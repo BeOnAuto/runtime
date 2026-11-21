@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { fakeMcpInProcess } from '../testing/index.ts';
 import { calledOnce, closedAfter, oneCallAccess, oneCallKey } from '../testing/one-calls.ts';
-import { serveFakeMcp } from './fake-mcp-server.ts';
 import type { FakeTool } from './fake-tools.ts';
 
-async function chatServer() {
-  const fake = await serveFakeMcp({ bearer: oneCallKey, chat: true });
+function chatServer() {
+  const fake = fakeMcpInProcess({ bearer: oneCallKey, chat: true });
   closedAfter(fake.close);
   return fake;
 }
@@ -14,7 +14,7 @@ const posting = { reference: { server: 'graph', tool: 'post_message' } };
 
 describe('the chat of the fake MCP server', () => {
   it('posts a message, in a thread when asked, and answers where it landed', async () => {
-    const fake = await chatServer();
+    const fake = chatServer();
     const access = oneCallAccess(fake.url, { allowed: ['post_message'] });
 
     const posted = await calledOnce(access, { ...posting, input: { channel: '#approvals', text: 'Approve?' } });
@@ -38,7 +38,7 @@ describe('the chat of the fake MCP server', () => {
 
 describe('the replies in the chat of the fake MCP server', () => {
   it('are listed for a thread after a point, or for the whole conversation, oldest first', async () => {
-    const fake = await chatServer();
+    const fake = chatServer();
     const access = oneCallAccess(fake.url, { allowed: ['post_message', 'thread_replies'] });
     await calledOnce(access, { ...posting, input: { channel: '#approvals', text: 'Approve?' } });
     fake.chat.reply({ channel: '#approvals', thread: '1699.000001', user: 'ada', text: 'approve' });
@@ -62,7 +62,7 @@ describe('the replies in the chat of the fake MCP server', () => {
 
 describe('the chat of a fake MCP server that echoes a value', () => {
   it('carries it in every answer of its chat tools, as a server that echoes its key would', async () => {
-    const fake = await serveFakeMcp({ bearer: oneCallKey, chat: true, echoes: 'echoed-value-5c1d' });
+    const fake = fakeMcpInProcess({ bearer: oneCallKey, chat: true, echoes: 'echoed-value-5c1d' });
     closedAfter(fake.close);
     const access = oneCallAccess(fake.url, { allowed: ['post_message', 'thread_replies'] });
 
@@ -77,7 +77,7 @@ describe('the chat of a fake MCP server that echoes a value', () => {
 
 describe('the chat tools of the fake MCP server', () => {
   it('is offered only by a server asked to hold one', async () => {
-    const plain = await serveFakeMcp({ bearer: oneCallKey });
+    const plain = fakeMcpInProcess({ bearer: oneCallKey });
     closedAfter(plain.close);
 
     expect(
@@ -102,7 +102,7 @@ const campaignCosts: FakeTool = {
 
 describe('a tool a test gives the fake MCP server', () => {
   it('is listed, marked reads by its hint, and answers as it is given', async () => {
-    const fake = await serveFakeMcp({ bearer: oneCallKey, tools: [campaignCosts] });
+    const fake = fakeMcpInProcess({ bearer: oneCallKey, tools: [campaignCosts] });
     closedAfter(fake.close);
     const access = oneCallAccess(fake.url, { allowed: ['campaign-costs'] });
 

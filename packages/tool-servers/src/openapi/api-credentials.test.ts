@@ -5,8 +5,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { refusalOf, servedDocumentAt } from '../api-testing/described-documents.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
-import { describedAccess, recordingCallJournal, toolRun, type ReportingAccess } from '../testing/index.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
+import {
+  describedAccess,
+  fakeApiInProcess,
+  recordingCallJournal,
+  toolRun,
+  type ReportingAccess,
+} from '../testing/index.ts';
+import type { FakeApiServer } from '../testing/served-fakes.ts';
 
 const key = 'k3y+With/Slash="Pad"==';
 
@@ -18,8 +24,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeApi(): Promise<FakeApiServer> {
-  const fake = await serveFakeApi({ key });
+function fakeApi(): FakeApiServer {
+  const fake = fakeApiInProcess({ key });
   closing.push(fake.close);
   return fake;
 }
@@ -46,7 +52,7 @@ function searched({ access }: ReportingAccess, tool = 'search'): Promise<CalledO
 }
 
 async function sentWith(security: Readonly<Record<string, string>>) {
-  const fake = await fakeApi();
+  const fake = fakeApi();
   const called = await searched(await accessWith(fake, security));
   const [seen] = fake.seen();
   return {
@@ -111,7 +117,7 @@ describe('the credential of a security scheme, placed as the document says', () 
 
 describe('the credentials of a call whose entry gives more than one scheme', () => {
   it('are those of the first alternative it gives, with no token minted beside a key', async () => {
-    const fake = await serveFakeApi({
+    const fake = fakeApiInProcess({
       key,
       client: { clientId: 'playbook', clientSecret: 'graph-secret-81c2', expiresInSeconds: 3600 },
     });
@@ -144,8 +150,8 @@ describe('the credentials of a call whose entry gives more than one scheme', () 
 
 describe('the credentials of a call whose operation needs the header one of its schemes places', () => {
   it('are those of the alternative that places the header, though the entry gives an earlier one too', async () => {
-    const fake = await fakeApi();
-    const document = await servedDocumentAt(() => Promise.resolve(Response.json(keyHeaderNeeded)));
+    const fake = fakeApi();
+    const document = servedDocumentAt(() => Promise.resolve(Response.json(keyHeaderNeeded)));
     const security = { bearerAuth: '${GRAPH_API_KEY}', apiKeyAuth: '${GRAPH_API_KEY}' };
     const reporting = await describedAccess(
       { graph: { org: 'acme', document, base_url: fake.baseUrl, security } },
@@ -167,7 +173,7 @@ describe('the credentials of a call whose operation needs the header one of its 
 
 describe('the security of an entry its document does not accept', () => {
   it('stops the start naming the entry and the scheme', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
 
     expect(
       await refusalOf({
@@ -196,7 +202,7 @@ const formsOfTheKey = [
 
 describe('a credential of a security scheme in what a call records and says', () => {
   it('is scrubbed in every form, from an answer, an error, the facts, the log and the listing', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const reporting = await accessWith(fake, { basicAuth: 'ada:${GRAPH_API_KEY}' });
     const echo = formsOfTheKey.join(' | ');
     fake.answerNextWith({ status: 200, headers: { 'content-type': 'text/plain' }, body: echo });
@@ -232,7 +238,7 @@ function documentTelling(secret: string) {
 
 describe('the tools a run is offered from a document that holds a secret', () => {
   it('reach the model scrubbed, in their descriptions and their input schemas', async () => {
-    const document = await servedDocumentAt(() => Promise.resolve(Response.json(documentTelling(key))));
+    const document = servedDocumentAt(() => Promise.resolve(Response.json(documentTelling(key))));
     const reporting = await describedAccess(
       { graph: { org: 'acme', document, headers: { 'X-Tenant': '${GRAPH_API_KEY}' } } },
       { environment: { GRAPH_API_KEY: key }, timing },

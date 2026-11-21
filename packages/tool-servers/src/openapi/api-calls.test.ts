@@ -12,8 +12,7 @@ import {
   fakeApi,
   keyed,
 } from '../api-testing/api-calls.ts';
-import { describedAccess, refusedConnections, type ClientRegistration } from '../testing/index.ts';
-import { serveFakeApi } from '../testing/served-fakes.ts';
+import { describedAccess, fakeApiInProcess, refusedConnections, type ClientRegistration } from '../testing/index.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -33,7 +32,7 @@ const searchTool: unknown = expect.arrayContaining([
 ]);
 
 async function authorized(registration: Partial<ClientRegistration> = {}) {
-  const fake = await fakeApi({
+  const fake = fakeApi({
     client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600, ...registration },
   });
   const issuer = String(fake.issuing?.issuer);
@@ -46,7 +45,7 @@ async function authorized(registration: Partial<ClientRegistration> = {}) {
 
 describe('the request of a call of a tool of an HTTP API', () => {
   it('fills the path, the query with repeated keys and the body, and sends no metadata of the run', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
 
     const updated = await called(access, 'updateProfile', { id: 'ada', body: { name: 'Ada', title: null } });
@@ -69,7 +68,7 @@ describe('the request of a call of a tool of an HTTP API', () => {
 
   it('scrubs a key of its query from an answer that echoes the address, in the form the address carried it', async () => {
     const formKey = 'k3y+With/Slash=Pad==';
-    const fake = await fakeApi({ key: formKey });
+    const fake = fakeApi({ key: formKey });
     const reporting = await describedAccess(
       { graph: { org: 'acme', document: fake.documentUrl, security: { queryKey: '${GRAPH_API_KEY}' } } },
       { environment: { GRAPH_API_KEY: formKey }, timing: apiTiming },
@@ -86,7 +85,7 @@ describe('the request of a call of a tool of an HTTP API', () => {
 
 describe('a call of an operation of an HTTP API that needs a header', () => {
   it('sends a header the operation needs from the headers of its entry, which give the model no input for it', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const session = { 'x-session': 'session-of-acme' };
     const access = await accessTo({ ...keyed(fake), headers: session });
 
@@ -102,7 +101,7 @@ describe('a call of an operation of an HTTP API that needs a header', () => {
 
 describe('the query of a call of a tool of an HTTP API', () => {
   it('carries the query parameters of its entry beside the key its security scheme places in the query', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo({
       document: fake.documentUrl,
       query_params: { tenant: 'acme-eu' },
@@ -116,7 +115,7 @@ describe('the query of a call of a tool of an HTTP API', () => {
 
 describe('the answer of a call of a tool of an HTTP API', () => {
   it('answers JSON as structured content and its text, any other answer as a document, and nothing as no content', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
 
     const answers = await Promise.all([
@@ -142,7 +141,7 @@ describe('the answer of a call of a tool of an HTTP API', () => {
   });
 
   it('answers a missing resource as an error result carrying what the API said, not as a failure of the server', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
     fake.answerNextWith({ status: 404, body: '{"title":"No profile named eve"}' });
 
@@ -160,7 +159,7 @@ describe('the answer of a call of a tool of an HTTP API', () => {
 
 describe('a call of a tool of an HTTP API whose server refuses its request as too large, with no words of its own', () => {
   it('answers an error result that says how large the arguments were and what to do, and claims no bound of the server', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
     fake.answerNextWith({ status: 413, body: '' });
 
@@ -173,8 +172,8 @@ describe('a call of a tool of an HTTP API whose server refuses its request as to
 
 describe('a call of a tool of an HTTP API that answers a redirect', () => {
   it('is an error result with its status, sending nothing and no key to the address the redirect names', async () => {
-    const fake = await fakeApi();
-    const elsewhere = await fakeApi();
+    const fake = fakeApi();
+    const elsewhere = fakeApi();
     const access = await accessTo(keyed(fake));
     fake.answerNextWith({ status: 307, headers: { location: `${elsewhere.baseUrl}/search?query=acme` } });
 
@@ -190,7 +189,7 @@ describe('a call of a tool of an HTTP API that answers a redirect', () => {
 
 describe('a call of a tool of an HTTP API that fails', () => {
   it('fails a call its API does not accept the key of, as a key the server refused', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo({ document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_CLIENT_SECRET}' } });
 
     expect(await called(access, 'search', { query: 'acme' })).toMatchObject({
@@ -201,7 +200,7 @@ describe('a call of a tool of an HTTP API that fails', () => {
   });
 
   it('refuses arguments it cannot send, sending nothing', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
 
     expect(await called(access, 'get_profiles_id', { name: 'ada' })).toMatchObject({
@@ -216,8 +215,8 @@ describe('a call of a tool of an HTTP API that fails', () => {
   });
 
   it('fails a call its API cannot be reached for', async () => {
-    const fake = await fakeApi();
-    const gone = await serveFakeApi();
+    const fake = fakeApi();
+    const gone = fakeApiInProcess();
     await gone.close();
     const access = await accessTo(
       { ...keyed(fake), base_url: gone.baseUrl },
@@ -233,7 +232,7 @@ describe('a call of a tool of an HTTP API that fails', () => {
 
 describe('the listing of the tools of an HTTP API', () => {
   it('lists its tools from the document alone, asking the API nothing', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const access = await accessTo(keyed(fake));
 
     const [listed] = await Effect.runPromise(access.listServers({ org: 'acme', playbook: 'alpha' }));
@@ -247,7 +246,7 @@ describe('the listing of the tools of an HTTP API', () => {
   });
 
   it('says of a tool whose described answers have no body that it answers none, and of no other', async () => {
-    const access = await accessTo(keyed(await fakeApi()));
+    const access = await accessTo(keyed(fakeApi()));
 
     const [listed] = await Effect.runPromise(access.listServers({ org: 'acme', playbook: 'alpha' }));
     const { tools } = toolsListedIn(listed);

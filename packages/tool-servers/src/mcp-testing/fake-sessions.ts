@@ -28,6 +28,7 @@ export interface SessionsServed {
 export function fakeSessions(
   records: ToolRecords,
   { issuesSessionIds = true, mostRequestBytes }: SessionsServed,
+  changed: () => void,
 ): FakeSessions {
   const sessions = new Map<string, Session>();
   let ended = 0;
@@ -44,10 +45,12 @@ export function fakeSessions(
         ...(mostRequestBytes === undefined ? {} : { maxRequestBodySize: mostRequestBytes }),
         onsessioninitialized: (id) => {
           sessions.set(id, { transport, server });
+          changed();
         },
         onsessionclosed: (id) => {
           ended += 1;
           sessions.delete(id);
+          changed();
         },
       });
       await server.connect(transport);

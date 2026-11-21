@@ -3,12 +3,15 @@ import { HostRefused } from '@on.auto/outbound';
 import { Function, Option, Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { arrivals } from '../testing/arrivals.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 import { until } from '../testing/until.ts';
 
 export interface GatedRequests {
   readonly fetch: FetchLike;
   readonly release: () => void;
   readonly holding: () => number;
+  readonly held: (count: number) => Promise<void>;
   readonly answered: () => readonly string[];
 }
 
@@ -17,23 +20,24 @@ const accessTokenOf = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.St
 export function gatedRequests(path = '/token'): GatedRequests {
   const opened = Promise.withResolvers<void>();
   const answered: string[] = [];
-  const held = { requests: 0 };
+  const held = arrivals();
   return {
     fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
       const url = String(address);
       if (!url.endsWith(path)) {
-        return globalThis.fetch(url, Object.assign({}, init));
+        return inProcessFetch(url, Object.assign({}, init));
       }
-      held.requests += 1;
+      held.arrive();
       await opened.promise;
-      const answer = await globalThis.fetch(url, Object.assign({}, init));
+      const answer = await inProcessFetch(url, Object.assign({}, init));
       answered.push(
         ...Option.toArray(Option.map(accessTokenOf(await answer.clone().text()), (tokens) => tokens.access_token)),
       );
       return answer;
     },
     release: opened.resolve,
-    holding: () => held.requests,
+    holding: held.count,
+    held: held.reached,
     answered: () => [...answered],
   };
 }
@@ -69,14 +73,14 @@ export function hostRefusedAt(path: string, rule: string): FetchLike {
   return (...[address, init]: readonly [unknown, unknown?]) =>
     String(address).endsWith(path)
       ? Promise.reject(new HostRefused({ rule }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 export function failingAt(path: string): FetchLike {
   return (...[address, init]: readonly [unknown, unknown?]) =>
     new URL(String(address)).pathname === path
       ? Promise.resolve(new Response('failing', { status: 500 }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 export interface WithdrawnMetadata {
@@ -102,7 +106,7 @@ export function metadataWithdrawnFrom(server: string): WithdrawnMetadata {
     fetch: (...[address, init]: readonly [unknown, unknown?]) => {
       const withdrawn = state.withdrawn ? withdrawnAnswerTo(String(address), server) : undefined;
       return withdrawn === undefined
-        ? globalThis.fetch(String(address), Object.assign({}, init))
+        ? inProcessFetch(String(address), Object.assign({}, init))
         : Promise.resolve(withdrawn);
     },
     withdraw: () => {
@@ -124,7 +128,7 @@ export function recordedFetch(
     fetch: (...[address, init]: readonly [unknown, unknown?]) => {
       asked.push(String(address));
       const here = answeredHere(String(address));
-      return here === undefined ? globalThis.fetch(String(address), Object.assign({}, init)) : Promise.resolve(here);
+      return here === undefined ? inProcessFetch(String(address), Object.assign({}, init)) : Promise.resolve(here);
     },
     asked: () => [...asked],
   };

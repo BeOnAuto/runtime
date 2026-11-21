@@ -3,7 +3,6 @@ import { memoryRecordedContent } from '@on.auto/content/testing';
 import { documentsReadInProcess } from '@on.auto/documents/testing';
 import { Effect, Function } from 'effect';
 
-import type { ServerMessage } from '../access/caller-context.ts';
 import { makeToolAccess } from '../call-fetch/access-of-the-call.ts';
 import { consentClientWith } from '../consent-testing/consent-fakes.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
@@ -13,17 +12,24 @@ import {
   type Environment,
   type ToolServerSettingsContext,
 } from '../settings/settings-reading.ts';
+import { inProcessFetch } from './in-process.ts';
 
 type ToolAccessOptions = Parameters<typeof makeToolAccess>[1];
 
 type ToolAccess = ReturnType<typeof makeToolAccess>;
+
+type ServerMessage = Parameters<ToolAccessOptions['reportServerMessage']>[0];
+
+function fetchOf(fetch: AccessOptions['fetch']): Pick<ToolAccessOptions, 'fetch'> {
+  return fetch === null ? {} : { fetch: fetch ?? inProcessFetch };
+}
 
 export const testClientInfo: ToolAccessOptions['clientInfo'] = { name: '@on.auto/runtime', version: '0.0.0-test' };
 
 export interface AccessOptions {
   readonly environment?: Environment;
   readonly timing?: ToolAccessOptions['timing'];
-  readonly fetch?: ToolAccessOptions['fetch'];
+  readonly fetch?: ToolAccessOptions['fetch'] | null;
   readonly consent?: ToolAccessOptions['consent'];
   readonly now?: ToolAccessOptions['now'];
   readonly traceMeta?: ToolAccessOptions['traceMeta'];
@@ -50,11 +56,7 @@ function servers(
   return readToolServerSettings(
     { ...environment, TOOL_SERVERS: JSON.stringify(written) },
     { modelProviders: [], ...(providers === undefined ? {} : { providers }) },
-  ).pipe(
-    Effect.flatMap((settings) =>
-      describedToolServers(settings, { ...describing, ...(fetch === undefined ? {} : { fetch }) }),
-    ),
-  );
+  ).pipe(Effect.flatMap((settings) => describedToolServers(settings, { ...describing, ...fetchOf(fetch) })));
 }
 
 function timedBy({
@@ -86,7 +88,7 @@ function accessOver(settings: ToolServers, options: AccessOptions): ReportingAcc
       messages.push(message);
     },
     ...timedBy(options),
-    ...(fetch === undefined ? {} : { fetch }),
+    ...fetchOf(fetch),
     ...(connections === undefined ? {} : { connections }),
     ...(runtimeSecrets === undefined ? {} : { runtimeSecrets }),
     ...(reportMarkUnlisted === undefined ? {} : { reportMarkUnlisted }),

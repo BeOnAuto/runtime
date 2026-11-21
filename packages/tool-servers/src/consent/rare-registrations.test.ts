@@ -4,13 +4,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   consentClientWith,
+  forConsentInProcess,
+  inProcessFetch,
   memoryRegistrations,
   startAskedAt,
   unansweredCall,
   type ClientRegistration,
   type MemoryRegistrations,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -19,8 +21,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -41,7 +43,7 @@ const registeringOnceInAWhile: Partial<ClientRegistration> = {
 
 describe('a public client registered at a server that registers once in a while', () => {
   it('is taken again at every later start, whatever end the server gives a secret it never issued, so the server is asked to register once', async () => {
-    const fake = await served({ ...registeringOnceInAWhile, registrationSecretSeconds: -60 });
+    const fake = served({ ...registeringOnceInAWhile, registrationSecretSeconds: -60 });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -59,10 +61,10 @@ describe('a public client registered at a server that registers once in a while'
   });
 
   it('refuses a start that must register past the limit with the host, the step, the status and the wait it names', async () => {
-    const fake = await served({ ...registeringOnceInAWhile, registrationRetryAfter: '600' });
+    const fake = served({ ...registeringOnceInAWhile, registrationRetryAfter: '600' });
     await started(consentClientWith(), startAskedAt(fake, { clients: ['dynamic'] }));
 
-    const unnamedWait = await served(registeringOnceInAWhile);
+    const unnamedWait = served(registeringOnceInAWhile);
     await started(consentClientWith(), startAskedAt(unnamedWait, { clients: ['dynamic'] }));
 
     expect([
@@ -97,7 +99,7 @@ function registrationsAt(fake: FakeMcpServer): number {
 
 describe('a confidential registration whose server names 0 as the end of its secret', () => {
   it('is taken again a century on, since its secret never ends', async () => {
-    const fake = await served({ dynamicRegistration: true, registrationsBeforeTheLimit: 1 });
+    const fake = served({ dynamicRegistration: true, registrationsBeforeTheLimit: 1 });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -112,14 +114,14 @@ describe('a confidential registration whose server names 0 as the end of its sec
 });
 
 function authorizedAt(url: string): Promise<number> {
-  return fetch(url, { redirect: 'manual' }).then((answer) => answer.status);
+  return inProcessFetch(url, { redirect: 'manual' }).then((answer) => answer.status);
 }
 
 const anotherReturn = 'https://studio.example.net/connect-return';
 
 describe('a kept registration at a return address the runtime no longer answers at', () => {
   it('is passed over for a registration at the new address, which is kept, since the server refuses the old client there', async () => {
-    const fake = await served({ dynamicRegistration: true, takesPublicClientsAlone: true });
+    const fake = served({ dynamicRegistration: true, takesPublicClientsAlone: true });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const before = startAskedAt(fake, { clients: ['dynamic'] });
@@ -145,7 +147,7 @@ describe('a kept registration at a return address the runtime no longer answers 
   });
 
   it('is passed over once where it was kept before registrations named their address, and the new one is taken after', async () => {
-    const fake = await served({ dynamicRegistration: true, takesPublicClientsAlone: true });
+    const fake = served({ dynamicRegistration: true, takesPublicClientsAlone: true });
     const registrations = memoryRegistrations();
     const earlier = {
       clientId: 'registered-earlier',

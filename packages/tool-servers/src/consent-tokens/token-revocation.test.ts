@@ -7,14 +7,16 @@ import {
   connectedByConsent,
   consentClientAt,
   everyHost,
+  forConsentInProcess,
   hostRefusedAt,
+  inProcessFetch,
   registeredAfterAnother,
   registeredAt,
   returnAddress,
   type ClientRegistration,
   type ConsentConnected,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -22,8 +24,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<ConsentConnected> {
-  const fake = await servedForConsent(changes);
+function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<ConsentConnected> {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return connectedByConsent(fake);
 }
@@ -51,7 +53,7 @@ function failingRevocations(failure: Readonly<Error>) {
   return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
     String(address).endsWith('/revoke')
       ? Promise.reject(failure)
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 describe('the revocation a removal asks for', () => {

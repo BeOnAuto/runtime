@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeMcpAnswers, type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
+import { fakeMcpInProcess } from '../testing/index.ts';
 import {
   asTheClient,
   basic,
@@ -54,8 +54,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function servedTakingPublicClientsAlone(changes: Partial<ClientRegistration>): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({
+function servedTakingPublicClientsAlone(changes: Partial<ClientRegistration>): FakeMcpServer {
+  const fake = fakeMcpInProcess({
     client: {
       clientId: 'auto-runtime',
       expiresInSeconds: 3600,
@@ -70,8 +70,8 @@ async function servedTakingPublicClientsAlone(changes: Partial<ClientRegistratio
 
 describe('a fake whose token endpoint takes public clients alone', () => {
   it('lists none alone, takes a public client by its id, and refuses a client with a secret however it sends it, and one it does not know', async () => {
-    const open = await servedTakingPublicClientsAlone({});
-    const confidential = await servedTakingPublicClientsAlone({ clientSecret });
+    const open = servedTakingPublicClientsAlone({});
+    const confidential = servedTakingPublicClientsAlone({ clientSecret });
 
     const statuses = [
       await redeemed(open, await codeOf(open), {}, { client_id: 'auto-runtime' }),

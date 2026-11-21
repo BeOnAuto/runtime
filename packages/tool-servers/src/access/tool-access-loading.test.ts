@@ -4,8 +4,8 @@ import { modulesReachedFrom } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { noToolServers, reportingAccess } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, noToolServers, reportingAccess } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -15,15 +15,15 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
 
 describe('an access to tool servers', () => {
   it('opens nothing until a run opens its tools, so an access closed unused has reached no server', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { access } = reportingAccess(
       { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
       { environment: { GRAPH_API_KEY: apiKey } },

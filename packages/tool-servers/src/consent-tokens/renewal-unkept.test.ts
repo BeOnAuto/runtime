@@ -11,6 +11,7 @@ import {
   connectedThroughAuto,
   consentClientAt,
   consentClientThrough,
+  forConsentInProcess,
   gatedRequests,
   memoryRegistrations,
   rowOf,
@@ -18,13 +19,12 @@ import {
   servedAt,
   servedOf,
   servedTokensOf,
+  throughAutoInProcess,
   type ConsentConnected,
   type GatedRequests,
   type ManualClock,
   type SealedTokens,
 } from '../testing/index.ts';
-import { servedForConsent, servedThroughAuto } from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
 import { renewalWords } from './renewal-words.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -67,7 +67,7 @@ async function renewedWhileTheStoreRefuses(
   const { source } = servedTokensOf(served, clock.now, consent);
   clock.setTo(renewalTime);
   const renewing = source.token().catch((error: unknown) => error);
-  await until(() => gate.holding() === 1);
+  await gate.held(1);
   row.custodian.refuse();
   gate.release();
   const failed = await renewing;
@@ -96,7 +96,7 @@ function revocationsAt(fake: FakeMcpServer): number {
 
 describe('renewed tokens the secret store cannot keep now', () => {
   it('are kept in memory and revoked nowhere, the call failing in the words of the store, and are kept under the next claim without asking the server again', async () => {
-    const fake = await servedForConsent();
+    const fake = forConsentInProcess();
     closing.push(fake.close);
     const sealed = await sealedFor(await connectedByConsent(fake), clockAt(0));
     const gate = gatedRequests();
@@ -126,7 +126,7 @@ describe('renewed tokens the secret store cannot keep now', () => {
 
 describe('renewed tokens the secret store cannot keep now, through Auto’s consent service', () => {
   it('are kept in memory alike, and the service is asked to revoke nothing', async () => {
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const sealed = await sealedFor(await connectedThroughAuto(serving), serving.clock);
     const gate = gatedRequests('/tokens/refresh');
@@ -156,7 +156,7 @@ describe('renewed tokens the secret store cannot keep now, through Auto’s cons
 
 describe('renewed tokens the secret store could not keep, before their next claim', () => {
   it('are left where another process keeps tokens of its own first, whose tokens are served instead', async () => {
-    const fake = await servedForConsent();
+    const fake = forConsentInProcess();
     closing.push(fake.close);
     const sealed = await sealedFor(await connectedByConsent(fake), clockAt(0));
     const other = await connectedByConsent(fake);
@@ -182,7 +182,7 @@ describe('renewed tokens the secret store could not keep, before their next clai
 
 describe('a renewal whose row the secret store cannot read now', () => {
   it('fails the call in the words of the store, breaks nothing and asks the server nothing', async () => {
-    const fake = await servedForConsent();
+    const fake = forConsentInProcess();
     closing.push(fake.close);
     const sealed = await sealedFor(await connectedByConsent(fake), clockAt(0));
     const { source } = servedTokensOf(sealed.served, sealed.clock.now, consentClientAt(fake));
@@ -207,7 +207,7 @@ describe('a renewal whose row the secret store cannot read now', () => {
 
 describe('a renewal whose client registration the secret store cannot read now', () => {
   it('fails the call in the words of the store and breaks nothing, and renews once the store reads it again', async () => {
-    const fake = await servedForConsent({ dynamicRegistration: true });
+    const fake = forConsentInProcess({ dynamicRegistration: true });
     closing.push(fake.close);
     const registrations = memoryRegistrations();
     const dynamic = { registrations, registeredClients: [] };

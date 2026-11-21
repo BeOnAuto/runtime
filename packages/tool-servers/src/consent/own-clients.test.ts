@@ -10,15 +10,18 @@ import {
   clockAt,
   consentClientWith,
   finishAskedOf,
+  forConsentInProcess,
+  inProcessFetch,
   registeredAt,
   rowOf,
   servedOf,
   servedTokensOf,
   startAskedAt,
+  throughAutoInProcess,
   tokensKeptBy,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, servedThroughAuto, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { OwnClient } from './client-sources.ts';
 import type {
   ConsentClient,
@@ -41,8 +44,8 @@ const theOrgsOAuthClient: OwnClient = { clientId: 'org-app', clientSecret: Redac
 
 const ofTheOrgsOAuthClient: Partial<ClientRegistration> = { clientId: 'org-app', clientSecret: orgsClientSecret };
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent({ ...ofTheOrgsOAuthClient, ...changes });
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess({ ...ofTheOrgsOAuthClient, ...changes });
   closing.push(fake.close);
   return fake;
 }
@@ -64,7 +67,7 @@ function recordingTokenRequests() {
       const form = new URLSearchParams(await request.clone().text());
       seen.push({ authorization: request.headers.get('authorization'), clientSecret: form.get('client_secret') });
     }
-    return globalThis.fetch(request);
+    return inProcessFetch(request);
   };
   return { fetch, seen: (): readonly TokenRequestSeen[] => [...seen] };
 }
@@ -88,7 +91,7 @@ async function redeemedAt(fake: FakeMcpServer, asked: StartAsked) {
 
 describe('the start of a consent under the organization’s own OAuth client', () => {
   it('sends the person to the authorization endpoint with the org’s client, before a client registered here at the issuer, and never through Auto’s consent service', async () => {
-    const serving = await servedThroughAuto(ofTheOrgsOAuthClient);
+    const serving = throughAutoInProcess(ofTheOrgsOAuthClient);
     closing.push(serving.close);
     const { fake, service } = serving;
     const client = consentClientWith({
@@ -108,7 +111,7 @@ describe('the start of a consent under the organization’s own OAuth client', (
   });
 
   it('is refused as having no client where the org’s client is not given', async () => {
-    const fake = await served();
+    const fake = served();
     const { ownClient: _given, ...ungiven } = underTheOrgsOAuthClient(fake);
 
     expect(await Effect.runPromise(Effect.flip(consentClientWith().start(ungiven)))).toEqual({ refused: 'no_client' });
@@ -117,9 +120,9 @@ describe('the start of a consent under the organization’s own OAuth client', (
 
 describe('the finish of a consent under the organization’s own OAuth client', () => {
   it('redeems the code with the org’s client, its secret in the Basic header where the metadata lists client_secret_basic or where the way writes out its endpoints, and in the form where the metadata lists client_secret_post alone', async () => {
-    const listingBoth = await served();
-    const listingThePost = await served({ takesBasicSecrets: false });
-    const unpublished = await served({ publishesMetadata: false });
+    const listingBoth = served();
+    const listingThePost = served({ takesBasicSecrets: false });
+    const unpublished = served({ publishesMetadata: false });
     const endpoints = {
       authorization_endpoint: `${unpublished.origin}/authorize`,
       token_endpoint: `${unpublished.origin}/token`,
@@ -147,7 +150,7 @@ describe('the finish of a consent under the organization’s own OAuth client', 
   });
 
   it('is refused as the client gone where the client given is not the one the consent was started with', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith();
     const asked = await finishAskedOf(client, underTheOrgsOAuthClient(fake));
     const another = { clientId: 'another-app', clientSecret: Redacted.make('another-app-client-secret-0c4f') };
@@ -160,7 +163,7 @@ describe('the finish of a consent under the organization’s own OAuth client', 
 });
 
 async function servedUnderTheOrgsOAuthClient() {
-  const fake = await served();
+  const fake = served();
   const client = consentClientWith({ renewalSpreadMs: 0 });
   const asked = await finishAskedOf(client, underTheOrgsOAuthClient(fake));
   const done = await finished(client, asked);

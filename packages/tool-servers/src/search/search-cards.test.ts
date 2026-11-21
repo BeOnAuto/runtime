@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineListConnectionTools, defineSearch, defineSearchInOrg } from '../index.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { patientTiming } from '../testing/index.ts';
+import { fakeMcpInProcess, patientTiming } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const reader: CallerIdentity = {
   id: 'acme-reader',
@@ -27,8 +27,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function connectedAccess() {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function connectedAccess() {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const entry = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' } };
   const connections = fakeConnections();
@@ -73,7 +73,7 @@ const down = { unavailable: 'down', because: 'unreachable' } as const;
 
 describe('search, for a server whose provider renders', () => {
   it('shows renders on the row of that server alone', async () => {
-    const searched = dispatchedTo(defineSearchInOrg(await connectedAccess(), () => Effect.void).registration);
+    const searched = dispatchedTo(defineSearchInOrg(connectedAccess(), () => Effect.void).registration);
 
     expect(await searched({})).toMatchObject({
       status: 'succeeded',
@@ -131,7 +131,7 @@ describe('search, for a server whose provider renders and that cannot be asked',
 
 describe('list_connection_tools, for a connection whose provider renders', () => {
   it('shows renders for it, and for no other', async () => {
-    const listed = dispatchedTo(defineListConnectionTools(await connectedAccess()).registration);
+    const listed = dispatchedTo(defineListConnectionTools(connectedAccess()).registration);
 
     expect(await listed({ id: 'chat-id' })).toMatchObject({
       status: 'succeeded',

@@ -62,7 +62,7 @@ async function searching(paths: Paths, servers: readonly string[] = ['billing'])
     servers: [{ url: 'https://billing.example.com/v1' }],
     paths,
   };
-  const url = await servedDocumentAt(() => Promise.resolve(Response.json(document)));
+  const url = servedDocumentAt(() => Promise.resolve(Response.json(document)));
   const entries = Object.fromEntries(servers.map((name) => [name, { document: url, org: 'acme' }]));
   const { access } = await describedAccess(entries);
   closing.push(access.close);

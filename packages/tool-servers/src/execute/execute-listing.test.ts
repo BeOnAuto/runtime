@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 function containing(part: string): unknown {
   return expect.stringContaining(part);
@@ -13,8 +13,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function callsTo(handlesMoney: boolean) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function callsTo(handlesMoney: boolean) {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = {
     url: fake.url,
@@ -40,7 +40,7 @@ const notOffered = {
 
 describe('a server whose tools handle money, called through the directory listing', () => {
   it('is refused by query_connection and execute_connection, and nothing is sent', async () => {
-    const { fake, calls } = await callsTo(true);
+    const { fake, calls } = callsTo(true);
 
     expect([
       await calls.call('query_connection', searched, { directoryListing: true }),
@@ -50,14 +50,14 @@ describe('a server whose tools handle money, called through the directory listin
   });
 
   it('is called as any other outside the directory listing', async () => {
-    const { fake, calls } = await callsTo(true);
+    const { fake, calls } = callsTo(true);
 
     expect(await calls.call('query_connection', searched)).toMatchObject({ status: 'succeeded' });
     expect(fake.received()).toMatchObject([{ tool: 'search' }]);
   });
 
   it('is left out of search through the directory listing', async () => {
-    const { calls } = await callsTo(true);
+    const { calls } = callsTo(true);
 
     expect([await calls.call('search', {}, { directoryListing: true }), await calls.call('search', {})]).toMatchObject([
       { status: 'succeeded', output: { servers: [] } },
@@ -68,7 +68,7 @@ describe('a server whose tools handle money, called through the directory listin
 
 describe('a server whose tools handle no money, called through the directory listing', () => {
   it('is called as any other', async () => {
-    const { fake, calls } = await callsTo(false);
+    const { fake, calls } = callsTo(false);
 
     expect(await calls.call('query_connection', searched, { directoryListing: true })).toMatchObject({
       status: 'succeeded',

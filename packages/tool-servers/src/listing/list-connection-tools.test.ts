@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineListConnectionTools } from '../index.ts';
 import { fakeConnections, pendingWords, type FakeConnections } from '../testing/fake-connections.ts';
-import { patientTiming, verboseDescription } from '../testing/index.ts';
+import { fakeApiInProcess, fakeMcpInProcess, patientTiming, verboseDescription } from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeApiKey, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -44,8 +44,8 @@ async function listingOver(connections: FakeConnections) {
   };
 }
 
-async function fakeMcp(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function fakeMcp(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -59,9 +59,9 @@ function graphOn(fake: FakeMcpServer, allowed: readonly string[]) {
   };
 }
 
-async function connectedGraph(allowed: readonly string[]) {
+function connectedGraph(allowed: readonly string[]) {
   const connections = fakeConnections();
-  connections.connect('acme', graphOn(await fakeMcp(), allowed));
+  connections.connect('acme', graphOn(fakeMcp(), allowed));
   return listingOver(connections);
 }
 
@@ -160,7 +160,7 @@ describe('the pages of the tools of a connection', () => {
 
 describe('the tools of a connection to an HTTP API', () => {
   it('are the operations of its document, each marked by its method, those that only read marked reads', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closing.push(fake.close);
     const connections = fakeConnections();
     connections.connect('acme', {
@@ -197,7 +197,7 @@ describe('the tools of a connection to an HTTP API', () => {
 describe('the tools of a connection that cannot answer them', () => {
   it('are refused as unavailable, in the words of why, for a connection nobody approved yet', async () => {
     const connections = fakeConnections();
-    connections.pend('acme', graphOn(await fakeMcp(), ['echo']));
+    connections.pend('acme', graphOn(fakeMcp(), ['echo']));
     const { listed } = await listingOver(connections);
 
     expect(await listed({ id: 'graph-id' })).toMatchObject({
@@ -211,7 +211,7 @@ describe('the tools of a connection that cannot answer them', () => {
 
   it('are not found for a connection the org does not have, or has removed', async () => {
     const connections = fakeConnections();
-    connections.connect('acme', graphOn(await fakeMcp(), ['echo']));
+    connections.connect('acme', graphOn(fakeMcp(), ['echo']));
     connections.remove('graph-id');
     const { listed } = await listingOver(connections);
 

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { toolBounds } from '../bounds/call-bounds.ts';
 import {
   controlledSignals,
+  fakeMcpInProcess,
   fakeToolNames,
   longToolName,
   noToolServers,
@@ -16,7 +17,7 @@ import {
   toolRunId,
   type AccessOptions,
 } from '../testing/index.ts';
-import { fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeStdioServerPath, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -30,8 +31,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(options?: FakeMcpOptions): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp(options);
+function fakeServer(options?: FakeMcpOptions): FakeMcpServer {
+  const fake = fakeMcpInProcess(options);
   closing.push(fake.close);
   return fake;
 }
@@ -88,7 +89,7 @@ const hashedLongName: unknown = expect.stringMatching(
 
 describe('the tools a run is offered', () => {
   it('offers the tools a reasoning function names under their model-facing names, with their schemas unchanged', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
 
     const tools = await offeredBy(access, 'graph/search', 'graph/profile', `graph/${longToolName}`);
@@ -114,7 +115,7 @@ describe('the tools a run is offered', () => {
   });
 
   it('maps a model-facing name back to the tool on its server', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
     const tools = await offeredBy(access, 'graph/graph.query.v2', `graph/${longToolName}`);
     const [dotted, long] = tools.offered;
@@ -138,7 +139,7 @@ describe('the tools a run is offered', () => {
 
 describe('the tools of server/*', () => {
   it('offers every tool of a server for server/*, or every tool its entry allows', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
     const { access: narrowed } = accessTo({ graph: graphOf(fake, { allowed: ['search', 'echo'] }) });
 
@@ -162,7 +163,7 @@ describe('the tools of server/*', () => {
 
 describe('a server that cannot be used', () => {
   it('cannot be reached', async () => {
-    const fake = await serveFakeMcp();
+    const fake = fakeMcpInProcess();
     await fake.close();
     const { access } = accessTo({ graph: graphOf(fake) }, { fetch: refusedConnections([fake.origin]).fetch });
 
@@ -174,8 +175,8 @@ describe('a server that cannot be used', () => {
   });
 
   it('keeps failing, or asks to slow down, while the other servers are let go', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
-    const other = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
+    const other = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake), wiki: graphOf(other) });
 
     fake.answerNextWith(503);
@@ -190,7 +191,7 @@ describe('a server that cannot be used', () => {
   });
 
   it('fails to list its tools on a session another run holds, which that run keeps', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
     const holding = await offeredBy(access, 'graph/search');
 
@@ -205,7 +206,7 @@ describe('a server that cannot be used', () => {
 
 describe('the sessions of runs', () => {
   it('shares one session between runs and ends it when the last run closes', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
 
     const first = await offeredBy(access, 'graph/search');
@@ -220,7 +221,7 @@ describe('the sessions of runs', () => {
   });
 
   it('keeps the tools it listed for the run when the server says they changed', async () => {
-    const fake = await fakeServer({ bearer: apiKey });
+    const fake = fakeServer({ bearer: apiKey });
     const { access } = accessTo({ graph: graphOf(fake) });
     const tools = await offeredBy(access, 'graph/*');
 
@@ -235,7 +236,7 @@ describe('the sessions of runs', () => {
 
 describe('the secrets of an access', () => {
   it('scrub a token a link minted from the recorded start of a call made by hand', async () => {
-    const fake = await fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+    const fake = fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const auth = { issuer: fake.origin, client_id: 'playbook', client_secret: '${GRAPH_CLIENT_SECRET}' };
     const { access, content } = accessTo({ graph: { url: fake.url, org: 'acme', auth } });
     await offeredBy(access, 'graph/echo');

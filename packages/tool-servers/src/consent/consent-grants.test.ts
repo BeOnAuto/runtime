@@ -6,12 +6,13 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   consentClientWith,
   finishAskedOf,
+  forConsentInProcess,
   registeredAt,
   startAskedAt,
   tokensKeptBy,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, FinishedConsent, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -20,8 +21,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -53,7 +54,7 @@ interface Revocable {
 
 describe('the scope a start asks for', () => {
   it('gains offline_access where the metadata it discovered lists it, once, and never where nothing was asked', async () => {
-    const listing = await served({ scopesSupported: offline });
+    const listing = served({ scopesSupported: offline });
 
     expect([
       await scopeAsked(listing, startAskedAt(listing)),
@@ -63,7 +64,7 @@ describe('the scope a start asks for', () => {
   });
 
   it('is the scope of the way alone where the way gives its endpoints, since no metadata is read', async () => {
-    const listing = await served({ scopesSupported: offline });
+    const listing = served({ scopesSupported: offline });
     const endpoints = {
       authorization_endpoint: `${listing.origin}/authorize`,
       token_endpoint: `${listing.origin}/token`,
@@ -76,14 +77,14 @@ describe('the scope a start asks for', () => {
 
 describe('the scope a finish answers', () => {
   it('is the granted scope with its scopes separated by single spaces, kept so with the tokens', async () => {
-    const spaced = await served({ grantedScope: '  files.read \t files.write ' });
+    const spaced = served({ grantedScope: '  files.read \t files.write ' });
     const done = await finishedAt(clientAt(spaced), startAskedAt(spaced, { scope: 'files.read files.write' }));
 
     expect([done.scope, tokensKeptBy(done).scope]).toEqual(['files.read files.write', 'files.read files.write']);
   });
 
   it('is the granted scope with its scopes separated by single spaces where the server separates them with commas', async () => {
-    const commas = await served({ grantedScope: 'files.read,files.write, files.share' });
+    const commas = served({ grantedScope: 'files.read,files.write, files.share' });
     const done = await finishedAt(clientAt(commas), startAskedAt(commas, { scope: 'files.read files.write' }));
 
     expect([done.scope, tokensKeptBy(done).scope]).toEqual([
@@ -93,8 +94,8 @@ describe('the scope a finish answers', () => {
   });
 
   it('is refused as no scope where the server grants an empty one to a scope asked, or as malformed where it is not a scope, revoking the tokens', async () => {
-    const empty = await served({ grantedScope: '' });
-    const quoted = await served({ grantedScope: 'files."read"' });
+    const empty = served({ grantedScope: '' });
+    const quoted = served({ grantedScope: 'files."read"' });
 
     expect([
       await refusedAt(clientAt(empty), startAskedAt(empty)),
@@ -105,7 +106,7 @@ describe('the scope a finish answers', () => {
   });
 
   it('is none where the server grants an empty scope to a way that asks none, and the tokens are kept with none', async () => {
-    const empty = await served({ grantedScope: '' });
+    const empty = served({ grantedScope: '' });
     const done = await finishedAt(clientAt(empty), startAskedAt(empty, { scope: undefined }));
 
     expect([done.scope, tokensKeptBy(done).scope]).toEqual([undefined, undefined]);
@@ -115,7 +116,7 @@ describe('the scope a finish answers', () => {
 
 describe('the end of the tokens a finish keeps', () => {
   it('is left out where the server gives one no clock can hold', async () => {
-    const endless = await served({ expiresInSeconds: 1e300 });
+    const endless = served({ expiresInSeconds: 1e300 });
 
     expect(Object.keys(tokensKeptBy(await finishedAt(clientAt(endless), startAskedAt(endless))))).toEqual([
       'access_token',
@@ -128,8 +129,8 @@ describe('the end of the tokens a finish keeps', () => {
 
 describe('the revocation of a client with a secret', () => {
   it('sends the secret in the form where the server takes it there alone, as its revocation methods say or else its token endpoint’s', async () => {
-    const listing = await served({ takesBasicSecrets: false });
-    const unlisting = await served({ takesBasicSecrets: false, listsRevocationMethods: false });
+    const listing = served({ takesBasicSecrets: false });
+    const unlisting = served({ takesBasicSecrets: false, listsRevocationMethods: false });
     const fakes = [listing, unlisting];
 
     const done = await Promise.all(
@@ -146,7 +147,7 @@ describe('the revocation of a client with a secret', () => {
   });
 
   it('sends the secret in the Basic header where the way gives the endpoints and so no methods are known', async () => {
-    const fake = await served({ publishesMetadata: false });
+    const fake = served({ publishesMetadata: false });
     const endpoints = {
       authorization_endpoint: `${fake.origin}/authorize`,
       token_endpoint: `${fake.origin}/token`,

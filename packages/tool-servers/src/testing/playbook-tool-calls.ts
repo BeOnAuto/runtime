@@ -22,6 +22,7 @@ import { defineSearch } from '../search/search.ts';
 import { defineDryRun } from '../tool-reads/dry-run.ts';
 import { defineIntrospect } from '../tool-reads/introspect.ts';
 import { defineValidate } from '../tool-reads/validate.ts';
+import { arrivals } from './arrivals.ts';
 
 export const toolCaller: CallerIdentity = {
   id: 'acme-builder',
@@ -49,6 +50,7 @@ export interface PlaybookToolCalls {
   readonly recorded: () => Promise<readonly RecordedEvent[]>;
   readonly incidents: () => readonly ReportedIncident[];
   readonly writesAttempted: () => number;
+  readonly writeAttempted: (count: number) => Promise<void>;
 }
 
 export interface WritesOptions {
@@ -88,12 +90,10 @@ export function playbookToolCalls(
 ): PlaybookToolCalls {
   const ledger = memoryLedger();
   const reporter = recordingReporter();
-  const writes = { attempted: 0 };
+  const attempts = arrivals();
   const refusing = {
     held: writesHeldUntil,
-    attempted: () => {
-      writes.attempted += 1;
-    },
+    attempted: attempts.arrive,
   };
   const services = Layer.mergeAll(
     writesRefused ? refusingWrites(ledger.service, refusing) : ledger.layer,
@@ -129,6 +129,7 @@ export function playbookToolCalls(
       return page.records;
     },
     incidents: reporter.reported,
-    writesAttempted: () => writes.attempted,
+    writesAttempted: attempts.count,
+    writeAttempted: attempts.reached,
   };
 }

@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { FakeTool } from '../mcp-testing/fake-tools.ts';
 import { fakeApiKey, openFakeToolRun, type FakeToolRun } from '../testing/fake-tool-run.ts';
-import { until } from '../testing/until.ts';
 import type { CallAnswered, CallEnded, CallFailed } from './call-facts.ts';
 import type { OfferedTool } from './offered-tools.ts';
 import { failureReply, keptReply } from './recorded-replies.ts';
@@ -129,7 +128,7 @@ describe('a call a run sends itself that fails', () => {
     const run = await runWith(['sleep']);
     const stop = new AbortController();
     const sending = offeredIn(run, 'sleep').send({ callId: 'toolu_1', input: { ms: 5000 } }, stop.signal);
-    await until(() => run.fake.received().length === 1);
+    await run.fake.once(() => run.fake.received().length === 1);
     stop.abort();
 
     expect((await sending).ended).toMatchObject({ type: 'tool_call_failed', data: { because: 'cancelled' } });

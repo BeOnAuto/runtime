@@ -13,6 +13,7 @@ import type {
 } from '../consent/consent-client.ts';
 import { makeConsentClient } from '../consent/consent-making.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 import { memoryRegistrations } from './given-consents.ts';
 
 export const studioBase = 'https://studio.example.com/';
@@ -64,7 +65,7 @@ export function registeredAfterAnother(issuer: string): readonly RegisteredClien
 
 export function consentClientWith(options: Partial<ConsentClientOptions> = {}): ConsentClient {
   return makeConsentClient({
-    fetch: globalThis.fetch,
+    fetch: inProcessFetch,
     registeredClients: [],
     publicUrl: undefined,
     registrations: memoryRegistrations(),

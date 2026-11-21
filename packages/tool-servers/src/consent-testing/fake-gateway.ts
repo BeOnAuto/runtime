@@ -4,7 +4,6 @@ import { Option, Schema } from 'effect';
 
 import { gatewayPaths, type ConnectedAccount } from '../consent-through-a-gateway/gateway-calls.ts';
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
-import { serveOnLoopback } from '../testing/loopback-server.ts';
 
 export type GatewayStep = 'start' | 'handoff' | 'end' | 'call';
 
@@ -234,39 +233,48 @@ function answeredFor(step: GatewayStep, request: Readonly<Request>, body: string
   return step === 'end' ? store.removed(body) : store.called(request);
 }
 
-export async function serveFakeGateway(options: FakeGatewayOptions = {}): Promise<FakeGateway> {
+export interface FakeGatewayAnswers {
+  readonly handlerAt: (origin: string) => FetchHandler;
+  readonly gatewayAt: <Served extends LoopbackServer>(served: Served) => Served & FakeGateway;
+}
+
+export function fakeGatewayAnswers(options: FakeGatewayOptions = {}): FakeGatewayAnswers {
   const store = gatewayStoreOf(options);
   const keyHeader = options.keyHeader ?? defaultKeyHeader;
   const seen: SeenGatewayRequest[] = [];
   const answers = new Map<GatewayStep, Forced>();
-  const listening = await serveOnLoopback((origin): FetchHandler => async (request) => {
-    const { pathname } = new URL(request.url);
-    const body = await request.text();
-    seen.push({ method: request.method, path: pathname, headers: Object.fromEntries(request.headers), body });
-    if (pathname === '/openapi.json') {
-      return json(gatewayDocumentOf(origin, keyHeader));
-    }
-    const step = stepOf(request.method, pathname);
-    if (step === undefined) {
-      return new Response(null, { status: 404 });
-    }
-    const forced = answers.get(step);
-    return forced === undefined ? answeredFor(step, request, body, store) : json(forced.body, forced.status);
-  });
   return {
-    ...listening,
-    url: `${listening.origin}${connectionsPath}`,
-    document: `${listening.origin}/openapi.json`,
-    keyHeader,
-    allow: store.allow,
-    keys: store.keys,
-    ended: store.ended,
-    seen: () => [...seen],
-    answering: (step, status, body) => {
-      answers.set(step, { status, body: body ?? { refused: 'answered' } });
-    },
-    answeringAsItself: (step) => {
-      answers.delete(step);
-    },
+    handlerAt:
+      (origin): FetchHandler =>
+      async (request) => {
+        const { pathname } = new URL(request.url);
+        const body = await request.text();
+        seen.push({ method: request.method, path: pathname, headers: Object.fromEntries(request.headers), body });
+        if (pathname === '/openapi.json') {
+          return json(gatewayDocumentOf(origin, keyHeader));
+        }
+        const step = stepOf(request.method, pathname);
+        if (step === undefined) {
+          return new Response(null, { status: 404 });
+        }
+        const forced = answers.get(step);
+        return forced === undefined ? answeredFor(step, request, body, store) : json(forced.body, forced.status);
+      },
+    gatewayAt: (served) => ({
+      ...served,
+      url: `${served.origin}${connectionsPath}`,
+      document: `${served.origin}/openapi.json`,
+      keyHeader,
+      allow: store.allow,
+      keys: store.keys,
+      ended: store.ended,
+      seen: () => [...seen],
+      answering: (step, status, body) => {
+        answers.set(step, { status, body: body ?? { refused: 'answered' } });
+      },
+      answeringAsItself: (step) => {
+        answers.delete(step);
+      },
+    }),
   };
 }

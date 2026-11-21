@@ -7,8 +7,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { apiKey } from '../api-testing/api-calls.ts';
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
-import { controlledSignals, describedAccess, patientTiming, recordingCallJournal, toolRun } from '../testing/index.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
+import {
+  controlledSignals,
+  describedAccess,
+  fakeApiInProcess,
+  patientTiming,
+  recordingCallJournal,
+  toolRun,
+} from '../testing/index.ts';
+import type { FakeApiServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -46,9 +53,9 @@ function uploadingDocument(fake: FakeApiServer): string {
 }
 
 async function uploaded(input: Readonly<Record<string, unknown>>) {
-  const fake = await serveFakeApi({ key: apiKey });
+  const fake = fakeApiInProcess({ key: apiKey });
   closing.push(fake.close);
-  const document = await servedDocumentAt(() => Promise.resolve(new Response(uploadingDocument(fake))));
+  const document = servedDocumentAt(() => Promise.resolve(new Response(uploadingDocument(fake))));
   const { access, content } = await describedAccess(
     { files: { org: 'acme', document, security: { apiKeyAuth: '${FILES_API_KEY}' } } },
     { environment: { FILES_API_KEY: apiKey }, timing: patientTiming },

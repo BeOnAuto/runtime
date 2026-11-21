@@ -151,7 +151,7 @@ describe('an answer of an HTTP API whose entry names its failure codes, whatever
 
 describe('the token of an HTTP API whose entry names its failure codes', () => {
   it('is minted once more when the API answers a code its entry names as a refused key, and a second such answer is a key the server refused in words that name the code', async () => {
-    const fake = await fakeApi({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+    const fake = fakeApi({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const access = await accessTo({
       document: fake.documentUrl,
       auth: { issuer: String(fake.issuing?.issuer), client_id: 'playbook', client_secret: '${GRAPH_CLIENT_SECRET}' },

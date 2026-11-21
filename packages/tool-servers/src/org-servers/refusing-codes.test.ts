@@ -2,9 +2,9 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { fakeConnections, refusedWords } from '../testing/fake-connections.ts';
-import { patientTiming } from '../testing/index.ts';
+import { fakeApiInProcess, patientTiming } from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -12,7 +12,7 @@ const search = { ...alpha, reference: { server: 'graph', tool: 'search' }, input
 
 describe('a connection of an HTTP API that answers a code its entry names as a refused key', () => {
   it('tells its source what the API answered, and the call fails in the words the source recorded', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     onTestFinished(fake.close);
     const connections = fakeConnections();
     connections.connect('acme', {

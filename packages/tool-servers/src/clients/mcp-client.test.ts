@@ -2,8 +2,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
 import type { McpServerSettings } from '../settings/server-settings.ts';
-import { testClientInfo } from '../testing/index.ts';
-import { serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, inProcessFetch, testClientInfo } from '../testing/index.ts';
 import { openHttp, systemTimer, type HttpOpening } from './http-client.ts';
 
 function httpSettings(url: string): McpServerSettings {
@@ -28,7 +27,7 @@ function httpSettings(url: string): McpServerSettings {
 function opening(reportError: (message: string) => void): HttpOpening {
   return {
     clientInfo: testClientInfo,
-    fetch: globalThis.fetch,
+    fetch: inProcessFetch,
     authProvider: undefined,
     timeoutMs: defaultTiming.openMs,
     longestRetryWaitMs: defaultTiming.longestRetryWaitMs,
@@ -39,7 +38,7 @@ function opening(reportError: (message: string) => void): HttpOpening {
 
 describe('a client of an MCP server', () => {
   it('tells the server it is the client it was given, by name and version', async () => {
-    const fake = await serveFakeMcp();
+    const fake = fakeMcpInProcess();
     onTestFinished(fake.close);
     const reported: string[] = [];
 

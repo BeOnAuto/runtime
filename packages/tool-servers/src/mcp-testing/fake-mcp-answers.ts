@@ -12,6 +12,7 @@ import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions, type SessionsServed } from './fake-sessions.ts';
 import { fakeToolChanges } from './fake-tool-changes.ts';
 import type { FakeHints, FakeTool, ReceivedCall } from './fake-tools.ts';
+import { nextAnswers, watchedChanges, type NextAnswers } from './next-answers.ts';
 
 export interface FakeMcpOptions extends SessionsServed {
   readonly bearer?: string;
@@ -59,59 +60,11 @@ export interface FakeMcpServer extends LoopbackServer {
   readonly removeTool: (name: string) => void;
   readonly annotateTool: (name: string, hints: Readonly<Record<string, boolean>>) => void;
   readonly notifyToolsChanged: () => void;
+  readonly once: (holds: () => boolean) => Promise<void>;
 }
 
 export interface FakeMcpAnswers extends Omit<FakeMcpServer, keyof LoopbackServer | 'url'> {
   readonly handlerAt: (origin: string) => FetchHandler;
-}
-
-interface Programmed {
-  readonly status: number;
-  readonly headers: Readonly<Record<string, string>>;
-}
-
-interface NextAnswers {
-  readonly programmed: (rpc: string | undefined) => Programmed | undefined;
-  readonly noise: () => number;
-  readonly answerWith: FakeMcpServer['answerNextWith'];
-  readonly answerOf: FakeMcpServer['answerNextOf'];
-  readonly answerAfterNoise: FakeMcpServer['answerNextCallAfterNoise'];
-  readonly held: (rpc: string | undefined) => Promise<void> | undefined;
-  readonly hold: FakeMcpServer['holdNextOf'];
-}
-
-function programmedAnswers(status: number, times: number, headers: Readonly<Record<string, string>>): Programmed[] {
-  return Array.from({ length: times }, () => ({ status, headers }));
-}
-
-function nextAnswers(): NextAnswers {
-  const programmed: Programmed[] = [];
-  const programmedOf = new Map<string, Programmed[]>();
-  const holding = new Map<string, Promise<void>[]>();
-  let noise = 0;
-  return {
-    held: (rpc) => holding.get(String(rpc))?.shift(),
-    hold: (rpc) => {
-      const held = Promise.withResolvers<void>();
-      holding.set(rpc, [...(holding.get(rpc) ?? []), held.promise]);
-      return held.resolve;
-    },
-    programmed: (rpc) => programmedOf.get(String(rpc))?.shift() ?? programmed.shift(),
-    noise: () => {
-      const messages = noise;
-      noise = 0;
-      return messages;
-    },
-    answerWith: (status, times = 1, headers = {}) => {
-      programmed.push(...programmedAnswers(status, times, headers));
-    },
-    answerOf: (rpc, status, times = 1, headers = {}) => {
-      programmedOf.set(rpc, [...(programmedOf.get(rpc) ?? []), ...programmedAnswers(status, times, headers)]);
-    },
-    answerAfterNoise: (messages) => {
-      noise = messages;
-    },
-  };
 }
 
 interface Endpoint {
@@ -259,6 +212,14 @@ function tokensOf(authorizations: readonly FakeAuthorization[]): Pick<FakeMcpSer
   };
 }
 
+function told<A, R>(record: (item: A) => R, changed: () => void): (item: A) => R {
+  return (item) => {
+    const result = record(item);
+    changed();
+    return result;
+  };
+}
+
 export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
   const seen: SeenRequest[] = [];
   const next = nextAnswers();
@@ -267,12 +228,17 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
   const authorizations: FakeAuthorization[] = [];
   const chat = fakeChat(options.echoes);
   const records = recordsOf(options, changes.removed, chat, changes.hints);
-  const sessions = fakeSessions({ ...records, receive: (call) => received.push(call) }, options);
+  const watching = watchedChanges();
+  const sessions = fakeSessions(
+    { ...records, receive: told((call: ReceivedCall) => received.push(call), watching.changed) },
+    options,
+    watching.changed,
+  );
   const endpoint = mcpEndpoint({
     sessions,
-    see: (request) => {
+    see: told((request: SeenRequest) => {
       seen.push(request);
-    },
+    }, watching.changed),
     next,
     requestIdHeader: options.requestIdHeader,
   });
@@ -295,5 +261,6 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
     removeTool: changes.removeTool,
     annotateTool: changes.annotateTool,
     notifyToolsChanged: sessions.notifyToolsChanged,
+    once: watching.once,
   };
 }

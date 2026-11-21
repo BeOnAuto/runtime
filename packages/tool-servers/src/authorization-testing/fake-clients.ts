@@ -3,6 +3,7 @@ import { verify } from 'node:crypto';
 
 import { Option, Schema } from 'effect';
 
+import { inProcessFetch } from '../testing/in-process.ts';
 import { json } from './authorization-answers.ts';
 
 export interface ClientRegistration {
@@ -106,7 +107,7 @@ function registeredClientOf({ clientId, clientSecret, publicKey, redirectUris = 
 }
 
 async function documentedClient(clientId: string): Promise<KnownClient | undefined> {
-  const answer = await fetch(clientId);
+  const answer = await inProcessFetch(clientId);
   const document = answer.ok ? decodeDocument(await answer.json()) : Option.none();
   return Option.getOrUndefined(
     Option.flatMap(document, ({ client_id: named, redirect_uris: redirectUris }) =>

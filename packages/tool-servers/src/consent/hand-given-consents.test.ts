@@ -8,6 +8,8 @@ import {
   connectedByConsent,
   consentClientAt,
   consentClientWith,
+  forConsentInProcess,
+  inProcessFetch,
   memoryRegistrations,
   metadataWithdrawnFrom,
   rowOf,
@@ -16,7 +18,7 @@ import {
   startAskedAt,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, ConsentServed, ConsentWay, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -25,8 +27,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -54,7 +56,7 @@ function registeringNamed(): Registering {
       if (new URL(request.url).pathname === '/register') {
         names.push(Schema.decodeUnknownSync(RegisteredNameSchema)(await request.clone().text()).client_name);
       }
-      return globalThis.fetch(request);
+      return inProcessFetch(request);
     },
     names: () => [...names],
   };
@@ -64,7 +66,7 @@ const dynamic: Partial<ConsentWay> = { clients: ['dynamic'] };
 
 describe('the start of a consent at a server given by hand', () => {
   it('asks the person to consent every time, as no start of a provider’s way does unless its way says so', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const client = consentClientWith();
 
     const handGiven = new URL((await startedAt(client, byHandAt(fake, dynamic))).url);
@@ -76,8 +78,8 @@ describe('the start of a consent at a server given by hand', () => {
 
 describe('the client registered dynamically for a server given by hand', () => {
   it('is its own, one for each server at an issuer and apart from a provider’s way there, named for the server’s host', async () => {
-    const issuing = await served({ dynamicRegistration: true });
-    const another = await served({ authorizationServers: [issuing.origin] });
+    const issuing = served({ dynamicRegistration: true });
+    const another = served({ authorizationServers: [issuing.origin] });
     const registering = registeringNamed();
     const registrations = memoryRegistrations();
     const client = consentClientWith({ fetch: registering.fetch, registrations });
@@ -102,7 +104,7 @@ describe('the client registered dynamically for a server given by hand', () => {
 
 describe('a server given by hand that no longer names its protected resource metadata', () => {
   it('refuses a start it took while the server published it, where a provider’s way goes on with the issuer it names', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const withdrawn = metadataWithdrawnFrom(fake.url);
     const client = consentClientWith({ fetch: withdrawn.fetch });
     const before = new URL((await startedAt(client, byHandAt(fake, dynamic))).url);
@@ -117,7 +119,7 @@ describe('a server given by hand that no longer names its protected resource met
   });
 
   it('renews none of its tokens, asking the authorization server nothing, in words that say why', async () => {
-    const fake = await served();
+    const fake = served();
     const connected = await connectedByConsent(fake);
     const clock = clockAt(0);
     const consent = servedOf(connected, rowOf(connected, clock.now));
@@ -137,7 +139,7 @@ describe('a server given by hand that no longer names its protected resource met
 
 describe('a challenge whose address answers with an error', () => {
   it('leads to the well-known paths, at the start of a provider’s way and of a server given by hand alike', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const client = consentClientWith({ fetch: brokenAtTheChallenge(fake).fetch });
 
     const provided = new URL((await startedAt(client, startAskedAt(fake, dynamic))).url);

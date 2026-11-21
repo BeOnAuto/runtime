@@ -29,7 +29,7 @@ const couldNotBeUsed = 'The tool server graph could not be used: ';
 
 describe('a server that cannot take one call now', () => {
   it('hands on the wait a 429 asks for to its caller, without waiting it out in the call', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '120' });
@@ -40,7 +40,7 @@ describe('a server that cannot take one call now', () => {
   });
 
   it('is unopened when the server cannot be reached, or refuses to list its tools, so nothing was sent', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     fake.answerNextOf('tools/list', 503);
     const listingRefused = await calledOnce(oneCallAccess(fake.url));
     const { url, origin } = fake;
@@ -54,7 +54,7 @@ describe('a server that cannot take one call now', () => {
   });
 
   it('keeps the words of a failure to 1 KiB, the bound every reader of a failure shares', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const refusal = 'The gateway refused the request. '.repeat(100);
     const { access } = reportingAccess(
       { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -72,7 +72,7 @@ const lackingScope = { 'www-authenticate': 'Bearer error="insufficient_scope", s
 
 describe('one call its server failed once it was sent', () => {
   it('names why in the word a call its server refused before it was sent names', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     fake.answerNextOf('tools/call', 403, 1, lackingScope);
@@ -95,7 +95,7 @@ describe('one call its server failed once it was sent', () => {
 
 describe('one call through a tool this playbook is not offered', () => {
   it('is refused before anything is sent or recorded, for a server it does not have, of another org, or a tool not allowed', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     expect([
@@ -119,7 +119,7 @@ describe('one call through a tool this playbook is not offered', () => {
   });
 
   it('is told by name alone, before any client opens, as a run asks before it records anything', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     expect([
@@ -166,7 +166,7 @@ describe('one call to a server whose client never opens', () => {
 
 describe('one call to a server that does not list its tools in time', () => {
   it('fails at the open bound, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     fake.holdNextOf('tools/list');
 
     expect(await calledOnce(oneCallAccess(fake.url, {}, { openMs: 300, callMs: longerThanTheTestMs }))).toEqual(
@@ -178,7 +178,7 @@ describe('one call to a server that does not list its tools in time', () => {
 
 describe('one call whose assets cannot be planned, the store failing as it is read', () => {
   it('lets the server go, so its session ends, though the call dies', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const page = keptForATest('019a5b12-0000-7000-8000-00000000000a', 'text/plain', 'a page');
     const { access } = reportingAccess(
       { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },

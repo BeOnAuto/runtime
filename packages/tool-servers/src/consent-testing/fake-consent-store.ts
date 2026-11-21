@@ -4,6 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Option, Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 import { consentRegistration, studioBase } from './consent-fakes.ts';
 
 export type RefusedCall = 'start' | 'redeem' | 'refresh' | 'revoke';
@@ -191,7 +192,7 @@ export function postedToTheVendor(
   form: Readonly<Record<string, string>>,
   resources: readonly string[] = [],
 ): Promise<Response> {
-  const { fetch = globalThis.fetch } = store.options;
+  const { fetch = inProcessFetch } = store.options;
   const body = new URLSearchParams(form);
   for (const resource of resources) {
     body.append('resource', resource);

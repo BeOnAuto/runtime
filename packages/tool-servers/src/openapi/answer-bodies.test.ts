@@ -214,7 +214,7 @@ describe('the name shown of an answer of an HTTP API that is not JSON', () => {
 
 describe('a file a tool of an HTTP API fetches through an access composed with no reading of documents', () => {
   it('is answered with the line and the words that no document is read', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const reporting = await describedAccess(
       { graph: { org: 'acme', ...keyed(fake) } },
       { environment: { GRAPH_API_KEY: apiKey }, documents: null },
@@ -230,7 +230,7 @@ describe('a file a tool of an HTTP API fetches through an access composed with n
 
 describe('a file a tool of an HTTP API fetches', () => {
   it('answers the text of a PDF, a Word document and a text file, after a line naming the file, its type and its size', async () => {
-    const access = await accessTo(keyed(await fakeApi()));
+    const access = await accessTo(keyed(fakeApi()));
 
     const answers = await Promise.all(
       ['terms.pdf', 'terms.docx', 'terms.txt'].map((fileName) => called(access, 'file', { fileName })),
@@ -246,7 +246,7 @@ describe('a file a tool of an HTTP API fetches', () => {
   });
 
   it('answers the line and why for an image, a file larger than the runtime reads as too large, and a missing file as an error result', async () => {
-    const access = await accessTo(keyed(await fakeApi()));
+    const access = await accessTo(keyed(fakeApi()));
 
     const answers = await Promise.all(
       ['photo.png', 'large.pdf', 'gone.pdf'].map((fileName) => called(access, 'file', { fileName })),

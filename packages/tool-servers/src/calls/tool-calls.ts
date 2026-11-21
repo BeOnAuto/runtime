@@ -21,6 +21,7 @@ export interface Forwarding {
   readonly callMs: number;
   readonly longestRetryWaitMs: number;
   readonly signal: Readonly<AbortSignal>;
+  readonly deadlineAfter?: (ms: number) => AbortSignal;
 }
 
 interface ForwardedCall {
@@ -117,6 +118,10 @@ function answered(forwarding: Forwarding, { result, resultJson, observed }: Answ
   };
 }
 
+function deadlineOf({ callMs, deadlineAfter }: Forwarding): AbortSignal {
+  return deadlineAfter === undefined ? AbortSignal.timeout(callMs) : deadlineAfter(callMs);
+}
+
 function stopped(forwarding: Forwarding, { deadline }: Attempt, observed: Observed): Forwarded | undefined {
   if (deadline.aborted) {
     return failed('timed_out', 'timed_out', `The tool server did not answer within ${forwarding.callMs} ms`, observed);
@@ -185,5 +190,5 @@ async function restarted(slot: ServerSlot): Promise<Forwarded | undefined> {
 
 export async function forwarded(forwarding: Forwarding): Promise<Forwarded> {
   const exited = await restarted(forwarding.slot);
-  return exited ?? attempted(forwarding, { deadline: AbortSignal.timeout(forwarding.callMs), waitedMs: 0 });
+  return exited ?? attempted(forwarding, { deadline: deadlineOf(forwarding), waitedMs: 0 });
 }

@@ -5,12 +5,13 @@ import {
   clockAt,
   connectedByConsent,
   consentClientAt,
+  forConsentInProcess,
+  inProcessFetch,
   rowOf,
   servedOf,
   servedTokensOf,
   type MemoryTokens,
 } from '../testing/index.ts';
-import { servedForConsent } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -31,11 +32,11 @@ function refreshAnsweredUnder200With(code: string) {
   return (...[address, init]: readonly [unknown, unknown?]): Promise<Response> =>
     String(address).endsWith('/token')
       ? Promise.resolve(Response.json({ ok: false, error: code }))
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 async function refreshRefusedWith(code: string, ending?: readonly string[]): Promise<Refused> {
-  const fake = await servedForConsent();
+  const fake = forConsentInProcess();
   closing.push(fake.close);
   const connected = await connectedByConsent(fake);
   const clock = clockAt(0);

@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
-import { describedAccess, playbookToolCalls, reportingAccess, toolReader } from '../testing/index.ts';
-import { serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import {
+  describedAccess,
+  fakeApiInProcess,
+  fakeMcpInProcess,
+  playbookToolCalls,
+  reportingAccess,
+  toolReader,
+} from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -14,14 +21,14 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
 
-async function validatingOn() {
-  const fake = await fakeServer();
+function validatingOn() {
+  const fake = fakeServer();
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
   const { access } = reportingAccess({ graph }, { environment: { GRAPH_API_KEY: apiKey } });
   closing.push(access.close);
@@ -46,8 +53,8 @@ function filling(bytes: number) {
 }
 
 describe('validate', () => {
-  it('is a query of the playbook routed by POST, since its arguments are an object a query string cannot carry, and served over HTTP alone', async () => {
-    const { registrations } = await validatingOn();
+  it('is a query of the playbook routed by POST, since its arguments are an object a query string cannot carry, and served over HTTP alone', () => {
+    const { registrations } = validatingOn();
 
     expect(registrations.validate).toMatchObject({
       scope: 'playbook',
@@ -60,7 +67,7 @@ describe('validate', () => {
   });
 
   it('answers that arguments match the input schema of the tool, or where they do not, and calls nothing', async () => {
-    const { fake, call, recorded } = await validatingOn();
+    const { fake, call, recorded } = validatingOn();
 
     expect([
       await call('validate', { server: 'graph', tool: 'search', arguments: { query: 'acme' } }, { caller: toolReader }),
@@ -74,7 +81,7 @@ describe('validate', () => {
   });
 
   it('checks the arguments of an operation of an HTTP API against its body and the schemas it refers to', async () => {
-    const fake = await serveFakeApi({ key: apiKey });
+    const fake = fakeApiInProcess({ key: apiKey });
     closing.push(fake.close);
     const { call } = await validatingAnApi({
       document: fake.documentUrl,
@@ -104,7 +111,7 @@ function bookingDocument(day: Readonly<Record<string, unknown>>) {
 }
 
 async function validatingBookings(day: Readonly<Record<string, unknown>>) {
-  const url = await servedDocumentAt(() => Promise.resolve(Response.json(bookingDocument(day))));
+  const url = servedDocumentAt(() => Promise.resolve(Response.json(bookingDocument(day))));
   const { call } = await validatingAnApi({ document: url });
   return (value: unknown) => call('validate', { server: 'graph', tool: 'listBookings', arguments: { day: value } });
 }
@@ -152,7 +159,7 @@ describe('validate against a schema this server cannot check', () => {
         },
       },
     };
-    const url = await servedDocumentAt(() => Promise.resolve(Response.json(document)));
+    const url = servedDocumentAt(() => Promise.resolve(Response.json(document)));
     const { call } = await validatingAnApi({ document: url });
 
     expect(await call('validate', { server: 'graph', tool: 'lookupCode', arguments: { code: 'ABC' } })).toEqual({
@@ -172,7 +179,7 @@ describe('validate against a schema this server cannot check', () => {
 
 describe('the arguments validate takes', () => {
   it('are required, and may take 1 MiB as JSON, one byte more refused at /arguments before anything is asked', async () => {
-    const { fake, call } = await validatingOn();
+    const { fake, call } = validatingOn();
     const asked = { server: 'graph', tool: 'search' };
 
     const admitted = await call('validate', { ...asked, arguments: filling(1_048_576) });
@@ -213,7 +220,7 @@ async function tallying() {
       },
     },
   };
-  const url = await servedDocumentAt(() => Promise.resolve(Response.json(document)));
+  const url = servedDocumentAt(() => Promise.resolve(Response.json(document)));
   const { call } = await validatingAnApi({ document: url });
   return (wrong: number) =>
     call('validate', {

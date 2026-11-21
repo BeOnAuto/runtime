@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming, shownWithin, type Timing } from '../bounds/call-bounds.ts';
 import { answerOf, resultText } from '../bounds/tool-results.ts';
-import { brokenPromise, deniedText, fakeChannels, inTurn, toolRunId } from '../testing/index.ts';
+import { brokenPromise, cuttingTimeouts, deniedText, fakeChannels, inTurn, toolRunId } from '../testing/index.ts';
 import { fakeApiKey, openFakeToolRun } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
@@ -132,7 +132,7 @@ describe('the calls a run may make', () => {
   it('makes the calls of one step at once, recording each', async () => {
     const { call, journal } = await runWith(['sleep']);
 
-    const replies = await Promise.all(Array.from({ length: 10 }, (_, index) => call('sleep', { ms: 50, index })));
+    const replies = await Promise.all(Array.from({ length: 10 }, (_, index) => call('sleep', { ms: 0, index })));
 
     expect(replies).toMatchObject(Array.from({ length: 10 }, () => ({ text: 'Slept.', isError: false })));
     expect(journal.facts()).toHaveLength(20);
@@ -224,9 +224,16 @@ describe('a server that fails a call', () => {
   });
 
   it('fails a call that takes longer than a call may', async () => {
-    const { call, journal } = await runWith(['sleep'], { ...defaultTiming, callMs: 200 });
+    const deadline = cuttingTimeouts();
+    deadline.cut();
+    const { call, journal } = await runWith(['echo'], {
+      ...defaultTiming,
+      callMs: 200,
+      deadlineAfter: deadline.requestTimeout,
+    });
 
-    expect(await call('sleep', { ms: 5000 })).toMatchObject(anErrorReply);
+    expect(await call('echo', {})).toMatchObject(anErrorReply);
+    expect(deadline.cuts()).toEqual([200]);
     expect(journal.facts().at(-1)).toMatchObject({ type: 'tool_call_failed', data: { because: 'timed_out' } });
   });
 });

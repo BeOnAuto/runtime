@@ -19,7 +19,7 @@ function endingOf(way = wayThrough({ url: 'http://127.0.0.1:1/connections' }), k
 
 describe('the end of a connection’s key at its gateway', () => {
   it('is done once the gateway ends it, and again when it no longer knows the key, which ending it twice is', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const client = switchedOn();
     const { finished } = await handedOverAt(gateway, client);
     const asked = endingOf(wayThrough(gateway), finished.tokens);
@@ -36,7 +36,7 @@ describe('the end of a connection’s key at its gateway', () => {
   });
 
   it('is not done for a refusal without unknown_key, a failure, or a host the rule refuses, so it is asked again', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const asked = endingOf(wayThrough(gateway));
     gateway.answering('end', 403, { detail: 'Not from Auto' });
     const unsaid = await refusalOf(switchedOn().end(asked));
@@ -58,7 +58,7 @@ describe('the end of a connection’s key at its gateway', () => {
 
 describe('the end of a key at its gateway, tried', () => {
   it('ends the key once the gateway confirms it, and logs the words given where it never does', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const client = switchedOn({ gatewayEndPauseMs: 0 });
     const { finished } = await handedOverAt(gateway, client);
     const logged: string[] = [];
@@ -84,7 +84,7 @@ describe('the end of a key at its gateway, tried', () => {
 
 describe('a gateway where gateways are not switched on', () => {
   it('is never asked: a start, a finish and an end are refused as having no client here', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const started = await Effect.runPromise(switchedOn().start(startAskedThrough(gateway)));
     const asked = finishAskedThrough(gateway, started, gateway.allow(started.url).handle);
     const seenBefore = gateway.seen().length;
@@ -101,7 +101,7 @@ describe('a gateway where gateways are not switched on', () => {
   });
 
   it('refuses a finish begun through a gateway whose way names none any more, or that brings a code', async () => {
-    const gateway = await gatewayServed();
+    const gateway = gatewayServed();
     const client = switchedOn();
     const started = await Effect.runPromise(client.start(startAskedThrough(gateway)));
     const asked = finishAskedThrough(gateway, started, 'a-handle');

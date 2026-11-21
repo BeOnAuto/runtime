@@ -2,8 +2,8 @@ import { HostUnresolved, type Reaches } from '@on.auto/outbound';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith, hostOf } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { consentClientWith, forConsentInProcess, hostOf } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -11,8 +11,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(endpointHost?: string): Promise<FakeMcpServer> {
-  const fake = await servedForConsent({
+function served(endpointHost?: string): FakeMcpServer {
+  const fake = forConsentInProcess({
     dynamicRegistration: true,
     ...(endpointHost === undefined ? {} : { endpointHost }),
   });
@@ -35,7 +35,7 @@ function refusedAt({ url }: Pick<FakeMcpServer, 'url'>, reaches: Reaches) {
 
 describe('the naming of a way whose hosts cannot be looked up', () => {
   it('is unanswered at the issuer, to try again and not refused, where an endpoint of its authorization server cannot', async () => {
-    const elsewhere = await served('localhost');
+    const elsewhere = served('localhost');
 
     expect(await refusedAt(elsewhere, unresolvedAt('localhost'))).toEqual({
       refused: 'at_the_issuer',
@@ -45,9 +45,9 @@ describe('the naming of a way whose hosts cannot be looked up', () => {
   });
 
   it('is unanswered where the host of the server itself cannot', async () => {
-    const fake = await served();
+    const fake = served();
 
-    expect(await refusedAt(fake, unresolvedAt('127.0.0.1'))).toEqual({
+    expect(await refusedAt(fake, unresolvedAt(new URL(fake.url).hostname))).toEqual({
       refused: 'unanswered',
       call: { step: 'ping', host: hostOf(fake), answer: { failed: 'unreachable' } },
     });

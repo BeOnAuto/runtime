@@ -7,6 +7,7 @@ import {
   consentClientWith,
   everyHost,
   failingAt,
+  forConsentInProcess,
   refusedConnections,
   registeredAt,
   returnAddress,
@@ -16,7 +17,7 @@ import {
   type ClientRegistration,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -25,8 +26,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -77,7 +78,7 @@ const explicitWay: StartAsked = {
 
 describe('the start of a consent at an MCP server', () => {
   it('answers the authorization request the server discovers, with the client, the challenge, the state, the return address, the scope, the resource and the parameters of the way', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const way = {
       scope: 'files.read offline_access',
@@ -106,7 +107,7 @@ describe('the start of a consent at an MCP server', () => {
   });
 
   it('builds the metadata from the endpoints of the way where the server publishes none, and sends no resource', async () => {
-    const fake = await served({ publishesMetadata: false });
+    const fake = served({ publishesMetadata: false });
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const endpoints = {
       authorization_endpoint: `${fake.origin}/authorize`,
@@ -122,7 +123,7 @@ describe('the start of a consent at an MCP server', () => {
 
 describe('the start of a consent at an MCP server that publishes its metadata only where its challenge names it', () => {
   it('reads the metadata there and sends its resource', async () => {
-    const fake = await served({ resourceMetadataPath: '/metadata/files' });
+    const fake = served({ resourceMetadataPath: '/metadata/files' });
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
 
     const { searchParams } = new URL((await started(client, startAskedAt(fake))).url);
@@ -133,7 +134,7 @@ describe('the start of a consent at an MCP server that publishes its metadata on
 
 describe('the start of a consent at an MCP server whose way gives its endpoints', () => {
   it('reads no metadata at the issuer, so metadata that names another issuer is not read', async () => {
-    const echoing = await served({ issuer: 'https://elsewhere.example.com' });
+    const echoing = served({ issuer: 'https://elsewhere.example.com' });
     const client = consentClientWith({ registeredClients: [registeredAt(echoing.origin)] });
     const endpoints = {
       authorization_endpoint: `${echoing.origin}/authorize`,
@@ -153,8 +154,8 @@ describe('the start of a consent at an MCP server whose way gives its endpoints'
 
 describe('a start refused for what its server says', () => {
   it('is refused before a client is chosen where the server names another authorization server, or its metadata another issuer', async () => {
-    const another = await served({ authorizationServers: ['https://elsewhere.example.com'] });
-    const echoing = await served({ issuer: 'https://elsewhere.example.com' });
+    const another = served({ authorizationServers: ['https://elsewhere.example.com'] });
+    const echoing = served({ issuer: 'https://elsewhere.example.com' });
     const client = consentClientWith();
 
     expect([await refused(client, startAskedAt(another)), await refused(client, startAskedAt(echoing))]).toEqual([
@@ -164,7 +165,7 @@ describe('a start refused for what its server says', () => {
   });
 
   it('is refused before a client is chosen where the server names a resource other than its own address', async () => {
-    const elsewhere = await served({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const elsewhere = served({ protectedResource: 'https://elsewhere.example.com/mcp' });
     const client = consentClientWith({ registeredClients: [registeredAt(elsewhere.origin)] });
 
     expect(await refused(client, startAskedAt(elsewhere))).toEqual({
@@ -174,8 +175,8 @@ describe('a start refused for what its server says', () => {
   });
 
   it('is refused where the metadata lists no S256 challenge method, and where nothing publishes metadata', async () => {
-    const plain = await served({ challengeMethods: ['plain'] });
-    const silent = await served({ publishesMetadata: false });
+    const plain = served({ challengeMethods: ['plain'] });
+    const silent = served({ publishesMetadata: false });
     const client = consentClientWith({ registeredClients: [registeredAt(plain.origin), registeredAt(silent.origin)] });
 
     expect([await refused(client, startAskedAt(plain)), await refused(client, startAskedAt(silent))]).toEqual([
@@ -208,8 +209,8 @@ describe('the start of a consent at an HTTP API whose way gives its endpoints', 
 
 describe('the hosts a start reaches', () => {
   it('are refused in the words of the rule, among the endpoints the metadata names and at the first request alike', async () => {
-    const elsewhere = await served({ endpointHost: 'localhost' });
-    const fake = await served();
+    const elsewhere = served({ endpointHost: 'localhost' });
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(elsewhere.origin)] });
 
     expect([
@@ -224,9 +225,9 @@ describe('the hosts a start reaches', () => {
 
 describe('a start that cannot ask the server', () => {
   it('is unanswered where the server is gone, or answers its metadata with an error', async () => {
-    const gone = await servedForConsent();
+    const gone = forConsentInProcess();
     await gone.close();
-    const failing = await served();
+    const failing = served();
 
     expect([
       await refused(consentClientWith({ fetch: refusedConnections([gone.origin]).fetch }), startAskedAt(gone)),
@@ -248,7 +249,7 @@ describe('a start that cannot ask the server', () => {
   it('is unanswered where the server does not answer within the bound of a request', async () => {
     const silent = await serveOnLoopback(() => () => Promise.withResolvers<Response>().promise);
     closing.push(silent.close);
-    const fake = await served();
+    const fake = served();
     const asked: StartAsked = { ...startAskedAt(fake), server: { type: 'mcp', url: `${silent.origin}/mcp` } };
 
     expect(await refused(consentClientWith({ requestMs: 50 }), asked)).toEqual(
@@ -276,7 +277,7 @@ describe('the client sources a consent client judges', () => {
 
 describe('the registered client a start chooses', () => {
   it('is the client at the issuer, with a key or with neither a secret nor a key', async () => {
-    const fake = await served();
+    const fake = served();
     const keyed = registeredAt(fake.origin, {
       clientId: 'keyed',
       credential: { kind: 'private_key', privateKey: Redacted.make('a key in PEM'), algorithm: 'RS256' },

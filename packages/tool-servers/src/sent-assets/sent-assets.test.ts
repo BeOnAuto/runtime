@@ -6,10 +6,10 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallStarted } from '../calls/call-facts.ts';
-import { patientTiming, recordingCallJournal } from '../testing/index.ts';
+import { fakeMcpInProcess, inProcessFetch, patientTiming, recordingCallJournal } from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
+import type { FakeTool } from '../testing/served-fakes.ts';
 
 const mebibyte = 1_048_576;
 
@@ -68,8 +68,8 @@ function paramsOf(body: string): unknown {
   return Reflect.get(new Object(sent), 'params');
 }
 
-async function sendingAccess(kept: readonly KeptForATest[], mostRequestBytes?: number) {
-  const fake = await serveFakeMcp({ bearer: oneCallKey, tools, mostRequestBytes: 16 * mebibyte });
+function sendingAccess(kept: readonly KeptForATest[], mostRequestBytes?: number) {
+  const fake = fakeMcpInProcess({ bearer: oneCallKey, tools, mostRequestBytes: 16 * mebibyte });
   closedAfter(fake.close);
   const holding = heldForATest(kept);
   const posted: string[] = [];
@@ -79,7 +79,7 @@ async function sendingAccess(kept: readonly KeptForATest[], mostRequestBytes?: n
     if (body !== undefined) {
       posted.push(body);
     }
-    return globalThis.fetch(String(address), body === undefined ? asked : { ...asked, body });
+    return inProcessFetch(String(address), body === undefined ? asked : { ...asked, body });
   };
   const { access, content } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -109,7 +109,7 @@ function calling(tool: string, input: Readonly<Record<string, unknown>>) {
 
 describe('an asset a function passes whole to a tool', () => {
   it('reaches a string as its text, written into the request a piece at a time, and is recorded as the asset', async () => {
-    const { fake, access, content, posted } = await sendingAccess([page]);
+    const { fake, access, content, posted } = sendingAccess([page]);
     const journal = recordingCallJournal();
     const input = { path: 'menu.md', content: page.reference };
 
@@ -131,7 +131,7 @@ describe('an asset a function passes whole to a tool', () => {
   });
 
   it('reaches a place whose schema says contentEncoding: base64 as the base64 of its bytes, whatever it holds', async () => {
-    const { fake, access } = await sendingAccess([report, page]);
+    const { fake, access } = sendingAccess([report, page]);
 
     const called = await Effect.runPromise(
       access.callOnce(calling('upload', { name: 'report.pdf', file: report.reference })),
@@ -148,7 +148,7 @@ describe('an asset a function passes whole to a tool', () => {
 
 describe('an asset that holds JSON', () => {
   it('reaches a place that takes a list or an object as the JSON value it holds', async () => {
-    const { fake, access } = await sendingAccess([table]);
+    const { fake, access } = sendingAccess([table]);
 
     await Effect.runPromise(access.callOnce(calling('rows', { rows: table.reference })));
 
@@ -165,7 +165,7 @@ describe('an asset that holds JSON', () => {
 
 describe('an asset sent again', () => {
   it('is sent again, the same bytes, when the server asks for the call again, and is recorded as one call', async () => {
-    const { fake, access, holding, posted } = await sendingAccess([page]);
+    const { fake, access, holding, posted } = sendingAccess([page]);
     const journal = recordingCallJournal();
     fake.answerNextOf('tools/call', 429, 1, { 'retry-after': '0' });
 
@@ -186,7 +186,7 @@ describe('an asset sent again', () => {
 
 describe('an asset a tool cannot be sent', () => {
   it('is refused before anything is recorded or sent: a file where the tool takes text', async () => {
-    const { fake, access } = await sendingAccess([report]);
+    const { fake, access } = sendingAccess([report]);
     const journal = recordingCallJournal();
 
     const called = await Effect.runPromise(
@@ -205,7 +205,7 @@ describe('an asset a tool cannot be sent', () => {
   });
 
   it('is refused where another playbook holds it, where it expired, and where the arguments are an asset whole', async () => {
-    const { fake, access } = await sendingAccess([elsewhere, { ...page, expired: true }]);
+    const { fake, access } = sendingAccess([elsewhere, { ...page, expired: true }]);
 
     const refused = await Promise.all([
       Effect.runPromise(access.callOnce(calling('save', { path: 'a.md', content: elsewhere.reference }))),
@@ -230,7 +230,7 @@ describe('an asset a tool cannot be sent', () => {
 
 describe('an asset that would make a call too large', () => {
   it('is refused where what the call would send is more than a call may send, counting the asset’s text', async () => {
-    const { fake, access } = await sendingAccess([page], 100_000);
+    const { fake, access } = sendingAccess([page], 100_000);
 
     const called = await Effect.runPromise(access.callOnce(calling('save', { path: 'a.md', content: page.reference })));
 
@@ -245,7 +245,7 @@ describe('an asset that would make a call too large', () => {
   });
 
   it('says, where the server answers that the request is too large, how many bytes its arguments sent with the asset', async () => {
-    const { fake, access } = await sendingAccess([page]);
+    const { fake, access } = sendingAccess([page]);
     fake.answerNextOf('tools/call', 413);
 
     const called = await Effect.runPromise(access.callOnce(calling('save', { path: 'a.md', content: page.reference })));

@@ -6,13 +6,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   controlledSignals,
   describedAccess,
+  fakeApiInProcess,
+  fakeMcpInProcess,
   patientTiming,
   playbookToolCalls,
   recordingCallJournal,
   reportingAccess,
   toolRun,
 } from '../testing/index.ts';
-import { fakeApiKey, serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeApiKey, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -30,8 +32,8 @@ const aTime: unknown = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{
 
 const decodeExecuted = Schema.decodeUnknownSync(Schema.Struct({ output: Schema.Struct({ call_id: Schema.String }) }));
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -43,8 +45,8 @@ function accessTo(fake: FakeMcpServer) {
   return reporting.access;
 }
 
-async function executing() {
-  const fake = await fakeServer();
+function executing() {
+  const fake = fakeServer();
   const access = accessTo(fake);
   const { call, registrations } = playbookToolCalls(access);
   return {
@@ -57,8 +59,8 @@ async function executing() {
 }
 
 describe('execute_connection', () => {
-  it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/execute that may change something outside', async () => {
-    const { registrations } = await executing();
+  it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/execute that may change something outside', () => {
+    const { registrations } = executing();
 
     expect(registrations.execute_connection).toMatchObject({
       scope: 'playbook',
@@ -85,8 +87,8 @@ describe('execute_connection', () => {
 });
 
 describe('query_connection', () => {
-  it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/query that only reads outside', async () => {
-    const { registrations } = await executing();
+  it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/query that only reads outside', () => {
+    const { registrations } = executing();
 
     expect(registrations.query_connection).toMatchObject({
       scope: 'playbook',
@@ -104,7 +106,7 @@ describe('query_connection', () => {
   });
 
   it('calls a tool marked reads and answers as execute_connection does', async () => {
-    const { fake, query } = await executing();
+    const { fake, query } = executing();
 
     expect(await query({ server: 'graph', tool: 'search', arguments: { query: 'acme' } })).toMatchObject({
       status: 'succeeded',
@@ -114,7 +116,7 @@ describe('query_connection', () => {
   });
 
   it('refuses a tool not marked reads, naming execute_connection, and sends nothing', async () => {
-    const { fake, query } = await executing();
+    const { fake, query } = executing();
 
     expect(await query({ server: 'graph', tool: 'echo', arguments: { said: 'hello' } })).toMatchObject({
       status: 'rejected',
@@ -128,7 +130,7 @@ describe('query_connection', () => {
 
 describe('a call of a tool its server marks read-only', () => {
   it('calls the tool once and answers what a run of a reasoning function would, with the size, the time and its id', async () => {
-    const { fake, execute } = await executing();
+    const { fake, execute } = executing();
 
     expect(await execute({ server: 'graph', tool: 'search', arguments: { query: 'acme' } })).toEqual({
       status: 'succeeded',
@@ -150,7 +152,7 @@ describe('a call of a tool its server marks read-only', () => {
   });
 
   it('answers in text exactly what the model of a run that calls the same tool sees', async () => {
-    const { access, execute } = await executing();
+    const { access, execute } = executing();
     const run = await Effect.runPromise(
       access.open(toolRun(recordingCallJournal()), [{ server: 'graph', tool: 'profile' }]),
     );
@@ -166,7 +168,7 @@ describe('a call of a tool its server marks read-only', () => {
 
 describe('the metadata of a call made by hand', () => {
   it('carries the id of the call in the metadata of the call, and no id of a run', async () => {
-    const { fake, execute } = await executing();
+    const { fake, execute } = executing();
 
     const called = await execute({ server: 'graph', tool: 'search', arguments: { query: 'acme' } });
 
@@ -182,7 +184,7 @@ describe('the metadata of a call made by hand', () => {
 
 describe('a call of a tool its server does not mark read-only', () => {
   it('is made for a caller who may change the playbook, whatever the tool does, with nothing to list first', async () => {
-    const { fake, execute } = await executing();
+    const { fake, execute } = executing();
     const kept = JSON.stringify({ content: [{ type: 'text', text: JSON.stringify({ said: 'the key [redacted]' }) }] });
 
     expect(
@@ -197,7 +199,7 @@ describe('a call of a tool its server does not mark read-only', () => {
 
 describe('a call of an operation of an HTTP API', () => {
   it('goes through the same call path, answering what the API answered', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closing.push(fake.close);
     const { access } = await describedAccess(
       { graph: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' } },

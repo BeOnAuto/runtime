@@ -8,10 +8,11 @@ import {
   consentClientWith,
   handedOffAskedOf,
   startAskedAt,
+  throughAutoInProcess,
   tokensKeptBy,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedThroughAuto, type ThroughAuto } from '../testing/served-fakes.ts';
+import type { ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -19,8 +20,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function throughAuto(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
-  const serving = await servedThroughAuto(changes);
+function throughAuto(changes: Partial<ClientRegistration> = {}): ThroughAuto {
+  const serving = throughAutoInProcess(changes);
   closing.push(serving.close);
   return serving;
 }
@@ -51,7 +52,7 @@ const requestOrigins = ['https://api.files.example.com', 'https://hooks.files.ex
 
 describe('the resources of a consent through Auto’s consent service', () => {
   it("are asked of the service as a list, its server's first, and the origins of its entry's requests are kept with the tokens", async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const client = consentClientThrough(serving);
     const asked = await handedOffAskedOf(client, { ...startAskedAt(serving.fake), requestOrigins }, serving.service);
 
@@ -67,7 +68,7 @@ describe('the resources of a consent through Auto’s consent service', () => {
 
 describe('the finish of a consent through Auto’s consent service', () => {
   it('takes the handoff with the verifier of its start, and answers the tokens with the connection key inside them', async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const client = consentClientThrough(serving);
     const asked = await handedOffAt(serving, client);
 
@@ -88,7 +89,7 @@ describe('the finish of a consent through Auto’s consent service', () => {
   });
 
   it('answers the client the service redeemed with, which the handoff names, whatever the start recorded', async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const client = consentClientThrough(serving);
     const asked = await handedOffAt(serving, client);
 
@@ -101,7 +102,7 @@ describe('the finish of a consent through Auto’s consent service', () => {
   });
 
   it('keeps no refresh token and no end where the authorization server gives neither', async () => {
-    const serving = await throughAuto({ issuesRefreshTokens: false, expiresInSeconds: null });
+    const serving = throughAuto({ issuesRefreshTokens: false, expiresInSeconds: null });
     const client = consentClientThrough(serving);
 
     const done = await finished(client, await handedOffAt(serving, client));
@@ -112,7 +113,7 @@ describe('the finish of a consent through Auto’s consent service', () => {
 
 describe('the tokens Auto’s consent service hands on', () => {
   it('are kept as a bearer token where they name no token_type', async () => {
-    const serving = await throughAuto({ namesTokenType: false });
+    const serving = throughAuto({ namesTokenType: false });
     const client = consentClientThrough(serving);
 
     const done = await finished(client, await handedOffAt(serving, client));
@@ -123,7 +124,7 @@ describe('the tokens Auto’s consent service hands on', () => {
 
 describe('the handoff of a finish through Auto’s consent service', () => {
   it('is taken once, and refused for another verifier and once its ten minutes are over', async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const client = consentClientThrough(serving);
     const asked = await handedOffAt(serving, client);
     const late = await handedOffAt(serving, client);
@@ -143,7 +144,7 @@ describe('the handoff of a finish through Auto’s consent service', () => {
   });
 
   it('is refused as gone, and not taken, where the source of Auto is off or the start was not made with its client', async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const asked = await handedOffAt(serving);
     const registered: HandleFinishAsked = {
       ...asked,
@@ -160,7 +161,7 @@ describe('the handoff of a finish through Auto’s consent service', () => {
 
 describe('the tokens a finish through Auto’s consent service takes', () => {
   it('are revoked through the service where the server grants none of the scopes asked', async () => {
-    const serving = await throughAuto({ grantedScope: '' });
+    const serving = throughAuto({ grantedScope: '' });
     const client = consentClientThrough(serving);
 
     expect(await refused(client, await handedOffAt(serving, client))).toEqual({ refused: 'no_scope' });
@@ -171,7 +172,7 @@ describe('the tokens a finish through Auto’s consent service takes', () => {
   });
 
   it('are revoked through the service by the revocation the finish offers', async () => {
-    const serving = await throughAuto();
+    const serving = throughAuto();
     const client = consentClientThrough(serving);
     const done = await finished(client, await handedOffAt(serving, client));
 

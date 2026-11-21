@@ -5,8 +5,14 @@ import { keptTextOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { controlledSignals, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import {
+  controlledSignals,
+  fakeMcpInProcess,
+  recordingCallJournal,
+  reportingAccess,
+  toolRun,
+} from '../testing/index.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 import type { ImageCall, KeepImage } from './answered-images.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -43,7 +49,7 @@ interface Kept {
 }
 
 async function photoTaken(entry: Readonly<Record<string, unknown>> = {}) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const { access, content } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry } },

@@ -12,9 +12,10 @@ import {
   returnAddress,
   startAskedAt,
   studioBase,
+  throughAutoInProcess,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedThroughAuto, type FakeConsentService, type ThroughAuto } from '../testing/served-fakes.ts';
+import type { FakeConsentService, ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -22,8 +23,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function throughAuto(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
-  const serving = await servedThroughAuto(changes);
+function throughAuto(changes: Partial<ClientRegistration> = {}): ThroughAuto {
+  const serving = throughAutoInProcess(changes);
   closing.push(serving.close);
   return serving;
 }
@@ -63,7 +64,7 @@ interface Asking {
 
 describe('the start of a consent through Auto’s consent service', () => {
   it('asks the service with the issuer, the scope, the parameters, the resource, the loopback base and the challenge of its own verifier', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
     const asked = { ...startAskedAt(fake, { parameters: { access_type: 'offline' } }), studioBase: loopbackBase };
 
@@ -82,7 +83,7 @@ describe('the start of a consent through Auto’s consent service', () => {
   });
 
   it('answers the page and the state the service made, and Auto’s client at the issuer', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
 
     const start = await started(client, { ...startAskedAt(fake), studioBase: loopbackBase });
@@ -100,7 +101,7 @@ describe('the start of a consent through Auto’s consent service', () => {
 
 describe('the start of a consent through Auto’s consent service from the hosted Studio', () => {
   it('asks to return to the Studio host, and reaches the service whatever the rules say of its host', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'hosted') });
 
     const start = await started(client, { ...startAskedAt(fake), reaches: refusingTheHostOf(service.url) });
@@ -110,7 +111,7 @@ describe('the start of a consent through Auto’s consent service from the hoste
   });
 
   it('is refused by the service, as a start it will not make, where the Studio host is not its own', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'hosted') });
 
     expect(await refused(client, { ...startAskedAt(fake), studioBase: 'https://studio.example.org/' })).toEqual({
@@ -119,7 +120,7 @@ describe('the start of a consent through Auto’s consent service from the hoste
   });
 
   it('is refused in the rule’s words where the rules refuse the host of the authorization server', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service) });
 
     expect(await refused(client, { ...startAskedAt(fake), reaches: refusingEveryHostBut(service.url) })).toEqual({
@@ -132,7 +133,7 @@ describe('the start of a consent through Auto’s consent service from the hoste
 
 describe('a start for a Studio neither hosted nor on this computer', () => {
   it('is refused before anything is sent where no other source the way takes remains', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
 
     expect(await refused(client, startAskedAt(fake))).toEqual({ refused: 'studio_elsewhere' });
@@ -140,7 +141,7 @@ describe('a start for a Studio neither hosted nor on this computer', () => {
   });
 
   it('is made with a later source the way takes, leaving Auto’s client out and asking the service nothing', async () => {
-    const { fake, service } = await throughAuto({ dynamicRegistration: true });
+    const { fake, service } = throughAuto({ dynamicRegistration: true });
     const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
 
     const start = await started(client, startAskedAt(fake, { clients: ['registered', 'dynamic'] }));
@@ -152,7 +153,7 @@ describe('a start for a Studio neither hosted nor on this computer', () => {
 
 describe('a start the consent service refuses or does not answer', () => {
   it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone', async () => {
-    const [refusing, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const [refusing, gone] = [throughAuto(), throughAuto()];
     const network = refusedConnections();
     const asking = [refusing, gone].map((serving): Asking => ({
       asked: startAskedAt(serving.fake),
@@ -169,7 +170,7 @@ describe('a start the consent service refuses or does not answer', () => {
   });
 
   it('is unanswered where the service stalls, once the bound of its request ends', async () => {
-    const stalling = await throughAuto();
+    const stalling = throughAuto();
     const { requestTimeout, cutWhen } = cuttingTimeouts();
     const client = consentClientWith({ autoClients: autoClientsOf(stalling.service), requestTimeout });
     await Effect.runPromise(client.hadSources(studioBase));

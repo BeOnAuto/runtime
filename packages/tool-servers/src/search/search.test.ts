@@ -2,13 +2,14 @@ import type { CallerIdentity } from '@on.auto/operations';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  fakeMcpInProcess,
   playbookToolCalls,
   refusedConnections,
   reportingAccess,
   toolCaller,
   type AccessOptions,
 } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 function containing(part: string): unknown {
   return expect.stringContaining(part);
@@ -22,8 +23,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -41,8 +42,8 @@ function searchingOn(servers: Readonly<Record<string, unknown>>, { fetch }: Pick
   return playbookToolCalls(access);
 }
 
-async function twoServers() {
-  const fake = await fakeServer();
+function twoServers() {
+  const fake = fakeServer();
   const calls = searchingOn({
     graph: remote(fake, { allowed: ['search', 'echo'] }),
     wiki: remote(fake, { allowed: ['search'] }),
@@ -64,8 +65,8 @@ const searchOf = (server: string) => ({
 const echoOf = (server: string) => ({ server, tool: 'echo', summary: 'Answers with its arguments.', mark: 'unmarked' });
 
 describe('search', () => {
-  it('is a query of the playbook at GET /tool-servers/search that reaches the servers outside', async () => {
-    const { registrations } = await twoServers();
+  it('is a query of the playbook at GET /tool-servers/search that reaches the servers outside', () => {
+    const { registrations } = twoServers();
 
     expect(registrations.search).toMatchObject({
       scope: 'playbook',
@@ -80,7 +81,7 @@ describe('search', () => {
   });
 
   it('lists without terms the servers of the playbook, by name, and every tool each allows, in its order', async () => {
-    const { call } = await twoServers();
+    const { call } = twoServers();
 
     expect(await call('search', {})).toEqual({
       status: 'succeeded',
@@ -95,7 +96,7 @@ describe('search', () => {
 
 describe('search kept to some tools', () => {
   it('keeps with only the tools marked reads, or the others, which may change something', async () => {
-    const { call } = await twoServers();
+    const { call } = twoServers();
 
     expect([await call('search', { only: 'read' }), await call('search', { only: 'write' })]).toMatchObject([
       {
@@ -117,7 +118,7 @@ describe('search kept to some tools', () => {
   });
 
   it('searches one server alone, asking no other, and answers for a retired playbook as every read does', async () => {
-    const { call } = await twoServers();
+    const { call } = twoServers();
 
     expect(await call('search', { server: 'wiki' })).toMatchObject({
       output: { servers: [wiki], tools: [searchOf('wiki')], scopes: ['wiki'] },
@@ -128,8 +129,8 @@ describe('search kept to some tools', () => {
 
 describe('search across servers that cannot all be asked', () => {
   it('lists a server that cannot be asked beside the others, with why, and none of its tools', async () => {
-    const fake = await fakeServer();
-    const gone = await serveFakeMcp();
+    const fake = fakeServer();
+    const gone = fakeMcpInProcess();
     await gone.close();
     const { call } = searchingOn(
       { graph: remote(fake, { allowed: ['echo'] }), vault: remote(gone, {}) },
@@ -149,7 +150,7 @@ describe('search across servers that cannot all be asked', () => {
   });
 
   it('answers an empty search, without asking anything, when no server serves the playbook', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = searchingOn({ crm: remote(fake, { org: 'globex' }) });
 
     expect(await call('search', { terms: 'search' })).toEqual({
@@ -162,7 +163,7 @@ describe('search across servers that cannot all be asked', () => {
 
 describe('search refusing', () => {
   it('rejects a playbook the org does not have, a name no server could have, and a caller who may not read', async () => {
-    const { fake, call } = await twoServers();
+    const { fake, call } = twoServers();
     const writerOnly: CallerIdentity = { ...toolCaller, permissions: ['playbook:write'] };
 
     expect(await call('search', {}, { playbook: 'nowhere' })).toMatchObject({ reason: 'not_found' });
@@ -175,7 +176,7 @@ describe('search refusing', () => {
   });
 
   it('rejects a name that no tool server of the playbook has, saying so and how to search the ones it has', async () => {
-    const { fake, call } = await twoServers();
+    const { fake, call } = twoServers();
     const detail = containing('mail');
 
     expect(await call('search', { server: 'mail' })).toMatchObject({

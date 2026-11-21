@@ -5,8 +5,14 @@ import { keptTextOf } from '@on.auto/content/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fakeRequestIdKey, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import {
+  fakeMcpInProcess,
+  fakeRequestIdKey,
+  patientTiming,
+  playbookToolCalls,
+  reportingAccess,
+} from '../testing/index.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -26,8 +32,8 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const answeredData: unknown = expect.objectContaining({ is_error: false, jsonrpc_id: aNumber, result_sha256: aDigest });
 
-async function callsOn(entry: Readonly<Record<string, unknown>> = {}) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function callsOn(entry: Readonly<Record<string, unknown>> = {}) {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
   const { access, content } = reportingAccess(
@@ -45,7 +51,7 @@ function digestOf(text: string): string {
 
 describe('what a call made by hand records', () => {
   it('is the facts of a call on a stream of its own, the answer caused by the start, with the caller as by and no run', async () => {
-    const { call, recorded } = await callsOn();
+    const { call, recorded } = callsOn();
     const argumentsJson = JSON.stringify({ query: 'acme' });
 
     const callId = decodeExecuted(
@@ -82,7 +88,7 @@ describe('what a call made by hand records', () => {
   });
 
   it('is nothing for search, introspect, validate and dry_run, which change nothing', async () => {
-    const { call, recorded } = await callsOn();
+    const { call, recorded } = callsOn();
     const asked = { server: 'graph', tool: 'search' };
 
     await call('search', { terms: 'search' });
@@ -98,8 +104,8 @@ describe('the content a call made by hand records', () => {
   it('is kept whole and scrubbed by default, and not at all where the entry turns keeping off', async () => {
     const said = { said: `the key is ${fakeApiKey} ${'x'.repeat(6000)}` };
     const scrubbed = JSON.stringify({ said: `the key is [redacted] ${'x'.repeat(6000)}` });
-    const keeping = await callsOn();
-    const notKeeping = await callsOn({ record_content: false });
+    const keeping = callsOn();
+    const notKeeping = callsOn({ record_content: false });
 
     await keeping.call('execute_connection', { server: 'graph', tool: 'echo', arguments: said });
     await notKeeping.call('execute_connection', { server: 'graph', tool: 'echo', arguments: said });
@@ -126,8 +132,8 @@ describe('the content a call made by hand records', () => {
   });
 
   it('carries the server’s own id of the request where the entry names where it is, and none where it does not', async () => {
-    const naming = await callsOn({ request_id: fakeRequestIdKey });
-    const silent = await callsOn();
+    const naming = callsOn({ request_id: fakeRequestIdKey });
+    const silent = callsOn();
     const asked = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
 
     const named = await naming.call('execute_connection', asked);

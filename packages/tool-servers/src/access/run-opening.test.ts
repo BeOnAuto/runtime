@@ -1,11 +1,8 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { Effect, Fiber } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
+import { fakeMcpInProcess, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -15,8 +12,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -31,14 +28,18 @@ function accessTo(fake: FakeMcpServer) {
 }
 
 async function noSessionOpen(fake: FakeMcpServer): Promise<number> {
-  await until(() => fake.openSessions() === 0);
+  await fake.once(() => fake.openSessions() === 0);
   return fake.openSessions();
 }
 
-async function interruptedOpening(fake: FakeMcpServer, interrupting: () => Promise<void>): Promise<number> {
+function asked(fake: FakeMcpServer, rpc: string): Promise<void> {
+  return fake.once(() => fake.seen().some((seen) => seen.rpc === rpc));
+}
+
+async function interruptedOpening(fake: FakeMcpServer, rpc: string): Promise<number> {
   const access = accessTo(fake);
   const opening = Effect.runFork(access.open(toolRun(recordingCallJournal()), [{ server: 'graph', tool: 'search' }]));
-  await interrupting();
+  await asked(fake, rpc);
   await Effect.runPromise(Fiber.interrupt(opening));
   return noSessionOpen(fake);
 }
@@ -47,7 +48,7 @@ async function interruptedOnceItsSessionOpened(fake: FakeMcpServer): Promise<num
   const release = fake.holdNextOf('notifications/initialized');
   const access = accessTo(fake);
   const opening = Effect.runFork(access.open(toolRun(recordingCallJournal()), [{ server: 'graph', tool: 'search' }]));
-  await until(() => fake.seen().some(({ rpc }) => rpc === 'notifications/initialized'));
+  await asked(fake, 'notifications/initialized');
   const interrupted = Effect.runPromise(Fiber.interrupt(opening));
   release();
   await interrupted;
@@ -55,14 +56,17 @@ async function interruptedOnceItsSessionOpened(fake: FakeMcpServer): Promise<num
 }
 
 describe('a run interrupted while it opens its tools', () => {
-  it.each([0, 1, 2, 3, 4])('lets its session go once the opening settles, interrupted %d ms in', async (afterMs) => {
-    const fake = await fakeServer();
+  it.each(['initialize', 'notifications/initialized', 'tools/list'])(
+    'lets its session go once the opening settles, interrupted once it asks %s',
+    async (rpc) => {
+      const fake = fakeServer();
 
-    expect(await interruptedOpening(fake, () => setTimeout(afterMs))).toBe(0);
-  });
+      expect(await interruptedOpening(fake, rpc)).toBe(0);
+    },
+  );
 
   it('ends the session its server was opening when it was interrupted, which no run holds any more', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
 
     expect(await interruptedOnceItsSessionOpened(fake)).toBe(0);
     expect(fake.endedSessions()).toBe(1);

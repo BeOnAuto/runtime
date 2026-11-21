@@ -12,7 +12,8 @@ import {
 } from '../api-testing/described-documents.ts';
 import { fakeApiToolNames } from '../api-testing/fake-api-document.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
+import { fakeApiInProcess, inProcessFetch } from '../testing/index.ts';
+import type { FakeApiServer } from '../testing/served-fakes.ts';
 
 const notes =
   "openapi: 3.0.3\ninfo: { title: Notes, version: '1' }\nservers:\n  - url: https://notes.example.com/v1\npaths:\n  /notes:\n    get: { operationId: listNotes }\n";
@@ -23,15 +24,15 @@ const sessionStateTool: unknown = expect.objectContaining({ name: 'sessionState'
 
 const offersSessionState: unknown = expect.arrayContaining([expect.objectContaining({ tool: sessionStateTool })]);
 
-async function fakeApi(): Promise<FakeApiServer> {
-  const fake = await serveFakeApi();
+function fakeApi(): FakeApiServer {
+  const fake = fakeApiInProcess();
   onTestFinished(fake.close);
   return fake;
 }
 
 describe('the document of an openapi server, read from its URL at start', () => {
   it('sends the calls to the first server it names, and reports every operation it leaves out', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const { effect, leftOut } = describing({ graph: { document: fake.documentUrl, org: 'acme', security: keyed } });
 
     const { servers } = await Effect.runPromise(effect);
@@ -45,8 +46,8 @@ describe('the document of an openapi server, read from its URL at start', () => 
   });
 
   it('is read through the fetch it is given, and leaves the servers of other kinds as they are', async () => {
-    const fake = await fakeApi();
-    const counted = countedFetch(globalThis.fetch);
+    const fake = fakeApi();
+    const counted = countedFetch(inProcessFetch);
     const entries = {
       graph: { document: fake.documentUrl, org: 'acme' },
       wiki: { url: 'https://wiki.example.com/mcp', org: 'acme' },
@@ -60,7 +61,7 @@ describe('the document of an openapi server, read from its URL at start', () => 
   });
 
   it('sends the calls to base_url in place of the servers the document names', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const entry = { document: fake.documentUrl, base_url: 'https://graph.example.com/v2', org: 'acme' };
 
     expect(await describedApiOf({ graph: entry })).toMatchObject({ baseUrl: 'https://graph.example.com/v2' });
@@ -69,7 +70,7 @@ describe('the document of an openapi server, read from its URL at start', () => 
 
 describe('the operations of an openapi server that need a header', () => {
   it('are offered where the headers of the entry give each of them, whatever the case either writes', async () => {
-    const fake = await fakeApi();
+    const fake = fakeApi();
     const headers = { 'X-SESSION': 'session-of-acme' };
     const { effect, leftOut } = describing({
       graph: { document: fake.documentUrl, org: 'acme', security: keyed, headers },

@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { Schema } from 'effect';
 
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 
 export const redirectUri = 'https://studio.example.com/connect-return';
 
@@ -50,7 +51,7 @@ export async function consentAt(
   fake: FakeMcpServer,
   changes: Readonly<Record<string, string | undefined>> = {},
 ): Promise<URL> {
-  const answer = await fetch(authorizeUrl(fake, changes), { redirect: 'manual' });
+  const answer = await inProcessFetch(authorizeUrl(fake, changes), { redirect: 'manual' });
   return new URL(String(answer.headers.get('location')));
 }
 
@@ -60,7 +61,7 @@ export async function postedTo(
   form: Readonly<Record<string, string>>,
   headers: Readonly<Record<string, string>> = asTheClient,
 ): Promise<Answered> {
-  const answer = await fetch(`${fake.origin}${path}`, {
+  const answer = await inProcessFetch(`${fake.origin}${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded', ...headers },
     body: new URLSearchParams(form),
@@ -96,12 +97,15 @@ export function refreshed(
 }
 
 export async function metadataOf(fake: FakeMcpServer): Promise<Readonly<Record<string, unknown>>> {
-  const answer = await fetch(`${fake.origin}/.well-known/oauth-authorization-server`);
+  const answer = await inProcessFetch(`${fake.origin}/.well-known/oauth-authorization-server`);
   return decodeAnswer(await answer.json());
 }
 
 export async function admitted(fake: FakeMcpServer, token: unknown): Promise<boolean> {
-  const answer = await fetch(fake.url, { method: 'DELETE', headers: { authorization: `Bearer ${String(token)}` } });
+  const answer = await inProcessFetch(fake.url, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${String(token)}` },
+  });
   await answer.text();
   return answer.status !== 401;
 }

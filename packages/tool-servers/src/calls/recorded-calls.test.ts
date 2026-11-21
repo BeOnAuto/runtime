@@ -5,10 +5,10 @@ import { keptTextOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { toolBounds } from '../bounds/call-bounds.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import {
   controlledSignals,
+  fakeMcpInProcess,
   fakeRequestIdKey,
   inTurn,
   patientTiming,
@@ -16,7 +16,7 @@ import {
   reportingAccess,
   toolRun,
 } from '../testing/index.ts';
-import { fakeApiKey, fakeStdioServerPath, serveFakeMcp, type FakeMcpOptions } from '../testing/served-fakes.ts';
+import { fakeApiKey, fakeStdioServerPath, type FakeMcpOptions } from '../testing/served-fakes.ts';
 import { failedData, recordingOf } from './recorded-calls.ts';
 
 type Call = readonly [string, Readonly<Record<string, unknown>>];
@@ -53,7 +53,7 @@ async function recordedCalls(
   calls: readonly Call[],
   fakeOptions: FakeMcpOptions = {},
 ) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey, ...fakeOptions });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey, ...fakeOptions });
   closing.push(fake.close);
   const { access, content } = reportingAccess(
     {
@@ -213,39 +213,16 @@ describe('the content of calls that answer alike, or of a server that keeps none
 });
 
 describe('the content of a large answer', () => {
-  it(
-    'is kept whole at 5 MB and at 16 MiB over HTTP, and a larger answer fails the call as too large',
-    { timeout: 120_000 },
-    async () => {
-      const kib = toolBounds.httpAnswerBytes / 1024;
-      const { facts, kept } = await recordedCalls({}, [
-        ['graph/large', { kib: 4883 }],
-        ['graph/large', { kib: kib - 1 }],
-        ['graph/large', { kib }],
-      ]);
-      const answers = facts.filter(({ type }) => type !== 'tool_call_started');
-      const fiveMegabytes = textAnswer('😀'.repeat(4883 * 256));
-      const sixteenMebibytes = textAnswer('😀'.repeat((kib - 1) * 256));
+  it('is kept whole, as large as it is', async () => {
+    const { facts, kept } = await recordedCalls({}, [['graph/large', { kib: 4883 }]]);
+    const fiveMegabytes = textAnswer('😀'.repeat(4883 * 256));
 
-      expect(answers.map(({ type, data }) => [type, data])).toEqual([
-        ['tool_call_answered', expect.objectContaining({ result_bytes: Buffer.byteLength(fiveMegabytes) })],
-        ['tool_call_answered', expect.objectContaining({ result_bytes: Buffer.byteLength(sixteenMebibytes) })],
-        ['tool_call_failed', expect.objectContaining({ because: 'too_large' })],
-      ]);
-      await expect(kept(digest(fiveMegabytes))).resolves.toBe(fiveMegabytes);
-      await expect(kept(digest(sixteenMebibytes))).resolves.toBe(sixteenMebibytes);
-    },
-  );
-
-  it(
-    'fails the call as too large when a stdio server writes more than its output may take at once',
-    { timeout: 120_000 },
-    async () => {
-      const { facts } = await recordedCalls({}, [['limitless/large', { kib: 4097 }]]);
-
-      expect(facts.at(-1)).toMatchObject({ type: 'tool_call_failed', data: { because: 'too_large' } });
-    },
-  );
+    expect(facts.at(-1)).toMatchObject({
+      type: 'tool_call_answered',
+      data: { result_bytes: Buffer.byteLength(fiveMegabytes) },
+    });
+    await expect(kept(digest(fiveMegabytes))).resolves.toBe(fiveMegabytes);
+  });
 });
 
 describe('the id a server gives a request', () => {

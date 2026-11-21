@@ -6,7 +6,7 @@ import type { Timing } from '../bounds/call-bounds.ts';
 import type { CallReply } from '../calls/call-replies.ts';
 import type { RunTools } from '../calls/run-tools.ts';
 import type { FakeMcpOptions, FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
+import { fakeMcpInProcess } from './in-process-fakes.ts';
 import { reportingAccess } from './reporting-access.ts';
 import {
   controlledSignals,
@@ -39,7 +39,7 @@ export async function openFakeToolRun(
   options: FakeMcpOptions = {},
   entry: Readonly<Record<string, unknown>> = {},
 ): Promise<FakeToolRun> {
-  const fake = await serveFakeMcp({ ...options, bearer: fakeApiKey });
+  const fake = fakeMcpInProcess({ ...options, bearer: fakeApiKey });
   const { access, messages, content } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry } },
     { environment: { GRAPH_API_KEY: fakeApiKey }, ...(timing === undefined ? {} : { timing }) },

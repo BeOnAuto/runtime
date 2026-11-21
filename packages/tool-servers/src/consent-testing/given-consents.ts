@@ -11,6 +11,7 @@ import type {
   RegistrationPlace,
   StartAsked,
 } from '../consent/consent-client.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 
 export interface Consented {
   readonly code: string;
@@ -28,7 +29,7 @@ interface KeptAt extends RegistrationPlace {
   readonly secretId: string;
 }
 
-export async function consentedAt(url: string, fetch = globalThis.fetch): Promise<Consented> {
+export async function consentedAt(url: string, fetch: typeof globalThis.fetch = inProcessFetch): Promise<Consented> {
   const answer = await fetch(url, { redirect: 'manual' });
   const back = new URL(String(answer.headers.get('location')));
   return {

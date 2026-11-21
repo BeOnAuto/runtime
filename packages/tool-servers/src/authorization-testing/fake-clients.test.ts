@@ -4,8 +4,8 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { fakeMcpInProcess, inProcessFetch } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
   admitted,
@@ -31,8 +31,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(client: ClientRegistration): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ client });
+function served(client: ClientRegistration): FakeMcpServer {
+  const fake = fakeMcpInProcess({ client });
   closing.push(fake.close);
   return fake;
 }
@@ -73,7 +73,7 @@ function assertionOf(subject: string, privateKey: string): Readonly<Record<strin
 
 describe('the clients of the fake and how they authenticate', () => {
   it('takes a client secret in the form as in the Basic header, and refuses another secret, none or an unknown client', async () => {
-    const fake = await served(withASecret);
+    const fake = served(withASecret);
 
     const statuses = [
       await redeemed(fake, await codeOf(fake), {}, { client_id: 'auto-runtime', client_secret: clientSecret }),
@@ -88,8 +88,8 @@ describe('the clients of the fake and how they authenticate', () => {
 
   it('takes an assertion signed by the key of the client it names, and refuses another key, client or a client without a key', async () => {
     const { publicKey, privateKey } = rsaKeys();
-    const withAKey = await served({ ...publicClient, publicKey });
-    const withoutAKey = await served(withASecret);
+    const withAKey = served({ ...publicClient, publicKey });
+    const withoutAKey = served(withASecret);
     const anotherKey = rsaKeys().privateKey;
 
     const statuses = [
@@ -103,7 +103,7 @@ describe('the clients of the fake and how they authenticate', () => {
   });
 
   it('takes a public client by its id alone, and refuses it a secret it does not have', async () => {
-    const fake = await served(publicClient);
+    const fake = served(publicClient);
 
     const statuses = [
       await redeemed(fake, await codeOf(fake), {}, { client_id: 'auto-runtime' }),
@@ -119,7 +119,7 @@ async function registeredAt(
   fake: FakeMcpServer,
   metadata: object,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
-  const answer = await fetch(`${fake.origin}/register`, {
+  const answer = await inProcessFetch(`${fake.origin}/register`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(metadata),
@@ -129,8 +129,8 @@ async function registeredAt(
 
 describe('the client credentials the fake grants', () => {
   it('are granted to a client that authenticates in any way it advertises, and to no public client', async () => {
-    const confidential = await served(withASecret);
-    const open = await served(publicClient);
+    const confidential = served(withASecret);
+    const open = served(publicClient);
     const asked = { grant_type: 'client_credentials' };
 
     const answers = [
@@ -152,7 +152,7 @@ describe('the client credentials the fake grants', () => {
 
 describe('the dynamic registration of the fake', () => {
   it('registers a client where the test asks, with a secret unless it authenticates with none, whose codes it redeems', async () => {
-    const fake = await served({ ...withASecret, dynamicRegistration: true });
+    const fake = served({ ...withASecret, dynamicRegistration: true });
 
     const confidential = await registeredAt(fake, { redirect_uris: [redirectUri], client_name: 'Auto' });
     const open = await registeredAt(fake, { redirect_uris: [redirectUri], token_endpoint_auth_method: 'none' });
@@ -187,21 +187,21 @@ describe('the dynamic registration of the fake', () => {
   });
 
   it('refuses a registration without its redirect URIs, and offers none where the test does not ask', async () => {
-    const offering = await served({ ...withASecret, dynamicRegistration: true });
-    const withholding = await served(withASecret);
+    const offering = served({ ...withASecret, dynamicRegistration: true });
+    const withholding = served(withASecret);
 
     expect(await registeredAt(offering, { client_name: 'Auto' })).toEqual({
       status: 400,
       body: { error: 'invalid_client_metadata', error_description: 'Expected redirect_uris' },
     });
     expect(await metadataOf(withholding)).not.toHaveProperty('registration_endpoint');
-    expect((await fetch(`${withholding.origin}/register`, { method: 'POST' })).status).toBe(401);
+    expect((await inProcessFetch(`${withholding.origin}/register`, { method: 'POST' })).status).toBe(401);
   });
 });
 
 describe('the clients a fake registers dynamically', () => {
   it('keep the codes and the tokens of one client from another', async () => {
-    const fake = await served({ ...withASecret, dynamicRegistration: true });
+    const fake = served({ ...withASecret, dynamicRegistration: true });
     const other = await registeredAt(fake, { redirect_uris: [redirectUri], token_endpoint_auth_method: 'none' });
     const asOther = { client_id: String(other.body['client_id']) };
     const granted = (await redeemed(fake, await codeOf(fake))).body;
@@ -246,7 +246,7 @@ async function documents(): Promise<string> {
 
 describe('the client metadata documents of the fake', () => {
   it('takes a client by its document where the test asks and advertises it, as a public client', async () => {
-    const fake = await served({ ...withASecret, clientMetadataDocuments: true });
+    const fake = served({ ...withASecret, clientMetadataDocuments: true });
     const clientId = `${await documents()}/client.json`;
 
     const code = await codeOf(fake, { client_id: clientId });
@@ -256,12 +256,13 @@ describe('the client metadata documents of the fake', () => {
   });
 
   it('takes no client whose document names another id, misses its redirect URIs or is missing, nor one that is no address', async () => {
-    const fake = await served({ ...withASecret, clientMetadataDocuments: true });
+    const fake = served({ ...withASecret, clientMetadataDocuments: true });
     const origin = await documents();
 
     const statuses = await Promise.all(
       [`${origin}/another.json`, `${origin}/broken.json`, `${origin}/missing.json`, 'not-an-address'].map(
-        async (clientId) => (await fetch(authorizeUrl(fake, { client_id: clientId }), { redirect: 'manual' })).status,
+        async (clientId) =>
+          (await inProcessFetch(authorizeUrl(fake, { client_id: clientId }), { redirect: 'manual' })).status,
       ),
     );
 
@@ -269,10 +270,12 @@ describe('the client metadata documents of the fake', () => {
   });
 
   it('takes no client by its document where the test does not ask, and advertises none', async () => {
-    const fake = await served(withASecret);
+    const fake = served(withASecret);
     const clientId = `${await documents()}/client.json`;
 
     expect(await metadataOf(fake)).not.toHaveProperty('client_id_metadata_document_supported');
-    expect((await fetch(authorizeUrl(fake, { client_id: clientId }), { redirect: 'manual' })).status).toBe(400);
+    expect((await inProcessFetch(authorizeUrl(fake, { client_id: clientId }), { redirect: 'manual' })).status).toBe(
+      400,
+    );
   });
 });

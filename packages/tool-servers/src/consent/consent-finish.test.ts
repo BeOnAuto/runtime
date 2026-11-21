@@ -8,14 +8,16 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   consentClientWith,
   finishAskedOf,
+  forConsentInProcess,
   hostOf,
+  inProcessFetch,
   memoryRegistrations,
   registeredAt,
   startAskedAt,
   tokensKeptBy,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { RegisteredClient } from './client-sources.ts';
 import type { ConsentClient, FinishAsked, FinishedConsent, StartAsked } from './consent-client.ts';
 
@@ -25,8 +27,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -46,7 +48,7 @@ function refused(client: ConsentClient, asked: FinishAsked) {
 function failingTokens(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
   return String(address).endsWith('/token')
     ? Promise.resolve(new Response('failing', { status: 500 }))
-    : globalThis.fetch(String(address), Object.assign({}, init));
+    : inProcessFetch(String(address), Object.assign({}, init));
 }
 
 const aToken: unknown = expect.stringMatching(/^token-/u);
@@ -76,7 +78,7 @@ interface Revoked {
 
 describe('the finish of a consent', () => {
   it('redeems the code with the verifier and the client it started with, and answers the tokens as one value and the scope granted', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
 
     const done = await finishedAt(client, startAskedAt(fake));
@@ -95,8 +97,8 @@ describe('the finish of a consent', () => {
   });
 
   it('answers the scope the server granted where it is narrower than asked, and none where none was asked or granted', async () => {
-    const narrower = await served({ grantedScope: 'files.read' });
-    const lasting = await served({ expiresInSeconds: null });
+    const narrower = served({ grantedScope: 'files.read' });
+    const lasting = served({ expiresInSeconds: null });
     const client = consentClientWith({
       registeredClients: [registeredAt(narrower.origin), registeredAt(lasting.origin)],
     });
@@ -113,7 +115,7 @@ describe('the finish of a consent', () => {
   });
 
   it('keeps a bearer token where the token answer names no token_type, the one type a call sends', async () => {
-    const untyped = await served({ namesTokenType: false });
+    const untyped = served({ namesTokenType: false });
     const client = consentClientWith({ registeredClients: [registeredAt(untyped.origin)] });
 
     const kept = tokensKeptBy(await finishedAt(client, startAskedAt(untyped)));
@@ -125,7 +127,7 @@ describe('the finish of a consent', () => {
 
 describe('a finish refused before the code is redeemed', () => {
   it('is refused for an issuer that is not the server’s, or none where the server sends one', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const asked = await finishAskedOf(client, startAskedAt(fake));
 
@@ -139,7 +141,7 @@ describe('a finish refused before the code is redeemed', () => {
 
 describe('a finish whose code is not redeemed', () => {
   it('is refused for a code the server refuses, as one already redeemed or one of another verifier', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const asked = await finishAskedOf(client, startAskedAt(fake));
     const another = await finishAskedOf(client, startAskedAt(fake));
@@ -153,7 +155,7 @@ describe('a finish whose code is not redeemed', () => {
   });
 
   it('is unanswered where the token endpoint fails', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ fetch: failingTokens, registeredClients: [registeredAt(fake.origin)] });
 
     expect(await refused(client, await finishAskedOf(client, startAskedAt(fake)))).toEqual({
@@ -165,8 +167,8 @@ describe('a finish whose code is not redeemed', () => {
 
 describe('the registered client a finish redeems the code with', () => {
   it('is the client the start chose, with a key or with neither a secret nor a key', async () => {
-    const keyed = await served({ clientSecret: undefined, publicKey: keys.publicKey });
-    const open = await served({ clientSecret: undefined });
+    const keyed = served({ clientSecret: undefined, publicKey: keys.publicKey });
+    const open = served({ clientSecret: undefined });
     const keyedClient = consentClientWith({ registeredClients: [keyedAt(keyed.origin)] });
     const openClient = consentClientWith({ registeredClients: [openAt(open.origin)] });
 
@@ -180,7 +182,7 @@ describe('the registered client a finish redeems the code with', () => {
   });
 
   it('is refused as gone where whoever runs the runtime no longer registers it at the issuer', async () => {
-    const fake = await served();
+    const fake = served();
     const starting = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const asked = await finishAskedOf(starting, startAskedAt(fake));
     const renamed = consentClientWith({ registeredClients: [registeredAt(fake.origin, { clientId: 'renamed' })] });
@@ -194,7 +196,7 @@ describe('the registered client a finish redeems the code with', () => {
 
 describe('the other clients a finish redeems the code with', () => {
   it('is the registration the start made dynamically, found by its id, and gone where it is not kept', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const client = consentClientWith({ registrations: memoryRegistrations() });
     const asked = await finishAskedOf(client, startAskedAt(fake, { clients: ['dynamic'] }));
 
@@ -205,7 +207,7 @@ describe('the other clients a finish redeems the code with', () => {
   });
 
   it('is a public registration where the token endpoint takes public clients alone, whose code it redeems by its id alone', async () => {
-    const fake = await served({ dynamicRegistration: true, takesPublicClientsAlone: true });
+    const fake = served({ dynamicRegistration: true, takesPublicClientsAlone: true });
     const client = consentClientWith({ registrations: memoryRegistrations() });
 
     const done = await finishedAt(client, startAskedAt(fake, { clients: ['dynamic'] }));
@@ -214,7 +216,7 @@ describe('the other clients a finish redeems the code with', () => {
   });
 
   it('is the metadata document while the public address is the one the start named it at', async () => {
-    const fake = await served({ clientMetadataDocuments: true });
+    const fake = served({ clientMetadataDocuments: true });
     const publicUrl = 'https://runtime.example.com';
     const asked = startAskedAt(fake, { clients: ['metadata_document'] });
     const start = await Effect.runPromise(consentClientWith({ publicUrl }).start(asked));
@@ -239,9 +241,9 @@ describe('the other clients a finish redeems the code with', () => {
 
 describe('the revocation a finish offers', () => {
   it('revokes the refresh token, and with it every token of its grant, with the client of the connection', async () => {
-    const secret = await served();
-    const keyed = await served({ clientSecret: undefined, publicKey: keys.publicKey });
-    const open = await served({ clientSecret: undefined });
+    const secret = served();
+    const keyed = served({ clientSecret: undefined, publicKey: keys.publicKey });
+    const open = served({ clientSecret: undefined });
     const fakes = [secret, keyed, open];
     const client = consentClientWith({
       registeredClients: [registeredAt(secret.origin), keyedAt(keyed.origin), openAt(open.origin)],
@@ -258,8 +260,8 @@ describe('the revocation a finish offers', () => {
   });
 
   it('revokes the access token where the server gave no refresh token, and nothing where the server names no revocation endpoint', async () => {
-    const unrefreshed = await served({ issuesRefreshTokens: false });
-    const unrevoking = await served({ publishesMetadata: false });
+    const unrefreshed = served({ issuesRefreshTokens: false });
+    const unrevoking = served({ publishesMetadata: false });
     const client = consentClientWith({
       registeredClients: [registeredAt(unrefreshed.origin), registeredAt(unrevoking.origin)],
     });

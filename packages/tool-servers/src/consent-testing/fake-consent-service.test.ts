@@ -7,7 +7,9 @@ import type { ServiceStartAsked } from '../consent-through-auto/consent-service.
 import {
   consentedAt,
   cuttingTimeouts,
+  inProcessFetch,
   studioBase,
+  throughAutoInProcess,
   type ClientRegistration,
   type FakeMcpServer,
 } from '../testing/index.ts';
@@ -19,7 +21,6 @@ import {
   type ServiceListing,
   type ThroughAuto,
 } from './auto-consents.ts';
-import { servedThroughAuto } from './consent-servers.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -27,8 +28,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(changes: Partial<ClientRegistration> = {}, listing: ServiceListing = {}): Promise<ThroughAuto> {
-  const served = await servedThroughAuto(changes, listing);
+function serving(changes: Partial<ClientRegistration> = {}, listing: ServiceListing = {}): ThroughAuto {
+  const served = throughAutoInProcess(changes, listing);
   closing.push(served.close);
   return served;
 }
@@ -57,8 +58,8 @@ function redeemedAt(served: ThroughAuto) {
 
 describe('the clients the fake consent service lists', () => {
   it('are its one client, at the issuer of the fake authorization server, with the scopes it names where it names them', async () => {
-    const { fake: vendor, service } = await serving();
-    const naming = await serving({}, { scopes: ['files.read'] });
+    const { fake: vendor, service } = serving();
+    const naming = serving({}, { scopes: ['files.read'] });
 
     expect([
       await Effect.runPromise(serviceCallsAt(service).clients),
@@ -72,7 +73,7 @@ describe('the clients the fake consent service lists', () => {
 
 describe('a start at the fake consent service', () => {
   it('answers the page of the authorization server with its client, its own state and challenge, and the parameters asked', async () => {
-    const { fake: vendor, service } = await serving();
+    const { fake: vendor, service } = serving();
 
     const started = await Effect.runPromise(serviceCallsAt(service).start(startOf(vendor)));
     const asked = Object.fromEntries(new URL(started.url).searchParams);
@@ -91,7 +92,7 @@ describe('a start at the fake consent service', () => {
   });
 
   it('is refused for an issuer it has no client at, a malformed request and when told to', async () => {
-    const { fake: vendor, service } = await serving();
+    const { fake: vendor, service } = serving();
     const calls = serviceCallsAt(service);
     service.refuseNext('start');
 
@@ -111,7 +112,7 @@ describe('a start at the fake consent service', () => {
 
 describe('a start at the fake consent service with a return base it does not send people back to', () => {
   it('is refused for a Studio host other than its own, and a loopback base that is not one of http, a loopback host and a closing slash', async () => {
-    const { fake: vendor, service } = await serving();
+    const { fake: vendor, service } = serving();
     const calls = serviceCallsAt(service);
     const startsAt = (kind: 'hosted' | 'loopback', base: string) =>
       run(calls.start(startOf(vendor, { returnTo: { kind, base } })));
@@ -132,7 +133,7 @@ describe('a start at the fake consent service with a return base it does not sen
 
 describe('a state the hosted Studio asks the fake consent service to describe', () => {
   it('is described to a person signed in, while it is open, and unknown once its ten minutes are over', async () => {
-    const { fake: vendor, service, clock } = await serving();
+    const { fake: vendor, service, clock } = serving();
     const calls = serviceCallsAt(service);
     const started = await Effect.runPromise(calls.start(startOf(vendor)));
 
@@ -151,9 +152,9 @@ describe('a state the hosted Studio asks the fake consent service to describe', 
   });
 
   it('is refused to a call without a session with 401, asking for a bearer', async () => {
-    const { service } = await serving();
+    const { service } = serving();
 
-    const answer = await fetch(`${service.url}/consents/a-state`);
+    const answer = await inProcessFetch(`${service.url}/consents/a-state`);
     await answer.text();
 
     expect([answer.status, answer.headers.get('www-authenticate')]).toEqual([401, 'Bearer']);
@@ -162,7 +163,7 @@ describe('a state the hosted Studio asks the fake consent service to describe', 
 
 describe('a code the hosted Studio asks the fake consent service to redeem', () => {
   it('is redeemed once for a person signed in, and refused when redeemed again, unknown, refused by the authorization server or when told to', async () => {
-    const serve = await serving();
+    const serve = serving();
     const { fake: vendor, service } = serve;
     const calls = serviceCallsAt(service);
     const { started, code } = await redeemedAt(serve);
@@ -195,7 +196,7 @@ describe('a code the hosted Studio asks the fake consent service to redeem', () 
 
 describe('a call the fake consent service does not know', () => {
   it('is answered as not found', async () => {
-    const { service } = await serving();
+    const { service } = serving();
 
     expect([
       await postedToTheService(service, '/consents/a/b/c', '{}'),
@@ -206,7 +207,7 @@ describe('a call the fake consent service does not know', () => {
 
 describe('the calls the fake consent service heard', () => {
   it('are recorded with what each sent, and stalled once it is told to stall, until the bound of the stalled call ends', async () => {
-    const { fake: vendor, service } = await serving();
+    const { fake: vendor, service } = serving();
     const { requestTimeout, cutWhen } = cuttingTimeouts();
     const calls = serviceCallsAt(service, requestTimeout);
     await Effect.runPromise(calls.clients);

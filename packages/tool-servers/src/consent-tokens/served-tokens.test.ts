@@ -6,8 +6,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { admitted } from '../authorization-testing/authorization-requests.ts';
 import { secretsOf } from '../bounds/secrets.ts';
 import {
+  clockAt,
   connectedByConsent,
   consentClientAt,
+  forConsentInProcess,
+  inProcessFetch,
   registeredAfterAnother,
   registeredAt,
   rowOf,
@@ -15,9 +18,8 @@ import {
   servedTokensOf,
   type ClientRegistration,
   type MemoryTokens,
-  clockAt,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { KeptTokens } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -26,8 +28,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -39,11 +41,11 @@ function keptIn(row: MemoryTokens): KeptTokens {
 }
 
 function unauthorizedAt(fake: FakeMcpServer) {
-  return { response: new Response(null, { status: 401 }), serverUrl: new URL(fake.url), fetchFn: globalThis.fetch };
+  return { response: new Response(null, { status: 401 }), serverUrl: new URL(fake.url), fetchFn: inProcessFetch };
 }
 
 async function servingAt(changes: Partial<ClientRegistration> = {}, renewalSpreadMs = 0) {
-  const fake = await served(changes);
+  const fake = served(changes);
   const connected = await connectedByConsent(fake);
   const clock = clockAt(0);
   const row = rowOf(connected, clock.now);
@@ -161,7 +163,7 @@ describe('the renewal of the tokens of a connection connected by consent', () =>
 
 describe('the renewal of a connection at an issuer where another registered client stands first', () => {
   it('is made with the client the connection was made with', async () => {
-    const fake = await served();
+    const fake = served();
     const connected = await connectedByConsent(fake);
     const clock = clockAt(0);
     const row = rowOf(connected, clock.now);
@@ -183,7 +185,7 @@ describe('the renewal of the tokens of a consent with a key', () => {
       publicKeyEncoding: { type: 'spki', format: 'pem' },
       privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
     });
-    const fake = await served({ clientSecret: undefined, publicKey: keys.publicKey });
+    const fake = served({ clientSecret: undefined, publicKey: keys.publicKey });
     const keyed = {
       registeredClients: [
         registeredAt(fake.origin, {

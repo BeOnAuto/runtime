@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { documentWithServer, servedDocumentAt } from '../api-testing/described-documents.ts';
 import { fakeConnections, type FakeConnection } from '../testing/fake-connections.ts';
-import { patientTiming, playbookToolCalls, recordingCallJournal, toolRun } from '../testing/index.ts';
+import { fakeApiInProcess, patientTiming, playbookToolCalls, recordingCallJournal, toolRun } from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -54,8 +54,8 @@ async function accessThrough(connection: Omit<FakeConnection, 'id' | 'name' | 'e
   return access;
 }
 
-async function apiOutsideTheRule() {
-  const fake = await serveFakeApi({ key: fakeApiKey });
+function apiOutsideTheRule() {
+  const fake = fakeApiInProcess({ key: fakeApiKey });
   closing.push(fake.close);
   return accessThrough({
     entry: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' } },
@@ -65,7 +65,7 @@ async function apiOutsideTheRule() {
 
 describe('a connection to an HTTP API whose document cannot be read', () => {
   it('is unavailable as failing in the words of its document, and its document is read again when next it is used', async () => {
-    const documentUrl = await servedDocumentAt(
+    const documentUrl = servedDocumentAt(
       inTurn([
         unavailable(),
         unavailable(),
@@ -101,7 +101,7 @@ describe('a connection to an HTTP API whose document cannot be read', () => {
 
 describe('a connection to an HTTP API whose entry gives a header its document says an operation needs', () => {
   it('offers the operation, and a call of it sends the header', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closing.push(fake.close);
     const access = await accessThrough({
       entry: {
@@ -122,7 +122,7 @@ describe('a connection to an HTTP API whose entry gives a header its document sa
 describe('a connection to an HTTP API whose document is refused for what it says', () => {
   it('is unavailable as failing in the words of its document, which is not read again for as long as the runtime runs', async () => {
     const reads = { made: 0 };
-    const documentUrl = await servedDocumentAt(() => {
+    const documentUrl = servedDocumentAt(() => {
       reads.made += 1;
       return Promise.resolve(new Response(unsecured));
     });
@@ -141,7 +141,7 @@ describe('a connection to an HTTP API whose document is refused for what it says
 
 describe('a connection to an HTTP API whose document address answers a page that is not a document', () => {
   it('is unavailable as failing in the words of the reading, and is read again when next it is used', async () => {
-    const documentUrl = await servedDocumentAt(
+    const documentUrl = servedDocumentAt(
       inTurn([
         new Response('<html><body>Bad gateway</body></html>', { status: 200 }),
         new Response(documentWithServer('https://api.example.com/v1')),

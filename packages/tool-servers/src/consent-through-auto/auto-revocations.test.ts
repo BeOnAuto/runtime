@@ -11,9 +11,10 @@ import {
   everyHost,
   refusedConnections,
   returnAddress,
+  throughAutoInProcess,
   type ConsentConnected,
 } from '../testing/index.ts';
-import { servedThroughAuto, type ThroughAuto } from '../testing/served-fakes.ts';
+import type { ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -27,7 +28,7 @@ interface Connected extends ThroughAuto {
 }
 
 async function connectedAt(): Promise<Connected> {
-  const serving = await servedThroughAuto();
+  const serving = throughAutoInProcess();
   closing.push(serving.close);
   const connection = await connectedThroughAuto(serving);
   return { ...serving, connection, first: connection.kept };

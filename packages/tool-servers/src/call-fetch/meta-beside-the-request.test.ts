@@ -3,8 +3,8 @@ import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { describedAccess, patientTiming } from '../testing/index.ts';
-import { serveFakeApi, type FakeApiServer } from '../testing/served-fakes.ts';
+import { describedAccess, fakeApiInProcess, inProcessFetch, patientTiming } from '../testing/index.ts';
+import type { FakeApiOptions, FakeApiServer } from '../testing/served-fakes.ts';
 
 const clientSecret = 'graph-client-secret-81c2';
 
@@ -35,7 +35,7 @@ function lentFetch() {
   const handed: Handed[] = [];
   const fetch: FetchOfACall = (...[input, init, ...beside]: readonly [unknown, unknown?, ...unknown[]]) => {
     handed.push({ path: new URL(String(input)).pathname, beside });
-    return globalThis.fetch(String(input), Object.assign({}, init));
+    return inProcessFetch(String(input), Object.assign({}, init));
   };
   return { fetch, handed: () => [...handed] };
 }
@@ -44,8 +44,8 @@ function issuerOf(api: FakeApiServer): string {
   return Option.getOrThrow(Option.fromNullishOr(api.issuing)).issuer;
 }
 
-async function servedApi(options: Parameters<typeof serveFakeApi>[0] = {}): Promise<FakeApiServer> {
-  const api = await serveFakeApi(options);
+function servedApi(options: FakeApiOptions = {}): FakeApiServer {
+  const api = fakeApiInProcess(options);
   closing.push(api.close);
   return api;
 }
@@ -78,7 +78,7 @@ function searchedWith(meta: CallMeta, server: string) {
 
 describe('the metadata of a call, beside its request', () => {
   it('is handed to the fetch of the call with the request of the call alone, of an entry and of a connection', async () => {
-    const [billing, ledger] = [await servedApi({ client }), await servedApi({ client })];
+    const [billing, ledger] = [servedApi({ client }), servedApi({ client })];
     const access = await accessTo(billing, ledger, byClientCredentials);
     const lent = lentFetch();
 
@@ -102,7 +102,7 @@ describe('the metadata of a call, beside its request', () => {
 
   it('sends nothing more where no fetch of a call is lent, so an HTTP API sees a request as it sees a notification', async () => {
     const keyed = { key: clientSecret };
-    const [billing, ledger] = [await servedApi(keyed), await servedApi(keyed)];
+    const [billing, ledger] = [servedApi(keyed), servedApi(keyed)];
     const access = await accessTo(billing, ledger, byKey);
 
     await Effect.runPromise(

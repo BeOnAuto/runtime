@@ -3,8 +3,8 @@ import { getEventListeners } from 'node:events';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { controlledSignals, reportingAccess, toolRun } from '../testing/index.ts';
-import { fakeApiKey, openFakeToolRun, serveFakeMcp } from '../testing/served-fakes.ts';
+import { controlledSignals, fakeMcpInProcess, reportingAccess, toolRun } from '../testing/index.ts';
+import { fakeApiKey, openFakeToolRun } from '../testing/served-fakes.ts';
 import { until } from '../testing/until.ts';
 import type { CallJournal } from './recorded-calls.ts';
 
@@ -82,7 +82,7 @@ describe('a run that ends while it calls', () => {
     const signals = controlledSignals();
 
     const replied = call('sleep', { ms: 5000 }, signals);
-    await until(() => fake.received().length === 1);
+    await fake.once(() => fake.received().length === 1);
     signals.end();
 
     expect(await replied).toMatchObject({
@@ -97,7 +97,7 @@ describe('a run that ends while it calls', () => {
     const signals = controlledSignals();
 
     const replied = call('sleep', { ms: 5000 }, signals);
-    await until(() => fake.received().length === 1);
+    await fake.once(() => fake.received().length === 1);
     signals.cancel();
     await replied;
 
@@ -120,7 +120,7 @@ describe('a run that ends while it calls', () => {
 });
 
 async function runCancelledOnRecording() {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const { access } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },

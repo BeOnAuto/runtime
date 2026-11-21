@@ -2,8 +2,14 @@ import { CallFetch } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith, memoryRegistrations, registeredAt, startAskedAt } from '../testing/index.ts';
-import { servedForConsent } from '../testing/served-fakes.ts';
+import {
+  consentClientWith,
+  forConsentInProcess,
+  inProcessFetch,
+  memoryRegistrations,
+  registeredAt,
+  startAskedAt,
+} from '../testing/index.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -17,13 +23,13 @@ function readsNothing(): Promise<Response> {
 
 describe('the fetch a consent client reaches the server of a consent with', () => {
   it('is the fetch the context of the operation gives, not the client its own, so each call of a shell has its own', async () => {
-    const fake = await servedForConsent();
+    const fake = forConsentInProcess();
     closing.push(fake.close);
     const client = consentClientWith({ fetch: readsNothing, registeredClients: [registeredAt(fake.origin)] });
     const asked: string[] = [];
     const ofTheCall: typeof globalThis.fetch = (...[address, init]: readonly [unknown, unknown?]) => {
       asked.push(String(address));
-      return globalThis.fetch(String(address), Object.assign({}, init));
+      return inProcessFetch(String(address), Object.assign({}, init));
     };
 
     const start = await Effect.runPromise(
@@ -37,7 +43,7 @@ describe('the fetch a consent client reaches the server of a consent with', () =
 
 describe('the dynamic registration of a consent client over lent fetches', () => {
   it('is made once for every start at its issuer, whatever fetch each start is lent, since the single flight and the registrations belong to the client', async () => {
-    const fake = await servedForConsent({ dynamicRegistration: true });
+    const fake = forConsentInProcess({ dynamicRegistration: true });
     closing.push(fake.close);
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
@@ -45,8 +51,8 @@ describe('the dynamic registration of a consent client over lent fetches', () =>
     const lentTo = (fetch: typeof globalThis.fetch) =>
       Effect.runPromise(client.start(asked).pipe(Effect.provideService(CallFetch, fetch)));
     const [one, other] = [
-      (...[address, init]: readonly [unknown, unknown?]) => globalThis.fetch(String(address), Object.assign({}, init)),
-      (...[address, init]: readonly [unknown, unknown?]) => globalThis.fetch(String(address), Object.assign({}, init)),
+      (...[address, init]: readonly [unknown, unknown?]) => inProcessFetch(String(address), Object.assign({}, init)),
+      (...[address, init]: readonly [unknown, unknown?]) => inProcessFetch(String(address), Object.assign({}, init)),
     ];
 
     const starts = await Promise.all([lentTo(one), lentTo(other)]);

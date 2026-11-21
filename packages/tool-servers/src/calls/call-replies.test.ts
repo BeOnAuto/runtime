@@ -7,13 +7,14 @@ import { noCalls } from '../bounds/call-bounds.ts';
 import { ignored } from '../clients/ignored.ts';
 import {
   controlledSignals,
+  fakeMcpInProcess,
   fakeRequestIdKey,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
   toolRun,
 } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 import { callReplyOf, failureCounted } from './call-replies.ts';
 
 const aDuration: unknown = expect.any(Number);
@@ -29,7 +30,7 @@ afterEach(async () => {
 });
 
 async function opened(meta: Readonly<Record<string, string>>, ...tools: readonly string[]) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = {
     url: fake.url,

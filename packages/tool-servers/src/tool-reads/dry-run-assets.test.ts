@@ -2,8 +2,8 @@ import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey, type FakeTool } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -61,7 +61,7 @@ const theirs = keptForATest('019a5b12-0000-7000-8000-000000000073', 'text/plain'
 });
 
 async function bothWays(arguments_: Readonly<Record<string, unknown>>, mostRequestBytes?: number) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey, tools: [save] });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey, tools: [save] });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
   const { access } = reportingAccess(

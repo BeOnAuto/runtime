@@ -12,13 +12,14 @@ import type {
   StartAsked,
   StartedConsent,
 } from '../consent/consent-client.ts';
+import { fakeGatewayInProcess } from '../testing/in-process-fakes.ts';
 import { consentClientWith, everyHost, returnAddress, studioBase } from './consent-fakes.ts';
-import { serveFakeGateway, type FakeGateway, type FakeGatewayOptions } from './fake-gateway.ts';
+import type { FakeGateway, FakeGatewayOptions } from './fake-gateway.ts';
 
 const issuer = 'https://accounts.example.com';
 
-export async function gatewayServed(options: FakeGatewayOptions = {}): Promise<FakeGateway> {
-  const gateway = await serveFakeGateway(options);
+export function gatewayServed(options: FakeGatewayOptions = {}): FakeGateway {
+  const gateway = fakeGatewayInProcess(options);
   onTestFinished(gateway.close);
   return gateway;
 }

@@ -8,6 +8,7 @@ import { secretsOf } from '../bounds/secrets.ts';
 import { tokenSource, type Discovery, type UnauthorizedContext } from '../clients/token-source.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import type { MintingAuth } from '../settings/server-settings.ts';
+import { inProcessFetch } from './in-process.ts';
 
 export const clientSecret = 'graph-client-secret-81c2';
 
@@ -48,7 +49,7 @@ export function askingFetch() {
     if (request.url.endsWith('/token')) {
       bodies.push(Object.fromEntries(new URLSearchParams(await request.clone().text())));
     }
-    return globalThis.fetch(request);
+    return inProcessFetch(request);
   };
   return {
     fetch: asking,
@@ -61,7 +62,7 @@ export function askingFetch() {
 export function sourceOf(
   fake: FakeMcpServer,
   settings: MintingAuth,
-  fetch: FetchLike = globalThis.fetch,
+  fetch: FetchLike = inProcessFetch,
   { discovery = 'from_the_server', serverUrl = fake.url }: SourceReach = {},
 ) {
   const clock = { now: Date.parse('2026-10-05T09:00:00.000Z') };

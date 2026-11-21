@@ -31,6 +31,7 @@ export interface Timing {
   readonly openMs: number;
   readonly longestRetryWaitMs: number;
   readonly stopMs?: number;
+  readonly deadlineAfter?: (ms: number) => AbortSignal;
 }
 
 export const defaultTiming: Timing = {

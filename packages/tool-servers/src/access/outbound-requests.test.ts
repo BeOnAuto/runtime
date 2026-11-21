@@ -3,8 +3,14 @@ import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections, type FakeConnections } from '../testing/fake-connections.ts';
-import { describedAccess, patientTiming } from '../testing/index.ts';
-import { serveFakeApi, serveFakeMcp, type FakeApiServer, type FakeMcpServer } from '../testing/served-fakes.ts';
+import {
+  describedAccess,
+  fakeApiInProcess,
+  fakeMcpInProcess,
+  inProcessFetch,
+  patientTiming,
+} from '../testing/index.ts';
+import type { FakeApiServer, FakeMcpServer } from '../testing/served-fakes.ts';
 
 const runtime = 'auto-runtime/0.0.0-test';
 
@@ -28,9 +34,9 @@ function issuerOf(api: FakeApiServer): string {
   return Option.getOrThrow(Option.fromNullishOr(api.issuing)).issuer;
 }
 
-async function fakes(): Promise<{ readonly api: FakeApiServer; readonly mcp: FakeMcpServer }> {
-  const api = await serveFakeApi({ client });
-  const mcp = await serveFakeMcp({ client });
+function fakes(): { readonly api: FakeApiServer; readonly mcp: FakeMcpServer } {
+  const api = fakeApiInProcess({ client });
+  const mcp = fakeMcpInProcess({ client });
   closing.push(api.close, mcp.close);
   return { api, mcp };
 }
@@ -39,7 +45,7 @@ async function accessThrough(entries: Readonly<Record<string, unknown>>, connect
   const { access } = await describedAccess(entries, {
     environment,
     timing: patientTiming,
-    fetch: withUserAgent(globalThis.fetch, runtime),
+    fetch: withUserAgent(inProcessFetch, runtime),
     connections,
   });
   closing.push(access.close);
@@ -71,8 +77,8 @@ function searched(access: Awaited<ReturnType<typeof accessThrough>>, server: str
 
 describe('every request a tool access makes to a tool server', () => {
   it('goes through the fetch it is given: the reads of a document and of metadata, the requests of tokens and the calls', async () => {
-    const { api, mcp } = await fakes();
-    const ledger = await serveFakeApi({ client });
+    const { api, mcp } = fakes();
+    const ledger = fakeApiInProcess({ client });
     closing.push(ledger.close);
     const entries = {
       billing: { org: 'acme', document: api.documentUrl, auth: authOf(issuerOf(api)) },
@@ -108,7 +114,7 @@ describe('every request a tool access makes to a tool server', () => {
 
 describe('the User-Agent of a request a tool access makes to a tool server', () => {
   it('is the one among the headers of an entry on its calls, and the one of its fetch elsewhere', async () => {
-    const { api, mcp } = await fakes();
+    const { api, mcp } = fakes();
     const own = { 'User-Agent': 'operator-agent/2.0' };
     const access = await accessThrough({
       billing: { org: 'acme', document: api.documentUrl, auth: authOf(issuerOf(api)), headers: own },

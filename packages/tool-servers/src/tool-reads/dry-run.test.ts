@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { servedDocumentAt } from '../api-testing/described-documents.ts';
 import {
   describedAccess,
+  fakeMcpInProcess,
   playbookToolCalls,
   refusedConnections,
   reportingAccess,
@@ -12,7 +13,7 @@ import {
   toolReader,
   type AccessOptions,
 } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -24,8 +25,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -60,8 +61,8 @@ function decidingExecuteConnection(decision: AccessDecision['decision']): Policy
 const reached = { reachable: 'yes' };
 
 describe('dry_run', () => {
-  it('is a query of the playbook routed by POST at /tool-servers/{server}/tools/{tool}/dry-run', async () => {
-    const { registrations } = callsOn({ graph: remote(await fakeServer()) });
+  it('is a query of the playbook routed by POST at /tool-servers/{server}/tools/{tool}/dry-run', () => {
+    const { registrations } = callsOn({ graph: remote(fakeServer()) });
 
     expect(registrations.dry_run).toMatchObject({
       scope: 'playbook',
@@ -75,7 +76,7 @@ describe('dry_run', () => {
   });
 
   it('answers that execute would call an allowed tool that reads, with arguments it takes, and sends nothing', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call, recorded } = callsOn({ graph: remote(fake) });
 
     expect(await call('dry_run', { server: 'graph', tool: 'search', arguments: { query: 'acme' } })).toEqual({
@@ -98,7 +99,7 @@ describe('dry_run', () => {
 
 describe('dry_run of a call that would not be made', () => {
   it('answers that a caller who may only read could not execute a tool that writes, its arguments left unchecked when none are given', async () => {
-    const { call } = callsOn({ graph: remote(await fakeServer()) });
+    const { call } = callsOn({ graph: remote(fakeServer()) });
 
     expect(await call('dry_run', { server: 'graph', tool: 'echo' }, { caller: toolReader })).toEqual({
       status: 'succeeded',
@@ -116,7 +117,7 @@ describe('dry_run of a call that would not be made', () => {
   });
 
   it('answers that a tool its entry does not allow would not be called, and reads nothing of it', async () => {
-    const { call } = callsOn({ graph: remote(await fakeServer(), { allowed: ['search'] }) });
+    const { call } = callsOn({ graph: remote(fakeServer(), { allowed: ['search'] }) });
 
     expect(await call('dry_run', { server: 'graph', tool: 'echo', arguments: { said: 'hello' } })).toEqual({
       status: 'succeeded',
@@ -137,8 +138,8 @@ describe('dry_run of a call that would not be made', () => {
   });
 });
 
-async function dryRunDecided(decision: AccessDecision['decision'], caller: CallerIdentity) {
-  const { call } = callsOn({ graph: remote(await fakeServer()) }, { decidedBy: decidingExecuteConnection(decision) });
+function dryRunDecided(decision: AccessDecision['decision'], caller: CallerIdentity) {
+  const { call } = callsOn({ graph: remote(fakeServer()) }, { decidedBy: decidingExecuteConnection(decision) });
   return call('dry_run', { server: 'graph', tool: 'echo' }, { caller });
 }
 
@@ -153,7 +154,7 @@ describe('dry_run where the dispatcher that runs it is decided by a policy decis
 
 describe('dry_run on a retired playbook', () => {
   it('answers that execute would not call the tool, since the playbook can no longer change, and says so', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = callsOn({ graph: remote(fake) });
 
     const asked = await call('dry_run', { server: 'graph', tool: 'search' }, { playbook: 'old' });
@@ -168,7 +169,7 @@ describe('dry_run on a retired playbook', () => {
 
 describe('dry_run of a server that cannot be asked', () => {
   it('answers that a server that cannot be asked would not be called, saying why', async () => {
-    const gone = await serveFakeMcp();
+    const gone = fakeMcpInProcess();
     await gone.close();
     const { call } = callsOn({ graph: remote(gone) }, { fetch: refusedConnections([gone.origin]).fetch });
 
@@ -186,7 +187,7 @@ describe('dry_run of a server that cannot be asked', () => {
 
 describe('dry_run of the hints and the arguments of a tool', () => {
   it('answers the mark of the tool as its server lists it, or as its entry marks it in place of its server', async () => {
-    const fake = await serveFakeMcp({ bearer: apiKey, hints: { search: { readOnlyHint: false } } });
+    const fake = fakeMcpInProcess({ bearer: apiKey, hints: { search: { readOnlyHint: false } } });
     closing.push(fake.close);
     const { call } = callsOn({ graph: remote(fake), wiki: remote(fake, { marks: { reads: ['search'] } }) });
 
@@ -197,7 +198,7 @@ describe('dry_run of the hints and the arguments of a tool', () => {
   });
 
   it('answers that execute would call a tool with arguments it does not take, which the tool may refuse', async () => {
-    const { call } = callsOn({ graph: remote(await fakeServer()) });
+    const { call } = callsOn({ graph: remote(fakeServer()) });
 
     expect(await call('dry_run', { server: 'graph', tool: 'search', arguments: { query: 7 } })).toMatchObject({
       output: { would_run: true, arguments: { valid: false, issues: [{ path: '/query' }] } },
@@ -217,7 +218,7 @@ describe('dry_run of the arguments of a tool whose schema names formats', () => 
       servers: [{ url: 'https://bookings.example.com' }],
       paths: { '/bookings': { get: { operationId: 'listBookings', parameters } } },
     };
-    const url = await servedDocumentAt(() => Promise.resolve(Response.json(document)));
+    const url = servedDocumentAt(() => Promise.resolve(Response.json(document)));
     const { access } = await describedAccess({ graph: { org: 'acme', document: url } });
     closing.push(access.close);
     const { call } = playbookToolCalls(access);
@@ -243,7 +244,7 @@ describe('dry_run of the arguments of a tool whose schema names formats', () => 
 
 describe('dry_run refusing', () => {
   it('refuses a server not set up for the playbook, as execute does, and a tool its server does not list', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = callsOn({ graph: remote(fake), crm: remote(fake, { org: 'globex' }) });
 
     expect([

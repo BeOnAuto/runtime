@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { describedAccess, playbookToolCalls, reportingAccess, toolReader } from '../testing/index.ts';
-import { serveFakeApi, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import {
+  describedAccess,
+  fakeApiInProcess,
+  fakeMcpInProcess,
+  playbookToolCalls,
+  reportingAccess,
+  toolReader,
+} from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -14,8 +21,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -40,8 +47,8 @@ const queried = {
 };
 
 describe('introspect', () => {
-  it('is a query of the playbook at GET /tool-servers/{server}/tools/{tool} that reaches the servers outside', async () => {
-    const { registrations } = callsOn({ graph: remote(await fakeServer()) });
+  it('is a query of the playbook at GET /tool-servers/{server}/tools/{tool} that reaches the servers outside', () => {
+    const { registrations } = callsOn({ graph: remote(fakeServer()) });
 
     expect(registrations.introspect).toMatchObject({
       scope: 'playbook',
@@ -58,7 +65,7 @@ describe('introspect', () => {
 
 describe('introspect of a tool of an MCP server', () => {
   it('describes a tool whole, with the hints its server gives it or none and its mark, to a key that may only read, and calls nothing', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = callsOn({ graph: remote(fake) });
 
     expect([
@@ -95,7 +102,7 @@ describe('introspect of a tool of an MCP server', () => {
 
 describe('introspect of an operation of an HTTP API', () => {
   it('describes an operation of an HTTP API as the tool its document gives, and asks the API nothing', async () => {
-    const fake = await serveFakeApi({ key: apiKey });
+    const fake = fakeApiInProcess({ key: apiKey });
     closing.push(fake.close);
     const { access } = await describedAccess(
       { graph: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -124,7 +131,7 @@ describe('introspect of an operation of an HTTP API', () => {
 
 describe('introspect refusing', () => {
   it('refuses a server not set up for the playbook and a tool its entry does not allow before any client opens', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = callsOn({ graph: remote(fake, { allowed: ['echo'] }), crm: remote(fake, { org: 'globex' }) });
 
     expect([
@@ -150,7 +157,7 @@ describe('introspect refusing', () => {
 
 describe('introspect refusing what it cannot reach', () => {
   it('refuses a tool its server does not list, and lets the session go', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { call } = callsOn({ graph: remote(fake) });
 
     expect(await call('introspect', { server: 'graph', tool: 'lookup' })).toMatchObject({
@@ -163,7 +170,7 @@ describe('introspect refusing what it cannot reach', () => {
   });
 
   it('refuses a server that cannot be asked, in words cut at 1 KiB', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const refusal = 'The gateway refused the request. '.repeat(100);
     const { call } = callsOn({ graph: remote(fake) }, () => Promise.reject(new Error(refusal)));
 

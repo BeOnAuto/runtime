@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming, secretsOf } from '../index.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
-import { consentClientWith, testClientInfo } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { consentClientWith, fakeMcpInProcess, inProcessFetch, testClientInfo } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { askingFetch, clientSecret, secretAuth } from '../testing/token-sources.ts';
 import { openerOf } from './link-openers.ts';
 
@@ -18,8 +18,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(authorizationServers?: readonly string[]): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({
+function served(authorizationServers?: readonly string[]): FakeMcpServer {
+  const fake = fakeMcpInProcess({
     client: {
       clientId: 'playbook',
       clientSecret,
@@ -50,7 +50,7 @@ function settingsOf(fake: FakeMcpServer, auth: AuthSettings): McpServerSettings 
   };
 }
 
-async function opened(settings: McpServerSettings, fetch: FetchOfACall = globalThis.fetch): Promise<void> {
+async function opened(settings: McpServerSettings, fetch: FetchOfACall = inProcessFetch): Promise<void> {
   const client = await openerOf(settings, {
     clientInfo: testClientInfo,
     fetch,
@@ -66,8 +66,8 @@ async function opened(settings: McpServerSettings, fetch: FetchOfACall = globalT
 
 describe('the opener of an mcp server whose metadata names another authorization server', () => {
   it('takes its token from the issuer, for the audience, where the auth block names discovery issuer', async () => {
-    const named = await served();
-    const fake = await served([named.origin]);
+    const named = served();
+    const fake = served([named.origin]);
     const asking = askingFetch();
 
     await opened(settingsOf(fake, secretAuth(fake, { discovery: 'issuer', audience })), asking.fetch);
@@ -77,8 +77,8 @@ describe('the opener of an mcp server whose metadata names another authorization
   });
 
   it('asks for no token where the auth block names no discovery, or protected_resource', async () => {
-    const named = await served();
-    const fake = await served([named.origin]);
+    const named = served();
+    const fake = served([named.origin]);
 
     const leftOut = settingsOf(fake, secretAuth(fake));
     const written = settingsOf(fake, secretAuth(fake, { discovery: 'protected_resource' }));

@@ -6,21 +6,16 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  fakeMcpInProcess,
   fetchWithDeletion,
+  inProcessFetch,
   patientTiming,
   playbookToolCalls,
   reportingAccess,
   type AccessOptions,
   type WritesOptions,
 } from '../testing/index.ts';
-import {
-  fakeApiKey,
-  fakeStdioServerPath,
-  serveFakeMcp,
-  type FakeMcpOptions,
-  type FakeMcpServer,
-} from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
+import { fakeApiKey, fakeStdioServerPath, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -28,8 +23,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(options: FakeMcpOptions = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey, ...options });
+function fakeServer(options: FakeMcpOptions = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey, ...options });
   closing.push(fake.close);
   return fake;
 }
@@ -69,8 +64,8 @@ const sleeping = { server: 'graph', tool: 'sleep', arguments: { ms: 5000 } };
 
 describe('the session a call made by hand opens', () => {
   it('is ended once the call has answered, six requests in all, and five where the server issues no session id', async () => {
-    const fake = await fakeServer();
-    const sessionless = await fakeServer({ issuesSessionIds: false });
+    const fake = fakeServer();
+    const sessionless = fakeServer({ issuesSessionIds: false });
 
     await callsByHand(accessTo(graphOn(fake))).execute(searching);
     await callsByHand(accessTo(graphOn(sessionless))).execute(searching);
@@ -86,7 +81,7 @@ describe('the session a call made by hand opens', () => {
   });
 
   it('is one for a call and a search made at once', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo(graphOn(fake));
     const { execute, call } = callsByHand(access);
 
@@ -103,18 +98,18 @@ describe('the session a call made by hand opens', () => {
 
 describe('a call whose caller goes away while the tool is called', () => {
   it('records a start and no answer, answers nothing, sends no second call and still lets the session go', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo(graphOn(fake));
     const { execute, recorded } = callsByHand(access);
     const leaving = new AbortController();
 
     const settling = execute(sleeping, leaving.signal);
-    await until(() => fake.received().length === 1);
+    await fake.once(() => fake.received().length === 1);
     leaving.abort();
     const settled = await settling;
 
     expect(settled).toEqual({ status: 'cancelled' });
-    await until(() => fake.endedSessions() === 1);
+    await fake.once(() => fake.endedSessions() === 1);
     expect((await recorded()).map(({ type }) => type)).toEqual(['tool_call_started']);
     expect(fake.received()).toHaveLength(1);
     await callsByHand(access).execute(searching);
@@ -124,10 +119,10 @@ describe('a call whose caller goes away while the tool is called', () => {
 
 describe('a call whose caller goes away while its server is slow to end the session', () => {
   it('answers cancelled without waiting for the session to end, and the session still ends', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const deleting = Promise.withResolvers<void>();
     const letGo = Promise.withResolvers<void>();
-    const slowToEnd = fetchWithDeletion(fetch, async (_request, sent) => {
+    const slowToEnd = fetchWithDeletion(inProcessFetch, async (_request, sent) => {
       deleting.resolve();
       await letGo.promise;
       return sent();
@@ -136,39 +131,39 @@ describe('a call whose caller goes away while its server is slow to end the sess
     const leaving = new AbortController();
 
     const settling = execute(sleeping, leaving.signal);
-    await until(() => fake.received().length === 1);
+    await fake.once(() => fake.received().length === 1);
     leaving.abort();
     const settled = await settling;
     await deleting.promise;
     letGo.resolve();
 
     expect(settled).toEqual({ status: 'cancelled' });
-    await until(() => fake.endedSessions() === 1);
+    await fake.once(() => fake.endedSessions() === 1);
   });
 });
 
 describe('a call the ledger cannot record', () => {
   it('fails with an incident and sends nothing, since the start is recorded first', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { execute, incidents } = callsByHand(accessTo(graphOn(fake)), { writesRefused: true });
 
     expect(await execute(searching)).toEqual({ status: 'failed', incident: incidents()[0]?.id });
     expect(incidents()).toHaveLength(1);
     expect(fake.received()).toEqual([]);
-    await until(() => fake.endedSessions() === 1);
+    await fake.once(() => fake.endedSessions() === 1);
   });
 
   it('is reported as an incident naming the call once its caller has gone, and sends nothing', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const leaving = new AbortController();
     const recording = Promise.withResolvers<void>();
-    const { execute, incidents, writesAttempted } = callsByHand(accessTo(graphOn(fake)), {
+    const { execute, incidents, writeAttempted } = callsByHand(accessTo(graphOn(fake)), {
       writesRefused: true,
       writesHeldUntil: recording.promise,
     });
 
     const settling = execute(searching, leaving.signal);
-    await until(() => writesAttempted() === 1);
+    await writeAttempted(1);
     leaving.abort();
     recording.resolve();
     const settled = await settling;
@@ -180,7 +175,7 @@ describe('a call the ledger cannot record', () => {
       call: { operation: 'execute_connection', org: 'acme', playbook: 'alpha', caller: 'acme-builder' },
     });
     expect(fake.received()).toEqual([]);
-    await until(() => fake.endedSessions() === 1);
+    await fake.once(() => fake.endedSessions() === 1);
   });
 });
 

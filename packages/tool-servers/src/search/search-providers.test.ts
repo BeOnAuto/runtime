@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { defineSearch, defineSearchInOrg, type OfferedProvider, type ProviderOffering } from '../index.ts';
 import { fakeConnections, type FakeConnections } from '../testing/fake-connections.ts';
 import { fakeProviders, type FakeProvider } from '../testing/fake-providers.ts';
-import { patientTiming, playbookToolCalls } from '../testing/index.ts';
+import { fakeMcpInProcess, patientTiming, playbookToolCalls } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeApiKey, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const adder: CallerIdentity = {
   id: 'person:ada',
@@ -76,8 +76,8 @@ function searchingWith({ offered = [tracker, ledgers, chat], connections = fakeC
     );
 }
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -178,7 +178,7 @@ describe('the offering of a search of the org', () => {
 
 describe('a provider a connection of the org serves', () => {
   it('is left out of the providers, pending, connected or broken, and its server is searched with the provider', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', servedBy(fake, 'tracker', 'issues'));
     connections.pend('acme', servedBy(fake, 'ledgers', 'books'));
@@ -202,7 +202,7 @@ describe('a provider a connection of the org serves', () => {
   });
 
   it('is left out whatever the playbook asked for narrows the servers to, the org read once for both', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.pend('acme', { ...servedBy(fake, 'tracker', 'issues'), entry: { url: fake.url, playbooks: ['beta'] } });
     const searched = searchingWith({ connections });
@@ -221,7 +221,7 @@ function trackerAt(fake: FakeMcpServer): FakeProvider {
 
 describe('a provider an entry of the file serves', () => {
   it('is left out of the providers, and its server is searched with the provider', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const providers = fakeProviders(new Map([['tracker', trackerAt(fake)]]));
     const { access } = reportingAccess(
       { issues: { provider: 'tracker', credential: '${GRAPH_API_KEY}', org: 'acme', allowed: ['search'] } },
@@ -248,7 +248,7 @@ describe('a provider an entry of the file serves', () => {
 
 describe('the providers of a search the caller may not add from', () => {
   it('are left out for a caller the offering refuses, and with a server named, and kept with a playbook', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', servedBy(fake, undefined, 'graph'));
     const searched = searchingWith({ connections });
@@ -269,7 +269,7 @@ describe('the providers of a search the caller may not add from', () => {
   });
 
   it('are never answered by the search of a playbook', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', servedBy(fake, 'tracker', 'issues'));
     const { access } = reportingAccess({}, { timing: patientTiming, connections });

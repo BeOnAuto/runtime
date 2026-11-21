@@ -5,13 +5,15 @@ import { defaultTiming, secretsOf } from '../index.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
 import {
   consentClientWith,
+  fakeMcpInProcess,
   fetchWithDeletion,
+  inProcessFetch,
   manualTimer,
   recordingTimer,
   refusedConnections,
   testClientInfo,
+  type FakeMcpServer,
 } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '../testing/served-fakes.ts';
 import { errorsNoLongerReported } from './mcp-client.ts';
 import type { CallSettled, ServerClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
@@ -27,8 +29,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(options?: FakeMcpOptions): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp(options);
+function fakeServer(options?: Parameters<typeof fakeMcpInProcess>[0]): FakeMcpServer {
+  const fake = fakeMcpInProcess(options);
   closing.push(fake.close);
   return fake;
 }
@@ -67,7 +69,7 @@ function linked(settings: McpServerSettings, options: Partial<Parameters<typeof 
   const reported: string[] = [];
   const link = serverLink(settings, {
     clientInfo: testClientInfo,
-    fetch: globalThis.fetch,
+    fetch: inProcessFetch,
     consent: consentClientWith(),
     secrets,
     now: Date.now,
@@ -105,7 +107,7 @@ async function failureOfTaking(link: ReturnType<typeof linked>['link']) {
 
 describe('a link to an mcp server', () => {
   it('shares one session between its holders and ends it when the last lets go', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
 
     const first = await link.take();
@@ -122,7 +124,7 @@ describe('a link to an mcp server', () => {
   });
 
   it('opens a new session in place of a failed one, once for everyone who saw it fail', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
 
     const failed = await link.take();
@@ -138,7 +140,7 @@ describe('a link to an mcp server', () => {
 
 describe('opening a session', () => {
   it('forgets a session it could not open, and opens one on the next take', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
     fake.answerNextWith(503);
 
@@ -147,9 +149,8 @@ describe('opening a session', () => {
   });
 
   it('cannot reach a server that is not listening', async () => {
-    const fake = await serveFakeMcp();
-    await fake.close();
-    const { link } = linked(httpSettings(fake.url), { fetch: refusedConnections([fake.origin]).fetch });
+    const gone = 'https://gone.in-process.test';
+    const { link } = linked(httpSettings(`${gone}/mcp`), { fetch: refusedConnections([gone]).fetch });
 
     expect(await failureOfTaking(link)).toEqual({
       kind: 'unreachable',
@@ -158,7 +159,7 @@ describe('opening a session', () => {
   });
 
   it('waits out a 429 that asks for no longer than the longest wait, once', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
     fake.answerNextWith(429, 1, { 'retry-after': '0' });
 
@@ -169,7 +170,7 @@ describe('opening a session', () => {
   });
 
   it('fails on a 429 that asks for a longer wait, for none, or comes again', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
     const rateLimited = { kind: 'rate_limited', message: 'The tool server answered HTTP 429' };
 
@@ -184,7 +185,7 @@ describe('opening a session', () => {
 
 describe('the headers and the end of a session', () => {
   it('sends the headers of its entry', async () => {
-    const fake = await fakeServer({ bearer: 'graph-api-key-4f1d9a7c2b' });
+    const fake = fakeServer({ bearer: 'graph-api-key-4f1d9a7c2b' });
     const { link } = linked(
       httpSettings(fake.url, {
         headers: new Map([['Authorization', Redacted.make('Bearer graph-api-key-4f1d9a7c2b')]]),
@@ -197,7 +198,7 @@ describe('the headers and the end of a session', () => {
   });
 
   it('stops the session it holds, and stops nothing when it holds none', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url));
 
     await link.stop();
@@ -212,13 +213,13 @@ const endings: readonly ('release' | 'stop')[] = ['release', 'stop'];
 
 describe('an http server that does not end its session', () => {
   it.each(endings)('bounds %s at its deadline and aborts a session deletion that never answers', async (ending) => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const deleting = Promise.withResolvers<unknown>();
     const unanswered = Promise.withResolvers<Response>();
     const deadline = manualTimer();
     const { link } = linked(httpSettings(fake.url), {
       timer: deadline.timer,
-      fetch: fetchWithDeletion(fetch, (request) => {
+      fetch: fetchWithDeletion(inProcessFetch, (request) => {
         deleting.resolve(request);
         return unanswered.promise;
       }),
@@ -235,9 +236,9 @@ describe('an http server that does not end its session', () => {
   });
 
   it('closes the client even when the server refuses deletion', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link } = linked(httpSettings(fake.url), {
-      fetch: fetchWithDeletion(fetch, () => Promise.resolve(new Response(null, { status: 500 }))),
+      fetch: fetchWithDeletion(inProcessFetch, () => Promise.resolve(new Response(null, { status: 500 }))),
     });
     const client = await link.take();
 
@@ -247,7 +248,7 @@ describe('an http server that does not end its session', () => {
 
 describe('an http session that ends before the deadline', () => {
   it('stops waiting for the deadline when the server answers', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { timer, waits } = recordingTimer();
     const { link } = linked(httpSettings(fake.url), { timer });
     const client = await link.take();
@@ -261,7 +262,7 @@ describe('an http session that ends before the deadline', () => {
 
 describe('a link to an http server with an auth block', () => {
   it('sends a token minted from the client credentials, scrubbed from what the server says', async () => {
-    const fake = await fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+    const fake = fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const { link, secrets } = linked(httpSettings(fake.url, { auth: authOf(fake) }));
 
     await link.take();
@@ -272,7 +273,7 @@ describe('a link to an http server with an auth block', () => {
   });
 
   it('authenticates again once on a 401, and fails on a second as a refused key', async () => {
-    const fake = await fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+    const fake = fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const { link } = linked(httpSettings(fake.url, { auth: authOf(fake) }));
     const client = await link.take();
 
@@ -289,7 +290,7 @@ describe('a link to an http server with an auth block', () => {
 
 describe('an http server that sends what is not JSON-RPC', () => {
   it('has the first 100 of the errors it causes reported, and then a line saying the rest is not shown', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { link, reported } = linked(httpSettings(fake.url));
     fake.answerNextCallAfterNoise(150);
 

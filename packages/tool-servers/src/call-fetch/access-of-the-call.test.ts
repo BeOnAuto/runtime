@@ -8,13 +8,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   controlledSignals,
+  fakeMcpInProcess,
+  inProcessFetch,
   patientTiming,
   recordingCallJournal,
   reportingAccess,
   toolRun,
   type ReportingAccess,
 } from '../testing/index.ts';
-import { fakeStdioServerPath, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -36,7 +38,7 @@ function recordingFetch(): RecordingFetch {
   return {
     fetch: (...[address, init]: readonly [unknown, unknown?]) => {
       asked.times += 1;
-      return globalThis.fetch(String(address), Object.assign({}, init));
+      return inProcessFetch(String(address), Object.assign({}, init));
     },
     asked: () => asked.times,
   };
@@ -65,14 +67,14 @@ async function calledOn(access: ReportingAccess['access'], server: string, ofThe
   return reply?.isError;
 }
 
-async function graphServer() {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function graphServer() {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
 }
 
-async function serverOfClientCredentials() {
-  const fake = await serveFakeMcp({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+function serverOfClientCredentials() {
+  const fake = fakeMcpInProcess({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
   closing.push(fake.close);
   const auth = { issuer: fake.origin, client_id: 'playbook', client_secret: '${GRAPH_CLIENT_SECRET}' };
   return { fake, entry: { url: fake.url, auth, org: 'acme' } };
@@ -80,7 +82,7 @@ async function serverOfClientCredentials() {
 
 describe('the access over a lent fetch', () => {
   it('is made once for the fetch and taken again by every call the fetch is lent to, with the token it minted, and holds no session once a call is done', async () => {
-    const { fake, entry } = await serverOfClientCredentials();
+    const { fake, entry } = serverOfClientCredentials();
     const [own, lent, another] = [recordingFetch(), recordingFetch(), recordingFetch()];
     const access = accessTo({ graph: entry }, own);
 
@@ -97,7 +99,7 @@ describe('the access over a lent fetch', () => {
 describe('the fetch the tools of a run reach their servers with', () => {
   it('is the fetch the context of the operation gives, not the access its own, so each call of a shell has its own', async () => {
     const [own, ofTheCall] = [recordingFetch(), recordingFetch()];
-    const access = accessTo({ graph: await graphServer() }, own);
+    const access = accessTo({ graph: graphServer() }, own);
 
     expect(await calledOn(access, 'graph', ofTheCall)).toBe(false);
     expect([own.asked(), ofTheCall.asked() > 0]).toEqual([0, true]);
@@ -105,7 +107,7 @@ describe('the fetch the tools of a run reach their servers with', () => {
 
   it('is the access its own when the context of the operation gives none, as on the server', async () => {
     const own = recordingFetch();
-    const access = accessTo({ graph: await graphServer() }, own);
+    const access = accessTo({ graph: graphServer() }, own);
 
     expect(await calledOn(access, 'graph')).toBe(false);
     expect(own.asked()).toBeGreaterThan(0);
@@ -121,7 +123,7 @@ describe('the fetch the tools of a run reach their servers with', () => {
       org: 'acme',
     };
     const own = recordingFetch();
-    const access = accessTo({ graph: await graphServer(), local }, own);
+    const access = accessTo({ graph: graphServer(), local }, own);
 
     expect(await calledOn(access, 'local')).toBe(false);
     expect(await calledOn(access, 'local', recordingFetch())).toBe(false);

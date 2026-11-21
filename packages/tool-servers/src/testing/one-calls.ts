@@ -3,11 +3,12 @@ import { afterEach } from 'vitest';
 
 import type { ToolAccess } from '../access/tool-access.ts';
 import type { Timing } from '../bounds/call-bounds.ts';
+import type { FakeMcpOptions, FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
 import type { OneCall, RunCall } from '../one-call/one-call.ts';
+import { fakeMcpInProcess } from './in-process-fakes.ts';
 import { patientTiming } from './index.ts';
 import { reportingAccess, type AccessOptions, type ReportingAccess } from './reporting-access.ts';
-import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from './served-fakes.ts';
 
 export const oneCallKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -25,8 +26,8 @@ export function closedAfter(close: () => Promise<void>): void {
   closing.push(close);
 }
 
-export async function oneCallServer(options: FakeMcpOptions = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ ...options, bearer: oneCallKey });
+export function oneCallServer(options: FakeMcpOptions = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess({ ...options, bearer: oneCallKey });
   closedAfter(fake.close);
   return fake;
 }

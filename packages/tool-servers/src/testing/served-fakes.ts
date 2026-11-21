@@ -13,7 +13,6 @@ export type { ServiceListing, ThroughAuto } from '../consent-testing/auto-consen
 export {
   gatewayClientId,
   gatewayDocumentOf,
-  serveFakeGateway,
   testAccount,
   type Allowed,
   type FakeGateway,
@@ -21,6 +20,7 @@ export {
   type GatewayStep,
   type SeenGatewayRequest,
 } from '../consent-testing/fake-gateway.ts';
+export { serveFakeGateway } from '../consent-testing/fake-gateway-server.ts';
 export { fakeApiKey, openFakeToolRun, type FakeToolRun } from './fake-tool-run.ts';
 export { toolAccessBehaviour } from '../access-testing/tool-access-behaviour.ts';
 export {

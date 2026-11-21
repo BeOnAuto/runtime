@@ -6,6 +6,7 @@ import type { ToolAccess } from '../access/tool-access.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
 import {
   describedAccess,
+  fakeApiInProcess,
   patientTiming,
   playbookToolCalls,
   refusedConnections,
@@ -13,7 +14,7 @@ import {
 } from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey, oneCallServer } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeApi } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01';
 
@@ -68,7 +69,7 @@ function toolCallsAmong(spans: readonly RecordedSpan[]): readonly RecordedSpan[]
 
 describe('one call of a tool of an MCP server, traced', () => {
   it('is a client span named for the tool, and hands the trace to the server in the metadata of the call', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
 
     expect(await spansOfOneCall(tracedAccess(fake.url))).toMatchObject([
       { name: 'tools/call echo', kind: 'client', ending: 'succeeded', attributes: toolAttributes },
@@ -79,7 +80,7 @@ describe('one call of a tool of an MCP server, traced', () => {
   });
 
   it('names why a call that was never sent ended, and how a sent call that did not answer ended', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     fake.answerNextOf('tools/call', 503);
     const failed = await spansOfOneCall(tracedAccess(fake.url));
     const { url, origin } = fake;
@@ -95,7 +96,7 @@ describe('one call of a tool of an MCP server, traced', () => {
 
 describe('a call of a tool of an MCP server made by hand with execute, traced', () => {
   it('is a client span named for the tool beneath the operation, and hands the trace to the server', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const spans = await spansOfExecute(tracedAccess(fake.url));
     const operation = spans.find(({ name }) => name === 'execute_connection');
 
@@ -106,7 +107,7 @@ describe('a call of a tool of an MCP server made by hand with execute, traced', 
   });
 
   it('names how a sent call that did not answer ended, and leaves a call refused at its opening to the operation', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     fake.answerNextOf('tools/call', 503);
     const failed = await spansOfExecute(tracedAccess(fake.url));
     const { url, origin } = fake;
@@ -124,7 +125,7 @@ describe('a call of a tool of an MCP server made by hand with execute, traced', 
 
 describe('a call of a tool of a connection, traced', () => {
   it('names the connection beside its tool server, called once or by execute', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const connections = fakeConnections();
     connections.connect('acme', {
       id: 'graph-id',
@@ -146,7 +147,7 @@ describe('a call of a tool of a connection, traced', () => {
 
 describe('a call of an operation of an HTTP API', () => {
   it('is no tools/call span, called once or by execute, since its HTTP request is the span beneath', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closedAfter(fake.close);
     const access = await tracedApiAccess(fake.documentUrl);
 

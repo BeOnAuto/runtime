@@ -9,7 +9,9 @@ import {
   consentClientAt,
   consentClientWith,
   finishAskedOf,
+  forConsentInProcess,
   hostOf,
+  inProcessFetch,
   registeredAt,
   returnAddress,
   rowOf,
@@ -19,7 +21,7 @@ import {
   tokensKeptBy,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -27,8 +29,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -63,7 +65,7 @@ function tokenFormsSent(refusingSeveral = false) {
     }
     return refusingSeveral && form.getAll('resource').length > 1
       ? Response.json({ error: 'invalid_target' }, { status: 400 })
-      : globalThis.fetch(request);
+      : inProcessFetch(request);
   };
   return { fetch, forms: () => [...forms] };
 }
@@ -84,7 +86,7 @@ function keptKeysOf({ tokens }: FinishedConsent): readonly string[] {
 
 describe('the resources a start asks for', () => {
   it("are its server's, then one for each origin its entry's requests name", async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
 
     const asked = await startedAt(client, { ...startAskedAt(fake), requestOrigins });
@@ -93,7 +95,7 @@ describe('the resources a start asks for', () => {
   });
 
   it('are none where the server publishes no resource of its own, whatever origins its entry names', async () => {
-    const fake = await served({ publishesMetadata: false });
+    const fake = served({ publishesMetadata: false });
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const endpoints = { authorization_endpoint: `${fake.origin}/authorize`, token_endpoint: `${fake.origin}/token` };
 
@@ -103,7 +105,7 @@ describe('the resources a start asks for', () => {
   });
 
   it("leave a start whose entry declares no request as it was, every parameter in its place and its server's resource once", async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
     const way = {
       scope: 'files.read offline_access',
@@ -133,7 +135,7 @@ describe('the resources a start asks for', () => {
 
 describe('the resources a finish redeems the code for', () => {
   it("are those its start asked, which it keeps with the tokens, the origins of its entry's requests", async () => {
-    const fake = await served();
+    const fake = served();
     const sent = tokenFormsSent();
     const client = consentClientWith({ fetch: sent.fetch, registeredClients: [registeredAt(fake.origin)] });
 
@@ -145,7 +147,7 @@ describe('the resources a finish redeems the code for', () => {
   });
 
   it("are its server's alone where its entry declares no request, the exchange and the value kept as they were", async () => {
-    const fake = await served();
+    const fake = served();
     const sent = tokenFormsSent();
     const client = consentClientWith({ fetch: sent.fetch, registeredClients: [registeredAt(fake.origin)] });
 
@@ -171,7 +173,7 @@ describe('the resources a finish redeems the code for', () => {
 
 describe('a finish whose server refuses a resource it asks for', () => {
   it('ends as any refused exchange ends, asked once and never again with fewer', async () => {
-    const fake = await served();
+    const fake = served();
     const sent = tokenFormsSent(true);
     const client = consentClientWith({ fetch: sent.fetch, registeredClients: [registeredAt(fake.origin)] });
     const asked = await finishAskedOf(client, { ...startAskedAt(fake), requestOrigins });
@@ -191,7 +193,7 @@ describe('a finish whose server refuses a resource it asks for', () => {
 const renewalTime = 3_540_000;
 
 async function renewingWith(signedInFor: readonly string[], declaredNow: readonly string[]) {
-  const fake = await served();
+  const fake = served();
   const sent = tokenFormsSent();
   const consent = consentClientAt(fake, { fetch: sent.fetch });
   const asked = await finishAskedOf(consent, { ...startAskedAt(fake), requestOrigins: signedInFor });

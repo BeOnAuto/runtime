@@ -22,7 +22,6 @@ import {
   type MemoryTokens,
 } from '../testing/index.ts';
 import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
 import { keptValueOf, type KeptTokens } from './kept-tokens.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -106,7 +105,7 @@ describe('a refresh the server refuses as invalid_grant', () => {
     const source = sourceOf(connected, consentClientAt(connected.fake, { fetch: gate.fetch }));
 
     const renewing = renewed(connected, source);
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     await revokedGrantOf(connected.fake, connected.first);
     Effect.runSync(connected.row.replace(1, other.tokens));
     gate.release();

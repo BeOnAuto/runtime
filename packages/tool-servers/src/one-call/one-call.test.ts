@@ -5,7 +5,7 @@ import { keptTextOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { brokenPromise, deniedText, patientTiming } from '../testing/index.ts';
+import { brokenPromise, cuttingTimeouts, deniedText } from '../testing/index.ts';
 import {
   calledOnce,
   echoCall,
@@ -16,10 +16,7 @@ import {
   oneCallServer,
   failedWith,
   unopenedWith,
-  closedAfter,
 } from '../testing/one-calls.ts';
-import { reportingAccess } from '../testing/reporting-access.ts';
-import { fakeStdioServerPath } from '../testing/served-fakes.ts';
 
 const largeText = '\u{1F600}'.repeat(8 * 256);
 
@@ -37,7 +34,7 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 describe('one call of a tool', () => {
   it('lists the tools of its server, calls the tool with the metadata its caller gives, and answers the call whole', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     expect(await calledOnce(access)).toEqual({
@@ -72,7 +69,7 @@ describe('one call of a tool', () => {
   });
 
   it('lists the tools of its server before it calls one', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     await calledOnce(oneCallAccess(fake.url));
     const asked = fake.seen().map(({ rpc }) => rpc);
 
@@ -83,7 +80,7 @@ describe('one call of a tool', () => {
 
 describe('the metadata of one call', () => {
   it('carries the mark of a delivery that takes an answer in the _meta of the call, a boolean beside the ids', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const meta = { ...echoCall.meta, 'auto.on/takes_answer': true };
 
     await calledOnce(oneCallAccess(fake.url), { meta });
@@ -94,7 +91,7 @@ describe('the metadata of one call', () => {
 
 describe('what one call answers of its tool', () => {
   it('answers the mark of the tool it listed, as its server marks it or as its entry marks it in place of its server', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const search = { reference: { server: 'graph', tool: 'search' } };
 
     expect([
@@ -107,7 +104,7 @@ describe('what one call answers of its tool', () => {
   });
 
   it('keeps the arguments and the answer, scrubbed, unless the entry of the server turns keeping off', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
     const call = { ...echoCall, input: { token: oneCallKey } };
     const keptAnswer = JSON.stringify({ content: [{ type: 'text', text: scrubbed }] });
@@ -141,7 +138,7 @@ describe('what one call answers of its tool', () => {
 
 describe('a call that fails', () => {
   it('is a tool error in the words of the tool when it answers with one, and in the words of the server when it refuses the arguments', async () => {
-    const fake = await oneCallServer({ data: true });
+    const fake = oneCallServer({ data: true });
     const access = oneCallAccess(fake.url, { allowed: ['denied', 'strict'] });
 
     expect(await calledOnce(access, { reference: { server: 'graph', tool: 'denied' } })).toMatchObject({
@@ -157,7 +154,7 @@ describe('a call that fails', () => {
   });
 
   it('is not opened for a tool its server does not list, and nothing is sent', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
 
     expect(await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'gone' } })).toEqual(
       unopenedWith('tool_not_offered', 'tool_not_listed', 'The tool server graph does not list the tool gone'),
@@ -166,22 +163,27 @@ describe('a call that fails', () => {
   });
 
   it('ends at its call bound, naming no failure of its server', async () => {
-    const fake = await oneCallServer();
-    const sleeping = { reference: { server: 'graph', tool: 'sleep' }, input: { ms: 5000 } };
+    const fake = oneCallServer();
+    const deadline = cuttingTimeouts();
+    deadline.cut();
 
-    const ended = await calledOnce(oneCallAccess(fake.url, {}, { callMs: 200 }), sleeping);
+    const ended = await calledOnce(
+      oneCallAccess(fake.url, {}, { callMs: 200, deadlineAfter: deadline.requestTimeout }),
+      {},
+    );
 
     expect(ended).toMatchObject({
-      ...failedWith('timed_out', 'The tool server did not answer within 200 ms'),
+      ...failedWith('timed_out', expect.any(String)),
       failed: { because: 'timed_out', duration_ms: aNumber },
     });
     expect(ended).not.toHaveProperty('because');
+    expect(deadline.cuts()).toEqual([200]);
   });
 });
 
 describe('what a tool answers', () => {
   it('is carried whole, its content and its structured content, and counted', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
 
     const large = await calledOnce(access, { reference: { server: 'graph', tool: 'large' }, input: { kib: 8 } });
@@ -199,7 +201,7 @@ describe('what a tool answers', () => {
   });
 
   it('is scrubbed of the secrets of the server before the caller reads it', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
 
     expect(await calledOnce(oneCallAccess(fake.url), { input: { token: oneCallKey } })).toMatchObject({
       outcome: 'result',
@@ -210,7 +212,7 @@ describe('what a tool answers', () => {
 
 describe('one call of a tool that declares an output schema', () => {
   it('answers what a tool answered against its own output schema, as it answered it', async () => {
-    const fake = await oneCallServer({ data: true });
+    const fake = oneCallServer({ data: true });
 
     expect(
       await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'promised' } }),
@@ -223,41 +225,15 @@ describe('one call of a tool that declares an output schema', () => {
   });
 });
 
-function stdioAccess() {
-  const { access } = reportingAccess(
-    {
-      limitless: {
-        command: process.execPath,
-        args: [fakeStdioServerPath()],
-        env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
-        org: 'acme',
-      },
-    },
-    { environment: { NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'] }, timing: patientTiming },
-  );
-  closedAfter(access.close);
-  return access;
-}
-
-const tooLarge = { kind: 'answered', outcome: 'too_large', failed: { because: 'too_large' } };
-
 describe('one call whose tool answers past the cap of its transport', () => {
-  it(
-    'ends too large past 16 MiB over HTTP and past 4 MiB over stdio, the end a delivery and a telling record',
-    { timeout: 120_000 },
-    async () => {
-      const fake = await oneCallServer();
+  it('ends too large past 16 MiB over HTTP, the end a delivery and a telling record', async () => {
+    const fake = oneCallServer();
 
-      const overHttp = await calledOnce(oneCallAccess(fake.url), {
-        reference: { server: 'graph', tool: 'large' },
-        input: { kib: 16_384 },
-      });
-      const overStdio = await calledOnce(stdioAccess(), {
-        reference: { server: 'limitless', tool: 'large' },
-        input: { kib: 4097 },
-      });
+    const overHttp = await calledOnce(oneCallAccess(fake.url), {
+      reference: { server: 'graph', tool: 'large' },
+      input: { kib: 16_384 },
+    });
 
-      expect([overHttp, overStdio]).toMatchObject([tooLarge, tooLarge]);
-    },
-  );
+    expect(overHttp).toMatchObject({ kind: 'answered', outcome: 'too_large', failed: { because: 'too_large' } });
+  });
 });

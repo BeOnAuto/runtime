@@ -9,11 +9,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ConsentAuth, ConsentClient, ConsentServed } from '../index.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
 import {
+  clockAt,
   connectedByConsent,
   consentClientAt,
   consentRegistration,
   everyHost,
+  fakeApiInProcess,
   finishAskedOf,
+  forConsentInProcess,
+  inProcessFetch,
   memoryTokens,
   patientTiming,
   reportingAccess,
@@ -21,9 +25,8 @@ import {
   rowOf,
   servedOf,
   studioBase,
-  clockAt,
 } from '../testing/index.ts';
-import { serveFakeApi, servedForConsent, type FakeApiServer, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeApiServer, FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -82,18 +85,18 @@ function echoingTokens(tokens: ConsentServed['held']['tokens']) {
             { status: 400 },
           ),
         )
-      : globalThis.fetch(String(address), Object.assign({}, init));
+      : inProcessFetch(String(address), Object.assign({}, init));
 }
 
-async function servedMcp(): Promise<FakeMcpServer> {
-  const fake = await servedForConsent();
+function servedMcp(): FakeMcpServer {
+  const fake = forConsentInProcess();
   closing.push(fake.close);
   return fake;
 }
 
 describe('a call through an MCP connection connected by consent', () => {
   it('sends its access token, and holds neither token in what it records or the lines its server reports', async () => {
-    const fake = await servedMcp();
+    const fake = servedMcp();
     const connected = await connectedByConsent(fake);
     const tokens = connected.kept;
     const clock = clockAt(0);
@@ -118,7 +121,7 @@ describe('a call through an MCP connection connected by consent', () => {
   });
 
   it('asks its tokens again through the fetch the context of the operation gives, not the consent client its own', async () => {
-    const fake = await servedMcp();
+    const fake = servedMcp();
     const connected = await connectedByConsent(fake);
     const served = servedOf(connected, rowOf(connected, clockAt(0).now));
     const { access, messages } = accessTo({ url: fake.url }, served, consentClientAt(fake));
@@ -135,8 +138,8 @@ describe('a call through an MCP connection connected by consent', () => {
   });
 });
 
-async function servedApi(): Promise<FakeApiServer> {
-  const api = await serveFakeApi({ client: consentRegistration() });
+function servedApi(): FakeApiServer {
+  const api = fakeApiInProcess({ client: consentRegistration() });
   closing.push(api.close);
   return api;
 }
@@ -169,7 +172,7 @@ async function connectedToApi(api: FakeApiServer) {
 
 describe('a call through an HTTP API connected by consent', () => {
   it('sends its access token as a bearer, and renews it once when the API refuses it', async () => {
-    const api = await servedApi();
+    const api = servedApi();
     const { consent, served, row } = await connectedToApi(api);
     const { access } = accessTo({ document: api.documentUrl }, served, consent);
 

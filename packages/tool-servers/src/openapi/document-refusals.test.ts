@@ -14,8 +14,7 @@ import {
   servedDocumentAt,
 } from '../api-testing/described-documents.ts';
 import { shippedDocumentOf } from '../settings/server-settings.ts';
-import { fakeApiDocument, refusedConnections } from '../testing/index.ts';
-import { serveFakeApi } from '../testing/served-fakes.ts';
+import { fakeApiDocument, fakeApiInProcess, inProcessFetch, refusedConnections } from '../testing/index.ts';
 
 const brokenFetch: typeof globalThis.fetch = () =>
   Promise.resolve(
@@ -34,9 +33,9 @@ function refusedIn(directory: string) {
 
 describe('a document refused at start because its URL', () => {
   it('answers an error, cannot be reached or does not answer in time', async () => {
-    const missing = await servedDocumentAt(() => Promise.resolve(new Response('gone', { status: 404 })));
-    const silent = await servedDocumentAt(() => Promise.withResolvers<Response>().promise);
-    const gone = await serveFakeApi();
+    const missing = servedDocumentAt(() => Promise.resolve(new Response('gone', { status: 404 })));
+    const silent = servedDocumentAt(() => Promise.withResolvers<Response>().promise);
+    const gone = fakeApiInProcess();
     await gone.close();
 
     expect(await refusalOf({ graph: { document: missing, org: 'acme' } })).toBe(
@@ -54,9 +53,9 @@ describe('a document refused at start because its URL', () => {
   });
 
   it('answers a redirect, which is not followed to the address it names', async () => {
-    const other = await serveFakeApi();
+    const other = fakeApiInProcess();
     onTestFinished(other.close);
-    const moved = await servedDocumentAt(() =>
+    const moved = servedDocumentAt(() =>
       Promise.resolve(new Response(null, { status: 302, headers: { location: `${other.baseUrl}/openapi.json` } })),
     );
 
@@ -78,7 +77,7 @@ describe('a document refused at start because its URL', () => {
 describe('a document refused at start because of its bytes', () => {
   it('when it takes more than 4 MiB at its URL, in its file or in the bytes the providers measured as they read it', async () => {
     const large = 'x'.repeat(4_194_305);
-    const served = await servedDocumentAt(() => Promise.resolve(new Response(large)));
+    const served = servedDocumentAt(() => Promise.resolve(new Response(large)));
     const directory = directoryWith({ 'graph.json': large });
     const byName = new Map([['graph.json', shippedDocumentOf(new TextEncoder().encode('é'.repeat(2_097_153)))]]);
     const refusals = [
@@ -153,7 +152,7 @@ function referringTo(address: string): string {
 
 describe('a document refused at start because a schema refers outside it', () => {
   it('to an https, http or file address, naming the entry and the place, and fetching nothing', async () => {
-    const counted = countedFetch(globalThis.fetch);
+    const counted = countedFetch(inProcessFetch);
     const directory = directoryWith(
       Object.fromEntries(elsewhere.map((address, index) => [`graph-${index}.json`, referringTo(address)])),
     );
@@ -174,18 +173,18 @@ function pathsAt(...keys: readonly string[]): string {
 
 describe('a document refused at start because a path would take its calls elsewhere', () => {
   it('to another host or port, which a path that does not begin with / joins, sending nothing there', async () => {
-    const other = await serveFakeApi({ key: 'graph-api-key-4f1d9a7c2b' });
+    const other = fakeApiInProcess({ key: 'graph-api-key-4f1d9a7c2b' });
     onTestFinished(other.close);
-    const port = new URL(other.origin).port;
-    const directory = directoryWith({ 'graph.json': pathsAt(`${port.slice(-1)}/v1/search`, '.attacker.example/x') });
+    const last = other.origin.slice(-1);
+    const directory = directoryWith({ 'graph.json': pathsAt(`${last}/v1/search`, '.attacker.example/x') });
 
     const refusal = await refusalOf(
-      { graph: { document: 'graph.json', base_url: `http://127.0.0.1:${port.slice(0, -1)}`, org: 'acme' } },
+      { graph: { document: 'graph.json', base_url: other.origin.slice(0, -1), org: 'acme' } },
       documentsIn(directory),
     );
 
     expect(refusal).toContain(
-      `graph/document: At /paths/${port.slice(-1)}~1v1~1search of the document: Expected a path that begins with /, since`,
+      `graph/document: At /paths/${last}~1v1~1search of the document: Expected a path that begins with /, since`,
     );
     expect(refusal).toContain('At /paths/.attacker.example~1x of the document');
     expect(other.seen()).toEqual([]);

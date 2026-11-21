@@ -3,7 +3,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { gatewayDocumentOf, serveFakeGateway, type FakeGateway } from '../testing/served-fakes.ts';
+import { fakeGatewayInProcess, inProcessFetch } from '../testing/index.ts';
+import { gatewayDocumentOf, type FakeGateway, type FakeGatewayOptions } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -11,14 +12,18 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(options: Parameters<typeof serveFakeGateway>[0] = {}): Promise<FakeGateway> {
-  const gateway = await serveFakeGateway(options);
+function served(options: FakeGatewayOptions = {}): FakeGateway {
+  const gateway = fakeGatewayInProcess(options);
   closing.push(gateway.close);
   return gateway;
 }
 
 function posted(url: string, body: unknown): Promise<Response> {
-  return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  return inProcessFetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 const verifier = randomBytes(32).toString('base64url');
@@ -39,35 +44,35 @@ async function keyOf(gateway: FakeGateway): Promise<string> {
 
 describe('the fake gateway', () => {
   it('serves its document, whose calls take the key in the header it names', async () => {
-    const gateway = await served({ keyHeader: 'X-Key' });
+    const gateway = served({ keyHeader: 'X-Key' });
 
-    const document = await (await fetch(gateway.document)).json();
+    const document = await (await inProcessFetch(gateway.document)).json();
 
     expect(document).toEqual(gatewayDocumentOf(gateway.origin, 'X-Key'));
     expect(gateway.keyHeader).toBe('X-Key');
   });
 
   it('answers a call that carries a key it handed over, and refuses one without it as a connection whose access ended', async () => {
-    const gateway = await served();
+    const gateway = served();
     const key = await keyOf(gateway);
 
     const statuses = [
-      (await fetch(`${gateway.origin}/api/whoami`, { headers: { [gateway.keyHeader]: key } })).status,
-      (await fetch(`${gateway.origin}/api/whoami`)).status,
-      (await fetch(`${gateway.origin}/api/whoami`, { headers: { [gateway.keyHeader]: 'unknown' } })).status,
+      (await inProcessFetch(`${gateway.origin}/api/whoami`, { headers: { [gateway.keyHeader]: key } })).status,
+      (await inProcessFetch(`${gateway.origin}/api/whoami`)).status,
+      (await inProcessFetch(`${gateway.origin}/api/whoami`, { headers: { [gateway.keyHeader]: 'unknown' } })).status,
     ];
 
     expect(statuses).toEqual([200, 401, 401]);
   });
 
   it('refuses a start of another method or with a state of another shape, and knows no other address', async () => {
-    const gateway = await served();
+    const gateway = served();
 
     const statuses = [
       (await posted(gateway.url, { challenge, challenge_method: 'plain', state })).status,
       (await posted(gateway.url, { challenge, challenge_method: 'S256', state: 'short' })).status,
       (await posted(gateway.url, 'not a start')).status,
-      (await fetch(gateway.url)).status,
+      (await inProcessFetch(gateway.url)).status,
       (await posted(`${gateway.origin}/elsewhere`, {})).status,
       (await posted(`${gateway.url}/remove`, 'not a key')).status,
     ];
@@ -76,11 +81,11 @@ describe('the fake gateway', () => {
   });
 
   it('answers a step as it is told to until it is told to answer as itself again', async () => {
-    const gateway = await served();
+    const gateway = served();
     gateway.answering('call', 503);
-    const told = (await fetch(`${gateway.origin}/api/whoami`)).status;
+    const told = (await inProcessFetch(`${gateway.origin}/api/whoami`)).status;
     gateway.answeringAsItself('call');
 
-    expect([told, (await fetch(`${gateway.origin}/api/whoami`)).status]).toEqual([503, 401]);
+    expect([told, (await inProcessFetch(`${gateway.origin}/api/whoami`)).status]).toEqual([503, 401]);
   });
 });

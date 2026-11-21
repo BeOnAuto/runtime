@@ -1,5 +1,7 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 
+import { inProcessFetch } from './in-process.ts';
+
 export interface RefusedConnections {
   readonly fetch: typeof globalThis.fetch;
   readonly refuse: (origin: string) => void;
@@ -16,7 +18,7 @@ function refusedConnectionTo(address: string): TypeError {
 
 export function refusedConnections(
   origins: readonly string[] = [],
-  passedOn: FetchLike = globalThis.fetch,
+  passedOn: FetchLike = inProcessFetch,
 ): RefusedConnections {
   const refused = new Set(origins);
   return {

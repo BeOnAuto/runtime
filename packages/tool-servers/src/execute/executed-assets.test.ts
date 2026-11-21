@@ -3,8 +3,8 @@ import { Buffer } from 'node:buffer';
 import { heldForATest, keptForATest } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
+import { fakeApiKey, type FakeTool } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -31,8 +31,8 @@ const ofAnotherPlaybook = keptForATest('019a5b12-0000-7000-8000-000000000012', '
 
 const scan = keptForATest('019a5b12-0000-7000-8000-000000000013', 'application/pdf', Uint8Array.of(37, 80, 68, 70));
 
-async function byHand(mostRequestBytes?: number) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey, tools: [save] });
+function byHand(mostRequestBytes?: number) {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey, tools: [save] });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
   const { access } = reportingAccess(
@@ -51,7 +51,7 @@ async function byHand(mostRequestBytes?: number) {
 
 describe('a call by hand that names an asset of the playbook', () => {
   it('sends the asset’s text where the tool takes text, as a run’s call would', async () => {
-    const { fake, execute } = await byHand();
+    const { fake, execute } = byHand();
 
     const executed = await execute({
       server: 'graph',
@@ -68,7 +68,7 @@ describe('a call by hand that names an asset of the playbook', () => {
 
 describe('a call by hand that names an asset it cannot send', () => {
   it('is refused as invalid input, sending nothing, for an asset of another playbook or a file where the tool takes text', async () => {
-    const { fake, execute } = await byHand();
+    const { fake, execute } = byHand();
 
     const refused = await Promise.all(
       [ofAnotherPlaybook, scan].map(({ reference }) =>
@@ -105,7 +105,7 @@ describe('a call by hand that names an asset it cannot send', () => {
 
 describe('a call by hand that names an asset with other bytes or too large', () => {
   it('is refused where the asset is named with other bytes than the playbook keeps under its id', async () => {
-    const { fake, execute } = await byHand();
+    const { fake, execute } = byHand();
     const guessed = { ...notes.reference, sha256: 'b'.repeat(64) };
 
     expect(
@@ -118,7 +118,7 @@ describe('a call by hand that names an asset with other bytes or too large', () 
   });
 
   it('is refused where the asset’s text makes the call more than a call may send, with what to do instead', async () => {
-    const { fake, execute } = await byHand(40);
+    const { fake, execute } = byHand(40);
     const executed = await execute({
       server: 'graph',
       tool: 'save',

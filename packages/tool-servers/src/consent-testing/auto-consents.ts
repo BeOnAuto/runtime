@@ -10,9 +10,9 @@ import type {
   StartAsked,
 } from '../consent/consent-client.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { inProcessFetch } from '../testing/in-process.ts';
 import { consentClientWith, startAskedAt } from './consent-fakes.ts';
 import type { FakeConsentService } from './fake-consent-answers.ts';
-import type { FakeConsentServiceOptions } from './fake-consent-store.ts';
 import { consentedAt, tokensKeptBy } from './given-consents.ts';
 import type { ConsentConnected, ManualClock } from './served-consents.ts';
 
@@ -23,7 +23,9 @@ export interface ThroughAuto {
   readonly close: () => Promise<void>;
 }
 
-export type ServiceListing = Pick<FakeConsentServiceOptions, 'scopes'>;
+export interface ServiceListing {
+  readonly scopes?: readonly string[];
+}
 
 export const studioSession = Redacted.make('session-of-a-person-signed-in-to-auto');
 
@@ -35,7 +37,7 @@ export function serviceCallsAt(
   { url }: Pick<FakeConsentService, 'url'>,
   requestTimeout = (ms: number) => AbortSignal.timeout(ms),
 ) {
-  return consentServiceOf({ fetch: globalThis.fetch, url, requestMs: 5000, requestTimeout });
+  return consentServiceOf({ fetch: inProcessFetch, url, requestMs: 5000, requestTimeout });
 }
 
 export async function handleOf(service: Pick<FakeConsentService, 'url'>, authorizationUrl: string): Promise<string> {
@@ -87,7 +89,7 @@ export async function postedToTheService(
   body: string,
   headers: Readonly<Record<string, string>> = {},
 ) {
-  const answer = await fetch(`${url}${path}`, {
+  const answer = await inProcessFetch(`${url}${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body,

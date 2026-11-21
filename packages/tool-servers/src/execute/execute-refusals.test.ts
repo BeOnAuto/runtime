@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import {
+  fakeMcpInProcess,
   patientTiming,
   playbookToolCalls,
   refusedConnections,
@@ -9,7 +10,7 @@ import {
   toolReader,
   type AccessOptions,
 } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeApiKey, type FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -17,8 +18,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -39,7 +40,7 @@ function executingOn(fake: FakeMcpServer, entry: Readonly<Record<string, unknown
 
 describe('a tool this playbook is not offered', () => {
   it('is refused before any client opens when its entry does not allow it or no server of the name serves the playbook', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const narrowed = executingOn(fake, { allowed: ['echo'] });
     const elsewhere = executingOn(fake, { org: 'globex' });
     const otherPlaybooks = executingOn(fake, { playbooks: ['sales'] });
@@ -64,7 +65,7 @@ describe('a tool this playbook is not offered', () => {
   });
 
   it('is refused when its server does not list it, and the session is let go', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
 
     expect(await executingOn(fake)({ server: 'graph', tool: 'lookup' })).toMatchObject({
       reason: 'unavailable',
@@ -79,8 +80,8 @@ describe('a tool this playbook is not offered', () => {
 
 describe('a tool server that cannot be used', () => {
   it('is refused as unreachable, failing, slowing down or refusing its key, with no call sent', async () => {
-    const fake = await fakeServer();
-    const gone = await serveFakeMcp();
+    const fake = fakeServer();
+    const gone = fakeMcpInProcess();
     await gone.close();
     const execute = executingOn(fake);
     const asked = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
@@ -104,7 +105,7 @@ describe('a tool server that cannot be used', () => {
   });
 
   it('is refused in words cut at 1 KiB, the bound search and a delivery cut the same failure at', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const refusal = 'The gateway refused the request. '.repeat(100);
     const execute = executingOn(fake, {}, { fetch: () => Promise.reject(new Error(refusal)) });
 
@@ -119,7 +120,7 @@ describe('a tool server that cannot be used', () => {
 
 describe('who may execute a tool, and in which playbook', () => {
   it('refuses a caller that may only read, whatever the tool does, and a playbook that is retired, as every command', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const execute = executingOn(fake);
 
     expect([

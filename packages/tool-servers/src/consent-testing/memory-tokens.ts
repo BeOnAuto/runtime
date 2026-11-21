@@ -13,6 +13,7 @@ import type {
 } from '../consent/consent-client.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import type { ConnectionUnready } from '../org-servers/connection-source.ts';
+import { arrivals } from '../testing/arrivals.ts';
 import { everyHost, returnAddress } from './consent-fakes.ts';
 
 export interface MemoryTokens extends ConnectionTokens {
@@ -107,20 +108,24 @@ export interface ManualTimer {
   readonly timer: Timer;
   readonly waits: () => readonly number[];
   readonly fire: () => void;
+  readonly waited: (count: number) => Promise<void>;
 }
 
 export function manualTimer(): ManualTimer {
   const waits: number[] = [];
+  const waiting = arrivals();
   const due: (() => void)[] = [];
   return {
     timer: {
       after: (ms, expire) => {
         waits.push(ms);
         due.push(expire);
+        waiting.arrive();
         return Function.constVoid;
       },
     },
     waits: () => [...waits],
+    waited: waiting.reached,
     fire: () => {
       for (const expire of due.splice(0)) {
         expire();

@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ServiceStartAsked } from '../consent-through-auto/consent-service.ts';
 import { keptHandedOf } from '../consent-tokens/kept-tokens.ts';
-import { clockAt, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
+import {
+  clockAt,
+  fakeConsentServiceInProcess,
+  throughAutoInProcess,
+  type ClientRegistration,
+  type FakeMcpServer,
+} from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
   postedToTheService,
@@ -14,8 +20,6 @@ import {
   studioSession,
   type ThroughAuto,
 } from './auto-consents.ts';
-import { servedThroughAuto } from './consent-servers.ts';
-import { serveFakeConsentService } from './fake-consent-service.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -23,8 +27,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function serving(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
-  const served = await servedThroughAuto(changes);
+function serving(changes: Partial<ClientRegistration> = {}): ThroughAuto {
+  const served = throughAutoInProcess(changes);
   closing.push(served.close);
   return served;
 }
@@ -55,7 +59,7 @@ function redeemedAt(served: ThroughAuto) {
 
 describe('a handoff the fake consent service holds', () => {
   it('is taken once with the verifier its start was challenged with, and refused for another, after ten minutes or unknown', async () => {
-    const serve = await serving();
+    const serve = serving();
     const calls = serviceCallsAt(serve.service);
     const { handle } = await redeemedAt(serve);
     const late = await redeemedAt(serve);
@@ -80,7 +84,7 @@ describe('a handoff the fake consent service holds', () => {
   });
 
   it('names a wrong verifier as one, with 403', async () => {
-    const serve = await serving();
+    const serve = serving();
     const { handle } = await redeemedAt(serve);
 
     const answered = await postedToTheService(serve.service, `/handoffs/${handle}`, '{"verifier":"another"}');
@@ -91,7 +95,7 @@ describe('a handoff the fake consent service holds', () => {
 
 describe('the tokens the fake consent service refreshes and revokes', () => {
   it('are refused without the connection key the handoff gave, and refreshed or revoked with it, at the authorization server', async () => {
-    const serve = await serving();
+    const serve = serving();
     const calls = serviceCallsAt(serve.service);
     const { handle } = await redeemedAt(serve);
     const handed = await Effect.runPromise(calls.takeHandoff(handle, Redacted.make(verifier)));
@@ -135,7 +139,7 @@ describe('the tokens the fake consent service refreshes and revokes', () => {
 
 describe('the tokens the fake consent service refreshes for the authorization server', () => {
   it('are refused in the words of the authorization server where it refuses the refresh token', async () => {
-    const serve = await serving();
+    const serve = serving();
     const calls = serviceCallsAt(serve.service);
     const handed = await Effect.runPromise(
       calls.takeHandoff((await redeemedAt(serve)).handle, Redacted.make(verifier)),
@@ -151,7 +155,7 @@ describe('the tokens the fake consent service refreshes for the authorization se
 
 describe('the tokens of an authorization server that gives no expiry', () => {
   it('are handed off without one', async () => {
-    const serve = await serving({ expiresInSeconds: null });
+    const serve = serving({ expiresInSeconds: null });
     const handed = await Effect.runPromise(
       serviceCallsAt(serve.service).takeHandoff((await redeemedAt(serve)).handle, Redacted.make(verifier)),
     );
@@ -179,7 +183,7 @@ async function failingVendor(): Promise<Pick<FakeMcpServer, 'origin'>> {
 describe('the calls of the fake consent service an authorization server fails', () => {
   it('are a 502 without a refusal where the server fails otherwise than by refusing, and not revoked in the status it answered', async () => {
     const vendor = await failingVendor();
-    const service = await serveFakeConsentService({ vendor, now: clockAt(0).now });
+    const service = fakeConsentServiceInProcess({ vendor, now: clockAt(0).now });
     closing.push(service.close);
     const calls = serviceCallsAt(service);
     const first = await Effect.runPromise(calls.start(startOf(vendor)));

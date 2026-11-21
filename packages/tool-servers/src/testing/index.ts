@@ -16,6 +16,17 @@ export {
   type IssuingAnswers,
 } from '../api-testing/fake-api-answers.ts';
 export type { FailedRequest, FetchHandler, HeardRequest, LoopbackServer } from './fetch-handler.ts';
+export { arrivals, type Arrivals } from './arrivals.ts';
+export { inProcessFetch, serveInProcess, type InProcessFetch, type InProcessServer } from './in-process.ts';
+export {
+  fakeApiInProcess,
+  fakeConsentServiceInProcess,
+  fakeGatewayInProcess,
+  fakeMcpInProcess,
+  forConsentInProcess,
+  throughAutoInProcess,
+  type Fetching,
+} from './in-process-fakes.ts';
 export type { SeenApiRequest } from '../api-testing/fake-api-routes.ts';
 export { fakeApiDocument, fakeApiToolNames, type FakeApiVersion } from '../api-testing/fake-api-document.ts';
 export { chatBot, type ChatMessage, type ChatReply, type FakeChat } from '../mcp-testing/fake-chat.ts';

@@ -2,8 +2,7 @@ import { keptTextOf } from '@on.auto/content/testing';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { reportingAccess } from '../testing/index.ts';
-import { serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, reportingAccess } from '../testing/index.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -17,7 +16,7 @@ afterEach(async () => {
 
 describe('the secrets of the runtime an access is given beside those of its servers', () => {
   it('are scrubbed from the recorded start of a call made by hand, as a secret of the settings is', async () => {
-    const fake = await serveFakeMcp({ bearer: apiKey });
+    const fake = fakeMcpInProcess({ bearer: apiKey });
     closing.push(fake.close);
     const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
     const { access, content } = reportingAccess(

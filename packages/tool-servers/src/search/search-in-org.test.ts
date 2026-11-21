@@ -4,8 +4,8 @@ import { Effect, Layer } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineSearchInOrg } from '../index.ts';
-import { reportingAccess } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, reportingAccess } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -83,8 +83,8 @@ function searchingOn(fake: FakeMcpServer) {
   };
 }
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -96,8 +96,8 @@ const searching = { name: 'notes', type: 'mcp', record_content: true, playbooks:
 const selling = { name: 'sales', type: 'mcp', record_content: true, playbooks: ['beta'], tool_count: 1 };
 
 describe('search of the org', () => {
-  it('is a query of the org at GET /tool-servers/search, permitted to a key that may read the org or a playbook', async () => {
-    const { registration } = searchingOn(await fakeServer());
+  it('is a query of the org at GET /tool-servers/search, permitted to a key that may read the org or a playbook', () => {
+    const { registration } = searchingOn(fakeServer());
 
     expect(registration).toMatchObject({
       scope: 'org',
@@ -115,7 +115,7 @@ describe('search of the org', () => {
   });
 
   it('searches without a playbook every tool server of the org, each with the playbooks it serves', async () => {
-    const { searched } = searchingOn(await fakeServer());
+    const { searched } = searchingOn(fakeServer());
 
     expect(await searched({ input: { terms: 'echo' } })).toMatchObject({
       status: 'succeeded',
@@ -137,7 +137,7 @@ describe('search of the org', () => {
 
 describe('search of the org, asked for one playbook', () => {
   it('searches with a playbook the tool servers that serve it, as the playbook itself does', async () => {
-    const { searched } = searchingOn(await fakeServer());
+    const { searched } = searchingOn(fakeServer());
 
     expect(await searched({ input: { playbook: 'alpha' } })).toMatchObject({
       status: 'succeeded',
@@ -152,7 +152,7 @@ describe('search of the org, asked for one playbook', () => {
 
 describe('search of the org, to a key limited to some playbooks', () => {
   it('names only the playbooks it may access', async () => {
-    const { searched } = searchingOn(await fakeServer());
+    const { searched } = searchingOn(fakeServer());
 
     expect(await searched({ input: { playbook: 'alpha' }, caller: alphaReader })).toMatchObject({
       status: 'succeeded',
@@ -163,7 +163,7 @@ describe('search of the org, to a key limited to some playbooks', () => {
 
 describe('search of the org, refusing', () => {
   it('refuses the whole org to a key limited to some playbooks, another playbook to it, and a key that may read neither', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { searched } = searchingOn(fake);
 
     expect(await searched({ caller: alphaReader })).toMatchObject({
@@ -186,7 +186,7 @@ describe('search of the org, refusing', () => {
 
 describe('search of the org, refusing what the org does not have', () => {
   it('rejects a playbook the org does not have as the playbook itself would be, and asks no server', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { searched } = searchingOn(fake);
 
     expect(await searched({ input: { playbook: 'nowhere' } })).toEqual({
@@ -198,7 +198,7 @@ describe('search of the org, refusing what the org does not have', () => {
   });
 
   it('rejects a name no tool server of the org, or of the playbook asked for, has, saying which', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { searched } = searchingOn(fake);
 
     expect(await searched({ input: { server: 'mail' } })).toMatchObject({

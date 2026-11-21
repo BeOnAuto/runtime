@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
+import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+import { fakeMcpInProcess, inProcessFetch } from '../testing/index.ts';
 import {
   admitted,
   asTheClient,
@@ -24,8 +24,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess({
     client: { clientId: 'auto-runtime', clientSecret, expiresInSeconds: 3600, redirectUris: [redirectUri], ...changes },
   });
   closing.push(fake.close);
@@ -42,7 +42,7 @@ type Changes = Readonly<Record<string, string | undefined>>;
 
 describe('the authorization code the fake grants', () => {
   it('sends the person back with a code, the state and its issuer, and redeems the code once, with its verifier, for tokens', async () => {
-    const fake = await served();
+    const fake = served();
 
     const back = await consentAt(fake);
     const code = String(back.searchParams.get('code'));
@@ -71,7 +71,7 @@ describe('the authorization code the fake grants', () => {
   });
 
   it('grants a consent asked without a state or a scope, and answers its tokens without a scope', async () => {
-    const fake = await served({ expiresInSeconds: null });
+    const fake = served({ expiresInSeconds: null });
 
     const back = await consentAt(fake, { state: undefined, scope: undefined });
     const tokens = await redeemed(fake, String(back.searchParams.get('code')));
@@ -83,7 +83,7 @@ describe('the authorization code the fake grants', () => {
 
 describe('the codes the fake does not redeem', () => {
   it('are those given with another verifier, another redirect URI, no verifier or no code', async () => {
-    const fake = await served();
+    const fake = served();
 
     const answers = [
       await redeemed(fake, await codeOf(fake), asTheClient, { code_verifier: 'another-verifier' }),
@@ -107,7 +107,7 @@ describe('the codes the fake does not redeem', () => {
 
 describe('the consent the fake refuses', () => {
   it('sends the person back with the error of a consent asked for another response or without a challenge of S256', async () => {
-    const fake = await served();
+    const fake = served();
     const asked: readonly Changes[] = [
       { response_type: 'token' },
       { code_challenge: undefined },
@@ -128,7 +128,7 @@ describe('the consent the fake refuses', () => {
   });
 
   it('answers a consent of a client or a redirect URI it does not know on its own page, sending the person nowhere', async () => {
-    const fake = await served();
+    const fake = served();
 
     const asked: readonly Changes[] = [
       { client_id: 'another-client' },
@@ -139,7 +139,7 @@ describe('the consent the fake refuses', () => {
 
     const answers = await Promise.all(
       asked.map(async (changes) => {
-        const answer = await fetch(authorizeUrl(fake, changes), { redirect: 'manual' });
+        const answer = await inProcessFetch(authorizeUrl(fake, changes), { redirect: 'manual' });
         return [answer.status, answer.headers.get('location'), await answer.json()];
       }),
     );
@@ -161,7 +161,7 @@ async function grantedTokens(fake: FakeMcpServer) {
 
 describe('the metadata of the fake', () => {
   it('says what it grants, how its clients authenticate and where it revokes, and offers no more than the test asks', async () => {
-    const fake = await served();
+    const fake = served();
     const methods = ['client_secret_basic', 'client_secret_post', 'private_key_jwt', 'none'];
 
     expect(await metadataOf(fake)).toEqual({
@@ -182,7 +182,7 @@ describe('the metadata of the fake', () => {
 
 describe('the refresh tokens the fake grants', () => {
   it('refresh the tokens of a grant, and are kept as they are unless the test asks for rotation', async () => {
-    const fake = await served();
+    const fake = served();
     const { refreshToken } = await grantedTokens(fake);
 
     const first = await refreshed(fake, refreshToken);
@@ -196,7 +196,7 @@ describe('the refresh tokens the fake grants', () => {
   });
 
   it('are refused unknown, absent or presented by a client that does not authenticate', async () => {
-    const fake = await served();
+    const fake = served();
     const { refreshToken } = await grantedTokens(fake);
 
     const answers = [
@@ -219,7 +219,7 @@ describe('the refresh tokens the fake grants', () => {
 
 describe('the rotation of the refresh tokens the fake grants', () => {
   it('is made on request, and a rotated token used again ends its grant', async () => {
-    const fake = await served({ rotatesRefreshTokens: true });
+    const fake = served({ rotatesRefreshTokens: true });
     const { accessToken, refreshToken } = await grantedTokens(fake);
 
     const rotated = await refreshed(fake, refreshToken);
@@ -247,7 +247,7 @@ describe('the rotation of the refresh tokens the fake grants', () => {
 
 describe('the revocation endpoint of the fake', () => {
   it('revokes an access token alone, and a refresh token with every token of its grant', async () => {
-    const fake = await served();
+    const fake = served();
     const { accessToken, refreshToken } = await grantedTokens(fake);
     const later = await grantedTokens(fake);
 
@@ -265,7 +265,7 @@ describe('the revocation endpoint of the fake', () => {
   });
 
   it('answers a token it does not know, or none, as revoked, and refuses a client that does not authenticate', async () => {
-    const fake = await served();
+    const fake = served();
 
     expect([
       await postedTo(fake, '/revoke', { token: 'token-unknown' }),

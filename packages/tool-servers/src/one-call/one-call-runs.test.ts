@@ -28,7 +28,7 @@ function seenWhenStarted(journal: CallJournal, onStart: () => void): CallJournal
 
 describe('a call recorded on its run', () => {
   it('records its start under the id it is given once its tool is listed and before it is sent, and its answer after', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const journal = recordingCallJournal();
     const receivedAtTheStart: number[] = [];
     const runCall = {
@@ -90,7 +90,7 @@ function keptIn({ content }: ReturnType<typeof oneCallAccess>) {
 
 describe('a call recorded on its run that keeps no content', () => {
   it('keeps neither its arguments nor the answer that echoes them, though its server keeps content, records their sizes alone, and answers its caller whole', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const keeping = oneCallAccess(fake.url);
     const keepingNone = oneCallAccess(fake.url);
     const journal = recordingCallJournal();
@@ -131,7 +131,7 @@ describe('a call recorded on its run that keeps no content', () => {
 
 describe('a call recorded on its run that keeps no content and fails', () => {
   it('records the failure without the words that echo its arguments, and hands the words to its caller alone', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const keeping = oneCallAccess(fake.url, { allowed: ['broken'] });
     const keepingNone = oneCallAccess(fake.url, { allowed: ['broken'] });
     const kept = recordingCallJournal();
@@ -163,10 +163,10 @@ describe('a call recorded on its run that keeps no content and fails', () => {
 
 describe('a call its run records nothing of', () => {
   it('records nothing for a tool that is not offered or not listed, or a server that cannot be reached', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const journal = recordingCallJournal();
     const runCall = { callId, journal };
-    const unreachable = await oneCallServer();
+    const unreachable = oneCallServer();
     await unreachable.close();
 
     expect([
@@ -186,7 +186,7 @@ describe('a call its run records nothing of', () => {
   });
 
   it('dies, sending nothing, when its run records no start, and lets its session go', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const journal = recordingCallJournal();
     journal.refuseStartsFromNowOn();
 
@@ -199,7 +199,7 @@ describe('a call its run records nothing of', () => {
 
 describe('a call that needs its tool marked reads', () => {
   it('is sent and recorded when its server marks the tool reads', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const journal = recordingCallJournal();
     const searching = { reference: { server: 'graph', tool: 'search' }, input: { query: 'acme' } };
 
@@ -214,7 +214,7 @@ describe('a call that needs its tool marked reads', () => {
   });
 
   it('reads the mark the server lists the tool with at the call, so one marked acts since an earlier call is refused', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
     const searching = {
       reference: { server: 'graph', tool: 'search' },
@@ -236,7 +236,7 @@ describe('a call that needs its tool marked reads', () => {
 
 describe('a call that needs its tool marked reads, to a tool marked otherwise', () => {
   it('is refused before its start is recorded or anything is sent, for a tool marked acts or carrying no mark, and lets its session go', async () => {
-    const fake = await oneCallServer({ hints: { denied: { readOnlyHint: false } } });
+    const fake = oneCallServer({ hints: { denied: { readOnlyHint: false } } });
     const access = oneCallAccess(fake.url);
     const journal = recordingCallJournal();
     const runCall = { callId, journal };
@@ -264,7 +264,7 @@ describe('a call that needs its tool marked reads, to a tool marked otherwise', 
 
 describe('the wait a 429 asks for in one call', () => {
   it('is waited out within the wait its caller gives, and handed on when its caller gives none', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const access = oneCallAccess(fake.url);
     const waiting = { ...echoCall, longestRetryWaitMs: 10_000 };
 

@@ -2,8 +2,8 @@ import { IssuerMismatchError } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ClientRegistration } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, inProcessFetch, type ClientRegistration } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { askingFetch, clientSecret, refusedAt, rsaKeys, secretAuth, sourceOf } from '../testing/token-sources.ts';
 
 const audience = 'https://graph.example.com/api';
@@ -14,8 +14,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess({
     client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600, ...changes },
   });
   closing.push(fake.close);
@@ -24,7 +24,7 @@ async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMc
 
 describe('the audience of a token request', () => {
   it('is left out when the auth block names none, and the resource is sent', async () => {
-    const fake = await served();
+    const fake = served();
     const asking = askingFetch();
 
     await sourceOf(fake, secretAuth(fake), asking.fetch).source.token();
@@ -34,7 +34,7 @@ describe('the audience of a token request', () => {
   });
 
   it('is sent in place of the resource, with the scope, when the auth block names both', async () => {
-    const fake = await served();
+    const fake = served();
     const asking = askingFetch();
 
     await sourceOf(fake, secretAuth(fake, { audience, scope: 'graph.read' }), asking.fetch).source.token();
@@ -44,7 +44,7 @@ describe('the audience of a token request', () => {
   });
 
   it('is sent with no scope where the auth block names none, or an empty one, as the credentials alone ask', async () => {
-    const fake = await served();
+    const fake = served();
     const asking = askingFetch();
 
     await sourceOf(fake, secretAuth(fake, { audience }), asking.fetch).source.token();
@@ -60,7 +60,7 @@ describe('the audience of a token request', () => {
 describe('the audience of every token request a source makes', () => {
   it('is sent beside the client assertion a private key signs', async () => {
     const { publicKey, privateKey } = rsaKeys();
-    const fake = await served({ clientSecret: undefined, publicKey });
+    const fake = served({ clientSecret: undefined, publicKey });
     const asking = askingFetch();
     const credential = { kind: 'private_key', private_key: Redacted.make(privateKey), algorithm: 'RS256' } as const;
 
@@ -73,7 +73,7 @@ describe('the audience of every token request a source makes', () => {
   });
 
   it('is sent again when the token is renewed and when the server refuses it', async () => {
-    const fake = await served({ expiresInSeconds: 120 });
+    const fake = served({ expiresInSeconds: 120 });
     const asking = askingFetch();
     const { source, clock } = sourceOf(fake, secretAuth(fake, { audience }), asking.fetch);
 
@@ -92,7 +92,7 @@ describe('the audience of every token request a source makes', () => {
 
 describe('the resource a token request with an audience leaves out', () => {
   it('is still checked against the server, so metadata that names another resource asks for no token', async () => {
-    const fake = await served({ protectedResource: 'https://elsewhere.example.com/mcp' });
+    const fake = served({ protectedResource: 'https://elsewhere.example.com/mcp' });
     const { source } = sourceOf(fake, secretAuth(fake, { audience }));
 
     await expect(source.token()).rejects.toBeInstanceOf(Error);
@@ -100,7 +100,7 @@ describe('the resource a token request with an audience leaves out', () => {
   });
 
   it('is none for a server that publishes no protected-resource metadata, whose issuer is asked', async () => {
-    const fake = await served();
+    const fake = served();
     const asking = askingFetch();
     const reach = { discovery: 'from_the_issuer', serverUrl: `${fake.origin}/api` } as const;
 
@@ -113,19 +113,19 @@ describe('the resource a token request with an audience leaves out', () => {
 
 describe('discovery from the issuer', () => {
   it('asks the issuer for the token even when the metadata of the server names another authorization server', async () => {
-    const named = await served();
-    const issuer = await served();
-    const server = await served({ authorizationServers: [named.origin] });
+    const named = served();
+    const issuer = served();
+    const server = served({ authorizationServers: [named.origin] });
 
-    await sourceOf(server, secretAuth(issuer), globalThis.fetch, { discovery: 'from_the_issuer' }).source.token();
+    await sourceOf(server, secretAuth(issuer), inProcessFetch, { discovery: 'from_the_issuer' }).source.token();
 
     expect([issuer.tokenRequests(), named.tokenRequests(), server.tokenRequests()]).toEqual([1, 0, 0]);
   });
 
   it('sends its credentials to no issuer whose own metadata names another issuer, and asks for no token', async () => {
-    const issuer = await served({ issuer: 'https://elsewhere.example.com' });
-    const server = await served({ authorizationServers: [issuer.origin] });
-    const { source } = sourceOf(server, secretAuth(issuer), globalThis.fetch, { discovery: 'from_the_issuer' });
+    const issuer = served({ issuer: 'https://elsewhere.example.com' });
+    const server = served({ authorizationServers: [issuer.origin] });
+    const { source } = sourceOf(server, secretAuth(issuer), inProcessFetch, { discovery: 'from_the_issuer' });
 
     await expect(source.token()).rejects.toBeInstanceOf(IssuerMismatchError);
     expect([issuer.tokenRequests(), server.tokenRequests()]).toEqual([0, 0]);

@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ConnectionSource } from '../org-servers/connection-source.ts';
 import { fakeConnections, type FakeConnection, type FakeConnections } from '../testing/fake-connections.ts';
-import { reportingAccess, type AccessOptions } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, inProcessFetch, reportingAccess, type AccessOptions } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { LISTING_KEPT_MS } from './kept-listings.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -22,8 +22,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -57,13 +57,12 @@ function servingNow(connections: FakeConnections, playbooks: () => readonly stri
 }
 
 function aFetchOfItsOwn(): typeof globalThis.fetch {
-  return (...[address, init]: readonly [unknown, unknown?]) =>
-    globalThis.fetch(String(address), Object.assign({}, init));
+  return (...[address, init]: readonly [unknown, unknown?]) => inProcessFetch(String(address), Object.assign({}, init));
 }
 
 describe('the servers of an org listed again within five minutes', () => {
   it('are answered from what was listed, asking the server nothing, and listed anew once five minutes passed', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const clock = { now: Date.parse('2026-11-08T12:00:00.000Z') };
     const access = accessTo({ graph: remote(fake, { allowed: ['echo'] }) }, { now: () => clock.now });
 
@@ -82,7 +81,7 @@ describe('the servers of an org listed again within five minutes', () => {
   });
 
   it('are kept for that org alone: a server two orgs share is listed once for each', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake, { org: '*', allowed: ['echo'] }) });
 
     await Effect.runPromise(access.listServersInOrg(inAcme));
@@ -94,7 +93,7 @@ describe('the servers of an org listed again within five minutes', () => {
   });
 
   it('are kept across calls that each send their requests through a fetch of their own', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake, { allowed: ['echo'] }) });
     const ofACall = () => access.listServersInOrg(inAcme).pipe(Effect.provideService(CallFetch, aFetchOfItsOwn()));
 
@@ -108,7 +107,7 @@ describe('the servers of an org listed again within five minutes', () => {
 
 describe('a server of an org that could not be listed', () => {
   it('is kept as nothing, so the next listing asks it again', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake, { allowed: ['echo'] }) });
     fake.answerNextOf('tools/list', 500);
 
@@ -124,7 +123,7 @@ describe('a server of an org that could not be listed', () => {
 
 describe('a connection of an org whose tools were listed', () => {
   it('is listed anew once it is connected again, since its credential may have changed', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', graphOn(fake));
     const access = accessTo({}, { connections });
@@ -139,7 +138,7 @@ describe('a connection of an org whose tools were listed', () => {
   });
 
   it('is left out once removed, and one added in its name is listed anew', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', graphOn(fake));
     const access = accessTo({}, { connections });
@@ -158,7 +157,7 @@ describe('a connection of an org whose tools were listed', () => {
 
 describe('the playbooks a kept connection serves', () => {
   it('are read as they are now, and decide whether it is listed for a playbook, its tools kept', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const connections = fakeConnections();
     connections.connect('acme', graphOn(fake));
     const playbooks = { now: ['alpha'] };
@@ -178,7 +177,7 @@ describe('the playbooks a kept connection serves', () => {
 
 describe('the servers a playbook may use', () => {
   it('are listed each time they are asked for, as a run reads what its servers list now', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake, { allowed: ['echo'] }) });
 
     await Effect.runPromise(access.listServersInOrg(inAcme));

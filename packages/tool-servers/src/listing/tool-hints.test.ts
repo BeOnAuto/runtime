@@ -2,8 +2,7 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeProviders, type FakeProvider } from '../testing/fake-providers.ts';
-import { longToolName, reportingAccess, type AccessOptions } from '../testing/index.ts';
-import { serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, longToolName, reportingAccess, type AccessOptions } from '../testing/index.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -20,8 +19,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function listed(lists: ToolLists, reporting: Pick<AccessOptions, 'reportMarkUnlisted'> = {}) {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function listed(lists: ToolLists, reporting: Pick<AccessOptions, 'reportMarkUnlisted'> = {}) {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...lists };
   const { access } = reportingAccess({ graph }, { environment: { GRAPH_API_KEY: apiKey }, ...reporting });
@@ -149,7 +148,7 @@ function graphsAt(url: string): FakeProvider {
 
 describe('the mark the entry of a provider gives', () => {
   it('is the one the entry of its provider gives a tool, in place of its server’s', async () => {
-    const fake = await serveFakeMcp({ bearer: apiKey });
+    const fake = fakeMcpInProcess({ bearer: apiKey });
     closing.push(fake.close);
     const graphs = fakeProviders(new Map([['graphs', graphsAt(fake.url)]]));
     const { access } = reportingAccess(
@@ -169,7 +168,7 @@ describe('the mark the entry of a provider gives', () => {
 
 describe('the tools of a server that gives no hints', () => {
   it('are listed without annotations, so each of them is unmarked and none of them only reads', async () => {
-    const fake = await serveFakeMcp({ bearer: apiKey, annotated: false });
+    const fake = fakeMcpInProcess({ bearer: apiKey, annotated: false });
     closing.push(fake.close);
     const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
     const { access } = reportingAccess({ graph }, { environment: { GRAPH_API_KEY: apiKey } });

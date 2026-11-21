@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { defineListConnectionTools, defineSearchInOrg, type OfferedProvider } from '../index.ts';
 import { fakeConnections } from '../testing/fake-connections.ts';
-import { patientTiming } from '../testing/index.ts';
+import { fakeMcpInProcess, patientTiming } from '../testing/index.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -41,8 +41,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function connectedPayments() {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function connectedPayments() {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const connections = fakeConnections();
   connections.connect('acme', {
@@ -73,7 +73,7 @@ function dispatchedBy(registration: RouteRegistration<'org'>) {
 
 describe('the search of the org through the directory listing', () => {
   it('lists no provider and no server whose tools handle money, which it lists elsewhere, and keeps the groups of more a provider offers', async () => {
-    const access = await connectedPayments();
+    const access = connectedPayments();
     const searched = dispatchedBy(
       defineSearchInOrg(
         access,
@@ -95,7 +95,7 @@ describe('the search of the org through the directory listing', () => {
   });
 
   it('lists no provider where the caller is offered none', async () => {
-    const access = await connectedPayments();
+    const access = connectedPayments();
     const searched = dispatchedBy(
       defineSearchInOrg(
         access,
@@ -113,7 +113,7 @@ describe('the search of the org through the directory listing', () => {
 
 describe('the tools of a connection through the directory listing', () => {
   it('are refused where its tools handle money, and listed elsewhere', async () => {
-    const listed = dispatchedBy(defineListConnectionTools(await connectedPayments()).registration);
+    const listed = dispatchedBy(defineListConnectionTools(connectedPayments()).registration);
 
     expect([await listed({ id: 'payments-id' }, true), await listed({ id: 'payments-id' }, false)]).toMatchObject([
       {

@@ -2,8 +2,7 @@ import { Effect, type Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { documentOf, toolsOf } from '../api-testing/derived-documents.ts';
-import { describedAccess } from '../testing/index.ts';
-import { serveFakeApi } from '../testing/served-fakes.ts';
+import { describedAccess, fakeApiInProcess } from '../testing/index.ts';
 import { settledOf } from './api-answers.ts';
 
 const described = { schema: { type: 'string' } };
@@ -15,7 +14,7 @@ afterEach(async () => {
 });
 
 async function answersOf(...tools: readonly string[]): Promise<readonly unknown[]> {
-  const fake = await serveFakeApi();
+  const fake = fakeApiInProcess();
   closing.push(fake.close);
   const { access } = await describedAccess({ graph: { org: 'acme', document: fake.documentUrl } });
   closing.push(access.close);

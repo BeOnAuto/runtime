@@ -3,10 +3,14 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeConnections, type FakeConnection } from '../testing/fake-connections.ts';
-import { type FakeMcpOptions, type FakeMcpServer } from '../testing/index.ts';
-import { patientTiming } from '../testing/index.ts';
+import {
+  fakeApiInProcess,
+  fakeMcpInProcess,
+  patientTiming,
+  type FakeMcpOptions,
+  type FakeMcpServer,
+} from '../testing/index.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
-import { serveFakeApi, serveFakeMcp } from '../testing/served-fakes.ts';
 import { fakeApiKey } from '../testing/served-fakes.ts';
 import type { ConnectionServer } from './connection-source.ts';
 
@@ -25,8 +29,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(options: FakeMcpOptions = {}): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp(options);
+function fakeServer(options: FakeMcpOptions = {}): FakeMcpServer {
+  const fake = fakeMcpInProcess(options);
   closing.push(fake.close);
   return fake;
 }
@@ -50,7 +54,7 @@ function unresolvedAt(path: string): ConnectionServer['reaches'] {
 
 describe('a connection to an HTTP API whose document names where its calls go', () => {
   it('is not allowed once its document is read, when the rules do not allow that address, and no call is sent', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closing.push(fake.close);
     const access = await accessThrough({
       entry: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' } },
@@ -71,7 +75,7 @@ describe('a connection to an HTTP API whose document names where its calls go', 
 
 describe('a connection to an HTTP API whose base address cannot be looked up', () => {
   it('is listed unreachable, to try again, not refused by the rules', async () => {
-    const fake = await serveFakeApi({ key: fakeApiKey });
+    const fake = fakeApiInProcess({ key: fakeApiKey });
     closing.push(fake.close);
     const access = await accessThrough({
       entry: { document: fake.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' } },
@@ -87,7 +91,7 @@ describe('a connection to an HTTP API whose base address cannot be looked up', (
 
 describe('a connection whose authorization server the rules do not allow', () => {
   it('asks it for no token, and lists the connection unavailable in the words of the rule', async () => {
-    const fake = await fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
+    const fake = fakeServer({ client: { clientId: 'playbook', clientSecret, expiresInSeconds: 3600 } });
     const auth = { issuer: fake.origin, client_id: 'playbook', client_secret: '${GRAPH_CLIENT_SECRET}' };
     const access = await accessThrough({ entry: { url: fake.url, auth }, reaches: refusing('/token') });
 
@@ -100,8 +104,8 @@ describe('a connection whose authorization server the rules do not allow', () =>
 
 describe('a connection to a server that answers with a redirect', () => {
   it('follows none to another origin, nor one within its origin to an address the rules do not allow', async () => {
-    const elsewhere = await fakeServer();
-    const fake = await fakeServer();
+    const elsewhere = fakeServer();
+    const fake = fakeServer();
     fake.answerNextWith(307, 1, { location: elsewhere.url });
     const access = await accessThrough({ entry: { url: fake.url }, reaches: refusing('/elsewhere') });
     const [across] = await Effect.runPromise(access.listServers(alpha));

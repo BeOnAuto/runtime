@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { servedForConsent } from '../consent-testing/consent-servers.ts';
+import { fakeMcpInProcess, forConsentInProcess, inProcessFetch } from '../testing/index.ts';
 import type { FakeMcpServer } from './fake-mcp-answers.ts';
-import { serveFakeMcp } from './fake-mcp-server.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -10,7 +9,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function kept(served: Promise<FakeMcpServer>): Promise<FakeMcpServer> {
+async function kept(served: FakeMcpServer | Promise<FakeMcpServer>): Promise<FakeMcpServer> {
   const fake = await served;
   closing.push(fake.close);
   return fake;
@@ -23,7 +22,7 @@ const pingWithoutAToken = {
 };
 
 async function answerToAPingOf({ url }: FakeMcpServer) {
-  const answer = await fetch(url, pingWithoutAToken);
+  const answer = await inProcessFetch(url, pingWithoutAToken);
   await answer.body?.cancel();
   return { status: answer.status, challenge: answer.headers.get('www-authenticate') };
 }
@@ -32,9 +31,9 @@ const missingToken = 'Bearer error="invalid_token", error_description="Missing A
 
 describe('the fake MCP server asked without a token', () => {
   it('answers with no challenge where it takes no token, with one that names no metadata where it takes a bearer token alone, and with one that names its metadata where it signs people in', async () => {
-    const open = await kept(serveFakeMcp());
-    const bearing = await kept(serveFakeMcp({ bearer: 'files-token' }));
-    const signing = await kept(servedForConsent({ dynamicRegistration: true }));
+    const open = await kept(fakeMcpInProcess());
+    const bearing = await kept(fakeMcpInProcess({ bearer: 'files-token' }));
+    const signing = await kept(forConsentInProcess({ dynamicRegistration: true }));
 
     expect([await answerToAPingOf(open), await answerToAPingOf(bearing), await answerToAPingOf(signing)]).toEqual([
       { status: 400, challenge: null },

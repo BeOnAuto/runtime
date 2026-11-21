@@ -6,13 +6,14 @@ import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
   consentClientWith,
   finishAskedOf,
+  forConsentInProcess,
   hostOf,
   registeredAt,
   returnAddress,
   startAskedAt,
   tokensKeptBy,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { ConsentClient, ConsentWay, FinishAsked, StartAsked } from './consent-client.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -21,8 +22,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function takingNoChallenge(): Promise<FakeMcpServer> {
-  const fake = await servedForConsent({ takesNoChallenge: true });
+function takingNoChallenge(): FakeMcpServer {
+  const fake = forConsentInProcess({ takesNoChallenge: true });
   closing.push(fake.close);
   return fake;
 }
@@ -44,7 +45,7 @@ const unchallenged: Partial<ConsentWay> = { pkce: 'none' };
 
 describe('the consent of a way whose written-out server takes no PKCE', () => {
   it('starts without a challenge and finishes without a verifier, by a client with a secret', async () => {
-    const fake = await takingNoChallenge();
+    const fake = takingNoChallenge();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
 
     const asked = await finishAskedOf(client, writtenOutAt(fake, unchallenged));
@@ -62,7 +63,7 @@ describe('the consent of a way whose written-out server takes no PKCE', () => {
   });
 
   it('starts without a challenge by a client with a key, whose assertion binds the code as a secret does', async () => {
-    const fake = await takingNoChallenge();
+    const fake = takingNoChallenge();
     const keyed = registeredAt(fake.origin, {
       credential: { kind: 'private_key', privateKey: Redacted.make('a key in PEM'), algorithm: 'RS256' },
     });
@@ -77,7 +78,7 @@ describe('the consent of a way whose written-out server takes no PKCE', () => {
 
 describe('the refusals of a way whose server takes no PKCE', () => {
   it('fails at the token endpoint where the way does not say so, since the server refuses a code redeemed with a verifier', async () => {
-    const fake = await takingNoChallenge();
+    const fake = takingNoChallenge();
     const client = consentClientWith({ registeredClients: [registeredAt(fake.origin)] });
 
     expect(await refusedAtTheFinish(client, await finishAskedOf(client, writtenOutAt(fake)))).toEqual({
@@ -91,7 +92,7 @@ describe('the refusals of a way whose server takes no PKCE', () => {
   });
 
   it('takes no public client, whose code nothing but a challenge binds, and refuses a server it discovers that lists no S256', async () => {
-    const fake = await takingNoChallenge();
+    const fake = takingNoChallenge();
     const open = registeredAt(fake.origin, { credential: { kind: 'public' } });
 
     expect([

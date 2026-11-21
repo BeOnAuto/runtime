@@ -1,8 +1,8 @@
 import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { patientTiming, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, patientTiming, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -14,8 +14,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -44,7 +44,7 @@ async function refusalOf(access: ReturnType<typeof accessTo>['access'], ...writt
 
 describe('a tool that is not offered', () => {
   it('names a server that is not configured, or not for this org or playbook', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { access } = accessTo({
       graph: graphOf(fake, { org: 'globex' }),
       crm: graphOf(fake, { playbooks: ['sales'] }),
@@ -60,7 +60,7 @@ describe('a tool that is not offered', () => {
   });
 
   it('names a tool the entry of its server does not allow', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { access } = accessTo({ graph: graphOf(fake, { allowed: ['search'] }) });
 
     expect(await refusalOf(access, 'graph/search', 'graph/echo')).toMatchObject({
@@ -73,7 +73,7 @@ describe('a tool that is not offered', () => {
 
 describe('a tool its server does not list', () => {
   it('names a tool its server does not list, and lets its session go', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { access } = accessTo({ graph: graphOf(fake) });
 
     expect(await refusalOf(access, 'graph/search', 'graph/lookup')).toMatchObject({
@@ -85,7 +85,7 @@ describe('a tool its server does not list', () => {
   });
 
   it('names every tool its servers do not list, by server, and every tool their entries do not allow', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const { access } = accessTo({ graph: graphOf(fake), wiki: graphOf(fake, { allowed: ['seek'] }) });
 
     expect([

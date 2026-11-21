@@ -4,13 +4,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   consentClientWith,
+  forConsentInProcess,
   memoryRegistrations,
   registeredAt,
   startAskedAt,
   unansweredCall,
   type ClientRegistration,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import type { WayClientSource } from './client-sources.ts';
 import type { ClientRegistrations, ConsentClient, RegistrationUnavailable, StartAsked } from './consent-client.ts';
 
@@ -26,8 +27,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent(changes);
+function served(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  const fake = forConsentInProcess(changes);
   closing.push(fake.close);
   return fake;
 }
@@ -46,7 +47,7 @@ const publicUrl = 'https://runtime.example.com';
 
 describe('the metadata document a start takes', () => {
   it('is taken where the server advertises it and the public address is https', async () => {
-    const documenting = await served({ clientMetadataDocuments: true });
+    const documenting = served({ clientMetadataDocuments: true });
 
     const taken = await started(
       consentClientWith({ publicUrl }),
@@ -58,8 +59,8 @@ describe('the metadata document a start takes', () => {
   });
 
   it('is passed over for the next source under an http public address, or at a server that does not advertise it', async () => {
-    const documenting = await served({ clientMetadataDocuments: true, dynamicRegistration: true });
-    const silent = await served({ dynamicRegistration: true });
+    const documenting = served({ clientMetadataDocuments: true, dynamicRegistration: true });
+    const silent = served({ dynamicRegistration: true });
     const http = { publicUrl: 'http://127.0.0.1:5555' };
 
     const underHttp = await started(consentClientWith(http), startAskedAt(documenting, { clients: documentFirst }));
@@ -71,7 +72,7 @@ describe('the metadata document a start takes', () => {
 
 describe('the dynamic registration a start makes', () => {
   it('is made where the server offers it, once for every start at its issuer, and kept', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -91,8 +92,8 @@ describe('the dynamic registration a start makes', () => {
 
 describe('a dynamic registration the runtime does not keep', () => {
   it('is one the server refuses, or one whose client id is empty, which the start answers as unanswered', async () => {
-    const refusing = await served({ dynamicRegistration: true, refusesRegistration: true });
-    const nameless = await served({ dynamicRegistration: true, registeredClientId: '' });
+    const refusing = served({ dynamicRegistration: true, refusesRegistration: true });
+    const nameless = served({ dynamicRegistration: true, registeredClientId: '' });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
 
@@ -111,7 +112,7 @@ describe('a dynamic registration the runtime does not keep', () => {
   });
 
   it('is not reused once its secret has ended, and a new one is made in its place', async () => {
-    const fake = await served({ dynamicRegistration: true, registrationSecretSeconds: -60 });
+    const fake = served({ dynamicRegistration: true, registrationSecretSeconds: -60 });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -134,7 +135,7 @@ function startedLogging(client: ConsentClient, asked: StartAsked, log: (line: st
 
 describe('a dynamic registration the secret store cannot read now', () => {
   it('fails the start in the words of the store, and registers nothing', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -153,7 +154,7 @@ describe('a dynamic registration the secret store cannot read now', () => {
 
 describe('a dynamic registration the secret store cannot keep now', () => {
   it('fails the start in the words of the store, logs its client, and is kept at the next start without registering again', async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -180,7 +181,7 @@ describe('a dynamic registration the secret store cannot keep now', () => {
   });
 
   it('registers again once the client it holds has ended before the store could keep it', async () => {
-    const fake = await served({ dynamicRegistration: true, registrationSecretSeconds: -60 });
+    const fake = served({ dynamicRegistration: true, registrationSecretSeconds: -60 });
     const registrations = memoryRegistrations();
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -199,7 +200,7 @@ const tooLarge: RegistrationUnavailable = { _tag: 'secret_refused', detail: 'A s
 
 describe('a dynamic registration the secret store refuses to keep', () => {
   it("fails the start in the refusal's words, logs the client as left unkept, and is not held, so the next start registers again", async () => {
-    const fake = await served({ dynamicRegistration: true });
+    const fake = served({ dynamicRegistration: true });
     const registrations: ClientRegistrations = { ...memoryRegistrations(), keep: () => Effect.fail(tooLarge) };
     const client = consentClientWith({ registrations });
     const asked = startAskedAt(fake, { clients: ['dynamic'] });
@@ -227,7 +228,7 @@ describe('a dynamic registration the secret store refuses to keep', () => {
 
 describe('a start at a server that takes no client the runtime has', () => {
   it('is refused', async () => {
-    const fake = await served();
+    const fake = served();
 
     expect([
       await refused(consentClientWith(), startAskedAt(fake, { clients: ['dynamic'] })),
@@ -239,7 +240,7 @@ describe('a start at a server that takes no client the runtime has', () => {
 
 describe('the registered client a start takes at an issuer two clients serve', () => {
   it('is the one whose scopes cover the scope of the way, the first where both do, and none where neither does', async () => {
-    const fake = await served();
+    const fake = served();
     const client = consentClientWith({
       registeredClients: [
         registeredAt(fake.origin, { clientId: 'reading', scopes: ['files.read'] }),

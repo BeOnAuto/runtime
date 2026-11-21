@@ -3,18 +3,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
 import {
+  clockAt,
   connectedByConsent,
   consentClientAt,
   cuttingTimeouts,
+  forConsentInProcess,
   gatedRequests,
   goneWords,
   rowOf,
   servedOf,
   servedTokensOf,
-  clockAt,
 } from '../testing/index.ts';
-import { servedForConsent, type FakeMcpServer } from '../testing/served-fakes.ts';
-import { until } from '../testing/until.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -25,7 +25,7 @@ afterEach(async () => {
 const renewalTime = 3_540_000;
 
 async function twoProcessesOverOneRow() {
-  const fake = await servedForConsent();
+  const fake = forConsentInProcess();
   closing.push(fake.close);
   const connected = await connectedByConsent(fake);
   const clock = clockAt(0);
@@ -50,7 +50,7 @@ async function cutOffAt(requestMs: number) {
   );
   clock.setTo(renewalTime);
   const renewing = source.token().catch((error: unknown) => error);
-  await until(() => gate.holding() === 1);
+  await gate.held(1);
   clock.advance(requestMs);
   timeouts.cut();
   gate.release();
@@ -89,9 +89,9 @@ describe('a renewal another process holds a claim for', () => {
 
     clock.setTo(renewalTime);
     const renewing = first.source.token();
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     const waiting = second.source.token();
-    await until(() => second.timer.waits().length === 1);
+    await second.timer.waited(1);
     gate.release();
     const renewed = await renewing;
     second.timer.fire();
@@ -109,9 +109,9 @@ describe('a renewal another process holds a claim for', () => {
 
     clock.setTo(renewalTime);
     const renewing = first.source.token();
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     const waiting = second.source.token();
-    await until(() => second.timer.waits().length === 1);
+    await second.timer.waited(1);
     clock.advance(30_000);
     second.timer.fire();
     const givenUp = await waiting.catch((error: unknown) => error);
@@ -136,7 +136,7 @@ describe('a renewal that loses its row to another process before it claims it', 
 
     clock.setTo(renewalTime);
     const reading = late.source.token();
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     const renewed = await early.source.token();
     gate.release();
 
@@ -203,7 +203,7 @@ describe('a renewal whose row moved before it replaces it', () => {
 
     clock.setTo(renewalTime);
     const renewing = source.token();
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     Effect.runSync(row.replace(1, other.tokens));
     gate.release();
     const taken = await renewing;
@@ -223,7 +223,7 @@ describe('a renewal whose row is gone before it replaces it', () => {
 
     clock.setTo(renewalTime);
     const renewing = source.token().catch((error: unknown) => error);
-    await until(() => gate.holding() === 1);
+    await gate.held(1);
     row.forget();
     gate.release();
     const failed = await renewing;

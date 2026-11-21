@@ -30,7 +30,7 @@ function recordedReading(reading: DocumentReading): {
 async function pooledAccess(callMsOfTheTest = callMs) {
   const pool = processPool({ processes: 2, longJobs: 1, memoryBytes: 768 * mebibyte, path: process.env['PATH'] });
   closedAfter(() => pool.close());
-  const fake = await fakeApi();
+  const fake = fakeApi();
   const { documents, bounds } = recordedReading(documentsReadIn(pool));
   const reporting = await describedAccess(
     { graph: { org: 'acme', ...keyed(fake) } },

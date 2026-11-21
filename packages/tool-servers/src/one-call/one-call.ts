@@ -82,15 +82,14 @@ async function sentOnce(call: Forwarded, link: LinkedServer['link'], opened: Ope
     return admitted;
   }
   const { assets, recording } = admitted;
-  const { callMs } = access.timing;
   const longestRetryWaitMs = Math.min(call.longestRetryWaitMs ?? 0, access.timing.longestRetryWaitMs);
   const forwarding = {
+    ...access.timing,
     slot,
     tool: tool.name,
     input: call.input,
     assets,
     meta: call.meta,
-    callMs,
     longestRetryWaitMs,
     signal,
   };

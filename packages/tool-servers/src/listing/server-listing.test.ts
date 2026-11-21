@@ -2,10 +2,9 @@ import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
-import { type LoopbackServer } from '../testing/fetch-handler.ts';
-import { recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
+import type { LoopbackServer } from '../testing/fetch-handler.ts';
+import { fakeMcpInProcess, inProcessFetch, recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
-import { serveFakeMcp } from '../testing/served-fakes.ts';
 import { longerThanTheTestMs } from '../testing/until.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -17,7 +16,7 @@ afterEach(async () => {
 const hanging = new Promise<Response>(() => {});
 
 async function silentOnListing(): Promise<LoopbackServer> {
-  const fake = await serveFakeMcp();
+  const fake = fakeMcpInProcess();
   const forwards: Promise<Response>[] = [];
   let forwarding = true;
   const proxy = await serveOnLoopback(() => async (request) => {
@@ -32,7 +31,7 @@ async function silentOnListing(): Promise<LoopbackServer> {
     if (!forwarding) {
       return new Response(null, { status: 503 });
     }
-    const forward = fetch(fake.url, method === 'POST' ? { method, headers, body } : { method, headers });
+    const forward = inProcessFetch(fake.url, method === 'POST' ? { method, headers, body } : { method, headers });
     forwards.push(forward);
     return forward;
   });

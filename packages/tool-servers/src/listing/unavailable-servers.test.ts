@@ -2,8 +2,8 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
-import { refusedConnections, reportingAccess, type AccessOptions } from '../testing/index.ts';
-import { serveFakeMcp, type FakeMcpServer } from '../testing/served-fakes.ts';
+import { fakeMcpInProcess, refusedConnections, reportingAccess, type AccessOptions } from '../testing/index.ts';
+import type { FakeMcpServer } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -17,8 +17,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function fakeServer(): Promise<FakeMcpServer> {
-  const fake = await serveFakeMcp({ bearer: apiKey });
+function fakeServer(): FakeMcpServer {
+  const fake = fakeMcpInProcess({ bearer: apiKey });
   closing.push(fake.close);
   return fake;
 }
@@ -47,8 +47,8 @@ const echoTool = {
 
 describe('a tool server that cannot be asked for its tools', () => {
   it('is unavailable, in words, beside the servers that answer', async () => {
-    const fake = await fakeServer();
-    const gone = await serveFakeMcp();
+    const fake = fakeServer();
+    const gone = fakeMcpInProcess();
     await gone.close();
 
     const listing = await listed(
@@ -71,7 +71,7 @@ describe('a tool server that cannot be asked for its tools', () => {
   });
 
   it('is unavailable while it keeps failing', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake) });
 
     fake.answerNextWith(503);
@@ -93,7 +93,7 @@ describe('a tool server that cannot be asked for its tools', () => {
 
 describe('the words of a tool server that cannot be asked', () => {
   it('are cut at 1 KiB, the bound every reader of a failure shares, and not at the bound of a description', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const refusal = 'The gateway refused the request. '.repeat(100);
     const failing = () => Promise.reject(new Error(refusal));
 
@@ -115,7 +115,7 @@ describe('the words of a tool server that cannot be asked', () => {
 
 describe('a tool server that answers its opening HTTP 403, as a gateway answers one operation it denies', () => {
   it('is unavailable because it is failing, and not because it refused its key', async () => {
-    const fake = await fakeServer();
+    const fake = fakeServer();
     const access = accessTo({ graph: remote(fake) });
 
     fake.answerNextWith(403);

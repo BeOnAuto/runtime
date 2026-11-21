@@ -14,18 +14,20 @@ import {
   consentClientWith,
   cuttingTimeouts,
   handedOffAskedOf,
+  inProcessFetch,
   memoryTokens,
   postedTo,
   rowOf,
   servedOf,
   servedTokensOf,
   startAskedAt,
+  throughAutoInProcess,
   type ClientRegistration,
   type ConsentConnected,
   type MemoryTokens,
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
-import { servedThroughAuto, type ThroughAuto } from '../testing/served-fakes.ts';
+import type { ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -42,7 +44,7 @@ interface Connected extends ThroughAuto {
 }
 
 async function connectedAt(changes: Partial<ClientRegistration> = {}): Promise<Connected> {
-  const serving = await servedThroughAuto(changes);
+  const serving = throughAutoInProcess(changes);
   closing.push(serving.close);
   const connection = await connectedThroughAuto(serving);
   return { ...serving, connection, first: connection.kept, row: rowOf(connection, serving.clock.now) };
@@ -62,7 +64,7 @@ function heardAt({ service }: Connected, path: string) {
 }
 
 function unauthorizedAt({ fake }: Pick<Connected, 'fake'>) {
-  return { response: new Response(null, { status: 401 }), serverUrl: new URL(fake.url), fetchFn: globalThis.fetch };
+  return { response: new Response(null, { status: 401 }), serverUrl: new URL(fake.url), fetchFn: inProcessFetch };
 }
 
 function rowHolding(connected: Connected, tokens: KeptTokens): MemoryTokens {
@@ -120,7 +122,7 @@ describe('the renewal of the tokens of a consent through Auto’s consent servic
 describe('the resources a renewal through Auto’s consent service asks for', () => {
   it("are its server's and those its tokens were asked for that the entry still declares, kept again with the new tokens", async () => {
     const api = 'https://api.files.example.com';
-    const serving = await servedThroughAuto();
+    const serving = throughAutoInProcess();
     closing.push(serving.close);
     const consent = consentClientThrough(serving);
     const signedIn = { ...startAskedAt(serving.fake), requestOrigins: [api, 'https://hooks.files.example.com'] };

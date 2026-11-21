@@ -2,8 +2,14 @@ import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { answerDocument } from '../bounds/tool-results.ts';
-import { patientTiming, playbookToolCalls, reportingAccess, threadReplies } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
+import {
+  fakeMcpInProcess,
+  patientTiming,
+  playbookToolCalls,
+  reportingAccess,
+  threadReplies,
+} from '../testing/index.ts';
+import { fakeApiKey, type FakeTool } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -20,7 +26,7 @@ async function executedAndCalled(
   input: Readonly<Record<string, unknown>> = {},
   tools: readonly FakeTool[] = [],
 ) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey, data: true, tools });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey, data: true, tools });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
   const { access } = reportingAccess({ graph }, { timing: patientTiming, environment: { GRAPH_API_KEY: fakeApiKey } });

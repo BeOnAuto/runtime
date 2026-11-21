@@ -8,7 +8,7 @@ import { onTestFinished } from 'vitest';
 import type { DescribedApiSettings, Describing } from '../openapi/described-api.ts';
 import { describedToolServers } from '../openapi/described-servers.ts';
 import { readToolServerSettings, type ToolServerSettingsContext } from '../settings/settings-reading.ts';
-import { serveOnLoopback } from '../testing/loopback-server.ts';
+import { inProcessFetch, serveInProcess } from '../testing/in-process.ts';
 import { fakeApiDocument } from './fake-api-document.ts';
 
 type Entries = Readonly<Record<string, unknown>>;
@@ -34,8 +34,8 @@ export function directoryWith(files: Readonly<Record<string, string>>): string {
   return directory;
 }
 
-export async function servedDocumentAt(answer: () => Promise<Response>): Promise<string> {
-  const listening = await serveOnLoopback(() => answer);
+export function servedDocumentAt(answer: () => Promise<Response>): string {
+  const listening = serveInProcess(() => answer);
   onTestFinished(listening.close);
   return `${listening.origin}/openapi.json`;
 }
@@ -80,6 +80,7 @@ export function describing(entries: Entries, { documents, ...more }: DescribingO
         reportLeftOut: (server, operation) => {
           leftOut.push({ server, ...operation });
         },
+        fetch: inProcessFetch,
         ...more,
       }),
     ),

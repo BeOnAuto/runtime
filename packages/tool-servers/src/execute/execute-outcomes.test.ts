@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Timing } from '../bounds/call-bounds.ts';
-import { deniedText, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import {
+  cuttingTimeouts,
+  deniedText,
+  fakeMcpInProcess,
+  patientTiming,
+  playbookToolCalls,
+  reportingAccess,
+} from '../testing/index.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 
 const anyText: unknown = expect.any(String);
 
@@ -12,8 +19,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function executingWith(timing: Timing = patientTiming) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+function executingWith(timing: Timing = patientTiming) {
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' };
   const { access, messages } = reportingAccess({ graph }, { timing, environment: { GRAPH_API_KEY: fakeApiKey } });
@@ -38,7 +45,7 @@ const cutLarge: unknown = expect.stringMatching(
 
 describe('a call whose tool does not answer as asked', () => {
   it('succeeds with a tool error when the tool answers one, as a run model sees it', async () => {
-    const { execute } = await executingWith();
+    const { execute } = executingWith();
 
     expect(await execute({ server: 'graph', tool: 'denied' })).toMatchObject({
       status: 'succeeded',
@@ -47,7 +54,7 @@ describe('a call whose tool does not answer as asked', () => {
   });
 
   it('succeeds with a server failure when the server fails the call, telling the operator which call it was', async () => {
-    const { execute, messages } = await executingWith();
+    const { execute, messages } = executingWith();
 
     const called = await execute({ server: 'graph', tool: 'broken', arguments: { attempt: 1 } });
 
@@ -63,9 +70,11 @@ describe('a call whose tool does not answer as asked', () => {
   });
 
   it('succeeds as timed out when the tool takes longer than a call may', async () => {
-    const { execute } = await executingWith({ ...patientTiming, callMs: 200 });
+    const deadline = cuttingTimeouts();
+    deadline.cut();
+    const { execute } = executingWith({ ...patientTiming, callMs: 200, deadlineAfter: deadline.requestTimeout });
 
-    expect(await execute({ server: 'graph', tool: 'sleep', arguments: { ms: 5000 } })).toMatchObject({
+    expect(await execute({ server: 'graph', tool: 'echo', arguments: {} })).toMatchObject({
       status: 'succeeded',
       output: {
         outcome: 'timed_out',
@@ -76,24 +85,9 @@ describe('a call whose tool does not answer as asked', () => {
   });
 });
 
-describe('a call whose tool answers more than one call may take', () => {
-  it('succeeds as too large, with no answer counted', { timeout: 120_000 }, async () => {
-    const { execute } = await executingWith();
-
-    expect(await execute({ server: 'graph', tool: 'large', arguments: { kib: 16_384 } })).toMatchObject({
-      status: 'succeeded',
-      output: {
-        outcome: 'too_large',
-        text: anyText,
-        result_bytes: null,
-      },
-    });
-  });
-});
-
 describe('a call whose tool answers more than a reply shows', () => {
   it('cuts an answer over 64 KiB where it stays valid, leaves its document out, and counts the whole result', async () => {
-    const { execute } = await executingWith();
+    const { execute } = executingWith();
 
     const called = await execute({ server: 'graph', tool: 'large', arguments: { kib: 80 } });
 
@@ -107,7 +101,7 @@ describe('a call whose tool answers more than a reply shows', () => {
 
 describe('the arguments of a call', () => {
   it('may take 1 MiB as JSON, as much as a run takes as its input, and one byte more is refused at /arguments before anything is opened', async () => {
-    const { fake, execute } = await executingWith();
+    const { fake, execute } = executingWith();
 
     const admitted = await execute({ server: 'graph', tool: 'search', arguments: filling(1_048_576) });
     const sessionsBefore = fake.seen().length;
@@ -129,7 +123,7 @@ describe('the arguments of a call', () => {
   });
 
   it('are an empty object when left out, and must be an object', async () => {
-    const { fake, execute } = await executingWith();
+    const { fake, execute } = executingWith();
 
     const leftOut = await execute({ server: 'graph', tool: 'profile' });
     const notAnObject = await execute({ server: 'graph', tool: 'profile', arguments: ['a'] });

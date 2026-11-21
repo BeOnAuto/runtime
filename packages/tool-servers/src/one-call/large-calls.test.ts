@@ -5,10 +5,10 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CallStarted } from '../calls/call-facts.ts';
-import { patientTiming, recordingCallJournal } from '../testing/index.ts';
+import { fakeMcpInProcess, inProcessFetch, patientTiming, recordingCallJournal } from '../testing/index.ts';
 import { closedAfter, echoCall, oneCallKey } from '../testing/one-calls.ts';
 import { reportingAccess } from '../testing/reporting-access.ts';
-import { serveFakeMcp, type FakeTool } from '../testing/served-fakes.ts';
+import type { FakeTool } from '../testing/served-fakes.ts';
 
 const mebibyte = 1_048_576;
 
@@ -26,13 +26,13 @@ function bodyOf(init: unknown): readonly string[] {
   return typeof body === 'string' && body.includes('"tools/call"') ? [body] : [];
 }
 
-async function postingAccess() {
-  const fake = await serveFakeMcp({ bearer: oneCallKey, tools: [save], mostRequestBytes: 16 * mebibyte });
+function postingAccess() {
+  const fake = fakeMcpInProcess({ bearer: oneCallKey, tools: [save], mostRequestBytes: 16 * mebibyte });
   closedAfter(fake.close);
   const posted: string[] = [];
   const postingFetch = (...[address, init]: readonly [unknown, unknown?]) => {
     posted.push(...bodyOf(init));
-    return globalThis.fetch(String(address), Object.assign({}, init));
+    return inProcessFetch(String(address), Object.assign({}, init));
   };
   const { access, content } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -54,7 +54,7 @@ function startOf(facts: ReturnType<ReturnType<typeof recordingCallJournal>['fact
 
 describe.each([1, 4, 8])('a call of %i MiB of text', (mebibytes) => {
   it('reaches its tool whole, and the arguments it records are the very bytes it sent', async () => {
-    const { fake, access, content, posted } = await postingAccess();
+    const { fake, access, content, posted } = postingAccess();
     const journal = recordingCallJournal();
     const input = pageTaking(mebibytes);
 

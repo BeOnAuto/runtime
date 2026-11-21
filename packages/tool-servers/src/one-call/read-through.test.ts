@@ -18,7 +18,7 @@ function throughTheFake(url: string, key: string) {
 
 describe('one read through a server not kept', () => {
   it('calls a tool that only reads, with no arguments, under the credential the server places', async () => {
-    const fake = await oneCallServer();
+    const fake = oneCallServer();
     const { access } = reportingAccess({}, { timing: patientTiming });
     closedAfter(access.close);
     const read = (tool: string, key: string) =>

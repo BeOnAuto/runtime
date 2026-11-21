@@ -3,14 +3,16 @@ import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ConsentClient } from '../consent/consent-client.ts';
-import { autoClientsOf, consentClientWith, registeredAt, startAskedAt, studioBase } from '../testing/index.ts';
-import { serveOnLoopback } from '../testing/loopback-server.ts';
 import {
-  servedThroughAuto,
-  type FakeConsentService,
-  type ServiceListing,
-  type ThroughAuto,
-} from '../testing/served-fakes.ts';
+  autoClientsOf,
+  consentClientWith,
+  registeredAt,
+  startAskedAt,
+  studioBase,
+  throughAutoInProcess,
+} from '../testing/index.ts';
+import { serveOnLoopback } from '../testing/loopback-server.ts';
+import type { FakeConsentService, ServiceListing, ThroughAuto } from '../testing/served-fakes.ts';
 import { unlistedWords, type ReturnKind } from './auto-clients.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -19,8 +21,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function throughAuto(listing: ServiceListing = {}): Promise<ThroughAuto> {
-  const serving = await servedThroughAuto({}, listing);
+function throughAuto(listing: ServiceListing = {}): ThroughAuto {
+  const serving = throughAutoInProcess({}, listing);
   closing.push(serving.close);
   return serving;
 }
@@ -55,7 +57,7 @@ async function failingOnceAt(): Promise<{ readonly url: string; readonly asked: 
 
 describe('the clients Auto’s consent service lists', () => {
   it('are asked for when first needed, and again once an hour has passed on the test clock', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const sourcesNow = sourcesAt(consentClientWith({ autoClients: autoClientsOf(service) }), fake.origin);
 
     const sources = await Effect.runPromise(
@@ -74,7 +76,7 @@ describe('the clients Auto’s consent service lists', () => {
   });
 
   it('are asked for within five seconds where a request may take longer', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const bounds: number[] = [];
     const requestTimeout = (ms: number) => {
       bounds.push(ms);
@@ -116,7 +118,7 @@ describe('the clients of a consent service that does not answer', () => {
 
 describe('the clients of Auto’s consent service where the source of Auto is switched off', () => {
   it('are never asked for, so no client of Auto’s is taken', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({ autoClients: { ...autoClientsOf(service), enabled: false } });
 
     const sources = await Effect.runPromise(sourcesAt(client, fake.origin));
@@ -129,7 +131,7 @@ describe('the clients of Auto’s consent service where the source of Auto is sw
 
 describe('the clients of Auto’s consent service for a Studio neither hosted nor on this computer', () => {
   it('are left out of the sources had, and never asked for', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const elsewhere: ReturnKind = 'elsewhere';
     const client = consentClientWith({ autoClients: autoClientsOf(service, elsewhere) });
 
@@ -140,7 +142,7 @@ describe('the clients of Auto’s consent service for a Studio neither hosted no
 
 describe('a start at an issuer both a registered client and Auto’s consent service serve', () => {
   it('takes the registered client, and asks the service for nothing but its clients', async () => {
-    const { fake, service } = await throughAuto();
+    const { fake, service } = throughAuto();
     const client = consentClientWith({
       registeredClients: [registeredAt(fake.origin)],
       autoClients: autoClientsOf(service),
@@ -158,7 +160,7 @@ describe('a start at an issuer both a registered client and Auto’s consent ser
 
 describe('the clients Auto’s consent service lists with the scopes each may ask', () => {
   it('serve a way whose scope they cover, and leave a way they do not cover to be set up first', async () => {
-    const { fake, service } = await throughAuto({ scopes: ['files.read'] });
+    const { fake, service } = throughAuto({ scopes: ['files.read'] });
     const client = consentClientWith({ autoClients: autoClientsOf(service) });
 
     const { sourcesOf } = await Effect.runPromise(client.hadSources(studioBase));
@@ -170,7 +172,7 @@ describe('the clients Auto’s consent service lists with the scopes each may as
   });
 
   it('take a start whose scope the registered client at the issuer does not cover', async () => {
-    const { fake, service } = await throughAuto({ scopes: ['files.read'] });
+    const { fake, service } = throughAuto({ scopes: ['files.read'] });
     const client = consentClientWith({
       registeredClients: [registeredAt(fake.origin, { scopes: ['mail.send'] })],
       autoClients: autoClientsOf(service),

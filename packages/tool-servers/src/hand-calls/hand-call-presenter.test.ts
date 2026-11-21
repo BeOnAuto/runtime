@@ -5,8 +5,15 @@ import type { KeptContent, RecordedEvent } from '@on.auto/operations';
 import { nothingKept } from '@on.auto/operations/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fakeRequestIdKey, inTurn, patientTiming, playbookToolCalls, reportingAccess } from '../testing/index.ts';
-import { fakeApiKey, serveFakeMcp } from '../testing/served-fakes.ts';
+import {
+  fakeMcpInProcess,
+  fakeRequestIdKey,
+  inTurn,
+  patientTiming,
+  playbookToolCalls,
+  reportingAccess,
+} from '../testing/index.ts';
+import { fakeApiKey } from '../testing/served-fakes.ts';
 import { handCallPresenter } from './hand-call-presenter.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -22,7 +29,7 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 const digestFields = ['arguments_sha256', 'result_sha256'];
 
 async function recordedCalls(entry: Readonly<Record<string, unknown>>, callMs: number, ...called: readonly unknown[]) {
-  const fake = await serveFakeMcp({ bearer: fakeApiKey });
+  const fake = fakeMcpInProcess({ bearer: fakeApiKey });
   closing.push(fake.close);
   const graph = { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme', ...entry };
   const { access, content } = reportingAccess(
