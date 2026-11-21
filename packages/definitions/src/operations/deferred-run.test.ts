@@ -39,7 +39,7 @@ describe('a run whose capability finishes it after the call returns', () => {
   it('is recorded as waiting when its call is cancelled while the capability starts it, never left without a result', async () => {
     const { executingCancelledOnceStarted, reading, relayer } = await withHandOn();
 
-    expect(await executingCancelledOnceStarted({ startingMs: 200 })).toStrictEqual({ status: 'cancelled' });
+    expect(await executingCancelledOnceStarted({ held: true })).toStrictEqual({ status: 'cancelled' });
     expect(relayer.runs()).toBe(1);
     expect(await reading()).toStrictEqual({
       status: 'succeeded',

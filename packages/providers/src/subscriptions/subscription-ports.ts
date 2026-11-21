@@ -131,6 +131,7 @@ export interface LoopConnection {
   readonly id: string;
   readonly connection: string;
   readonly connected?: string;
+  readonly account?: string;
   readonly destinations: readonly Destination[];
 }
 

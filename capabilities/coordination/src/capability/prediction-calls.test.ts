@@ -1,7 +1,8 @@
 import { measuredPoolSettings } from '@on.auto/definitions/testing';
 import { makePredictionFunctionAdapter } from '@on.auto/prediction';
 import { weeklyOrders } from '@on.auto/prediction/testing';
-import { pageFiltersOn, programPool } from '@on.auto/workflow-engine/dsl';
+import { pageFiltersOn } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { Effect } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -11,7 +12,7 @@ import { recordingStarts, recordingWorkflows } from '../testing/recording-starts
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-555555555553';
 
-const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
+const pool = threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
 

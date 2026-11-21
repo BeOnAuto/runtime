@@ -1,6 +1,7 @@
 import { InvalidInput, Unavailable } from '@on.auto/operations';
 import { importedWithoutAnAddress } from '@on.auto/operations/testing';
-import { type CheckJob, type CheckOutcome, programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { CheckJob, CheckOutcome, ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { Effect, Exit, type Schema } from 'effect';
 import ts from 'typescript6';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -14,7 +15,7 @@ import { sandboxLibFrom } from './kept-lib.ts';
 import { checkDeadlineMs, checkedAtSave, checkWorker } from './save-check.ts';
 import { strippedExpression, strippedModule } from './type-stripping.ts';
 
-const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
+const pool = threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 const patient = checkingWithin(pool);
 

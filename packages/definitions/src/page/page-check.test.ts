@@ -1,4 +1,4 @@
-import { programPool } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { Effect, Exit } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -11,7 +11,7 @@ function wordsNaming(text: string): unknown {
   return expect.stringContaining(text);
 }
 
-const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
+const pool = threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
 

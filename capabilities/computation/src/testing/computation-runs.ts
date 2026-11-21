@@ -14,6 +14,7 @@ import {
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { Effect, type Exit, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach } from 'vitest';
@@ -53,15 +54,27 @@ afterEach(async () => {
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
+const poolSettings: PoolSettings = {
+  workers: computationBounds.workers,
+  heapMegabytes: computationBounds.heapMegabytes,
+  ...measuredPoolSettings,
+};
+
 export function poolOf(settings: Partial<PoolSettings> = {}): ProgramPool {
-  const pool = programPool({
-    workers: computationBounds.workers,
-    heapMegabytes: computationBounds.heapMegabytes,
-    ...measuredPoolSettings,
-    ...settings,
-  });
+  const pool = threadPool({ ...poolSettings, ...settings });
   pools.push(pool);
   return checkingWithin(pool);
+}
+
+/**
+ * A pool that runs programs on real worker threads, for what only the stack of a worker shows, and checks a save on
+ * the thread of the test.
+ */
+export function workerPoolOf(): ProgramPool {
+  const checks = poolOf();
+  const workers = programPool(poolSettings);
+  pools.push(workers);
+  return { ...workers, check: checks.check };
 }
 
 export type RunBounds = Omit<ComputationFunctionAdapterOptions, 'pool'>;

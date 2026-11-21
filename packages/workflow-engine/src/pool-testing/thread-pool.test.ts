@@ -1,15 +1,20 @@
 import { Effect } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import type { Json } from '../dsl/json.ts';
 import type { ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
 import { programPool } from '../program-pool/program-pool.ts';
 import { runMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
+import * as programWorkerModule from '../workers/program-worker.ts';
+import { countingOnTheLoop } from './counting-workers.ts';
 import { moduleOfSource } from './source-modules.ts';
 import { testPoolSettings } from './test-pools.ts';
 import { threadPool } from './thread-pool.ts';
 
-function request(body: string, input: Json = null, more: Partial<ProgramRequest> = {}): ProgramRequest {
+function request(
+  body: string,
+  input: ProgramRequest['arguments'][number] = null,
+  more: Partial<ProgramRequest> = {},
+): ProgramRequest {
   return {
     source: `export default function (input) {\n  ${body}\n}`,
     entry: 'default',
@@ -36,6 +41,20 @@ afterAll(async () => {
 });
 
 describe.each(pools)('a program pool %s', (_where, pool) => {
+  it('runs on the worker module of the pool, though the test imported that module already', async () => {
+    expect(Object.keys(programWorkerModule)).toEqual([]);
+    expect(await pool.run(request('return input + 1;', 1))).toMatchObject({ ran: 'answered', output: 2 });
+  });
+
+  it('starts a thread for another module while every thread it may keep idles', async () => {
+    await Promise.all([pool.run(request('return 1;')), pool.run(request('return 2;'))]);
+
+    expect(await pool.run(request('.', null, { source: 'count', worker: countingOnTheLoop }))).toMatchObject({
+      ran: 'answered',
+      output: { jobs: 1 },
+    });
+  });
+
   it('runs a program on its input, and ends one that raises or works too long as a worker would', async () => {
     const outcomes = [
       await pool.run(request('return { doubled: input * 2 };', 21)),

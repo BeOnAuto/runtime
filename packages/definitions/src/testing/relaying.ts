@@ -42,8 +42,11 @@ export async function withHandOn(meter?: Layer.Layer<RunMeter>) {
     relayer,
     prober,
     running: (input: unknown = {}) => definitions.call(operations.runDefinition, handingOn(input)),
-    executingCancelledOnceStarted: (input: unknown) =>
-      definitions.callCancelledWhen(relayer.started, operations.runDefinition, handingOn(input)),
+    executingCancelledOnceStarted: (input: unknown) => {
+      const called = definitions.callCancelledWhen(relayer.started, operations.runDefinition, handingOn(input));
+      void relayer.started.then(relayer.free);
+      return called;
+    },
     reading: () => definitions.call(operations.getRun, toAlpha(acmeAdmin, { run_id: relayedId })),
     cancelling: (input: object = {}, id: string = relayedId) =>
       definitions.call(operations.cancelRun, toAlpha(acmeAdmin, { run_id: id, ...input }), cancelledAt),

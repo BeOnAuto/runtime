@@ -61,12 +61,13 @@ describe('the connections the loop arranges through', () => {
     ]);
   });
 
-  it('keep the id of a connection connected again, and give one added again under a removed one’s name its own', async () => {
-    const again = ['2026-11-18T08:00:00.000Z', [...connected, addedFact('connection-9', 'gone', null)]] as const;
+  it('keep the id of a connection connected again, with the account it was connected in, and give one added again under a removed one’s name its own', async () => {
+    const inAnAccount = { ...connected[0], data: { ...connected[0].data, account: { id: 'workspace' } } };
+    const again = ['2026-11-18T08:00:00.000Z', [inAnAccount, addedFact('connection-9', 'gone', null)]] as const;
     const registry = await registryOf([addedAt, added], [connectedAt, connected], again);
 
     expect(await Effect.runPromise(loopConnectionsOf({ registry, providers })(alpha))).toEqual([
-      { id: 'connection-1', connection: 'tracker', connected: again[0], destinations: declared },
+      { id: 'connection-1', connection: 'tracker', connected: again[0], account: 'workspace', destinations: declared },
       { id: 'connection-2', connection: 'notes', destinations: [] },
       { id: 'connection-9', connection: 'gone', destinations: [] },
     ]);
@@ -249,10 +250,9 @@ describe('the ports of the loop', () => {
     const ports = subscriptionLoopPortsOf({ ...parts, registry: await aRegistry() });
     const arranged = new Map(declared.map((each) => ['tracker', each]));
 
-    expect((await Effect.runPromise(ports.connectionsOf(alpha))).map(({ connection }) => connection)).toEqual([
-      'tracker',
-      'notes',
-    ]);
+    const named = (await Effect.runPromise(ports.connectionsOf(alpha))).map(({ connection }) => connection);
+
+    expect(named).toEqual(['tracker', 'notes']);
     expect(await Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, arranged })))).toEqual([
       [{ connection: 'tracker', topic: 'site' }],
       [],

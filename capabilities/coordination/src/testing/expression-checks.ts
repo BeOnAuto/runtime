@@ -1,6 +1,7 @@
 import { checkedAtSave } from '@on.auto/definitions/check';
 import { checksAwaitedAtMostMs, measuredPoolSettings } from '@on.auto/definitions/testing';
-import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { afterAll } from 'vitest';
 
 import type { ExpressionCheck } from '../document/expression-check.ts';
@@ -13,6 +14,6 @@ afterAll(async () => {
 });
 
 export const testExpressionCheck: ExpressionCheck = (job) => {
-  pool ??= programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
+  pool ??= threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
   return checkedAtSave(pool, job, checksAwaitedAtMostMs);
 };

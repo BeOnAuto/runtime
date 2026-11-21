@@ -1,7 +1,7 @@
 import { echo } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
-import { Schema } from 'effect';
-import { expect, vi } from 'vitest';
+import { Effect, Schema } from 'effect';
+import { expect } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
 import { connectionsReporting } from './connection-events.ts';
@@ -18,8 +18,6 @@ export interface WorkflowPlaybook extends Playbook {
 
 const mostDurationMs = 2_592_000_000;
 
-const longerThanTheTestMs = 120_000;
-
 const StartedSchema = Schema.Struct({ output: Schema.Struct({ status: Schema.Literal('started') }) });
 
 const isStarted = Schema.is(StartedSchema);
@@ -29,7 +27,21 @@ export async function workflowPlaybook({
 }: { readonly goals?: boolean } = {}): Promise<WorkflowPlaybook> {
   const ledger = namingLedger();
   const nested = playbookOn(ledger, [echo]);
-  const host = await testHost(nested);
+  const settlements = new Map<string, PromiseWithResolvers<void>>();
+  const settlementOf = (runId: string): PromiseWithResolvers<void> => {
+    const settlement = settlements.get(runId) ?? Promise.withResolvers<void>();
+    settlements.set(runId, settlement);
+    return settlement;
+  };
+  const host = await testHost({
+    ...nested,
+    settle: (address, settlement, lineage) =>
+      Effect.tap(nested.settle(address, settlement, lineage), () =>
+        Effect.sync(() => {
+          settlementOf(address.id).resolve();
+        }),
+      ),
+  });
   const playbook = playbookOn(ledger, [
     makeWorkflowAdapter({
       runs: host,
@@ -42,14 +54,11 @@ export async function workflowPlaybook({
     }),
     echo,
   ]);
-  const settled = (runId: string): Promise<Outcome> =>
-    vi.waitFor(
-      async () => {
-        const outcome = await playbook.call(playbook.getRun, { run_id: runId });
-        expect(isStarted(outcome)).toBe(false);
-        return outcome;
-      },
-      { timeout: longerThanTheTestMs, interval: 10 },
-    );
+  const settled = async (runId: string): Promise<Outcome> => {
+    await settlementOf(runId).promise;
+    const outcome = await playbook.call(playbook.getRun, { run_id: runId });
+    expect(isStarted(outcome)).toBe(false);
+    return outcome;
+  };
   return { ...playbook, host, settled, close: () => host.stop() };
 }

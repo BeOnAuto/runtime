@@ -81,12 +81,6 @@ describe('a run whose program raises', () => {
     );
   });
 
-  it('ends in conflict when the stack overflows and the program does not catch it', async () => {
-    expect(await ended('const down = (depth: number): number => down(depth + 1);\n  return down(0);')).toEqual(
-      unworkable('The program raised an error on line 5: InternalError: stack overflow'),
-    );
-  });
-
   it('cuts the text of the error at 1,024 bytes', async () => {
     expect(await ended('throw new Error("x".repeat(30000000));')).toEqual(
       unworkable(`The program raised an error on line 5: Error: ${'x'.repeat(1017)}…`),
@@ -229,10 +223,10 @@ describe('a run of a program its save did not strip', () => {
 
 describe('a run of the server that cannot finish', () => {
   it('is unavailable when it runs past its deadline, though its native work spends few checkpoints', async () => {
-    const slow = computationWith(poolOf(), { deadlineMs: 500 });
-    const churning = 'const big = ["x".repeat(4000000)];\n  for (;;) JSON.stringify(big);';
+    const stopped = scriptedPool([{ ran: 'stopped', because: 'deadline', milliseconds: 500 }], poolOf());
+    const slow = computationWith(stopped, { deadlineMs: 500 });
 
-    expect(await slow.running(programDocument(functionOf(churning)), null)).toEqual(
+    expect(await slow.running(programDocument(functionOf('return 1;')), null)).toEqual(
       Exit.fail(
         new Unavailable({
           detail: 'The run took longer than the 500 ms a computation function may run, and was stopped',

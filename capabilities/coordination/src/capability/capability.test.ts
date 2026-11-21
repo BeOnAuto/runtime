@@ -1,5 +1,3 @@
-import { setTimeout } from 'node:timers/promises';
-
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -19,18 +17,20 @@ const flow = "document: { dsl: '1.0.3', namespace: acme, name: flow, version: '1
 
 const startBegan = Promise.withResolvers<void>();
 
-const slowlyStarting: Pick<WorkflowHost, 'start'> = {
+const startFreed = Promise.withResolvers<void>();
+
+const heldWhileStarting: Pick<WorkflowHost, 'start'> = {
   start: () =>
     Effect.promise(() => {
       startBegan.resolve();
-      return setTimeout(300);
+      return startFreed.promise;
     }).pipe(Effect.as('started' as const)),
 };
 
 describe('a run whose call is cancelled while its workflow starts', () => {
   it('waits for the start and records the run waiting for the workflow it started', async () => {
     const workflow = makeWorkflowAdapter({
-      runs: slowlyStarting,
+      runs: heldWhileStarting,
       check: testExpressionCheck,
       connectionEvents: connectionsReporting({}),
       mostDurationMs: 2_592_000_000,
@@ -40,11 +40,13 @@ describe('a run whose call is cancelled while its workflow starts', () => {
     const playbook = playbookOn(namingLedger(), [workflow]);
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
 
-    const answered = await playbook.callCancelledWhen(startBegan.promise, playbook.runDefinition, {
+    const answering = playbook.callCancelledWhen(startBegan.promise, playbook.runDefinition, {
       type: 'workflow',
       name: 'flow',
       run_id: runId,
     });
+    void startBegan.promise.then(startFreed.resolve);
+    const answered = await answering;
 
     expect(answered).toStrictEqual({ status: 'cancelled' });
     expect(await playbook.call(playbook.getRun, { run_id: runId })).toMatchObject({

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { programPool } from '@on.auto/workflow-engine/dsl';
+import { threadPool } from '@on.auto/workflow-engine/thread-pool';
 import { Effect, Option, Predicate, Result, type Schema } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -22,7 +22,7 @@ const documentedPage = fencedIn('yaml');
 
 const documentedRuns = fencedIn('markdown');
 
-const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
+const pool = threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
 

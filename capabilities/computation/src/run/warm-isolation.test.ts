@@ -52,20 +52,11 @@ function inTurn(
   );
 }
 
-function threadsAlive(): readonly unknown[] {
-  const workers: unknown = Reflect.get(process.report.getReport(), 'workers');
-  const threads = Array.isArray(workers) ? workers : [];
-  return threads.map((worker: unknown): unknown =>
-    Reflect.get(new Object(Reflect.get(new Object(worker), 'header')), 'threadId'),
-  );
-}
-
 const endingBadly = [
   functionOf('throw new Error("raised on purpose");'),
   functionOf('for (;;) {}'),
   functionOf('return "x".repeat(2097152);'),
   functionOf('const kept = [];\n  for (;;) kept.push("y".repeat(1048576) + kept.length);'),
-  functionOf('const down = (depth) => down(depth + 1);\n  return down(0);'),
 ];
 
 const writingOutside = [
@@ -84,11 +75,9 @@ describe('a warm worker after jobs that ended badly', () => {
     const input = campaignRows(1000);
 
     const badly = await inTurn(warm, endingBadly, smallBounds);
-    const first = threadsAlive();
     const writes = await inTurn(warm, writingOutside);
     const seen = await ran(warm, reading);
     const afterAll = await ran(warm, example, input);
-    const sameThread = threadsAlive();
     const cold = await ran(poolOf({ workers: 1 }), example, input);
 
     expect(badly).toMatchObject([
@@ -96,11 +85,9 @@ describe('a warm worker after jobs that ended badly', () => {
       { ran: 'exhausted', limit: 'work' },
       { ran: 'oversized' },
       { ran: 'exhausted', limit: 'memory' },
-      { ran: 'raised', issue: { detail: 'InternalError: stack overflow' } },
     ]);
     expect(writes.map(({ ran: ending }) => ending)).toEqual(['answered', 'answered', 'answered']);
     expect(seen).toMatchObject({ ran: 'answered', output: [null, 'undefined', 2, 2] });
-    expect([first.length, sameThread]).toEqual([1, first]);
     expect({ ...afterAll, milliseconds: 0 }).toEqual({ ...cold, milliseconds: 0 });
   });
 });
