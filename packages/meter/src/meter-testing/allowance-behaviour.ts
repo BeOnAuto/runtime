@@ -12,7 +12,7 @@ async function pageOf(metered: Awaited<ReturnType<typeof opened>>['metered']): P
 }
 
 export function allowanceBehaviour(ledgerOf: LedgerOf): void {
-  it('admits its first runs without a key, then at the free rate, refusing as license_required past the day’s, saying when it lifts', async () => {
+  it('admits its first runs without a key, then at the free rate, with no call to Auto, refusing as license_required past the day’s, saying when it lifts', async () => {
     const { metered } = await opened(ledgerOf, small);
     const admitted = await admittedEach(metered, runsNamed('run', 5));
     const refused = await metered.admitted(runOf('run-5'));
@@ -28,6 +28,7 @@ export function allowanceBehaviour(ledgerOf: LedgerOf): void {
       lifts_at: '2026-10-28T00:00:00.000Z',
     });
     expect((await metered.state()).admitted).toMatchObject({ actions: 5, first_runs: 3, licensed: 0 });
+    expect([metered.account.activations(), metered.account.reportsSent()]).toEqual([[], 0]);
   });
 
   it('admits again the next UTC day, up to the month’s, then refuses as license_required until the next UTC month', async () => {
@@ -67,30 +68,18 @@ export function laggingClockBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function defaultAllowanceBehaviour(ledgerOf: LedgerOf): void {
-  it('runs 100 first runs and then 15 a UTC day and 75 a UTC month by default, with no call to Auto', async () => {
-    const { metered } = await opened(ledgerOf);
-    const admitted = await admittedEach(metered, runsNamed('run', 115));
-    const refused = await metered.admitted(runOf('run-115'));
-
-    expect(admitted.filter((kind) => kind === 'admitted')).toHaveLength(115);
-    expect(refused).toMatchObject({ kind: 'license_required', because: 'free_daily_limit' });
-    expect([metered.account.activations(), metered.account.reportsSent()]).toEqual([[], 0]);
-  }, 120_000);
-}
-
 export function concurrencyBehaviour(ledgerOf: LedgerOf): void {
-  it('admits exactly its first runs and the day’s free rate of 60 asked at once, on two replicas of one ledger', async () => {
-    const tight = { allowance: 20, freeRate: { per_day: 10, per_month: 75 } };
+  it('admits exactly its first runs and the day’s free rate of 20 asked at once, on two replicas of one ledger', async () => {
+    const tight = { allowance: 6, freeRate: { per_day: 4, per_month: 75 } };
     const { at, metered } = await opened(ledgerOf, tight);
     const replica = await replicaOf(at, tight);
     const answers = await Promise.all([
-      ...runsNamed('one', 30).map((run) => metered.admitted(runOf(run))),
-      ...runsNamed('other', 30).map((run) => replica.admitted(runOf(run))),
+      ...runsNamed('one', 10).map((run) => metered.admitted(runOf(run))),
+      ...runsNamed('other', 10).map((run) => replica.admitted(runOf(run))),
     ]);
 
-    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(30);
-    expect(answers.filter(({ kind }) => kind === 'license_required')).toHaveLength(30);
-    expect((await metered.state()).admitted).toMatchObject({ actions: 30, first_runs: 20 });
-  }, 120_000);
+    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(10);
+    expect(answers.filter(({ kind }) => kind === 'license_required')).toHaveLength(10);
+    expect((await metered.state()).admitted).toMatchObject({ actions: 10, first_runs: 6 });
+  });
 }

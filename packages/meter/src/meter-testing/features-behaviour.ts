@@ -1,8 +1,9 @@
 import { expect, it } from 'vitest';
 
 import { METER_STREAM } from '../meter-stream/meter-events.ts';
+import { tamperingOn } from '../testing/ledgers.ts';
 import type { Metered } from '../testing/metered.ts';
-import { licensedInstallation, licensedOn, opened, restartedOf, type LedgerOf } from './opened.ts';
+import { licensedInstallation, licensedOn, opened, restartedOf, type DatabaseOf, type LedgerOf } from './opened.ts';
 
 const feature = 'prediction-example';
 
@@ -150,9 +151,12 @@ function refusalBehaviour(ledgerOf: LedgerOf): void {
 
     expect((await metered.featureRefusal(use)).resolve_at).toBe('https://studio.on.auto/licenses');
   });
+}
 
+export function unreadFeaturesBehaviour(databaseOf: DatabaseOf): void {
   it('answers meter_unavailable when it cannot read its ledger, as its status does', async () => {
-    const { metered, tampering } = await licensedOn(ledgerOf, {}, granted);
+    const { at, metered } = await licensedOn(databaseOf, {}, granted);
+    const tampering = tamperingOn(at);
     const [first = ''] = await tampering.idsOf(METER_STREAM);
     await tampering.garbled(first);
 

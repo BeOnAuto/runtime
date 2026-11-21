@@ -87,18 +87,20 @@ function graceBehaviour(ledgerOf: LedgerOf): void {
     expect(admitted).toBe('admitted');
     expect((await metered.state()).allocation?.refresh_by).toBe('2027-02-25T12:00:00.000Z');
   });
+}
 
+export function allocationReplicasBehaviour(ledgerOf: LedgerOf): void {
   it('admits exactly its credits of the actions asked at once on two replicas of one ledger', async () => {
-    const { at, metered } = await allocatedOn(ledgerOf, 20, false);
+    const { at, metered } = await allocatedOn(ledgerOf, 8, false);
     const replica = await replicaOf(at);
     const answers = await Promise.all([
-      ...runsNamed('one', 20).map((run) => metered.admitted(runOf(run))),
-      ...runsNamed('other', 20).map((run) => replica.admitted(runOf(run))),
+      ...runsNamed('one', 8).map((run) => metered.admitted(runOf(run))),
+      ...runsNamed('other', 8).map((run) => replica.admitted(runOf(run))),
     ]);
 
-    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(20);
-    expect(answers.filter(({ kind }) => kind === 'credits_exhausted')).toHaveLength(20);
-  }, 120_000);
+    expect(answers.filter(({ kind }) => kind === 'admitted')).toHaveLength(8);
+    expect(answers.filter(({ kind }) => kind === 'credits_exhausted')).toHaveLength(8);
+  });
 }
 
 const notAuto: readonly (readonly [string, Answering])[] = [

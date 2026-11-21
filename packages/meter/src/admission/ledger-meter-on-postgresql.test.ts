@@ -5,12 +5,12 @@ import { Client } from 'pg';
 import { describe } from 'vitest';
 
 import { meterOnADatabaseBehaviour } from '../meter-testing/meter-behaviour.ts';
-import type { LedgerAt } from '../testing/ledgers.ts';
+import type { DatabaseAt } from '../testing/ledgers.ts';
 import { placedDefinitions } from '../testing/runs.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
-async function postgresqlLedger(): Promise<LedgerAt> {
+async function postgresqlLedger(): Promise<DatabaseAt> {
   const { url, remove } = await postgresqlDatabaseOn(server);
   return {
     name: 'PostgreSQL',

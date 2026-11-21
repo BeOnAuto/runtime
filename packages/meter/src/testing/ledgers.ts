@@ -4,8 +4,9 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { runIds } from '@on.auto/definitions';
-import type { LedgerServices } from '@on.auto/ledger';
+import type { LedgerLog } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
+import type { Ledger } from '@on.auto/operations';
 import type { Layer } from 'effect';
 
 import { placedDefinitions } from './runs.ts';
@@ -17,14 +18,20 @@ function parsed(text: string): unknown {
   return value;
 }
 
+/** A ledger the meter keeps its record on, opened afresh by each runtime over it, as replicas of one ledger are. */
 export interface LedgerAt {
   readonly name: string;
-  readonly layer: () => Layer.Layer<LedgerServices>;
+  readonly layer: () => Layer.Layer<Ledger>;
+  readonly remove: () => Promise<void>;
+}
+
+/** A ledger on a database, whose log can be read and whose rows a test can read and change under the meter. */
+export interface DatabaseAt extends LedgerAt {
+  readonly layer: () => Layer.Layer<Ledger | LedgerLog>;
   readonly rows: (statement: string, values?: readonly (string | number)[]) => Promise<readonly Row[]>;
   readonly dataOf: (stored: unknown) => unknown;
   readonly stored: (data: unknown) => string;
   readonly unreadable: string;
-  readonly remove: () => Promise<void>;
 }
 
 export interface Tampering {
@@ -37,7 +44,7 @@ export interface Tampering {
   readonly restoredTo: (position: number) => Promise<void>;
 }
 
-export function tamperingOn(at: LedgerAt): Tampering {
+export function tamperingOn(at: DatabaseAt): Tampering {
   return {
     idsOf: async (stream) =>
       (await at.rows('SELECT message_id FROM emt_messages WHERE stream_id = ? ORDER BY stream_position', [stream])).map(
@@ -75,7 +82,7 @@ export function tamperingOn(at: LedgerAt): Tampering {
   };
 }
 
-export function sqliteLedger(): LedgerAt {
+export function sqliteLedger(): DatabaseAt {
   const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-meter-'));
   const fileName = join(directory, 'ledger.db');
   return {

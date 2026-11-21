@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 
+import { tamperingOn } from '../testing/ledgers.ts';
 import {
   admittedEach,
   licensedInstallation,
@@ -8,6 +9,7 @@ import {
   restartedAfter,
   runsNamed,
   startedOnceAdmitted,
+  type DatabaseOf,
   type LedgerOf,
 } from './opened.ts';
 
@@ -110,9 +112,10 @@ export function earlyReportBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function restoredReportBehaviour(ledgerOf: LedgerOf): void {
+export function restoredReportBehaviour(databaseOf: DatabaseOf): void {
   it('reports the lower count of a ledger restored from an older copy with the same key once, then counts from what Auto charged, never backwards', async () => {
-    const { metered, tampering, key } = await licensedOn(ledgerOf);
+    const { at, metered, key } = await licensedOn(databaseOf);
+    const tampering = tamperingOn(at);
     await startedOnceAdmitted(metered, 'run-1');
     const copied = await tampering.lastPosition();
     await admittedEach(metered, ['run-2', 'run-3']);

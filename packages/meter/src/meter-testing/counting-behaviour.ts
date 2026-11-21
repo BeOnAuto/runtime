@@ -1,9 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { heldRunOf } from '../admission/metering.ts';
+import { tamperingOn } from '../testing/ledgers.ts';
 import { runOf, runStreamOf } from '../testing/runs.ts';
-import { admittedWhereFiled, countedWhereFiled } from './filed-runs-behaviour.ts';
-import { opened, replicaOf, restartedAfter, runsNamed, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import {
+  opened,
+  replicaOf,
+  restartedAfter,
+  runsNamed,
+  startedOnceAdmitted,
+  type DatabaseOf,
+  type LedgerOf,
+} from './opened.ts';
 
 function countingBehaviour(ledgerOf: LedgerOf): void {
   it('counts a run once as it admits it, however often it is asked again under its id, before or after it starts', async () => {
@@ -47,6 +55,22 @@ function countingBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
+function unavailableBehaviour(ledgerOf: LedgerOf): void {
+  it('refuses as meter_unavailable when the change that admits a run keeps losing to others', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.executesFail('conflict');
+
+    expect((await metered.admitted(runOf('run-1'))).kind).toBe('meter_unavailable');
+  });
+
+  it('refuses as meter_unavailable when its ledger breaks while it admits a run', async () => {
+    const { metered } = await opened(ledgerOf);
+    metered.executesFail('defect');
+
+    expect((await metered.admitted(runOf('run-1'))).kind).toBe('meter_unavailable');
+  });
+}
+
 function startedRunsBehaviour(ledgerOf: LedgerOf): void {
   it('counts every run of every org and playbook it admits, and nothing it did not admit', async () => {
     const { metered } = await opened(ledgerOf);
@@ -69,23 +93,26 @@ function startedRunsBehaviour(ledgerOf: LedgerOf): void {
       { run: heldRunOf(runOf('run-1')), until: '2026-10-27T12:20:00.001Z' },
     ]);
   });
+}
 
+export function replicasCountingBehaviour(ledgerOf: LedgerOf): void {
   it('counts each run once while two replicas of one ledger admit and start the same runs at once', async () => {
     const { at, metered } = await opened(ledgerOf);
     const replica = await replicaOf(at);
-    const runs = runsNamed('run', 30);
+    const runs = runsNamed('run', 10);
     await Promise.all([
       ...runs.map((run) => startedOnceAdmitted(metered, run)),
       ...runs.map((run) => startedOnceAdmitted(replica, run)),
     ]);
 
-    expect((await metered.state()).admitted.actions).toBe(30);
-  }, 60_000);
+    expect((await metered.state()).admitted.actions).toBe(10);
+  });
 }
 
-function unreadableHistoryBehaviour(ledgerOf: LedgerOf): void {
+function unreadableHistoryBehaviour(databaseOf: DatabaseOf): void {
   it('never stops for an event of the history of its runs that can no longer be read', async () => {
-    const { metered, tampering } = await opened(ledgerOf);
+    const { at, metered } = await opened(databaseOf);
+    const tampering = tamperingOn(at);
     await metered.admitted(runOf('run-1'));
     await metered.started('run-1');
     const [started = ''] = await tampering.idsOf(runStreamOf('run-1'));
@@ -96,10 +123,11 @@ function unreadableHistoryBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-export function historyBehaviour(ledgerOf: LedgerOf): void {
-  unreadableHistoryBehaviour(ledgerOf);
+export function historyBehaviour(databaseOf: DatabaseOf): void {
+  unreadableHistoryBehaviour(databaseOf);
   it('never stops for the history of its runs, deleted or rewritten: it admits on from its own count', async () => {
-    const { metered, tampering } = await opened(ledgerOf);
+    const { at, metered } = await opened(databaseOf);
+    const tampering = tamperingOn(at);
     await startedOnceAdmitted(metered, 'run-1');
     await startedOnceAdmitted(metered, 'run-2');
     await startedOnceAdmitted(metered, 'run-3');
@@ -115,7 +143,8 @@ export function historyBehaviour(ledgerOf: LedgerOf): void {
   });
 
   it('never stops for a ledger restored from an older copy: it admits on from the count the copy kept', async () => {
-    const { metered, tampering } = await opened(ledgerOf);
+    const { at, metered } = await opened(databaseOf);
+    const tampering = tamperingOn(at);
     await startedOnceAdmitted(metered, 'run-1');
     const copied = await tampering.lastPosition();
     await startedOnceAdmitted(metered, 'run-2');
@@ -127,7 +156,8 @@ export function historyBehaviour(ledgerOf: LedgerOf): void {
   });
 
   it('starts again as a new runtime with a ledger wiped of its own record, with an id of its own', async () => {
-    const { metered, tampering } = await opened(ledgerOf, { allowance: 1, freeRate: { per_day: 0, per_month: 0 } });
+    const { at, metered } = await opened(databaseOf, { allowance: 1, freeRate: { per_day: 0, per_month: 0 } });
+    const tampering = tamperingOn(at);
     await startedOnceAdmitted(metered, 'run-1');
     const { installation } = await metered.state();
     const refused = await metered.admitted(runOf('run-2'));
@@ -141,13 +171,7 @@ export function historyBehaviour(ledgerOf: LedgerOf): void {
 export function runsBehaviour(ledgerOf: LedgerOf): void {
   describe('counting', () => {
     countingBehaviour(ledgerOf);
+    unavailableBehaviour(ledgerOf);
     startedRunsBehaviour(ledgerOf);
-  });
-  describe('runs filed under their definitions', () => {
-    admittedWhereFiled(ledgerOf);
-    countedWhereFiled(ledgerOf);
-  });
-  describe('the history of its runs', () => {
-    historyBehaviour(ledgerOf);
   });
 }

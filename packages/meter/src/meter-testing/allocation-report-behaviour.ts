@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
 
+import { tamperingOn } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
-import { allocatedOn, opened, restartedAfter, startedOnceAdmitted, type LedgerOf } from './opened.ts';
+import { allocatedOn, opened, restartedAfter, startedOnceAdmitted, type DatabaseOf, type LedgerOf } from './opened.ts';
 
 function madeReportBehaviour(ledgerOf: LedgerOf): void {
   it('makes reports numbered one after another, each of all it spent under its allocation and signed with its key', async () => {
@@ -34,9 +35,10 @@ function madeReportBehaviour(ledgerOf: LedgerOf): void {
   });
 }
 
-function restoredReportBehaviour(ledgerOf: LedgerOf): void {
+export function restoredAllocationReportBehaviour(databaseOf: DatabaseOf): void {
   it('reports the lower count of a ledger restored from an older copy, under a number it used, which Auto freezes', async () => {
-    const { metered, tampering, key } = await allocatedOn(ledgerOf, 5);
+    const { at, metered, key } = await allocatedOn(databaseOf, 5);
+    const tampering = tamperingOn(at);
     await startedOnceAdmitted(metered, 'run-1');
     await metered.reported();
     const copied = await tampering.lastPosition();
@@ -61,7 +63,6 @@ function restoredReportBehaviour(ledgerOf: LedgerOf): void {
 
 export function allocationReportBehaviour(ledgerOf: LedgerOf): void {
   madeReportBehaviour(ledgerOf);
-  restoredReportBehaviour(ledgerOf);
 }
 
 export function allocationReportRefusalBehaviour(ledgerOf: LedgerOf): void {

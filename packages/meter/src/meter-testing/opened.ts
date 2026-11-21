@@ -1,18 +1,20 @@
 import { Function } from 'effect';
 import { onTestFinished } from 'vitest';
 
-import { tamperingOn, type LedgerAt } from '../testing/ledgers.ts';
+import type { DatabaseAt, LedgerAt } from '../testing/ledgers.ts';
 import { meteredOn, type Metered, type MeteredOptions } from '../testing/metered.ts';
 import { inTurn, runOf } from '../testing/runs.ts';
 
 export type LedgerOf = () => Promise<LedgerAt>;
 
-export async function opened(ledgerOf: LedgerOf, options: MeteredOptions = {}) {
+export type DatabaseOf = () => Promise<DatabaseAt>;
+
+export async function opened<At extends LedgerAt>(ledgerOf: () => Promise<At>, options: MeteredOptions = {}) {
   const at = await ledgerOf();
   onTestFinished(() => at.remove());
   const metered = await meteredOn(at, options);
   onTestFinished(() => metered.dispose());
-  return { at, metered, tampering: tamperingOn(at) };
+  return { at, metered };
 }
 
 export async function replicaOf(at: LedgerAt, options: MeteredOptions = {}): Promise<Metered> {
@@ -51,7 +53,12 @@ export function admittedEach(metered: Metered, runs: readonly string[]): Promise
 
 const allocatedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7f';
 
-export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey = true, days?: 30 | 90) {
+export async function allocatedOn<At extends LedgerAt>(
+  ledgerOf: () => Promise<At>,
+  credits: number,
+  withAKey = true,
+  days?: 30 | 90,
+) {
   const { metered, ...rest } = await opened(ledgerOf);
   const key = metered.account.keyFor(allocatedInstallation);
   const allocation = metered.account.allocationFor(allocatedInstallation, credits, days);
@@ -62,8 +69,8 @@ export async function allocatedOn(ledgerOf: LedgerOf, credits: number, withAKey 
 
 export const licensedInstallation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-export async function licensedOn(
-  ledgerOf: LedgerOf,
+export async function licensedOn<At extends LedgerAt>(
+  ledgerOf: () => Promise<At>,
   options: MeteredOptions = {},
   prepared: (account: Metered['account']) => void = Function.constVoid,
 ) {

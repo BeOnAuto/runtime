@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import type { Answering } from '../testing/account-fake.ts';
+import { tamperingOn } from '../testing/ledgers.ts';
 import { runOf } from '../testing/runs.ts';
 import {
   admittedEach,
@@ -11,6 +12,7 @@ import {
   restartedOf,
   runsNamed,
   startedOnceAdmitted,
+  type DatabaseOf,
   type LedgerOf,
 } from './opened.ts';
 import { closedAccountBehaviour, fallbackWordsBehaviour, keptWordingBehaviour } from './refusal-behaviour.ts';
@@ -74,8 +76,22 @@ function keptLicenseBehaviour(ledgerOf: LedgerOf): void {
     expect(metered.account.activations()).toHaveLength(1);
   });
 
+  it('refuses as meter_unavailable an activation while Auto cannot be reached, or its license cannot be recorded', async () => {
+    const { metered } = await opened(ledgerOf);
+    const key = metered.account.keyFor(installation);
+    metered.account.goDown();
+    const unreached = await metered.activated(key);
+    metered.account.comeBack();
+    metered.executesFail('conflict');
+
+    expect([unreached.kind, (await metered.activated(key)).kind]).toEqual(['meter_unavailable', 'meter_unavailable']);
+  });
+}
+
+export function wipedLicenseBehaviour(databaseOf: DatabaseOf): void {
   it('takes as the floor of its licensed count what Auto charged already, so a wiped ledger with the same key gains nothing', async () => {
-    const { metered, tampering, key } = await licensedOn(ledgerOf);
+    const { at, metered, key } = await licensedOn(databaseOf);
+    const tampering = tamperingOn(at);
     await admittedEach(metered, runsNamed('run', 3));
     await metered.reported();
     const wiped = await restartedAfter(metered, () => tampering.streamDeleted('meter'), { key });
@@ -87,17 +103,6 @@ function keptLicenseBehaviour(ledgerOf: LedgerOf): void {
     expect((await wiped.state()).admitted).toMatchObject({ actions: 4, licensed: 4, first_runs: 0 });
     expect(wiped.account.chargedThrough(installation)).toBe(4);
     expect(wiped.account.wentBackwards()).toEqual([]);
-  });
-
-  it('refuses as meter_unavailable an activation while Auto cannot be reached, or its license cannot be recorded', async () => {
-    const { metered } = await opened(ledgerOf);
-    const key = metered.account.keyFor(installation);
-    metered.account.goDown();
-    const unreached = await metered.activated(key);
-    metered.account.comeBack();
-    metered.executesFail('conflict');
-
-    expect([unreached.kind, (await metered.activated(key)).kind]).toEqual(['meter_unavailable', 'meter_unavailable']);
   });
 }
 
