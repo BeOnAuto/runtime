@@ -14,7 +14,10 @@ import { settingsAtStart } from '../settings/shipped-settings.ts';
 import { companySignInOf, signInByDefaultOf, type CompanySignIn } from '../sign-in/company-client.ts';
 import { signInServingOf } from '../sign-in/company-sign-in.ts';
 import { startTelemetry } from '../telemetry/start-telemetry.ts';
-import { started } from './server-start.ts';
+import { started, startedInProcess, type AnsweringInProcess, type Starting } from './server-start.ts';
+
+export type { AnsweringInProcess } from './server-start.ts';
+export { SignInNeedsAListener } from './served-sign-in.ts';
 
 interface Admitting {
   readonly mode: AccessMode;
@@ -45,7 +48,11 @@ async function admittingBy(settings: Settings): Promise<Admitting> {
   };
 }
 
-export async function startServer<R>(environment: Environment, options: ServerOptions<R>): Promise<RunningServer> {
+async function startedBy<R, Running>(
+  environment: Environment,
+  options: ServerOptions<R>,
+  starting: (given: Starting<R>) => Promise<Running>,
+): Promise<Running> {
   const [settings, pageStyle] = await Promise.all([
     settingsAtStart(environment, options.shippedFiles, options.defaultIdentityProvider),
     readPageStyle(options.shippedFiles),
@@ -54,9 +61,25 @@ export async function startServer<R>(environment: Environment, options: ServerOp
   const telemetry = startTelemetry(settings.telemetry);
   try {
     const signInServing = signInServingOf(companySignIn);
-    return await started({ settings, mode, answering, signInServing, telemetry, options, pageStyle });
+    return await starting({ settings, mode, answering, signInServing, telemetry, options, pageStyle });
   } catch (failure) {
     await telemetry.shutdown();
     throw failure;
   }
+}
+
+export function startServer<R>(environment: Environment, options: ServerOptions<R>): Promise<RunningServer> {
+  return startedBy(environment, options, started);
+}
+
+/**
+ * The server `startServer` starts, answering through `fetch` with no listener: its origin is the one given, and
+ * nothing listens there. A server that signs people in with a company's identity provider is refused.
+ */
+export function startServerInProcess<R>(
+  environment: Environment,
+  options: ServerOptions<R>,
+  origin: string,
+): Promise<AnsweringInProcess> {
+  return startedBy(environment, options, (starting) => startedInProcess(starting, origin));
 }

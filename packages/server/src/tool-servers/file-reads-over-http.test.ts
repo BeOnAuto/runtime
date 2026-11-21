@@ -29,7 +29,7 @@ async function serving(): Promise<ReasoningServer> {
       }),
     },
     undefined,
-    { toolTiming: { ...defaultTiming, callMs } },
+    { toolTiming: { ...defaultTiming, callMs }, over: 'http' },
   );
   onTestFinished(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', {

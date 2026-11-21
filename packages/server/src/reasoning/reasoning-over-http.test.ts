@@ -472,7 +472,7 @@ describe('outlived client over http', () => {
       const answering = Promise.withResolvers<void>();
       const heldUntilReleased: ScriptedReply = () =>
         Effect.promise(() => answering.promise).pipe(Effect.as(textResult('Profits rose.')));
-      server = await servingReasoning([heldUntilReleased]);
+      server = await servingReasoning([heldUntilReleased], {}, undefined, { over: 'http' });
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       await server.call('POST', `${alpha}/definitions/reasoning`, {
         body: { name: 'summary', source: summaryOutlivedClient, diagram: 'none' },

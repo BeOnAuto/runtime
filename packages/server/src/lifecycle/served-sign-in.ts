@@ -1,12 +1,17 @@
 import type { AppRuntime, PageStyle } from '@on.auto/api';
 import { studioClientOf, type AccessMode, type Authenticator, type IdentityService } from '@on.auto/identity';
-import { Function } from 'effect';
+import { Data, Function } from 'effect';
 
 import type { Served } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
 import type { SignInServing, SignInServingOf, SignInServingParts } from '../sign-in/company-sign-in.ts';
 
 export type { SignInServing } from '../sign-in/company-sign-in.ts';
+
+/** A server that signs people in answers sign-in on a listener of its own, beside its handler, so it has no fetch alone. */
+export class SignInNeedsAListener extends Data.TaggedError('SignInNeedsAListener')<{
+  readonly message: string;
+}> {}
 
 export interface SigningInAtStart {
   readonly settings: Settings;

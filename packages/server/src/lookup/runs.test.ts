@@ -19,7 +19,7 @@ const withinItsCall =
 const callFacts = ['run_started', 'tool_call_started', 'tool_call_answered', 'run_succeeded'];
 
 async function sleeping(): Promise<SystemServer> {
-  const serverRuns = await lookingUp();
+  const serverRuns = await lookingUp({ over: 'http' });
   await serverRuns.define('sleeping', calling('sleep', ['    ms: 1000']));
   return serverRuns;
 }

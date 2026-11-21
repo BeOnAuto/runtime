@@ -34,6 +34,12 @@ export interface ServedParts {
   readonly goalsPortsOver?: NonNullable<CompositionParts['goalsPortsOver']>;
   readonly keptOutside?: boolean;
   readonly key?: string | ((origin: string) => Promise<string>);
+  /**
+   * `'http'` starts the server as `startServer` does, on a port with a ledger file, for a test whose subject is the
+   * listener, a process or a file. Otherwise it answers in the process through its handler, on an in-memory ledger
+   * unless `ledger` names a file.
+   */
+  readonly over?: 'http';
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {

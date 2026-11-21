@@ -27,20 +27,25 @@ interface Serving {
   readonly graph: FakeMcpServer;
 }
 
-async function serving(): Promise<Serving> {
+async function serving(over?: 'http'): Promise<Serving> {
   const graph = await serveFakeMcp({ bearer: apiKey });
   closing.push(graph.close);
-  const server = await servingReasoning([], {
-    API_KEYS: JSON.stringify([builder.entry, reader.entry]),
-    GRAPH_API_KEY: apiKey,
-    TOOL_SERVERS: JSON.stringify({
-      graph: {
-        url: graph.url,
-        headers: { Authorization: 'Bearer ${GRAPH_API_KEY}', 'X-Region': 'production-eu' },
-        org: 'acme',
-      },
-    }),
-  });
+  const server = await servingReasoning(
+    [],
+    {
+      API_KEYS: JSON.stringify([builder.entry, reader.entry]),
+      GRAPH_API_KEY: apiKey,
+      TOOL_SERVERS: JSON.stringify({
+        graph: {
+          url: graph.url,
+          headers: { Authorization: 'Bearer ${GRAPH_API_KEY}', 'X-Region': 'production-eu' },
+          org: 'acme',
+        },
+      }),
+    },
+    undefined,
+    over === undefined ? {} : { over },
+  );
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', {
     key: builder.key,
@@ -263,7 +268,7 @@ describe('hand calls over http', () => {
 
   describe('a call made by hand whose caller goes away over HTTP while the tool is called', () => {
     it('records a start and no answer, sends no second call, and still lets the session go', async () => {
-      const { server, graph } = await serving();
+      const { server, graph } = await serving('http');
       const leaving = new AbortController();
 
       const gone: Promise<unknown> = fetch(`${server.origin}${alpha}/tool-servers/graph/tools/sleep/execute`, {

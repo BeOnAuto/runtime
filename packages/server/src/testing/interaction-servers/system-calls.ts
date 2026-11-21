@@ -39,6 +39,7 @@ export interface SystemOptions {
   readonly ledgerOver?: LedgerOver;
   readonly environment?: Readonly<Record<string, string>>;
   readonly serverTakes?: number;
+  readonly over?: ServedParts['over'];
 }
 
 export interface SystemServer extends InteractionServer {
@@ -69,6 +70,20 @@ const documentsOf: Readonly<Record<CallingType, (document: CallOptions) => strin
   lookup: lookupDocument,
 };
 
+interface Parted {
+  readonly timing: SystemOptions['timing'] | undefined;
+  readonly ledgerOver: SystemOptions['ledgerOver'] | undefined;
+  readonly over: SystemOptions['over'] | undefined;
+}
+
+function partsOf({ timing, ledgerOver, over }: Parted): ServedParts {
+  return {
+    ...(timing === undefined ? {} : { toolTiming: timing }),
+    ...(ledgerOver === undefined ? {} : { ledgerOver }),
+    ...(over === undefined ? {} : { over }),
+  };
+}
+
 export async function askingASystem({
   type = 'interaction',
   hints = {},
@@ -78,6 +93,7 @@ export async function askingASystem({
   ledgerOver,
   environment = {},
   serverTakes,
+  over,
 }: SystemOptions = {}): Promise<SystemServer> {
   const takes = serverTakes === undefined ? {} : { mostRequestBytes: serverTakes };
   const fake = await serveFakeMcp({ bearer: chatKey, data: true, hints, ...takes });
@@ -85,7 +101,7 @@ export async function askingASystem({
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...entry };
   const server = await interactionServerOn(
     { CHAT_KEY: chatKey, TOOL_SERVERS: JSON.stringify({ chat, ...servers }), ...environment },
-    { ...(timing === undefined ? {} : { toolTiming: timing }), ...(ledgerOver === undefined ? {} : { ledgerOver }) },
+    partsOf({ timing, ledgerOver, over }),
   );
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return {

@@ -23,15 +23,21 @@ import type { Settings } from '../settings/settings.ts';
 import { servedStudioOf } from '../studio/served-studio.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
 import { beside, createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
-import { answeringBy, signInServedOn, type SignInServing, type SigningInAtStart } from './served-sign-in.ts';
-import { shutDown } from './shutdown.ts';
+import {
+  answeringBy,
+  signInServedOn,
+  SignInNeedsAListener,
+  type SignInServing,
+  type SigningInAtStart,
+} from './served-sign-in.ts';
+import { shutDown, shutDownInProcess, type ShutdownHooks } from './shutdown.ts';
 
 class StartupError extends Data.TaggedError('StartupError')<{
   readonly message: string;
   readonly cause: unknown;
 }> {}
 
-interface Starting<R> extends SigningInAtStart {
+export interface Starting<R> extends SigningInAtStart {
   readonly settings: Settings;
   readonly telemetry: Telemetry;
   readonly options: ServerOptions<R>;
@@ -148,7 +154,15 @@ function composedFor<R>(
   return options.composed(settingsServing(settings, local), telemetryServing(telemetry, local), options.shippedFiles);
 }
 
-export async function started<R>(starting: Starting<R>): Promise<RunningServer> {
+interface Answered<R> {
+  readonly api: ApiHandler;
+  readonly signIn: SignInServing | undefined;
+  readonly served: Served;
+  readonly runtime: AppRuntime<R>;
+  readonly startPing: StartPing;
+}
+
+async function answeredFor<R>(starting: Starting<R>, ownOrigin: () => string): Promise<Answered<R>> {
   const { settings, mode, telemetry, options } = starting;
   const local = options.localServingIn?.(mode);
   const composed = await composedFor(starting, local);
@@ -157,11 +171,78 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
   await runtime.run(logServedStudio({ ...settings, mode }));
   await runtime.run(logConfigFile(settings.configFile));
   await runtime.run(logTelemetry(settings.telemetry));
-  const listening = { port: settings.port };
-  const ownOrigin = (): string => settings.publicUrl ?? ownOriginOf(settings.host, listening.port);
   const { served, signIn } = await servedSigningIn(starting, { composed, runtime, ownOrigin });
   const startPing = options.usagePing?.(settings) ?? noStartPing;
   const api = apiOf({ ...starting, authenticator: answeringBy(starting, signIn), served, runtime, local, startPing });
+  return { api, signIn, served, runtime, startPing };
+}
+
+function stoppedOnce<R>(
+  { telemetry }: Starting<R>,
+  { api, served, runtime, startPing }: Answered<R>,
+  shutting: (hooks: ShutdownHooks) => Promise<void>,
+): () => Promise<void> {
+  let stopping: Promise<void> | undefined;
+  const hooks: ShutdownHooks = {
+    stopWork: served.stopWork,
+    disposeRuntime: runtime.dispose,
+    stopTelemetry: telemetry.shutdown,
+    closeApi: api.close,
+  };
+  return async () => {
+    startPing.stop();
+    stopping ??= shutting(hooks);
+    await stopping;
+  };
+}
+
+function runningOf<R>(
+  { settings, mode }: Starting<R>,
+  { served }: Answered<R>,
+  port: number,
+  install: RunningServer['install'],
+): Omit<RunningServer, 'stop'> {
+  return {
+    port,
+    publicUrl: settings.publicUrl,
+    mode,
+    signIn: settings.signIn,
+    studio: settings.studio,
+    install,
+    ...(served.licenseNotice === undefined ? {} : { licenseNotice: served.licenseNotice }),
+  };
+}
+
+export interface AnsweringInProcess extends RunningServer {
+  /** Answers a request as the server's listener would, with no port bound. */
+  readonly fetch: (request: Request) => Promise<Response>;
+}
+
+/**
+ * The server composed as `started` composes it, answering through its handler with no listener, at the origin given.
+ * Company sign-in is answered beside the handler by a listener of its own, so a server that signs people in needs
+ * `started`.
+ */
+export async function startedInProcess<R>(starting: Starting<R>, origin: string): Promise<AnsweringInProcess> {
+  if (starting.signInServing !== undefined) {
+    throw new SignInNeedsAListener({
+      message: 'A server that signs people in answers sign-in beside its handler, so it needs a listener',
+    });
+  }
+  const answered = await answeredFor(starting, () => starting.settings.publicUrl ?? origin);
+  const install = answered.startPing.sent();
+  return {
+    ...runningOf(starting, answered, 0, install),
+    stop: stoppedOnce(starting, answered, shutDownInProcess),
+    fetch: answered.api.fetch,
+  };
+}
+
+export async function started<R>(starting: Starting<R>): Promise<RunningServer> {
+  const { settings, options } = starting;
+  const listening = { port: settings.port };
+  const answered = await answeredFor(starting, () => settings.publicUrl ?? ownOriginOf(settings.host, listening.port));
+  const { api, signIn, served, runtime } = answered;
   const server = createHttpServer(signIn === undefined ? api.listener : beside(signIn, api.listener));
   try {
     await listen(server, settings.port, settings.host);
@@ -172,29 +253,9 @@ export async function started<R>(starting: Starting<R>): Promise<RunningServer> 
     throw error;
   }
   listening.port = tcpPort(server.address());
-  const install = startPing.sent();
-  let stopping: Promise<void> | undefined;
+  const install = answered.startPing.sent();
   return {
-    port: listening.port,
-    publicUrl: settings.publicUrl,
-    mode,
-    signIn: settings.signIn,
-    studio: settings.studio,
-    install,
-    ...(served.licenseNotice === undefined ? {} : { licenseNotice: served.licenseNotice }),
-    stop: async () => {
-      startPing.stop();
-      stopping ??= shutDown(
-        server,
-        {
-          stopWork: served.stopWork,
-          disposeRuntime: runtime.dispose,
-          stopTelemetry: telemetry.shutdown,
-          closeApi: api.close,
-        },
-        options.shutdownTimeoutMs,
-      );
-      await stopping;
-    },
+    ...runningOf(starting, answered, listening.port, install),
+    stop: stoppedOnce(starting, answered, (hooks) => shutDown(server, hooks, options.shutdownTimeoutMs)),
   };
 }

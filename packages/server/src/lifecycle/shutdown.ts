@@ -29,6 +29,14 @@ export async function shutDown(server: Server, hooks: ShutdownHooks, timeoutMs: 
   await closed;
 }
 
+/** The order `shutDown` keeps, for a server that answers in the process and has no listener to close. */
+export async function shutDownInProcess(hooks: ShutdownHooks): Promise<void> {
+  await hooks.stopWork();
+  await hooks.closeApi();
+  await hooks.disposeRuntime();
+  await hooks.stopTelemetry();
+}
+
 function elapsed(ms: number): Promise<void> {
   return setTimeout(ms, undefined, { ref: false });
 }

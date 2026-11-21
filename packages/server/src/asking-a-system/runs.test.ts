@@ -70,7 +70,7 @@ describe('a run that calls a tool that acts whose session or process is gone', (
 });
 
 async function sleeping(): Promise<SystemServer> {
-  const server = await askingASystem({ hints: { sleep: mayChange } });
+  const server = await askingASystem({ hints: { sleep: mayChange }, over: 'http' });
   await server.define('sleeping', calling('sleep', ['    ms: 1000']));
   return server;
 }

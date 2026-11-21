@@ -28,6 +28,10 @@ const large = { leads: ['lead-1'], notes: 'n'.repeat(17_000) };
 
 const kept = keptArmOf(large);
 
+function promptOfBytes(bytes: number): string {
+  return 'w'.repeat(bytes - '""'.length);
+}
+
 function outside<A, E>(effect: Effect.Effect<A, E>, keepsOutside = true) {
   return Effect.runPromise(effect.pipe(Effect.provideService(PayloadOffloading, keepsOutside)));
 }
@@ -128,6 +132,31 @@ describe('a value written as a payload under the threshold the shell gives', () 
     expect((await underAThresholdOf(4096)).map(({ payload }) => 'kept' in payload)).toEqual([false, true, true]);
     expect((await underAThresholdOf(65_536)).map(({ payload }) => 'kept' in payload)).toEqual([false, false, false]);
   });
+
+  it.each([2048, 16_384, 65_536])(
+    'keeps the prompt of a record in it at a threshold of %i bytes, and by its digest and size a byte past it',
+    async (threshold) => {
+      const { service } = memoryLedger();
+      const [atIt, pastIt] = [promptOfBytes(threshold), promptOfBytes(threshold + 1)];
+      const writtenUnder = (prompt: string) =>
+        outside(
+          recordWritten({ model: 'm', prompt }, payloadWrittenIn(service.content, alpha)).pipe(
+            Effect.provideService(PayloadSizeThreshold, threshold),
+          ),
+        );
+      const keptPastIt = keptArmOf(pastIt);
+
+      expect((await writtenUnder(atIt)).record).toEqual({ model: 'm', prompt: atIt });
+      expect((await writtenUnder(pastIt)).record).toEqual({
+        model: 'm',
+        prompt_sha256: keptPastIt.sha256,
+        prompt_bytes: threshold + 1,
+      });
+      expect(await Effect.runPromise(service.content.getHead(alpha, keptPastIt.sha256))).toMatchObject({
+        bytes: threshold + 1,
+      });
+    },
+  );
 });
 
 describe('a value written as a payload while the switch is off', () => {

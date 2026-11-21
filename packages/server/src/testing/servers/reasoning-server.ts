@@ -3,12 +3,12 @@ import { scriptedLanguageModel, type ScriptedReplies } from '@on.auto/reasoning/
 import { Effect } from 'effect';
 
 import { compositionRootWith } from '../../composition/composition-root.ts';
-import { startServer } from '../../lifecycle/lifecycle.ts';
-import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
-import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
-import { request, type RequestOptions, type TestResponse } from './http-client.ts';
+import { requestThrough, type Answering, type RequestOptions, type TestResponse } from './http-client.ts';
 import { composedWithTheParts, offloadingSetBy, type ServedParts } from './served-parts.ts';
+import { startedOver } from './started-servers.ts';
 import { patientWorkerPool } from './worker-pools.ts';
+
+export { loopbackSettingsOver } from './started-servers.ts';
 
 export interface ReasoningServer {
   readonly origin: string;
@@ -24,35 +24,19 @@ export function alphaIn(org: string): string {
 
 export const alpha = alphaIn('acme');
 
-export function loopbackSettingsOver(ledger: TemporaryLedger): Readonly<Record<string, string>> {
-  return {
-    HOST: '127.0.0.1',
-    PORT: '0',
-    LEDGER_FILE: ledger.fileName,
-    ...noConsentThroughAuto,
-  };
-}
-
 type Fetch = typeof globalThis.fetch;
 
 export const noNetwork: Fetch = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
 
-async function startedRemovingOnFailure<Started>(start: Promise<Started>, removeOwn: () => void): Promise<Started> {
-  try {
-    return await start;
-  } catch (failure) {
-    removeOwn();
-    throw failure;
-  }
-}
-
-async function callsAt(port: number, key: ServedParts['key']): Promise<Pick<ReasoningServer, 'origin' | 'call'>> {
-  const origin = `http://127.0.0.1:${port}`;
-  const given = typeof key === 'function' ? await key(origin) : key;
+async function callsAt(
+  answering: Answering,
+  key: ServedParts['key'],
+): Promise<Pick<ReasoningServer, 'origin' | 'call'>> {
+  const given = typeof key === 'function' ? await key(answering.origin) : key;
   return {
-    origin,
+    origin: answering.origin,
     call: (method, path, options) =>
-      request(port, method, path, given === undefined ? options : { key: given, ...options }),
+      requestThrough(answering, method, path, given === undefined ? options : { key: given, ...options }),
   };
 }
 
@@ -69,15 +53,10 @@ export async function servingReasoning(
     shippedFilesOver,
     keptOutside,
     key,
+    over,
     ...composing
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
-  const ledger = shared ?? temporaryLedger();
-  const removeOwn = (): void => {
-    if (shared === undefined) {
-      ledger.remove();
-    }
-  };
   const scripted = scriptedLanguageModel(...replies);
   const composition = compositionRootWith(
     (settings) =>
@@ -87,20 +66,12 @@ export async function servingReasoning(
       })),
     { programPoolOf, ...composing },
   );
-  const server = await startedRemovingOnFailure(
-    startServer(
-      { ...loopbackSettingsOver(ledger), ...offloadingSetBy(keptOutside), ...environment },
-      composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver }),
-    ),
-    removeOwn,
-  );
+  const composed = composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver });
+  const server = await startedOver(over, { ...offloadingSetBy(keptOutside), ...environment }, composed, shared);
   return {
-    ...(await callsAt(server.port, key)),
+    ...(await callsAt(server, key)),
     modelCalls: () => scripted.requests().length,
     modelRunIds: () => scripted.requests().map(({ run_id: runId }) => runId),
-    stop: async () => {
-      await server.stop();
-      removeOwn();
-    },
+    stop: server.stop,
   };
 }
