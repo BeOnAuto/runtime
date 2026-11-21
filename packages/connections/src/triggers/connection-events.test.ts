@@ -1,10 +1,12 @@
 import type { PlaybookAddress } from '@on.auto/operations';
+import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
 import type { ToolServer } from '@on.auto/tool-servers';
 import { Effect, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { addedFact, registryOf } from '../testing/loop-registries.ts';
 import { shipped } from '../testing/shipped-additions.ts';
-import { connectionEventsOver } from './connection-events.ts';
+import { connectionEventsOver, servedConnectionOf } from './connection-events.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -64,5 +66,77 @@ describe('what a connection reports, for the triggers of a playbook it serves', 
       undefined,
     ]);
     expect(asked()).toEqual(['alpha/reports', 'alpha/mended', 'alpha/by-hand', 'alpha/in-the-file', 'alpha/unknown']);
+  });
+});
+
+const opened = 'com.example.ticket.opened';
+
+const reporting = providersOf({
+  ...tracker,
+  events: {
+    types: [{ type: opened, title: 'A ticket is opened', subject: { title: 'Board', required: true }, data: {} }],
+    destinations: [
+      {
+        ...ofEachSubscription,
+        events: [
+          {
+            type: opened,
+            when: { '$request.body#/kind': ['opened'] },
+            id: ['$request.body#/ticket/id'],
+            subject: '$request.body#/ticket/board',
+            data: { title: '$request.body#/ticket/title' },
+            topic: '{{ subject }}',
+          },
+        ],
+      },
+    ],
+  },
+});
+
+const reported = [{ type: opened, subject: 'board-7' }, { type: opened }, { type: 'com.example.ticket.closed' }];
+
+async function servedOver() {
+  const registry = await registryOf([
+    '2026-11-20T08:00:00.000Z',
+    [
+      addedFact('connection-1', 'tracker', 'tracker'),
+      addedFact('connection-2', 'notes', null),
+      addedFact('connection-3', 'sales-tracker', 'tracker', { playbooks: ['sales'] }),
+      addedFact('connection-4', 'gone', 'tracker'),
+      { type: 'connection_removed', data: { connection: 'connection-4' } },
+    ],
+  ]);
+  const servedOf = servedConnectionOf({ registry, providers: reporting });
+  return (org: string, connection: string) =>
+    Effect.runPromise(
+      Effect.flatMap(
+        servedOf({ org, playbook: 'alpha', connection }),
+        (served): Effect.Effect<string | readonly (readonly string[])[]> =>
+          served === undefined ? Effect.succeed('not served') : Effect.forEach(reported, served.topicsOf),
+      ),
+    );
+}
+
+describe('the connection an event a delivery carries is taken in through', () => {
+  it('serves the playbook, and gives the topic its entry renders for an event of a type and subject, and none otherwise', async () => {
+    const topicsThrough = await servedOver();
+
+    expect([await topicsThrough('acme', 'tracker'), await topicsThrough('acme', 'notes')]).toEqual([
+      [['board-7'], [], []],
+      [[], [], []],
+    ]);
+  });
+
+  it('is none for a connection removed, of another playbook or org, or unknown', async () => {
+    const topicsThrough = await servedOver();
+
+    expect(
+      await Promise.all([
+        topicsThrough('acme', 'gone'),
+        topicsThrough('acme', 'sales-tracker'),
+        topicsThrough('globex', 'tracker'),
+        topicsThrough('acme', 'billing'),
+      ]),
+    ).toEqual(['not served', 'not served', 'not served', 'not served']);
   });
 });

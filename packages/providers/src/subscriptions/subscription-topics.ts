@@ -42,9 +42,9 @@ export function topicOf(destination: Destination, place: PlaceOfARequest): Effec
   return topic === undefined ? Effect.undefined : renderedTopic(topic, { with: place.with, sent: { ...place.sent } });
 }
 
-function triggerTopicsOf(
+export function triggerTopicsOf(
   destination: Destination,
-  { type, subject }: ConnectionTrigger,
+  { type, subject }: Pick<ConnectionTrigger, 'type' | 'subject'>,
 ): Effect.Effect<readonly (string | undefined)[]> {
   const templates = (destination.events ?? []).flatMap((event) =>
     event.type === type && event.topic !== undefined ? [event.topic] : [],

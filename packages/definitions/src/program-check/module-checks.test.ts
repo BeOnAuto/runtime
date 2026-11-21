@@ -251,6 +251,7 @@ describe('the compiler', () => {
       'attempts/index.ts',
       'check.ts',
       checkHandler,
+      'events/connection-events.ts',
       'read-model-reads/connection-triggers.ts',
       'document.ts',
       'events/event-time.ts',

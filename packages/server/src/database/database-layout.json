@@ -1,5 +1,5 @@
 {
-  "layout": 28,
+  "layout": 29,
   "catalog": [
     {
       "name": "activity_1",
@@ -576,6 +576,10 @@
     {
       "name": "workflow_timers_due",
       "sql": "CREATE INDEX workflow_timers_due ON workflow_timers (due_at) WHERE state = 'armed'"
+    },
+    {
+      "name": "workflow_trigger_outcomes",
+      "sql": "CREATE TABLE workflow_trigger_outcomes (playbook_key TEXT NOT NULL, definition_key TEXT NOT NULL, trigger_reference TEXT NOT NULL, reason TEXT NOT NULL, count BIGINT NOT NULL, last_at BIGINT NOT NULL, PRIMARY KEY (playbook_key, definition_key, trigger_reference, reason))"
     }
   ]
 }

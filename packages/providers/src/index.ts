@@ -83,6 +83,7 @@ export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
 export {
   requestsAskerOf,
   triggersAskerOf,
+  triggerTopicsOf,
   type ConnectionTrigger,
   type WaitingRequest,
 } from './subscriptions/subscription-topics.ts';

@@ -8,6 +8,31 @@ import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 
 const tablesOfTheHost = statement`SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'workflow_%' ORDER BY name`;
 
+const tablesOfAHost = [
+  'workflow_calls',
+  'workflow_due',
+  'workflow_failed_rounds',
+  'workflow_followed_orgs',
+  'workflow_followed_scans',
+  'workflow_held_playbooks',
+  'workflow_leases',
+  'workflow_listener_types',
+  'workflow_listeners',
+  'workflow_passed_runs',
+  'workflow_pauses',
+  'workflow_pending_cancels',
+  'workflow_reaction_backlog',
+  'workflow_reaction_rates',
+  'workflow_reaction_refusals',
+  'workflow_runs',
+  'workflow_settlements',
+  'workflow_snapshot_chunks',
+  'workflow_subscription_types',
+  'workflow_subscriptions',
+  'workflow_timers',
+  'workflow_trigger_outcomes',
+];
+
 describe('the host database on SQLite', () => {
   it('keeps the tables of the host beside the ledger, in the same file', async () => {
     const file = aSQLiteFile();
@@ -19,31 +44,7 @@ describe('the host database on SQLite', () => {
       first.read(statement`SELECT COUNT(*) AS streams FROM sqlite_master WHERE name = 'emt_streams'`),
     );
 
-    expect(tables).toEqual(
-      [
-        'workflow_calls',
-        'workflow_due',
-        'workflow_failed_rounds',
-        'workflow_followed_orgs',
-        'workflow_followed_scans',
-        'workflow_held_playbooks',
-        'workflow_leases',
-        'workflow_listener_types',
-        'workflow_listeners',
-        'workflow_passed_runs',
-        'workflow_pauses',
-        'workflow_pending_cancels',
-        'workflow_reaction_backlog',
-        'workflow_reaction_rates',
-        'workflow_reaction_refusals',
-        'workflow_runs',
-        'workflow_settlements',
-        'workflow_snapshot_chunks',
-        'workflow_subscription_types',
-        'workflow_subscriptions',
-        'workflow_timers',
-      ].map((name) => ({ name })),
-    );
+    expect(tables).toEqual(tablesOfAHost.map((name) => ({ name })));
     expect(ledger).toEqual([{ streams: 1 }]);
   });
 
@@ -63,7 +64,7 @@ describe('the host database on SQLite, in memory or refusing', () => {
   it('opens a private database in memory', async () => {
     const database = await openedOn({ store: 'sqlite', file: ':memory:' });
 
-    expect(await Effect.runPromise(database.read(tablesOfTheHost))).toHaveLength(21);
+    expect(await Effect.runPromise(database.read(tablesOfTheHost))).toHaveLength(tablesOfAHost.length);
   });
 
   it('fails a statement the database refuses with the error of the driver', async () => {

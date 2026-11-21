@@ -69,4 +69,4 @@ export {
   type ChangesRelayed,
 } from './subscriptions/connection-changes.ts';
 export { subscriptionLayoutSteps } from './subscriptions/subscription-layout.ts';
-export { connectionEventsOver, type ConnectionsReporting } from './triggers/connection-events.ts';
+export { connectionEventsOver, servedConnectionOf, type ConnectionsReporting } from './triggers/connection-events.ts';

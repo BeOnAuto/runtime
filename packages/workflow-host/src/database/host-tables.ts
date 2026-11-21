@@ -1,5 +1,6 @@
 import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
 
+import { triggerOutcomeTables } from '../intake/trigger-outcomes.ts';
 import { orgFollowerTables, subscriptionTables } from './org-follower-tables.ts';
 
 const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
@@ -150,6 +151,7 @@ const hostTables: readonly Statement[] = [
   )`,
   ...followerTables,
   ...subscriptionTables,
+  ...triggerOutcomeTables,
 ];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {

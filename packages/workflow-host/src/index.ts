@@ -144,3 +144,14 @@ export {
   orgFollowerTables,
   subscriptionTables,
 } from './database/org-follower-tables.ts';
+export { hostLayoutSteps } from './database/host-layout-steps.ts';
+export {
+  connectionEventIntakeOf,
+  type ConnectionArrival,
+  type IntakeAnswer,
+  type IntakeParts,
+  type IntakePorts,
+  type ServedConnection,
+  type TakeIn,
+} from './intake/connection-intake.ts';
+export type { NotTakenReason } from './intake/trigger-outcomes.ts';

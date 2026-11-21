@@ -1,6 +1,7 @@
 import { subscriptionLayoutSteps } from '@on.auto/connections';
 import { definitionTypeOrder, runIds, runOutcomeMapping, type DeclaredFact } from '@on.auto/definitions';
 import { definitionAndGoalNamesOf, unbounded } from '@on.auto/definitions/identity';
+import { hostLayoutSteps } from '@on.auto/workflow-host';
 
 import { keptProjections } from './kept-projections.ts';
 import { factsKnownWith } from './known-holders.ts';
@@ -14,7 +15,7 @@ export function keptByTheLedgerWith(
     runIds,
     runOutcomes: runOutcomeMapping,
     projections: keptProjections,
-    layoutSteps: subscriptionLayoutSteps,
+    layoutSteps: [...subscriptionLayoutSteps, ...hostLayoutSteps],
     ...factsKnownWith(declared),
   };
 }

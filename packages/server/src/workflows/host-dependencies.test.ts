@@ -4,6 +4,7 @@ import { playbookOwnNamesOf } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import {
+  Ledger,
   makeDispatcher,
   type Outcome,
   playbookCallerOf,
@@ -11,6 +12,7 @@ import {
   undecidedMessage,
 } from '@on.auto/operations';
 import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { providersShippedRoots, readProviders } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   filterSandboxOf,
@@ -21,14 +23,17 @@ import {
   sandboxModuleIn,
   sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
-import { StartRefused, StartRejected } from '@on.auto/workflow-host';
-import { Cause, Effect, Exit, Layer, Logger } from 'effect';
+import { openWorkflowStore, StartRefused, StartRejected } from '@on.auto/workflow-host';
+import { Cause, Effect, Exit, Layer, Logger, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { applicationLayer } from '../composition/application-layer.ts';
 import { decisionPointServing } from '../composition/served-access-control.ts';
+import { ledgerConnectionIn } from '../database/ledger-database.ts';
 import { shippedRoots } from '../server-options/shipped-roots.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
+import { addedAndConnected, connectionsRecorded } from '../testing/subscriptions/connections-followed.ts';
+import { connectionIntakeServedBy } from './connection-intake.ts';
 import { type HostDispatch, hostDispatchesOf, hostOperationsOf, hostRegistrationsOf } from './host-operations.ts';
 import { hostReports } from './host-reports.ts';
 import { hostWorkOf } from './host-work.ts';
@@ -344,5 +349,35 @@ describe('an event a workflow emits', () => {
     );
 
     expect(outcome).toBe('recorded');
+  });
+});
+
+describe('an event a connection reports, taken in through the ports the server gives the intake', () => {
+  it('is refused for a connection the org does not hold, and counted where one serves the playbook and no trigger names it', async () => {
+    const runtime = await makeAppRuntime(applicationLayer(memoryLedgerHostDependencies));
+    onTestFinished(() => runtime.dispose());
+    const store = await openWorkflowStore(await ledgerConnectionIn(runtime), []);
+    const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
+    await connectionsRecorded(
+      ledger,
+      'acme',
+      addedAndConnected('connection-1', 'github', 'https://api.example.com/mcp'),
+    );
+    const takeIn = connectionIntakeServedBy(runtime, {
+      store,
+      filters: filterSandboxOf(freshInstances(sandboxModule)),
+      providers: Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots()))),
+      now: () => Date.parse('2026-11-20T09:00:00.000Z'),
+    });
+    const event = { type: 'com.example.ticket.opened', id: 'T-1', data: {} };
+
+    const answers = await Effect.runPromise(
+      Effect.all([
+        takeIn({ playbook: { org: 'acme', playbook: 'alpha' }, connection: 'billing', event }),
+        takeIn({ playbook: { org: 'acme', playbook: 'alpha' }, connection: 'github', event }),
+      ]),
+    );
+
+    expect(answers).toEqual([{ outcome: 'refused' }, { outcome: 'not_taken', reasons: ['no_trigger'] }]);
   });
 });

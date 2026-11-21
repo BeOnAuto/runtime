@@ -36,7 +36,7 @@ interface SecretIdOfASubscription {
 
 const noSecrets: readonly SecretOfASubscription[] = [];
 
-function arrangedPerSubscription(destinations: readonly EventDestination[]): EventDestination | undefined {
+export function arrangedPerSubscription(destinations: readonly EventDestination[]): EventDestination | undefined {
   const webhook = destinations.find(({ type }) => type === 'webhook');
   return webhook?.per === 'subscription' ? webhook : undefined;
 }

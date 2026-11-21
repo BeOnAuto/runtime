@@ -1,7 +1,16 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { providerFoundBy, type ProviderEntry, type ProviderList } from '@on.auto/providers';
+import {
+  providerFoundBy,
+  triggerTopicsOf,
+  type EventDestination,
+  type ProviderEntry,
+  type ProviderList,
+} from '@on.auto/providers';
 import type { ToolServer } from '@on.auto/tool-servers';
 import { Effect, Function } from 'effect';
+
+import { loopConnectionsOf, type LoopConnectionsParts } from '../subscriptions/loop-connections.ts';
+import { arrangedPerSubscription } from '../subscriptions/subscription-deliveries.ts';
 
 type ListServers = (playbook: PlaybookAddress, named: string) => Effect.Effect<readonly ToolServer[]>;
 
@@ -57,4 +66,37 @@ export function connectionEventsOver(
           : Effect.zipWith(providers, listenedIn(playbook), (list, listened) => reportingOf(server, list, listened));
       }),
   };
+}
+
+interface ConnectionPlace extends PlaybookAddress {
+  readonly connection: string;
+}
+
+interface ReportedPlace {
+  readonly type: string;
+  readonly subject?: string;
+}
+
+interface ServedConnection {
+  readonly topicsOf: (event: ReportedPlace) => Effect.Effect<readonly string[]>;
+}
+
+function topicsIn(destination: EventDestination | undefined): ServedConnection['topicsOf'] {
+  return (event) =>
+    destination === undefined
+      ? Effect.succeed([])
+      : Effect.map(triggerTopicsOf(destination, event), (topics) =>
+          topics.filter((topic): topic is string => topic !== undefined),
+        );
+}
+
+export function servedConnectionOf(
+  parts: LoopConnectionsParts,
+): (place: ConnectionPlace) => Effect.Effect<ServedConnection | undefined> {
+  const connectionsOf = loopConnectionsOf(parts);
+  return ({ connection, ...playbook }) =>
+    Effect.map(connectionsOf(playbook), (connections) => {
+      const named = connections.find((each) => each.connection === connection);
+      return named === undefined ? undefined : { topicsOf: topicsIn(arrangedPerSubscription(named.destinations)) };
+    });
 }
