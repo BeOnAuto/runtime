@@ -1,8 +1,16 @@
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
+import { mostInputMs } from '../dsl/evaluation.ts';
 import { decidedOnce } from '../pool-testing/decided-once.ts';
-import { churn, evaluatedAt, loadingAfterItsWork } from '../pool-testing/evaluation-workers.ts';
+import {
+  answerGraceMs,
+  churn,
+  evaluatedAt,
+  loadingAfterItsWork,
+  machineWaitingOn,
+  runningOutOnce,
+} from '../pool-testing/evaluation-workers.ts';
 import { machineOnTheThread, testPoolSettings } from '../pool-testing/test-pools.ts';
 import { countedThreadStarts, threadsAlive, type ThreadStarts } from '../pool-testing/threads-alive.ts';
 import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
@@ -51,12 +59,6 @@ function nested<Answer>(depth: number, then: () => Answer): Answer {
   return depth === 0 ? then() : nested(depth - 1, then);
 }
 
-function timed<Answer>(work: () => Answer): { answer: Answer; ms: number } {
-  const started = performance.now();
-  const answer = work();
-  return { answer, ms: performance.now() - started };
-}
-
 function threadStartsOfTheTest(): ThreadStarts {
   const starts = countedThreadStarts();
   onTestFinished(starts.stop);
@@ -73,12 +75,14 @@ describe('the evaluation worker of a pool asked before any reserve', () => {
 
 describe('the evaluation worker of a pool, given native work that no checkpoint interrupts', () => {
   it('ends the expression of a decision at the input deadline, by replacing the worker before its churn lets it answer, and decides the next input on the fresh worker', async () => {
-    const { machine } = poolOf().evaluations;
+    const waits = runningOutOnce('answer');
+    const machine = machineWaitingOn(waits);
     const churning = `do:\n  - churn: { set: { churned: '\${ ${churn} }' } }`;
     await Effect.runPromise(machine.reserve);
     const starts = threadStartsOfTheTest();
 
-    const { answer: ended, ms } = timed(() => decidedOnce(machine, churning, evaluatedAt));
+    const ended = decidedOnce(machine, churning, evaluatedAt);
+    const answerWaitMs = waits.waited[1]?.[1];
     const startedByTheDecision = starts.counted();
     await Effect.runPromise(machine.reserve);
     const next = decidedOnce(machine, 'do:\n  - add: { set: { sum: "${ 1 + 1 }" } }', evaluatedAt);
@@ -87,7 +91,9 @@ describe('the evaluation worker of a pool, given native work that no checkpoint 
     expect(JSON.stringify(ended.outcome)).toContain(
       'The program ran past its deadline: the expressions of one input may take 2000 ms',
     );
-    expect(ms).toBeGreaterThan(2000);
+    expect(waits.waited.map(([flag]) => flag).slice(0, 2)).toEqual(['ready', 'answer']);
+    expect(answerWaitMs).toBeGreaterThan(mostInputMs - 1000);
+    expect(answerWaitMs).toBeLessThanOrEqual(mostInputMs + answerGraceMs);
     expect(startedByTheDecision).toBe(1);
     expect(next.outcome).toEqual({ kind: 'completed', output: { sum: 2 } });
     expect(starts.counted()).toBe(1);
@@ -156,15 +162,18 @@ describe('the evaluation worker of a pool that cannot answer', () => {
   });
 
   it('ends an evaluation at its deadline while the worker it started has not loaded, before that worker has done the work it loads after, and never ends a worker that is loading', async () => {
-    const { machine } = poolOf({ evaluationWorker: loadingAfterItsWork }).evaluations;
+    const waits = runningOutOnce('ready');
+    const machine = machineWaitingOn(waits, loadingAfterItsWork);
     const starts = threadStartsOfTheTest();
 
-    const { answer, ms } = timed(() => evaluatedIn(machine, '1 + 1', 200));
+    const answer = evaluatedIn(machine, '1 + 1', 200);
+    const readyWaitsMs = waits.waited.filter(([flag]) => flag === 'ready').map(([, waitMs]) => waitMs);
     await Effect.runPromise(machine.reserve);
     const next = evaluatedIn(machine, '1 + 1', longerThanTheTestMs);
 
     expect(answer).toMatchObject({ ran: 'exhausted', limit: 'deadline', work: 0 });
-    expect(ms).toBeGreaterThan(150);
+    expect(readyWaitsMs[0]).toBeGreaterThan(150);
+    expect(readyWaitsMs[0]).toBeLessThanOrEqual(200);
     expect(next).toMatchObject({ ran: 'answered', text: '2' });
     expect(starts.counted()).toBe(1);
   });

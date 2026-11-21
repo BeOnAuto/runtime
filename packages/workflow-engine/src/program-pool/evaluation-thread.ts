@@ -17,6 +17,23 @@ import { workerModuleOf, workerOptions } from './pool-threads.ts';
 
 export const answerGraceMs = 50;
 
+/** Blocks the thread until the flag at the index leaves the value or the time runs out, as Atomics.wait does. */
+export type FlagWait = (
+  flags: Readonly<Int32Array>,
+  index: number,
+  value: number,
+  timeoutMs: number,
+) => 'ok' | 'not-equal' | 'timed-out';
+
+function atomicWait(
+  flags: Readonly<Int32Array>,
+  index: number,
+  value: number,
+  timeoutMs: number,
+): 'ok' | 'not-equal' | 'timed-out' {
+  return Atomics.wait(flags, index, value, timeoutMs);
+}
+
 interface Keeper {
   readonly current: () => Live | undefined;
   readonly replaced: () => void;
@@ -133,7 +150,7 @@ function keptAfter(run: ProgramRun, keeper: Keeper): ProgramRun {
   return run;
 }
 
-function callingThreadOf(keeper: Keeper): EvaluationCalls {
+function callingThreadOf(keeper: Keeper, wait: FlagWait): EvaluationCalls {
   return {
     ready: async () => {
       await keeper.current()?.ready;
@@ -141,13 +158,13 @@ function callingThreadOf(keeper: Keeper): EvaluationCalls {
     call: (request, waitMs) => {
       const live = keeper.current();
       const until = performance.now() + Math.max(0, waitMs);
-      if (live === undefined || Atomics.wait(live.flags, readyFlag, 0, remainingUntil(until)) === 'timed-out') {
+      if (live === undefined || wait(live.flags, readyFlag, 0, remainingUntil(until)) === 'timed-out') {
         return exhaustedBy('deadline', 0);
       }
       const remaining = remainingUntil(until);
       Atomics.store(live.flags, answeredFlag, 0);
       live.post(request, remaining);
-      if (Atomics.wait(live.flags, answeredFlag, 0, remaining + answerGraceMs) === 'timed-out') {
+      if (wait(live.flags, answeredFlag, 0, remaining + answerGraceMs) === 'timed-out') {
         keeper.replaced();
         return exhaustedBy('deadline', 0);
       }
@@ -204,11 +221,15 @@ function askingThreadOf(keeper: Keeper): EvaluationAsks {
   };
 }
 
-export function poolEvaluationsOf(module: ModuleAddress, settings: PoolSettings): PoolEvaluations {
+export function poolEvaluationsOf(
+  module: ModuleAddress,
+  settings: PoolSettings,
+  wait: FlagWait = atomicWait,
+): PoolEvaluations {
   const deciding = keeperOf(module, settings);
   const filtering = keeperOf(module, settings);
   return {
-    evaluations: remoteEvaluations(callingThreadOf(deciding), askingThreadOf(filtering), hostClock),
+    evaluations: remoteEvaluations(callingThreadOf(deciding, wait), askingThreadOf(filtering), hostClock),
     close: async () => {
       await Promise.all([deciding.close(), filtering.close()]);
     },

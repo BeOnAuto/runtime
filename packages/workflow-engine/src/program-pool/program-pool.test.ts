@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Json } from '../dsl/json.ts';
 import type { ModuleAddress, PoolSettings, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
 import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { nextThreadStarted, threadEnded } from '../pool-testing/threads-alive.ts';
-import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
+import { afterFakeTime, fakePoolTimers, watchedController } from '../pool-testing/waiting.ts';
 import { runMemoryBytes, unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { programPool } from './program-pool.ts';
 
@@ -51,6 +51,7 @@ function request(source: string, input: Json = null, more: Partial<ProgramReques
 }
 
 afterEach(async () => {
+  vi.useRealTimers();
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
@@ -158,7 +159,8 @@ describe('what a worker of the pool refuses', () => {
 
 describe('the deadline and the memory of a worker', () => {
   it('terminate a worker at the deadline', async () => {
-    const ended = await poolOf({ worker: blocking }).run(request('.', null, { deadlineMs: 500 }));
+    fakePoolTimers();
+    const ended = await afterFakeTime(500, poolOf({ worker: blocking }).run(request('.', null, { deadlineMs: 500 })));
 
     expect(ended).toMatchObject({ ran: 'stopped', because: 'deadline' });
     expect(ended.milliseconds).toBeGreaterThanOrEqual(500);
@@ -178,7 +180,7 @@ describe('the workers of a pool', () => {
   it('go on answering on the others while one is blocked, however long it takes', async () => {
     const pool = poolOf();
     const cancelling = new AbortController();
-    const blockedForLong = request('.', null, { worker: blocking, deadlineMs: longerThanTheTestMs });
+    const blockedForLong = request('.', null, { worker: blocking });
     const stuck = pool.run(blockedForLong, cancelling.signal);
 
     const meanwhile = await pool.run(request(program('return input + 1;'), 1));
@@ -189,10 +191,11 @@ describe('the workers of a pool', () => {
   });
 
   it('turn away a fifth run while four take every worker, once it has waited until its deadline', async () => {
+    fakePoolTimers();
     const pool = poolOf({ worker: blocking });
-    const four = Array.from({ length: 4 }, () => pool.run(request('.', null, { deadlineMs: longerThanTheTestMs })));
+    const four = Array.from({ length: 4 }, () => pool.run(request('.')));
 
-    const fifth = await pool.run(request('.', null, { deadlineMs: 300 }));
+    const fifth = await afterFakeTime(300, pool.run(request('.', null, { deadlineMs: 300 })));
 
     expect(fifth).toMatchObject({ ran: 'stopped', because: 'busy' });
     expect(fifth.milliseconds).toBeGreaterThanOrEqual(300);
@@ -247,13 +250,13 @@ describe('a worker that breaks', () => {
 
 describe('a run of the pool that is cancelled', () => {
   it('stops its worker', async () => {
-    const cancelling = new AbortController();
+    const { controller, watched } = watchedController();
     const starting = nextThreadStarted();
-    const run = poolOf({ worker: blocking }).run(request('.'), cancelling.signal);
+    const run = poolOf({ worker: blocking }).run(request('.'), controller.signal);
 
     const thread = await starting;
-    await until(() => isWatched(cancelling.signal));
-    cancelling.abort();
+    await watched;
+    controller.abort();
 
     expect(await run).toMatchObject({ ran: 'stopped', because: 'cancelled' });
     expect(threadEnded(thread)).toBe(true);
@@ -261,7 +264,7 @@ describe('a run of the pool that is cancelled', () => {
 
   it('starts no worker when it was cancelled before it was admitted', async () => {
     const pool = poolOf({ workers: 1, worker: blocking });
-    const first = pool.run(request('.', null, { deadlineMs: longerThanTheTestMs }));
+    const first = pool.run(request('.'));
     const cancelling = new AbortController();
     const waiting = pool.run(request('.'), cancelling.signal);
 

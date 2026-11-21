@@ -1,4 +1,5 @@
 import type { ModuleAddress } from '../jobs/pool-contract.ts';
+import { beginningSource, onReleaseSource } from './counting-workers.ts';
 import { moduleOfSource } from './source-modules.ts';
 
 function workerOf(lines: readonly string[]): ModuleAddress {
@@ -6,7 +7,7 @@ function workerOf(lines: readonly string[]): ModuleAddress {
 }
 
 const answeringByThread = [
-  "import { parentPort, threadId } from 'node:worker_threads';",
+  "import { BroadcastChannel, parentPort, threadId } from 'node:worker_threads';",
   'const listen = () => {',
   "  parentPort.on('message', ({ job, request }) => {",
   '    const issues = request.expressions.map((each, at) => ({ at, line: threadId, detail: each.source }));',
@@ -16,15 +17,17 @@ const answeringByThread = [
   '};',
 ];
 
-export function checkingReadyAfter(milliseconds: number): ModuleAddress {
-  return workerOf([...answeringByThread, `setTimeout(listen, ${milliseconds});`]);
+/** A checking worker that is ready only once the test calls `released`, and tells `begun` it is starting. */
+export function checkingReadyWhenReleased(): ModuleAddress {
+  return workerOf([...answeringByThread, onReleaseSource('listen();'), beginningSource('starting')]);
 }
 
 export const checking = workerOf([...answeringByThread, 'listen();']);
 
 export const checkingForever = workerOf([
-  "import { parentPort } from 'node:worker_threads';",
+  "import { BroadcastChannel, parentPort, threadId } from 'node:worker_threads';",
   "parentPort.on('message', () => {",
+  `  ${beginningSource('forever')}`,
   '  for (;;) {}',
   '});',
   'parentPort.postMessage({ ready: true });',

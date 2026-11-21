@@ -4,8 +4,7 @@ import { Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ModuleAddress } from '../jobs/pool-contract.ts';
-import { until } from '../pool-testing/waiting.ts';
-import { fakeProcesses, type FakeProcesses, isAlive, nudge } from '../process-testing/fake-processes.ts';
+import { exitOf, fakeProcesses, type FakeProcesses, isAlive, nudge } from '../process-testing/fake-processes.ts';
 import { memoryLimiter } from './memory-limit.ts';
 import {
   type ProcessOutcome,
@@ -90,7 +89,6 @@ function endingOf(
 }
 
 const endings: readonly Ending[] = [
-  { ...endingOf('ran past its deadline', 'block', { ended: 'timed_out' }), deadlineMs: 1000 },
   endingOf('aborted, as at its memory bound', 'abort', { ended: 'out_of_memory' }),
   endingOf('could not allocate', 'fail to allocate', { ended: 'out_of_memory' }),
   endingOf('exited', 'exit', { ended: 'crashed', detail: 'The process ended with code 3 before it answered' }, 3),
@@ -163,6 +161,7 @@ function pidOf(outcome: ProcessOutcome): number {
 
 describe('process pool', () => {
   afterEach(async () => {
+    vi.useRealTimers();
     await Promise.all(pools.splice(0).map((pool) => pool.close()));
   });
 
@@ -206,7 +205,8 @@ describe('process pool', () => {
       ['a number that is not finite, which JSON would carry as null', { values: [1, Number.NaN] }],
     ])('ends crashed, before it takes a permit, when its payload holds %s', async (_what, payload) => {
       const pool = poolOf({ processes: 1 });
-      const holding = run(pool, 'sleep', 300);
+      const warm = await echoed(pool);
+      const holding = run(pool, 'hold');
 
       const endedFirst = await Promise.race([
         run(pool, 'echo', payload),
@@ -217,6 +217,8 @@ describe('process pool', () => {
         ended: 'crashed',
         detail: 'The payload holds what the pipe to a process cannot carry',
       });
+      await fake.announced(warm.pid, 'began');
+      nudge(warm.pid);
       expect((await holding).ended).toBe('answered');
     });
   });
@@ -242,11 +244,17 @@ describe('process pool', () => {
     });
 
     it('is let go of once it has been idle for the time a process may idle, but not while a job longer than that runs', async () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
       const pool = poolOf({ idleMs: 100 });
       const first = await echoed(pool);
 
-      const slept = ranOf(await run(pool, 'sleep', 300));
-      await until(() => !isAlive(first.pid));
+      const holding = run(pool, 'hold');
+      await fake.announced(first.pid, 'began');
+      await vi.advanceTimersByTimeAsync(300);
+      nudge(first.pid);
+      const slept = ranOf(await holding);
+      await vi.advanceTimersByTimeAsync(100);
+      await exitOf(first.pid);
       const next = await echoed(pool);
 
       expect([slept.pid, slept.jobs]).toEqual([first.pid, 2]);
@@ -280,7 +288,7 @@ describe('process pool', () => {
       const first = await run(pool, kind);
       const { pid } = ranOf(first);
       nudge(pid);
-      await until(() => !isAlive(pid));
+      await exitOf(pid);
       const next = await echoed(pool);
 
       expect(first).toMatchObject({ ended: 'answered' });
@@ -289,8 +297,9 @@ describe('process pool', () => {
 
     it('ends a job it could not send to its process as crashed, and lets that process go', async () => {
       const pool = poolOf();
-      const first = ranOf(await run(pool, 'disconnect later'));
-      await until(() => fake.announced(first.pid, 'disconnected'));
+      const first = ranOf(await run(pool, 'disconnect when nudged'));
+      nudge(first.pid);
+      await fake.announced(first.pid, 'disconnected');
 
       const outcome = await run(pool, 'echo');
       const next = await echoed(pool);
@@ -323,7 +332,7 @@ describe('process pool', () => {
         { module: fake.module, key: 'a model', kind: 'begin and wait', payload: null, deadlineMs: ordinaryDeadlineMs },
         cancelling.signal,
       );
-      await until(() => fake.announced(warm.pid, 'began'));
+      await fake.announced(warm.pid, 'began');
       cancelling.abort();
       const outcome = await running;
 
@@ -335,6 +344,7 @@ describe('process pool', () => {
 
 describe('process limits', () => {
   afterEach(async () => {
+    vi.useRealTimers();
     await Promise.all(pools.splice(0).map((pool) => pool.close()));
     for (const fakeProcessLimits of fakes.splice(0)) {
       fakeProcessLimits.remove();

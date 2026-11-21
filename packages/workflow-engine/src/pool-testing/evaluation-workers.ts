@@ -1,12 +1,52 @@
-import { setTimeout as delay } from 'node:timers/promises';
-
 import { Schema } from 'effect';
+import { onTestFinished, vi } from 'vitest';
 
 import { mostFilterMs } from '../dsl/evaluation.ts';
 import type { FilterSandbox } from '../filters/filter-verdicts.ts';
-import { answerGraceMs } from '../program-pool/evaluation-thread.ts';
+import { readyFlag } from '../jobs/evaluation-messages.ts';
+import { answerGraceMs, poolEvaluationsOf, type FlagWait } from '../program-pool/evaluation-thread.ts';
+import type { MachineSandbox } from '../programs/reserved-instances.ts';
 import { moduleOfSource } from './source-modules.ts';
+import { testPoolSettings } from './test-pools.ts';
 import { nextThreadStarted } from './threads-alive.ts';
+
+export { answerGraceMs } from '../program-pool/evaluation-thread.ts';
+
+type Flag = 'answer' | 'ready';
+
+export interface Waits {
+  readonly wait: FlagWait;
+  readonly waited: readonly (readonly [Flag, number])[];
+}
+
+/** Waits on the flags of an evaluation worker as Atomics.wait does, but for the first wait on the flag named, which runs out at once. */
+export function runningOutOnce(flag: Flag): Waits {
+  const waited: (readonly [Flag, number])[] = [];
+  const state = { outOfTime: false };
+  return {
+    waited,
+    wait: (flags, index, value, timeoutMs) => {
+      const named: Flag = index === readyFlag ? 'ready' : 'answer';
+      waited.push([named, timeoutMs]);
+      if (named === flag && !state.outOfTime) {
+        state.outOfTime = true;
+        return 'timed-out';
+      }
+      return Atomics.wait(flags, index, value, timeoutMs);
+    },
+  };
+}
+
+function evaluationWorker(): URL {
+  return new URL('../workers/evaluation-worker.ts', import.meta.url);
+}
+
+/** The machine sandbox of the evaluation worker of a pool, whose calls wait on its flags as the waits given do. */
+export function machineWaitingOn(waits: Waits, module: () => URL = evaluationWorker): MachineSandbox {
+  const evaluations = poolEvaluationsOf(module, testPoolSettings(1), waits.wait);
+  onTestFinished(evaluations.close);
+  return evaluations.evaluations.machine;
+}
 
 export interface Replacement<Answer> {
   readonly answer: Answer;
@@ -30,7 +70,14 @@ export const plainFilter = {
 
 const asked = 'the requests evaluation workers are asked';
 
-const decodeAsked = Schema.decodeUnknownSync(Schema.Struct({ kind: Schema.String }));
+const decodeAsked = Schema.decodeUnknownSync(
+  Schema.Struct({
+    kind: Schema.String,
+    unit: Schema.Number,
+    test: Schema.Number,
+    sources: Schema.Array(Schema.String),
+  }),
+);
 
 const evaluationLoop = new URL('../program-pool/evaluation-loop.ts', import.meta.url).href;
 
@@ -50,12 +97,12 @@ export const announcingEvaluations = moduleOfSource(
     `import { serveEvaluations } from '${evaluationLoop}';`,
     `const asked = new BroadcastChannel(${JSON.stringify(asked)});`,
     'asked.unref();',
-    "workerData.port.on('message', (request) => { asked.postMessage({ kind: request.kind }); });",
+    "workerData.port.on('message', (request) => { asked.postMessage({ kind: request.kind, unit: request.unit ?? 0, test: request.test ?? 0, sources: request.sources ?? [] }); });",
     'serveEvaluations(workerData);',
   ].join('\n'),
 );
 
-const roundsOfLoadingWork = 300_000_000;
+const roundsOfLoadingWork = 3_000_000;
 
 export const loadingAfterItsWork = moduleOfSource(
   [
@@ -67,11 +114,19 @@ export const loadingAfterItsWork = moduleOfSource(
   ].join('\n'),
 );
 
-function nextAsked(kind: string): Promise<void> {
+/** Resolves once an announcing evaluation worker is asked to test a value on a filter whose source holds the fragment. */
+export function testAskedOn(fragment: string): Promise<void> {
   const listening = new BroadcastChannel(asked);
   const { promise, resolve } = Promise.withResolvers<void>();
+  const marked = new Set<string>();
   listening.addEventListener('message', (event: Readonly<MessageEvent>) => {
-    if (decodeAsked(event.data).kind === kind) {
+    const { kind, unit, test, sources } = decodeAsked(event.data);
+    for (const [at, source] of sources.entries()) {
+      if (kind === 'prepare' && source.includes(fragment)) {
+        marked.add(`${unit} ${at}`);
+      }
+    }
+    if (kind === 'test' && marked.has(`${unit} ${test}`)) {
       listening.close();
       resolve();
     }
@@ -80,7 +135,7 @@ function nextAsked(kind: string): Promise<void> {
 }
 
 export async function replacementOf<Answer>(
-  kind: string,
+  fragment: string,
   deadlineMs: number,
   work: () => Promise<Answer>,
 ): Promise<Replacement<Answer>> {
@@ -90,10 +145,10 @@ export async function replacementOf<Answer>(
     replacedAfterMs.push(performance.now() - started);
     return thread;
   });
-  const asking = nextAsked(kind);
+  const asking = testAskedOn(fragment);
   const working = work();
   await asking;
-  await delay(deadlineMs + answerGraceMs + 1);
+  await vi.advanceTimersByTimeAsync(deadlineMs + answerGraceMs + 1);
   const byTheDeadline = [...replacedAfterMs];
   const answer = await working;
   await replacing;

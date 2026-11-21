@@ -10,7 +10,8 @@
     "./job-loop": "./src/job-loop.ts",
     "./process-loop": "./src/process-loop.ts",
     "./worker": "./src/worker.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./thread-pool": "./src/pool-testing/thread-pool.ts"
   },
   "scripts": {
     "lint": "oxlint -c ../../.oxlintrc.json",

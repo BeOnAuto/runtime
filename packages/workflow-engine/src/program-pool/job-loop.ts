@@ -96,27 +96,51 @@ function answerTo(message: unknown, serving: Serving): Promise<JobAnswer> {
   return value.kind === 'fold' ? foldAnswer(value, serving) : Promise.resolve(checkAnswer(value, serving));
 }
 
-export function serveJobsWith(
-  handlersOf: (handed: HandedFile) => JobHandlers,
-  port: MessagePort | null = parentPort,
-  data: unknown = workerData,
-): void {
-  if (port === null) {
-    return;
-  }
+export type HandlersOf = (handed: HandedFile) => JobHandlers;
+
+export type AnswerJob = (message: unknown) => Promise<JobAnswer>;
+
+export function jobAnswererOf(handlersOf: HandlersOf, data: unknown): AnswerJob {
   const handlers = handlersOf((file) => handedFile(file, data));
   const serving: Serving = {
     handlers,
     kept: keptFor(handlers.checks),
     instances: instanceStock(handedSandboxOf(data)),
   };
+  return (message) => answerTo(message, serving);
+}
+
+const servedHere: { claim?: ((handlersOf: HandlersOf) => void) | undefined } = {};
+
+export function serveJobsWith(
+  handlersOf: HandlersOf,
+  port: MessagePort | null = parentPort,
+  data: unknown = workerData,
+): void {
+  if (port === null) {
+    servedHere.claim?.(handlersOf);
+    return;
+  }
+  const answer = jobAnswererOf(handlersOf, data);
   port.on('message', (message: unknown) => {
-    void answerTo(message, serving).then((answer) => {
-      port.postMessage(answer, []);
-      return answer;
+    void answer(message).then((answered) => {
+      port.postMessage(answered, []);
+      return answered;
     });
   });
   port.postMessage(readySignal, []);
+}
+
+export async function handlersServedDuring(load: () => Promise<unknown>): Promise<HandlersOf> {
+  const claiming = Promise.withResolvers<HandlersOf>();
+  servedHere.claim = claiming.resolve;
+  try {
+    await load();
+  } finally {
+    delete servedHere.claim;
+  }
+  claiming.reject(new Error('The module serves no jobs'));
+  return claiming.promise;
 }
 
 export function serveJobs(

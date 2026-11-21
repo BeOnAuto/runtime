@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { mostFilterMs } from '../dsl/evaluation.ts';
 import type { PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
@@ -11,13 +11,18 @@ import {
   filteringWithinOnceReplaced,
   plainFilter,
   replacementOf,
+  testAskedOn,
 } from '../pool-testing/evaluation-workers.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
+import { fakePoolTimers } from '../pool-testing/waiting.ts';
+import { answerGraceMs } from '../program-pool/evaluation-thread.ts';
 import { programPool } from '../program-pool/program-pool.ts';
 import { filterVerdictsOf } from './filter-verdicts.ts';
 
-const timerMs = 20;
+const churning = 'repeat(4194304)';
+
+const pastTheDeadlineOfAFilterMs = mostFilterMs + answerGraceMs + 1;
 
 const pools: ProgramPool[] = [];
 
@@ -25,7 +30,12 @@ function european(reference: string): typeof plainFilter {
   return { ...plainFilter, reference };
 }
 
+beforeEach(() => {
+  fakePoolTimers();
+});
+
 afterEach(async () => {
+  vi.useRealTimers();
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
@@ -41,7 +51,7 @@ describe('the filter worker of a pool, given native work that no checkpoint inte
     await filterVerdictsOf([plainFilter], closed, filters, evaluatedAt);
     const patientOnceReplaced = filteringWithinOnceReplaced(filters, 30_000);
 
-    const { answer, ...replaced } = await replacementOf('test', mostFilterMs, () =>
+    const { answer, ...replaced } = await replacementOf(churning, mostFilterMs, () =>
       filterVerdictsOf([churningFilter, plainFilter], closed, patientOnceReplaced, evaluatedAt),
     );
 
@@ -52,41 +62,47 @@ describe('the filter worker of a pool, given native work that no checkpoint inte
     expect(replaced).toEqual({ replacedByTheDeadline: true, replacedBeforeTheDeadline: false });
   });
 
-  it("leaves the main thread free while a plain filter and a churning one after it are matched, so the main thread's timer fires on schedule", async () => {
-    const { filters } = poolOf().evaluations;
+  it('leaves the main thread free while a plain filter and a churning one after it are matched, so the main thread goes on while the churning one runs', async () => {
+    const { filters } = poolOf({ evaluationWorker: announcingEvaluations }).evaluations;
     await filterVerdictsOf([plainFilter], closed, filters, evaluatedAt);
     const order: string[] = [];
+    const churnAsked = testAskedOn(churning);
 
-    const fired = new Promise<void>((resolve) => {
-      setTimeout(() => {
-        order.push('timer');
-        resolve();
-      }, timerMs);
-    });
     const matched = filterVerdictsOf([plainFilter, churningFilter], closed, filters, evaluatedAt).then((verdicts) => {
       order.push('verdicts');
       return verdicts;
     });
-    await Promise.all([fired, matched]);
+    await churnAsked;
+    await new Promise<void>((resolve) => {
+      setImmediate(() => {
+        order.push('the main thread');
+        resolve();
+      });
+    });
+    await vi.advanceTimersByTimeAsync(pastTheDeadlineOfAFilterMs);
+    const verdicts = await matched;
 
-    expect(timerMs).toBeLessThan(mostFilterMs);
-    expect(order).toEqual(['timer', 'verdicts']);
-    expect(await matched).toMatchObject([true, { stopped: true }]);
+    expect(order).toEqual(['the main thread', 'verdicts']);
+    expect(verdicts).toMatchObject([true, { stopped: true }]);
   });
 });
 
 describe('the filter worker of a pool, matching groups at the same time', () => {
   it('prepares again on the fresh worker the groups prepared on the worker a churning filter ended, so groups matched at the same time still match', async () => {
-    const { filters } = poolOf().evaluations;
+    const { filters } = poolOf({ evaluationWorker: announcingEvaluations }).evaluations;
     const patient = filteringWithin(filters, 30_000);
     await filterVerdictsOf([plainFilter], closed, filters, evaluatedAt);
+    const churnAsked = testAskedOn(churning);
 
-    const verdicts = await Promise.all([
+    const matching = Promise.all([
       filterVerdictsOf([churningFilter], closed, filters, evaluatedAt),
       filterVerdictsOf([european('/first')], closed, patient, evaluatedAt),
       filterVerdictsOf([european('/second')], closed, patient, evaluatedAt),
       filterVerdictsOf([european('/third')], closed, patient, evaluatedAt),
     ]);
+    await churnAsked;
+    await vi.advanceTimersByTimeAsync(pastTheDeadlineOfAFilterMs);
+    const verdicts = await matching;
 
     expect(verdicts).toMatchObject([[{ stopped: true }], [true], [true], [true]]);
   });

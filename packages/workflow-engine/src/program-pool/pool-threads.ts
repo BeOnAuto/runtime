@@ -35,7 +35,7 @@ export interface ThreadHooks<Message> {
 
 export type StartThread<Message> = (work: Job<unknown, Message>, hooks: ThreadHooks<Message>) => Thread<Message>;
 
-type Envelope = typeof JobSchema.Encoded;
+export type Envelope = typeof JobSchema.Encoded;
 
 interface ThreadEvents {
   readonly answered: (message: unknown) => void;
@@ -79,7 +79,7 @@ function failedWith(error: unknown): Interrupted {
     : crashed(`The worker failed: ${String(Reflect.get(failure, 'message'))}`);
 }
 
-function answerIn<Answer>(message: unknown, job: number, { decode }: Job<Answer>): Served<Answer> {
+export function answerIn<Answer>(message: unknown, job: number, { decode }: Job<Answer>): Served<Answer> {
   const reply = decodeJobAnswer(message);
   if (Option.isNone(reply)) {
     return { ending: crashed(notAnAnswer), keep: false };

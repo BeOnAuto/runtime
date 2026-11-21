@@ -1,15 +1,14 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { JsonObject } from '../dsl/json.ts';
 import type { FoldRequest, ModuleAddress, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
+import { begun, beginningSource } from '../pool-testing/counting-workers.ts';
 import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
-import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
+import { afterFakeTime, fakePoolTimers } from '../pool-testing/waiting.ts';
 import { programPool } from '../program-pool/program-pool.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import type { FoldingView } from './fold-page.ts';
-
-const timerSlackMs = 2;
 
 const pools: ProgramPool[] = [];
 
@@ -30,7 +29,7 @@ const events: readonly JsonObject[] = [
 
 function markingThen(event: number, view: number, then: string): ModuleAddress {
   return moduleOfSource(
-    `import { parentPort } from "node:worker_threads"; parentPort.on("message", ({ progress }) => { const place = new Int32Array(progress); Atomics.store(place, 0, ${event}); Atomics.store(place, 1, ${view}); ${then} });`,
+    `import { BroadcastChannel, parentPort, threadId } from "node:worker_threads"; parentPort.on("message", ({ progress }) => { const place = new Int32Array(progress); Atomics.store(place, 0, ${event}); Atomics.store(place, 1, ${view}); ${beginningSource('marked')} ${then} });`,
   );
 }
 
@@ -67,6 +66,7 @@ function request(views: readonly FoldingView[], more: Partial<FoldRequest> = {})
 }
 
 afterEach(async () => {
+  vi.useRealTimers();
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
@@ -102,9 +102,11 @@ describe('a page of folds in a worker of the pool', () => {
 
 describe('a page of folds the pool stops', () => {
   it('names the event and the view whose fold was going when it reached its deadline', async () => {
-    const outcome = await poolOf({ foldWorker: markingThenBlocking }).fold(
-      request([viewOf(keeping)], { deadlineMs: 500 }),
-    );
+    fakePoolTimers();
+    const marked = begun(1);
+    const folding = poolOf({ foldWorker: markingThenBlocking }).fold(request([viewOf(keeping)], { deadlineMs: 500 }));
+    await marked;
+    const outcome = await afterFakeTime(500, folding);
 
     expect(outcome).toMatchObject({ ran: 'stopped', because: 'deadline', progress: { event: 1, view: 0 } });
     expect(outcome.milliseconds).toBeGreaterThanOrEqual(500);
@@ -125,6 +127,7 @@ describe('a page of folds the pool stops', () => {
 
 describe('a page of folds that waits for a worker', () => {
   it('counts its deadline from when a worker takes it, after it waited for one longer than that deadline', async () => {
+    fakePoolTimers();
     const pool = poolOf({ workers: 1, foldWorker: foldingAtOnce });
     const busy = pool.run({
       source: '.',
@@ -139,18 +142,19 @@ describe('a page of folds that waits for a worker', () => {
       worker: moduleOfSource('while (true) {}'),
     });
 
-    const folded = await pool.fold(request([viewOf(adding)], { deadlineMs: 5000 }));
+    const folded = await afterFakeTime(6000, pool.fold(request([viewOf(adding)], { deadlineMs: 5000 })));
 
     expect(await busy).toMatchObject({ ran: 'stopped', because: 'deadline' });
     expect(folded).toMatchObject({ ran: 'folded', views: [{ view: 3 }] });
-    expect(folded.milliseconds).toBeGreaterThan(6000 - timerSlackMs);
+    expect(folded.milliseconds).toBeGreaterThanOrEqual(6000);
   });
 
   it('is turned away when no worker comes free within its wait, and names no fold', async () => {
+    fakePoolTimers();
     const pool = poolOf({ workers: 1, foldWorker: markingThenBlocking });
-    const blocking = pool.fold(request([viewOf(keeping)], { deadlineMs: longerThanTheTestMs }));
+    const blocking = pool.fold(request([viewOf(keeping)]));
 
-    const turnedAway = await pool.fold(request([viewOf(keeping)], { waitMs: 200 }));
+    const turnedAway = await afterFakeTime(200, pool.fold(request([viewOf(keeping)], { waitMs: 200 })));
 
     expect(turnedAway).toMatchObject({ ran: 'stopped', because: 'busy' });
     expect(turnedAway).not.toHaveProperty('progress');

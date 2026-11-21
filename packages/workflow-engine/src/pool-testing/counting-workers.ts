@@ -9,12 +9,28 @@ export interface Begun {
 
 const beginnings = 'the jobs counting workers begin';
 
+const releases = 'the jobs counting workers are let finish';
+
+/** The source of a worker statement that tells `begun` the worker began what it names. */
+export function beginningSource(what: string): string {
+  return `{ const beginnings = new BroadcastChannel(${JSON.stringify(beginnings)}); beginnings.postMessage({ source: ${JSON.stringify(what)}, thread: threadId }); beginnings.close(); }`;
+}
+
+/** The source of a worker statement that runs `then` once the test calls `released`. */
+export function onReleaseSource(then: string): string {
+  return `{ const releasing = new BroadcastChannel(${JSON.stringify(releases)}); releasing.onmessage = () => { releasing.close(); ${then} }; }`;
+}
+
 const decodeBegun = Schema.decodeUnknownSync(Schema.Struct({ source: Schema.String, thread: Schema.Number }));
 
 const countingSource = [
   "import { pbkdf2Sync } from 'node:crypto';",
   "import { BroadcastChannel, parentPort, threadId } from 'node:worker_threads';",
   'let jobs = 0;',
+  `const releases = new BroadcastChannel(${JSON.stringify(releases)});`,
+  'const held = { then: undefined };',
+  'releases.onmessage = () => { const { then } = held; held.then = undefined; then?.(); };',
+  'const whenReleased = (then) => { held.then = then; };',
   'const begin = (source) => {',
   `  const beginnings = new BroadcastChannel(${JSON.stringify(beginnings)});`,
   '  beginnings.postMessage({ source, thread: threadId });',
@@ -30,11 +46,11 @@ const countingSource = [
   "  crash: () => { throw new Error('broken on purpose'); },",
   "  'wrong job': (job) => answer(job + 1, true),",
   "  'let go': (job) => answer(job, false),",
-  '  hold: (job) => { setTimeout(() => answer(job, true), 300); },',
-  "  linger: (job) => { setTimeout(() => { answer(job, true); pbkdf2Sync('x', 'y', 3000000, 32, 'sha512'); }, 300); },",
-  "  'then message': (job) => { answer(job, true); setTimeout(() => parentPort.postMessage('stray'), 50); },",
-  "  'then throw': (job) => { answer(job, true); setTimeout(() => { throw new Error('idle and broken'); }, 50); },",
-  "  'then exit': (job) => { answer(job, true); setTimeout(() => process.exit(0), 50); },",
+  '  hold: (job) => { whenReleased(() => answer(job, true)); },',
+  "  linger: (job) => { whenReleased(() => { answer(job, true); pbkdf2Sync('x', 'y', 3000000, 32, 'sha512'); }); },",
+  "  'then message': (job) => { answer(job, true); whenReleased(() => parentPort.postMessage('stray')); },",
+  "  'then throw': (job) => { answer(job, true); whenReleased(() => { throw new Error('idle and broken'); }); },",
+  "  'then exit': (job) => { answer(job, true); whenReleased(() => process.exit(0)); },",
   '};',
   "parentPort.on('message', ({ job, request }) => {",
   '  jobs += 1;',
@@ -55,6 +71,14 @@ export function begun(jobs: number): Promise<readonly Begun[]> {
     }
   });
   return promise;
+}
+
+/** Lets every job that a counting worker holds, and every misbehaviour it saves for when it idles, go on. */
+export function released(): void {
+  const releasing = new BroadcastChannel(releases);
+  const post = releasing.postMessage.bind(releasing);
+  post(null);
+  releasing.close();
 }
 
 export const counting = moduleOfSource(countingSource);

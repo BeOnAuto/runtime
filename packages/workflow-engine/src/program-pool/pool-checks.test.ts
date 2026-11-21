@@ -1,18 +1,18 @@
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CheckOutcome, CheckRequest, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
 import {
   brokenAtStart,
   checking,
   checkingForever,
-  checkingReadyAfter,
+  checkingReadyWhenReleased,
   checkingWithTheFilesHanded,
 } from '../pool-testing/checking-workers.ts';
-import { counting } from '../pool-testing/counting-workers.ts';
+import { begun, counting, released } from '../pool-testing/counting-workers.ts';
 import { handedSandbox, handedWorkers, testPoolSettings } from '../pool-testing/test-pools.ts';
-import { nextThreadStarted, threadEnded } from '../pool-testing/threads-alive.ts';
-import { isWatched, longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
+import { nextThreadStarted, threadEnding } from '../pool-testing/threads-alive.ts';
+import { afterFakeTime, fakePoolTimers, watchedController } from '../pool-testing/waiting.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { checkPermits, mostCheckStartMs, programPool } from './program-pool.ts';
 
@@ -22,7 +22,12 @@ const pools: ProgramPool[] = [];
 
 const decodeRan = Schema.decodeUnknownSync(Schema.Struct({ thread: Schema.Number }));
 
+beforeEach(() => {
+  fakePoolTimers();
+});
+
 afterEach(async () => {
+  vi.useRealTimers();
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
 });
 
@@ -59,7 +64,7 @@ function counted(pool: ProgramPool, source: string): Promise<PoolOutcome> {
     budget: 500,
     memoryBytes: unitMemoryBytes,
     stackBytes: workerStackBytes,
-    deadlineMs: longerThanTheTestMs,
+    deadlineMs: 10_000,
     mostOutputBytes: 1000,
     worker: counting,
   });
@@ -92,12 +97,14 @@ describe('the permit of the checks of a pool', () => {
 
   it('waits for its one permit until its deadline, and stops a check that runs past it', async () => {
     const pool = poolOf();
+    const beginning = begun(1);
     const first = pool.check(checkOf({ worker: checkingForever, deadlineMs: 2000 }));
+    await beginning;
 
-    const second = await pool.check(checkOf({ deadlineMs: 300 }));
+    const second = await afterFakeTime(300, pool.check(checkOf({ deadlineMs: 300 })));
 
     expect(second).toMatchObject({ ran: 'stopped', because: 'busy' });
-    expect(await first).toMatchObject({ ran: 'stopped', because: 'deadline' });
+    expect(await afterFakeTime(1700, first)).toMatchObject({ ran: 'stopped', because: 'deadline' });
   });
 
   it('takes no more checks once the pool is closed', async () => {
@@ -127,28 +134,32 @@ describe('the files the worker of a check starts with', () => {
 
 describe('the worker of the checks of a pool, while it starts', () => {
   it('counts a check’s deadline from when its worker is ready, so a worker slower to start than the deadline answers', async () => {
-    const pool = poolOf();
-
-    const checked = await pool.check(checkOf({ worker: checkingReadyAfter(slowStartMs), deadlineMs: 300 }));
+    const starting = begun(1);
+    const answering = poolOf().check(checkOf({ worker: checkingReadyWhenReleased(), deadlineMs: 300 }));
+    await starting;
+    await vi.advanceTimersByTimeAsync(slowStartMs);
+    released();
+    const checked = await answering;
 
     expect(checked).toMatchObject({ ran: 'checked' });
-    expect(checked.milliseconds).toBeGreaterThan(slowStartMs);
+    expect(checked.milliseconds).toBeGreaterThanOrEqual(slowStartMs);
     expect(mostCheckStartMs).toBe(10_000);
   });
 
   it('ends a check busy when its worker is not ready within the start a check allows, and never ends the worker while it starts', async () => {
     const pool = poolOf({ checkStartMs: 200 });
-    const worker = checkingReadyAfter(slowStartMs);
-    const starting = nextThreadStarted();
+    const [worker, starting, loading] = [checkingReadyWhenReleased(), nextThreadStarted(), begun(1)];
 
-    const early = await pool.check(checkOf({ worker }));
-    const started = await starting;
-    const cancelling = new AbortController();
-    const cancelled = pool.check(checkOf({ worker }), cancelling.signal);
-    await until(() => isWatched(cancelling.signal));
-    cancelling.abort();
-    await until(async () => threadOf(await pool.check(checkOf({ worker }))) === started);
-    const second = await pool.check(checkOf({ worker }));
+    const asked = pool.check(checkOf({ worker }));
+    await loading;
+    const [early, started] = await Promise.all([afterFakeTime(200, asked), starting]);
+    const { controller, watched } = watchedController();
+    const cancelled = pool.check(checkOf({ worker }), controller.signal);
+    await watched;
+    controller.abort();
+    const answering = pool.check(checkOf({ worker }));
+    released();
+    const second = await answering;
 
     expect(early).toMatchObject({ ran: 'stopped', because: 'busy' });
     expect(await cancelled).toMatchObject({ ran: 'stopped', because: 'cancelled' });
@@ -157,9 +168,9 @@ describe('the worker of the checks of a pool, while it starts', () => {
 
   it('ends a check closing when the pool closes while its worker starts, and crashed when the worker ends before it is ready', async () => {
     const pool = poolOf();
-    const watched = new AbortController();
-    const starting = pool.check(checkOf({ worker: checkingReadyAfter(slowStartMs) }), watched.signal);
-    await until(() => isWatched(watched.signal));
+    const { controller, watched } = watchedController();
+    const starting = pool.check(checkOf({ worker: checkingReadyWhenReleased() }), controller.signal);
+    await watched;
 
     await pool.close();
 
@@ -177,7 +188,7 @@ describe('the worker of the checks of a pool, once it started', () => {
 
     const first = await pool.check(checkOf());
     const programThread = await threadCounting(pool);
-    await until(() => threadEnded(programThread));
+    await afterFakeTime(100, threadEnding(programThread));
     const later = await pool.check(checkOf());
 
     expect(threadOf(later)).toBe(threadOf(first));

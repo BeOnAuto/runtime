@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { until } from '../pool-testing/waiting.ts';
 import { inlinePool, type InlineRequest } from './inline-pool.ts';
 import type { ProcessHandlers } from './process-loop.ts';
 import type { ProcessValue } from './process-values.ts';
@@ -9,6 +8,7 @@ interface Held {
   readonly handlers: ProcessHandlers;
   readonly free: () => void;
   readonly signals: readonly Readonly<AbortSignal>[];
+  readonly arrived: Promise<void>;
 }
 
 const shortMs = 40;
@@ -18,8 +18,10 @@ const longMs = 5_000;
 function heldUntilFreed(): Held {
   const signals: Readonly<AbortSignal>[] = [];
   const freed = Promise.withResolvers<ProcessValue>();
+  const arrived = Promise.withResolvers<void>();
   return {
     signals,
+    arrived: arrived.promise,
     free: () => {
       freed.resolve('freed');
     },
@@ -28,12 +30,26 @@ function heldUntilFreed(): Held {
         if (signal !== undefined) {
           signals.push(signal);
         }
+        arrived.resolve();
         return freed.promise;
       },
       echo: (payload) => ({ echoed: payload }),
     },
   };
 }
+
+async function afterTheDeadline<Ending>(ending: Promise<Ending>): Promise<Ending> {
+  await vi.advanceTimersByTimeAsync(shortMs);
+  return ending;
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function request(kind: string, deadlineMs: number, long = false): InlineRequest {
   return { kind, payload: { asked: kind }, deadlineMs, long };
@@ -81,8 +97,10 @@ describe('the bounds of a job in the pool that serves it in the process that ask
     const held = heldUntilFreed();
     const pool = inlinePool({ jobs: 1, longJobs: 1, handlers: held.handlers });
 
-    const timedOut = await pool.run(request('hold', shortMs));
-    const waited = await pool.run(request('echo', shortMs));
+    const timing = pool.run(request('hold', shortMs));
+    await held.arrived;
+    const timedOut = await afterTheDeadline(timing);
+    const waited = await afterTheDeadline(pool.run(request('echo', shortMs)));
     held.free();
     const after = await pool.run(request('echo', longMs));
 
@@ -98,7 +116,7 @@ describe('the bounds of a job in the pool that serves it in the process that ask
     aborted.abort();
 
     const asked = pool.run(request('hold', longMs), running.signal);
-    await until(() => held.signals.length === 1);
+    await held.arrived;
     running.abort();
     const cancelled = await asked;
     held.free();
@@ -118,7 +136,7 @@ describe('the lanes of the pool that serves jobs in the process that asks', () =
     const pool = inlinePool({ jobs: 2, longJobs: 1, handlers: held.handlers });
 
     const first = pool.run(request('hold', longMs, true));
-    const second = await pool.run(request('echo', shortMs, true));
+    const second = await afterTheDeadline(pool.run(request('echo', shortMs, true)));
     const short = await pool.run(request('echo', longMs));
     held.free();
 
@@ -130,7 +148,7 @@ describe('the lanes of the pool that serves jobs in the process that asks', () =
     const pool = inlinePool({ jobs: 1, longJobs: 1, handlers: held.handlers });
 
     const holding = pool.run(request('hold', longMs));
-    const crowded = await pool.run(request('echo', shortMs, true));
+    const crowded = await afterTheDeadline(pool.run(request('echo', shortMs, true)));
     held.free();
     await holding;
     const freed = await pool.run(request('echo', longMs, true));
@@ -144,7 +162,7 @@ describe('the lanes of the pool that serves jobs in the process that asks', () =
 
     const holding = pool.run(request('hold', longMs));
     const waiting = pool.run(request('echo', longMs));
-    await until(() => held.signals.length === 1);
+    await held.arrived;
     pool.close();
     const refused = await pool.run(request('echo', longMs));
     held.free();

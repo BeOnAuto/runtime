@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import type { FoldingView } from '../folds/fold-page.ts';
 import type {
@@ -18,11 +18,11 @@ import type {
   ProgramPool,
   ProgramRequest,
 } from '../jobs/pool-contract.ts';
-import { begun, counting, countingElsewhere, countingOnTheLoop } from '../pool-testing/counting-workers.ts';
+import { begun, counting, countingElsewhere, countingOnTheLoop, released } from '../pool-testing/counting-workers.ts';
 import { moduleOfSource } from '../pool-testing/source-modules.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
-import { threadEnded, threadsAlive } from '../pool-testing/threads-alive.ts';
-import { longerThanTheTestMs, until } from '../pool-testing/waiting.ts';
+import { threadEnding, threadsAlive } from '../pool-testing/threads-alive.ts';
+import { afterFakeTime, fakePoolTimers } from '../pool-testing/waiting.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { programPool } from './program-pool.ts';
 
@@ -168,6 +168,7 @@ async function printedBy(nodeArguments: readonly string[]): Promise<string> {
 
 describe('warm workers', () => {
   afterEach(async () => {
+    vi.useRealTimers();
     await Promise.all(pools.splice(0).map((pool) => pool.close()));
   });
 
@@ -182,10 +183,16 @@ describe('warm workers', () => {
     });
 
     it('keeps the warm worker a job takes past the time it may idle, so a job longer than that answers in the same thread', async () => {
+      fakePoolTimers();
       const pool = poolOf({ idleMs: 100 });
       const first = await counted(pool);
+      const beginning = begun(1);
 
-      const held = await run(pool, 'hold');
+      const holding = run(pool, 'hold');
+      await beginning;
+      await vi.advanceTimersByTimeAsync(300);
+      released();
+      const held = await holding;
 
       expect(ranOf(held)).toEqual({ jobs: 2, thread: first.thread });
     });
@@ -199,10 +206,11 @@ describe('warm workers', () => {
     });
 
     it('is let go of once it has been idle for the time a worker may idle', async () => {
+      fakePoolTimers();
       const pool = poolOf({ idleMs: 100 });
       const first = await counted(pool);
 
-      await until(() => threadEnded(first.thread));
+      await afterFakeTime(100, threadEnding(first.thread));
       const next = await counted(pool);
 
       expect([first.jobs, next.jobs]).toEqual([1, 1]);
@@ -211,8 +219,23 @@ describe('warm workers', () => {
   });
 
   describe('a worker of the pool after a job the pool had to stop', () => {
+    it('is let go of after a job its deadline stopped, so the next job starts in a fresh worker', async () => {
+      fakePoolTimers();
+      const pool = poolOf();
+      const first = await counted(pool);
+      const beginning = begun(1);
+
+      const blocked = run(pool, 'block', { deadlineMs: 2000 });
+      await beginning;
+      const outcome = await afterFakeTime(2000, blocked);
+      const next = await counted(pool);
+
+      expect(outcome).toMatchObject({ ran: 'stopped', because: 'deadline' });
+      expect([first.jobs, next.jobs]).toEqual([1, 1]);
+      expect(next.thread).not.toBe(first.thread);
+    });
+
     it.each<readonly [string, string, Partial<PoolSettings>, Readonly<Record<string, unknown>>]>([
-      ['its deadline stopped', 'block', {}, { ran: 'stopped', because: 'deadline' }],
       ['ran out of memory', 'allocate', { heapMegabytes: 16 }, { ran: 'stopped', because: 'memory' }],
       ['crashed', 'crash', {}, { ran: 'crashed', detail: 'The worker failed: broken on purpose' }],
       ['answered a job it was not given', 'wrong job', {}, { ran: 'crashed' }],
@@ -223,7 +246,7 @@ describe('warm workers', () => {
         const pool = poolOf(settings);
         const first = await counted(pool);
 
-        const outcome = await run(pool, source, { deadlineMs: 2000 });
+        const outcome = await run(pool, source);
         const next = await counted(pool);
 
         expect(outcome).toMatchObject(ended);
@@ -256,7 +279,6 @@ describe('warm workers', () => {
       const cancelling = new AbortController();
 
       const blocked = run(pool, 'block', {
-        deadlineMs: longerThanTheTestMs,
         signal: cancelling.signal,
         worker: countingElsewhere,
       });
@@ -356,7 +378,8 @@ describe('warm workers', () => {
         const pool = poolOf();
         const first = ranOf(await run(pool, misbehaviour));
 
-        await until(() => threadEnded(first.thread));
+        released();
+        await threadEnding(first.thread);
         const next = await counted(pool);
 
         expect([first.jobs, next.jobs]).toEqual([1, 1]);

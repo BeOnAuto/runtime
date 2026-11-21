@@ -1,13 +1,12 @@
-import { once } from 'node:events';
-
-import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ModuleAddress, PoolOutcome, PoolSettings, ProgramPool } from '../jobs/pool-contract.ts';
-import { begun, counting, countingElsewhere } from '../pool-testing/counting-workers.ts';
+import { begun, counting, countingElsewhere, released } from '../pool-testing/counting-workers.ts';
+import { printedByTheScript } from '../pool-testing/printed-scripts.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { threadsAlive } from '../pool-testing/threads-alive.ts';
+import { afterFakeTime, fakePoolTimers } from '../pool-testing/waiting.ts';
 import { unitMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
 import { programPool } from './program-pool.ts';
 
@@ -19,20 +18,6 @@ interface Ran {
 const pools: ProgramPool[] = [];
 
 const decodeRan = Schema.decodeUnknownSync(Schema.Struct({ jobs: Schema.Number, thread: Schema.Number }));
-
-async function executed(script: string): Promise<string> {
-  const child = spawnForTheTest(process.execPath, ['--eval', script], {
-    stdio: ['ignore', 'pipe', 'inherit'],
-    timeout: 20_000,
-  });
-  const printed = { text: '' };
-  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
-    printed.text += chunk;
-  });
-  const ended: readonly unknown[] = await once(child, 'close');
-  expect(ended).toEqual([0, null]);
-  return printed.text;
-}
 
 afterEach(async () => {
   await Promise.all(pools.splice(0).map((pool) => pool.close()));
@@ -72,9 +57,16 @@ async function counted(pool: ProgramPool, worker: ModuleAddress = counting): Pro
   return ranOf(await run(pool, 'count', worker));
 }
 
+function holding(pool: ProgramPool, jobs: number, worker: ModuleAddress = counting): Promise<readonly PoolOutcome[]> {
+  return Promise.all(Array.from({ length: jobs }, () => run(pool, 'hold', worker)));
+}
+
 async function held(pool: ProgramPool, jobs: number): Promise<readonly number[]> {
-  const outcomes = await Promise.all(Array.from({ length: jobs }, () => run(pool, 'hold')));
-  return outcomes.map((outcome) => ranOf(outcome).thread);
+  const beginning = begun(jobs);
+  const outcomes = holding(pool, jobs);
+  await beginning;
+  released();
+  return (await outcomes).map((outcome) => ranOf(outcome).thread);
 }
 
 describe('the workers of a pool and its permits', () => {
@@ -87,10 +79,11 @@ describe('the workers of a pool and its permits', () => {
     const elsewhere = await counted(pool, countingElsewhere);
     const afterTheOther = threadsAlive() - before;
     const beginning = begun(4);
-    const holding = held(pool, 4);
+    const holdingAgain = holding(pool, 4);
     await beginning;
     const whileHolding = threadsAlive() - before;
-    const again = await holding;
+    released();
+    const again = (await holdingAgain).map((outcome) => ranOf(outcome).thread);
 
     expect(new Set(four).size).toBe(4);
     expect([fullOfIdle, afterTheOther]).toEqual([4, 4]);
@@ -115,15 +108,17 @@ describe('the workers of a pool and its permits, while a worker is let go of', (
   it('starts two jobs at once against a worker still dying only once it has gone, so the threads alive never exceed the permits', async () => {
     const before = threadsAlive();
     const pool = poolOf({ workers: 2 });
-    await Promise.all([run(pool, 'count'), run(pool, 'linger')]);
+    const lingering = begun(2);
+    const warm = Promise.all([run(pool, 'count'), run(pool, 'linger')]);
+    await lingering;
+    released();
+    await warm;
 
     const beginning = begun(2);
-    const both = Promise.all([
-      run(pool, 'hold', countingElsewhere, 20_000),
-      run(pool, 'hold', countingElsewhere, 20_000),
-    ]);
+    const both = holding(pool, 2, countingElsewhere);
     await beginning;
     const whileTheLastDies = threadsAlive() - before;
+    released();
     const answered = await both;
 
     expect(whileTheLastDies).toBeLessThanOrEqual(2);
@@ -147,10 +142,14 @@ describe('the workers of a pool and its permits, while a worker is let go of', (
 
 describe('the deadline of a warm worker', () => {
   it('terminates a warm worker blocked past its deadline, and the jobs after it go to the worker left and a fresh one', async () => {
+    fakePoolTimers();
     const pool = poolOf({ workers: 2 });
     const warm = await Promise.all([counted(pool), counted(pool)]);
+    const beginning = begun(1);
 
-    const ended = await run(pool, 'block', counting, 500);
+    const blocked = run(pool, 'block', counting, 500);
+    await beginning;
+    const ended = await afterFakeTime(500, blocked);
     const after = await Promise.all([counted(pool), counted(pool)]);
 
     expect(new Set(warm.map(({ thread }) => thread)).size).toBe(2);
@@ -191,7 +190,7 @@ describe('a pool that closes', () => {
       'process.stdout.write(JSON.stringify(outcome));',
     ].join('\n');
 
-    const stdout = await executed(script);
+    const stdout = await printedByTheScript(script);
 
     expect(JSON.parse(stdout)).toMatchObject({ ran: 'answered', output: 2 });
   });

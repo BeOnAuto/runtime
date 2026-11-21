@@ -5,9 +5,9 @@ import { foldJobOf } from '../jobs/fold-job.ts';
 import type { CheckRequest, PoolSettings, ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
 import type { Job } from '../jobs/pool-job.ts';
 import { ProgramAnswerSchema, type ProgramAnswer } from '../jobs/program-messages.ts';
-import { poolEvaluationsOf } from './evaluation-thread.ts';
+import { poolEvaluationsOf, type PoolEvaluations } from './evaluation-thread.ts';
 import { admitted, poolSlots } from './pool-slots.ts';
-import { workerThreadsOf } from './pool-threads.ts';
+import { workerThreadsOf, type Envelope, type StartThread } from './pool-threads.ts';
 import { poolWorkers } from './pool-workers.ts';
 
 export const checkPermits = 1;
@@ -55,15 +55,23 @@ function checkJob(module: Readonly<URL>, request: CheckRequest): Job<CheckAnswer
   };
 }
 
+export interface PoolRunners {
+  readonly threads: StartThread<Envelope>;
+  readonly evaluations: PoolEvaluations;
+}
+
 export function programPool(settings: PoolSettings): ProgramPool {
+  return programPoolOn(settings, {
+    threads: workerThreadsOf(settings),
+    evaluations: poolEvaluationsOf(settings.evaluationWorker ?? evaluationWorker, settings),
+  });
+}
+
+export function programPoolOn(settings: PoolSettings, { threads, evaluations }: PoolRunners): ProgramPool {
   const slots = poolSlots(settings.workers);
   const checkSlots = poolSlots(checkPermits);
-  const workers = poolWorkers(settings, workerThreadsOf(settings));
-  const checkers = poolWorkers(
-    { ...settings, workers: checkPermits, idleMs: Number.POSITIVE_INFINITY },
-    workerThreadsOf(settings),
-  );
-  const evaluations = poolEvaluationsOf(settings.evaluationWorker ?? evaluationWorker, settings);
+  const workers = poolWorkers(settings, threads);
+  const checkers = poolWorkers({ ...settings, workers: checkPermits, idleMs: Number.POSITIVE_INFINITY }, threads);
   return {
     workers: settings.workers,
     heapMegabytes: settings.heapMegabytes,

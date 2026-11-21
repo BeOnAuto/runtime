@@ -13,13 +13,31 @@ const decodeThread = Schema.decodeUnknownSync(Schema.Struct({ threadId: Schema.N
 
 const ended = new Set<number>();
 
+const endings = new Map<number, PromiseWithResolvers<void>>();
+
+function endingOf(thread: number): PromiseWithResolvers<void> {
+  const ending = endings.get(thread) ?? Promise.withResolvers<void>();
+  endings.set(thread, ending);
+  return ending;
+}
+
 subscribe(threadStarts, (started) => {
   const { worker } = decodeStarted(started);
   const { threadId } = decodeThread(worker);
+  const ending = endingOf(threadId);
   worker.once('exit', () => {
     ended.add(threadId);
+    ending.resolve();
   });
 });
+
+/**
+ * Resolves once the thread has exited. The pool hears the exit in the same turn, before this resolves, since a
+ * listener that runs on the exit only queues the resolution.
+ */
+export function threadEnding(thread: number): Promise<void> {
+  return endingOf(thread).promise;
+}
 
 export function threadsAlive(): number {
   return decodeReport(process.report.getReport()).workers.length;

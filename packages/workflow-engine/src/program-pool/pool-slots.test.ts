@@ -121,12 +121,23 @@ describe('the slots of a pool', () => {
   });
 
   it('turn away a run that finds no free slot before its deadline', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const slots = poolSlots(1);
     await slots.admit(inMs(1000));
     const started = performance.now();
+    const settled: string[] = [];
+    const turnedAway = slots.admit(inMs(20)).then((admission) => settled.push(admission));
 
-    expect(await slots.admit(inMs(20))).toBe('busy');
-    expect(performance.now() - started).toBeGreaterThanOrEqual(20);
+    await vi.advanceTimersByTimeAsync(19);
+    const whileWaiting = [...settled];
+    await vi.advanceTimersByTimeAsync(1);
+    await turnedAway;
+
+    expect([whileWaiting, settled]).toEqual([[], ['busy']]);
+    expect(performance.now() - started).toBe(20);
   });
 
   it('turn away a run no sooner than its deadline, though its timer fires before it', async () => {
@@ -195,7 +206,7 @@ describe('the program pool', () => {
   it('loads where import.meta.url names no file, reading the module of a worker only as it makes a job of it', async () => {
     const loaded = await importedWithoutAnAddress(new URL('./program-pool.ts', import.meta.url));
 
-    expect(Object.keys(loaded)).toEqual(['checkPermits', 'mostCheckStartMs', 'programPool']);
+    expect(Object.keys(loaded)).toEqual(['checkPermits', 'mostCheckStartMs', 'programPool', 'programPoolOn']);
   });
 });
 
