@@ -1,22 +1,36 @@
-import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { tallyFolderOf, type TallyDetails } from '../folder-testing/tally-folder.ts';
 import { tallyHarness, type TallyHarness } from '../folder-testing/tally-harness.ts';
 import { someFolder } from '../projector/folder.ts';
 import { onSQLite } from '../testing/host-files.ts';
+import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import { answeredOnceFolded, answeringCapability } from './answered-runs.ts';
-import { foldedBeforeItRuns, type FoldWaitBounds } from './folded-before-runs.ts';
+import { foldedBeforeItRuns, foldWaitBounds, type FoldWaitBounds } from './folded-before-runs.ts';
 
 const succeeded: TallyDetails = { counts: 'run_succeeded' };
 
-function countedWhenAsked(tallies: TallyHarness, bounds?: FoldWaitBounds): Promise<unknown> {
+function countedWhenAsked(tallies: TallyHarness, bounds?: FoldWaitBounds, clock?: SteppedClock): Promise<unknown> {
   return answeredOnceFolded({
     answer: async () => (await tallies.tallies()).map(({ counted }) => counted),
     folders: [someFolder(tallyFolderOf(4))],
     database: tallies.store.database,
     ...(bounds === undefined ? {} : { bounds }),
+    ...(clock === undefined ? {} : { clock }),
   });
+}
+
+function asleepOn(clock: SteppedClock): Promise<number> {
+  return clock.when(clock.asleep, (sleeping) => sleeping > 0);
+}
+
+async function steppedWhileAsleep(clock: SteppedClock, stepMs: number, steps: number): Promise<void> {
+  if (steps === 0) {
+    return;
+  }
+  await asleepOn(clock);
+  clock.step(stepMs);
+  await steppedWhileAsleep(clock, stepMs, steps - 1);
 }
 
 async function caughtUpOnce(tallies: TallyHarness): Promise<() => Promise<void>> {
@@ -34,9 +48,12 @@ describe('a run of a capability whose rows the projector folds', () => {
     await stopped();
     await tallies.ran('reasoning/runs', 2);
 
-    const counted = countedWhenAsked(tallies);
-    await Effect.runPromise(Effect.sleep(100));
+    const clock = steppedClock(0);
+    const counted = countedWhenAsked(tallies, undefined, clock);
+    await asleepOn(clock);
     tallies.startWithTallies();
+    await tallies.untilTally(succeeded, (row) => row.counted === 2);
+    clock.step(foldWaitBounds.everyMs);
 
     expect(await counted).toEqual([2]);
   });
@@ -46,11 +63,12 @@ describe('a run of a capability whose rows the projector folds', () => {
     const stopped = await caughtUpOnce(tallies);
     await stopped();
     await tallies.ran('reasoning/runs', 2);
-    const startedAt = performance.now();
+    const clock = steppedClock(0);
 
-    const counted = await countedWhenAsked(tallies, { mostMs: 200, everyMs: 20 });
+    const counting = countedWhenAsked(tallies, { mostMs: 200, everyMs: 20 }, clock);
+    await steppedWhileAsleep(clock, 20, 10);
 
-    expect([counted, performance.now() - startedAt >= 200]).toEqual([[1], true]);
+    expect([await counting, clock.now()]).toEqual([[1], 200]);
   });
 
   it('runs at once when its rows have folded the whole history, or the playbook has recorded nothing', async () => {

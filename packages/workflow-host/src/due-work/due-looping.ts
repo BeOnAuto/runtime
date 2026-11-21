@@ -41,6 +41,7 @@ export async function dueLooping(
   const trouble = (what: string) =>
     Effect.sync(() => {
       troubles.push(what);
+      rows.changed();
     });
   const parts: WakeUpParts = {
     clock,
@@ -51,6 +52,7 @@ export async function dueLooping(
       Effect.sync(() => {
         order.push(`timer ${timerId} after ${rows.performed().length} rows`);
         firedAt.push(clock.now());
+        rows.changed();
       }),
     resume: () => Effect.succeed(0),
     trouble,

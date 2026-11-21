@@ -67,6 +67,7 @@ export function hostEngineOn(
     trouble: reports.trouble,
     mostAtOnce: options.mostCallsAtOnce,
     now: clock.now,
+    sleep: clock.sleep,
     context: options.context,
     ...waiting,
   });

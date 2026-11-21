@@ -1,8 +1,9 @@
 import { Effect } from 'effect';
 import { expect } from 'vitest';
 
-import type { HostClock } from '../loop/host-clock.ts';
 import { until } from '../testing/until.ts';
+
+export { steppedClock } from '../testing/stepped-clock.ts';
 import { rowsOfPlaybook } from '../views/view-reconciling.ts';
 import type { FoldingSettings } from '../views/views-folding.ts';
 import { foldingWorker } from './test-fold-workers.ts';
@@ -44,45 +45,6 @@ const delayingFoldWorker = foldingWorker({
 
 export function delayingFolding(): FoldingSettings {
   return { ...foldingOf(), foldDeadlineMs: neighbourFoldDeadlineMs, pageBudgetMs: 1, worker: delayingFoldWorker };
-}
-
-export interface SteppedClock extends HostClock {
-  readonly step: (milliseconds: number) => void;
-}
-
-interface Sleeper {
-  readonly until: number;
-  readonly wake: () => void;
-}
-
-export function steppedClock(start: number): SteppedClock {
-  const time = { now: start };
-  const sleepers = new Set<Sleeper>();
-  return {
-    now: () => time.now,
-    sleep: (milliseconds) =>
-      milliseconds <= 0
-        ? Effect.void
-        : Effect.callback<void>((resume) => {
-            const sleeper: Sleeper = {
-              until: time.now + milliseconds,
-              wake: () => {
-                resume(Effect.void);
-              },
-            };
-            sleepers.add(sleeper);
-            return Effect.sync(() => {
-              sleepers.delete(sleeper);
-            });
-          }),
-    step: (milliseconds) => {
-      time.now += milliseconds;
-      for (const sleeper of [...sleepers].filter((asleep) => asleep.until <= time.now)) {
-        sleepers.delete(sleeper);
-        sleeper.wake();
-      }
-    },
-  };
 }
 
 export async function overtimesOf(views: ViewHarness, name: string): Promise<number | undefined> {

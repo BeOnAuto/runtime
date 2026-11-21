@@ -3,6 +3,7 @@ import { streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
+import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { comparePoints, type Point } from '../pages/history-points.ts';
 import type { PassedRow, SomeFolder } from '../projector/folder.ts';
 
@@ -18,6 +19,7 @@ export interface FoldedBeforeRuns {
   readonly folders: readonly SomeFolder[];
   readonly database: HostDatabase;
   readonly bounds?: FoldWaitBounds;
+  readonly clock?: HostClock;
 }
 
 function newestPointOf(database: HostDatabase, playbookKey: string): Effect.Effect<Point | undefined> {
@@ -44,10 +46,14 @@ function anyBehind(
   ).pipe(Effect.map((behind: readonly boolean[]) => behind.includes(true)));
 }
 
-function caughtUpWithin(behind: Effect.Effect<boolean>, tries: number, everyMs: number): Effect.Effect<void> {
+function caughtUpWithin(
+  behind: Effect.Effect<boolean>,
+  tries: number,
+  { everyMs, sleep }: { readonly everyMs: number; readonly sleep: HostClock['sleep'] },
+): Effect.Effect<void> {
   return Effect.flatMap(behind, (stillBehind) =>
     stillBehind && tries > 0
-      ? Effect.andThen(Effect.sleep(everyMs), caughtUpWithin(behind, tries - 1, everyMs))
+      ? Effect.andThen(sleep(everyMs), caughtUpWithin(behind, tries - 1, { everyMs, sleep }))
       : Effect.void,
   );
 }
@@ -58,7 +64,10 @@ function caughtUp(waiting: FoldedBeforeRuns, { org, playbook }: RunContext): Eff
   return Effect.flatMap(newestPointOf(waiting.database, playbookKey), (through) =>
     through === undefined
       ? Effect.void
-      : caughtUpWithin(anyBehind(waiting, playbookKey, through), Math.ceil(mostMs / everyMs), everyMs),
+      : caughtUpWithin(anyBehind(waiting, playbookKey, through), Math.ceil(mostMs / everyMs), {
+          everyMs,
+          sleep: (waiting.clock ?? systemClock).sleep,
+        }),
   );
 }
 

@@ -62,9 +62,9 @@ import { settleAttemptsBeforeBackingOff, settleBackOffMs } from '../settlement/s
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, connectedOn, leaseHoldersOn, onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn, recordedOptionsOf } from '../testing/host-runs.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
 import { watchedClock, watchedSystemClock } from '../testing/watched-clock.ts';
-import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { counting } from '../views-testing/view-documents.ts';
 import { viewHarness } from '../views-testing/view-harness.ts';
 import { HostStopped } from './host-gate.ts';
@@ -491,7 +491,7 @@ describe('the host asked to start a run whose settlement is pending', () => {
 
 describe('the host whose ledger cannot be reached for two minutes', () => {
   it('backs off to once a minute, and settles the run once the ledger is back, with nothing done by hand', async () => {
-    const clock = skippingClock(1_790_845_200_000);
+    const clock = skippingClock(1_790_845_200_000, () => Effect.never);
     const outage = { endsAt: Number.POSITIVE_INFINITY };
     const hosted = await hostedOn(
       { store: 'sqlite', file: aSQLiteFile() },

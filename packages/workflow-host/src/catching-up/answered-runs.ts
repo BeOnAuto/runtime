@@ -4,6 +4,7 @@ import { allPermissions } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
+import type { HostClock } from '../loop/host-clock.ts';
 import type { SomeFolder } from '../projector/folder.ts';
 import { foldedBeforeItRuns, type FoldWaitBounds } from './folded-before-runs.ts';
 
@@ -41,14 +42,16 @@ export interface AnsweredRun {
   readonly folders: readonly SomeFolder[];
   readonly database: HostDatabase;
   readonly bounds?: FoldWaitBounds;
+  readonly clock?: HostClock;
 }
 
-export async function answeredOnceFolded({ answer, folders, database, bounds }: AnsweredRun): Promise<unknown> {
+export async function answeredOnceFolded({ answer, folders, database, bounds, clock }: AnsweredRun): Promise<unknown> {
   const capability = foldedBeforeItRuns({
     capability: answeringCapability(answer),
     folders,
     database,
     ...(bounds === undefined ? {} : { bounds }),
+    ...(clock === undefined ? {} : { clock }),
   });
   const prepared = await Effect.runPromise(capability.prepare('count'));
   const answered = await Effect.runPromise(prepared.run({}, askedRun));

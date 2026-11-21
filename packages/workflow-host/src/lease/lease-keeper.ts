@@ -63,7 +63,7 @@ export async function keptLease(parts: KeeperParts): Promise<LeaseKeeper> {
   await ranIn(parts.context, kept);
   const fiber = forkedIn(
     parts.context,
-    Effect.forever(Effect.andThen(Effect.sleep(sweepEveryMs), Effect.uninterruptible(kept))),
+    Effect.forever(Effect.andThen((clock.sweeps ?? clock.sleep)(sweepEveryMs), Effect.uninterruptible(kept))),
   );
   return { stop: () => Effect.runPromise(Effect.asVoid(Fiber.interrupt(fiber))) };
 }

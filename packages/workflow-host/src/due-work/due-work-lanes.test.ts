@@ -1,8 +1,8 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
-import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork } from './fake-due-work.ts';
@@ -90,7 +90,7 @@ describe('a host that stops while due rows are in flight', () => {
     }
     rows.local('expiry');
     const looping = await dueLooping(rows);
-    await until(rows.attempts, (made) => made.length === 2);
+    await rows.when(rows.attempts, (made) => made.length === 2);
 
     await looping.stop();
 
@@ -112,8 +112,8 @@ describe('a delivery handed out while workflow timers fall due', () => {
 
     await looping.armTimer(now + 500);
     clock.step(500);
-    await until(looping.order, (order) => order.length === 1);
-    const handed = await until(rows.attempts, (made) => made.length === duePerformedAtOnce);
+    await rows.when(looping.order, (order) => order.length === 1);
+    const handed = await rows.when(rows.attempts, (made) => made.length === duePerformedAtOnce);
     rows.release();
 
     expect(looping.firedAt()).toEqual([now + 500]);

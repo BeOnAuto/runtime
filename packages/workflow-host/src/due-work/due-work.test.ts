@@ -1,5 +1,3 @@
-import { setTimeout } from 'node:timers/promises';
-
 import type { WorkflowEngine } from '@on.auto/workflow-engine';
 import { Effect, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -8,8 +6,9 @@ import { systemClock } from '../loop/host-clock.ts';
 import { hostWakeUp, type NextWake } from '../loop/host-wake-up.ts';
 import { aSQLiteFile } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { signals } from '../testing/signals.ts';
+import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
-import { steppedClock, type SteppedClock } from '../views-testing/stepped-sweeps.ts';
 import { type Chore, choreWork } from './due-chores.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce, type DueWork } from './due-work.ts';
@@ -28,9 +27,10 @@ function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsO
 }
 
 async function aSecondLater(clock: SteppedClock, rows: FakeDueWork, sweeps: number): Promise<void> {
+  const asleep = clock.asleep();
   clock.step(1000);
-  await until(rows.reads, (read) => read.due >= sweeps);
-  await setTimeout(30);
+  await rows.when(rows.reads, (read) => read.due >= sweeps);
+  await clock.when(clock.asleep, (sleeping) => sleeping >= asleep);
 }
 
 const noTimers = {
@@ -89,7 +89,7 @@ describe('the due rows of a projection, in the loop of the host', () => {
 
     await looping.armTimer(now - 1000);
     rows.release();
-    await until(rows.performed, (performed) => performed.length === 300);
+    await rows.when(rows.performed, (performed) => performed.length === 300);
 
     expect(looping.order()).toEqual([`timer 1 after ${dueInOneWakeUp} rows`]);
     expect([rows.mostAtOnce(), new Set(rows.performed().map(({ at }) => at)).size]).toEqual([duePerformedAtOnce, 1]);
@@ -105,10 +105,10 @@ describe('the due rows of a projection, in the loop of the host', () => {
     const looping = await dueLooping(rows, steppedClock(now));
 
     await looping.armTimer(now - 1000);
-    const firedWhileHeld = [...(await until(looping.order, (order) => order.length === 1))];
-    const handedWhileHeld = (await until(rows.attempts, (made) => made.length === duePerformedAtOnce)).length;
+    const firedWhileHeld = [...(await rows.when(looping.order, (order) => order.length === 1))];
+    const handedWhileHeld = (await rows.when(rows.attempts, (made) => made.length === duePerformedAtOnce)).length;
     rows.release();
-    await until(rows.performed, (performed) => performed.length === 40);
+    await rows.when(rows.performed, (performed) => performed.length === 40);
 
     expect([firedWhileHeld, handedWhileHeld]).toEqual([['timer 1 after 0 rows'], duePerformedAtOnce]);
     expect([rows.attempts().length, rows.mostAtOnce()]).toEqual([40, duePerformedAtOnce]);
@@ -122,7 +122,7 @@ describe('the due rows of a projection, in the loop of the host', () => {
 
     await dueLooping(rows, clock);
     clock.step(90_000);
-    const [performed] = await until(rows.performed, (done) => done.length > 0);
+    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed).toEqual({ key: 'later', at: now + 90_000, by: 'host' });
   });
@@ -140,10 +140,10 @@ describe('due rows whose perform never ends, as a delivery through a tool that n
     const looping = await dueLooping(rows, clock);
 
     await looping.armTimer(now - 1000);
-    await until(looping.order, (order) => order.length === 1);
+    await rows.when(looping.order, (order) => order.length === 1);
     await looping.armTimer(now + 300, '2');
     clock.step(300);
-    await until(looping.order, (order) => order.length === 2);
+    await rows.when(looping.order, (order) => order.length === 2);
 
     expect(looping.order()).toEqual(['timer 1 after 0 rows', 'timer 2 after 0 rows']);
     expect(looping.firedAt()).toEqual([now, now + 300]);
@@ -161,14 +161,14 @@ describe('a due row that calls out nowhere and whose perform never ends', () => 
     rows.hanging('expiry');
     const looping = await dueLooping(rows, clock);
 
-    await until(rows.attempts, (made) => made.length === 1);
+    await rows.when(rows.attempts, (made) => made.length === 1);
     await looping.armTimer(now - 1000);
     const beforeTheSecond = [...looping.order()];
     clock.step(dueAwaitedMs);
-    await until(looping.order, (order) => order.length === 1);
+    await rows.when(looping.order, (order) => order.length === 1);
     await looping.armTimer(now + dueAwaitedMs + 300, '2');
     clock.step(300);
-    await until(looping.order, (order) => order.length === 2);
+    await rows.when(looping.order, (order) => order.length === 2);
 
     expect(beforeTheSecond).toEqual([]);
     expect(looping.firedAt()).toEqual([now + dueAwaitedMs, now + dueAwaitedMs + 300]);
@@ -189,7 +189,7 @@ describe('due rows in flight', () => {
 
       const clock = steppedClock(now);
       await dueLooping(rows, clock, 1000);
-      await until(rows.attempts, (made) => made.length === duePerformedAtOnce);
+      await rows.when(rows.attempts, (made) => made.length === duePerformedAtOnce);
       await aSecondLater(clock, rows, 1);
       await aSecondLater(clock, rows, 2);
       await aSecondLater(clock, rows, 3);
@@ -226,7 +226,7 @@ describe('a due row that calls out nowhere, while deliveries hang', () => {
     rows.local('expiry');
 
     await dueLooping(rows, clock);
-    const [performed] = await until(rows.performed, (done) => done.length > 0);
+    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed).toEqual({ key: 'expiry', at: now, by: 'host' });
     expect(rows.mostAtOnce()).toBe(duePerformedAtOnce + 1);
@@ -245,10 +245,10 @@ describe('a due row that cannot be performed', () => {
 
     const clock = steppedClock(now);
     const looping = await dueLooping(rows, clock);
-    await until(rows.attempts, (made) => made.length === 1);
+    await rows.when(rows.attempts, (made) => made.length === 1);
     const steppedUntilTried = async (gapMs: number, made: number) => {
       clock.step(gapMs);
-      await until(rows.attempts, (attempted) => attempted.length === made);
+      await rows.when(rows.attempts, (attempted) => attempted.length === made);
     };
     await steppedUntilTried(1000, 2);
     await steppedUntilTried(500, 3);
@@ -352,6 +352,7 @@ describe('due rows that cannot be read', () => {
 describe('a chore the wake-up of the host performs', () => {
   it('is performed at the first wake-up, wakes nothing while it is under way, then waits for the time it answered', async () => {
     const performedAt: number[] = [];
+    const signalled = signals();
     const held = Promise.withResolvers<void>();
     const clock = steppedClock(5000);
     const chore: Chore = {
@@ -361,6 +362,7 @@ describe('a chore the wake-up of the host performs', () => {
           Effect.promise(() => held.promise),
           Effect.sync(() => {
             performedAt.push(now);
+            signalled.changed();
             return now + 1000;
           }),
         ),
@@ -369,7 +371,7 @@ describe('a chore the wake-up of the host performs', () => {
 
     const underWay = await wakeUp(5000);
     held.resolve();
-    await until(
+    await signalled.when(
       () => performedAt.length,
       (performed) => performed > 0,
     );
@@ -377,7 +379,7 @@ describe('a chore the wake-up of the host performs', () => {
     const between = await wakeUp(5500);
     clock.step(500);
     await wakeUp(6000);
-    await until(
+    await signalled.when(
       () => performedAt.length,
       (performed) => performed > 1,
     );

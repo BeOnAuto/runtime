@@ -6,9 +6,9 @@ import { describe, expect, it } from 'vitest';
 import { runKey } from '../suite-testing/probe-subjects.ts';
 import { faultyDatabase, type FaultyDatabase } from '../testing/faulty-database.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
-import { until } from '../testing/until.ts';
+import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import type { CallAttempt } from './call-starts.ts';
-import { hostExecutor, type Deliver, type HostExecutor } from './host-executor.ts';
+import { answerWrittenAgainAfterMs, hostExecutor, type Deliver, type HostExecutor } from './host-executor.ts';
 
 const origin = { version: 2 };
 
@@ -31,6 +31,8 @@ interface Executing {
   readonly attempts: () => readonly CallAttempt[];
   readonly answered: () => readonly string[];
   readonly troubles: () => readonly string[];
+  readonly clock: SteppedClock;
+  readonly waitedToWriteMs: () => readonly number[];
 }
 
 type Answer = (database: FaultyDatabase) => Effect.Effect<CallResult>;
@@ -45,6 +47,8 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
   const attempts: CallAttempt[] = [];
   const answered: string[] = [];
   const troubles: string[] = [];
+  const waitedToWriteMs: number[] = [];
+  const clock = steppedClock(0);
   const deliverAnswer: Deliver = (key: CallKey) =>
     Effect.sync(() => {
       answered.push(callKeyText(key));
@@ -54,6 +58,11 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
     executorOn: (deliver = deliverAnswer) =>
       hostExecutor({
         now: Date.now,
+        sleep: (milliseconds) =>
+          Effect.suspend(() => {
+            waitedToWriteMs.push(milliseconds);
+            return clock.sleep(milliseconds);
+          }),
         database,
         perform: (_call, _run, _origin, attempt) =>
           Effect.suspend(() => {
@@ -76,6 +85,8 @@ async function executing(answer: Answer = answeredSent): Promise<Executing> {
     attempts: () => attempts,
     answered: () => answered,
     troubles: () => troubles,
+    clock,
+    waitedToWriteMs: () => waitedToWriteMs,
   };
 }
 
@@ -207,16 +218,28 @@ describe('the executor of the host, failing to record an answer', () => {
     );
     const executor = calls.executorOn();
 
+    const { clock } = calls;
     await Effect.runPromise(executor.executor.start(call, run, origin));
-    await until(calls.troubles, (troubles) => troubles.length > 0);
+    await clock.when(clock.asleep, (sleeping) => sleeping > 0);
     const refusedByTheTrouble = calls.database.writesRefused();
-    await until(calls.database.writesRefused, (refused) => refused > refusedByTheTrouble);
+    clock.step(answerWrittenAgainAfterMs(0));
+    await clock.when(clock.asleep, (sleeping) => sleeping > 0);
+    const refusedAgain = calls.database.writesRefused();
     const resumedWhileWriting = await Effect.runPromise(executor.resume());
     calls.database.failingWrites(false);
+    clock.step(answerWrittenAgainAfterMs(1));
     await Effect.runPromise(executor.idle());
 
+    expect(refusedAgain).toBeGreaterThan(refusedByTheTrouble);
+    expect(calls.waitedToWriteMs()).toEqual([answerWrittenAgainAfterMs(0), answerWrittenAgainAfterMs(1)]);
     expect([resumedWhileWriting, calls.performed(), calls.answered()]).toEqual([0, 1, [callKeyText(call.key)]]);
     expect(calls.troubles()).toEqual(['An answer of a call could not be recorded; it is written again until it is']);
+  });
+
+  it('waits twice as long before each write after the first, 50 ms first and 30 seconds at most', () => {
+    expect([0, 1, 2, 9, 10, 20].map((failures) => answerWrittenAgainAfterMs(failures))).toEqual([
+      50, 100, 200, 25_600, 30_000, 30_000,
+    ]);
   });
 });
 

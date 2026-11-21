@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
 import { watchedClock } from '../testing/watched-clock.ts';
 import { failingOnce } from '../views-testing/pool-faults.ts';
-import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
 import { viewHarness } from '../views-testing/view-harness.ts';
 import { firstSeenOf } from './projector.ts';

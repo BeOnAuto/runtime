@@ -26,7 +26,8 @@ do:
 export function longRunSuite(settings: SettingsOf): void {
   it(`runs a loop of ${longRunInputs} inputs of ${paddingCharacters} characters each, and loads it again from its last snapshot and the events after it`, async () => {
     const database = await settings();
-    const hosted = await hostedOn(database, { clock: skippingClock(1_790_845_200_000), sweepEveryMs: 3_600_000 });
+    const clock = skippingClock(1_790_845_200_000, () => Effect.never);
+    const hosted = await hostedOn(database, { clock, sweepEveryMs: 3_600_000 });
     hosted.know(runId);
 
     await Effect.runPromise(hosted.host.start(runAt(runId), startOf(ticking)));

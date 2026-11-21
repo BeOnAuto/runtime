@@ -5,17 +5,11 @@ import type { HostDatabase } from '../database/host-database.ts';
 import type { HostNote, HostReports } from '../host/host-reports.ts';
 import { openWorkflowStore } from '../host/workflow-store.ts';
 import { ledgerConnectedOn, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
-import { systemClock } from '../loop/host-clock.ts';
 import type { SomeFolder } from '../projector/folder.ts';
-import { startProjector, type Projector } from '../projector/projector.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
+import { folding, projectorOf, type Projector, type ProjectingOptions, type WhenFolded } from './folding-projector.ts';
 
-export interface ProjectingOptions {
-  readonly sweepEveryMs?: number;
-  readonly pagesPerWake?: number;
-  readonly playbooksAtOnce?: number;
-  readonly through?: (database: HostDatabase) => HostDatabase;
-}
+export type { ProjectingOptions } from './folding-projector.ts';
 
 export interface ProjectedFolders {
   readonly database: HostDatabase;
@@ -24,12 +18,9 @@ export interface ProjectedFolders {
   readonly troubles: () => readonly string[];
   readonly append: (stream: string, events: readonly EncodedEvent[], context: Context) => Promise<void>;
   readonly start: (options?: ProjectingOptions) => void;
+  readonly whenFolded: WhenFolded;
   readonly stop: () => Promise<void>;
   readonly close: () => Promise<void>;
-}
-
-function asItIs(database: HostDatabase): HostDatabase {
-  return database;
 }
 
 export async function projectedFolders(
@@ -41,6 +32,7 @@ export async function projectedFolders(
   const ledger = await ledgerConnectedOn(settings);
   const { database } = await openWorkflowStore(ledger.connection, folders);
   const versions = new Map<string, number>();
+  const folded = folding();
   const running: Projector[] = [];
   const stop = async (): Promise<void> => {
     await Promise.all(running.splice(0).map((projector) => projector.stop()));
@@ -56,17 +48,10 @@ export async function projectedFolders(
       versions.set(stream, expectedVersion + events.length);
       appends.raise(stream);
     },
-    start: ({ sweepEveryMs = 50, pagesPerWake = 10, playbooksAtOnce = 4, through = asItIs } = {}) => {
-      running.push(
-        startProjector({
-          database: through(database),
-          settings: { folders, playbooksAtOnce, pagesPerWake, appends },
-          reports: reports.reports,
-          clock: systemClock,
-          sweepEveryMs,
-        }),
-      );
+    start: (options) => {
+      running.push(projectorOf({ database, folders, appends, reports: reports.reports, folded }, options));
     },
+    whenFolded: folded.whenFolded,
     stop,
     close: async () => {
       await stop();

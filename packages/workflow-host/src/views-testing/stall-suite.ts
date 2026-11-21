@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { secondFoldWithBudget } from './pool-faults.ts';
 import {
   delayingFolding,
   overrunningFold,
   overrunningFolding,
   overrunsItsDeadline,
-  steppedClock,
   takesItsNeighboursTime,
   untilTried,
 } from './stepped-sweeps.ts';

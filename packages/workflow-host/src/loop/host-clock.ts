@@ -6,6 +6,7 @@ export interface HostClock {
   readonly now: () => number;
   readonly sleep: (milliseconds: number) => Effect.Effect<void>;
   readonly inZone?: InZone;
+  readonly sweeps?: (milliseconds: number) => Effect.Effect<void>;
 }
 
 export const systemClock: HostClock = {
@@ -13,9 +14,10 @@ export const systemClock: HostClock = {
   sleep: (milliseconds) => Effect.sleep(milliseconds),
 };
 
-export function skippingClock(start: number): HostClock {
+export function skippingClock(start: number, sweeps?: HostClock['sweeps']): HostClock {
   const time = { now: start };
   return {
+    ...(sweeps === undefined ? {} : { sweeps }),
     now: () => time.now,
     sleep: (milliseconds) =>
       Effect.sync(() => {

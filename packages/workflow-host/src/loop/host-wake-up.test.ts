@@ -3,9 +3,9 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { fakeDueWork, type FakeDueWork } from '../due-work/fake-due-work.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
 import type { DueTimer, TimerTable } from '../timers/sql-timers.ts';
-import { steppedClock } from '../views-testing/stepped-sweeps.ts';
 import { hostWakeUp, type NextWake, type Woken } from './host-wake-up.ts';
 
 const sweepEveryMs = 1000;

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { readsWhile, watchedClock } from '../testing/watched-clock.ts';
 import { overrunningWhenTold } from '../views-testing/pool-faults.ts';
-import { steppedClock, untilTried } from '../views-testing/stepped-sweeps.ts';
+import { untilTried } from '../views-testing/stepped-sweeps.ts';
 import { counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
 import type { TallyDetails, TallyRow } from './tally-folder.ts';
 import { tallyHarness } from './tally-harness.ts';

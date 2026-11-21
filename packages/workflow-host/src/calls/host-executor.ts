@@ -7,10 +7,11 @@ import {
   type RunContext,
   type StartCall,
 } from '@on.auto/workflow-engine';
-import { Effect, Schedule, Semaphore, type Cause, type Context } from 'effect';
+import { Effect, Semaphore, type Cause, type Context } from 'effect';
 
 import type { DatabaseFailed } from '../database/host-database.ts';
 import { runSerialiser } from '../dispatch/run-serialiser.ts';
+import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { callSpanOf } from '../runs/run-spans.ts';
 import { background, type Background } from './background.ts';
 import { cancelledCall, type CancelChild } from './call-cancels.ts';
@@ -54,6 +55,7 @@ export interface ExecutorParts extends StartParts {
   readonly childAnswerOf: (runKey: string, child: string) => Effect.Effect<CallAnsweredResult | undefined>;
   readonly cancelChild: CancelChild;
   readonly now: () => number;
+  readonly sleep?: HostClock['sleep'];
   readonly context?: Context.Context<never> | undefined;
 }
 
@@ -71,14 +73,19 @@ interface Calls extends StartingCalls {
   readonly dispatchedAgain: HostExecutor['dispatchedAgain'];
 }
 
-const answerWrittenAgain = Schedule.min([Schedule.exponential('50 millis'), Schedule.spaced('30 seconds')]);
+const answerWrittenAgainMs = { firstMs: 50, mostMs: 30_000 };
+
+export function answerWrittenAgainAfterMs(failures: number): number {
+  return Math.min(answerWrittenAgainMs.firstMs * 2 ** failures, answerWrittenAgainMs.mostMs);
+}
 
 function writtenUntilItIs<A>(
   written: Effect.Effect<A, DatabaseFailed>,
   trouble: Trouble,
+  sleep: HostClock['sleep'],
 ): Effect.Effect<A, DatabaseFailed> {
   const failures = { reported: false };
-  return written.pipe(
+  const reported = written.pipe(
     Effect.tapCause((cause: Cause.Cause<unknown>) => {
       if (failures.reported) {
         return Effect.void;
@@ -86,8 +93,17 @@ function writtenUntilItIs<A>(
       failures.reported = true;
       return trouble('An answer of a call could not be recorded; it is written again until it is', cause);
     }),
-    Effect.retry(answerWrittenAgain),
   );
+  const writtenAfter = (tries: number): Effect.Effect<A, DatabaseFailed> =>
+    reported.pipe(
+      Effect.catch(() =>
+        Effect.andThen(
+          sleep(answerWrittenAgainAfterMs(tries)),
+          Effect.suspend(() => writtenAfter(tries + 1)),
+        ),
+      ),
+    );
+  return writtenAfter(0);
 }
 
 function failedTo(output: 'start_call' | 'cancel_call') {
@@ -111,7 +127,7 @@ function dispatchedAgainBy(
 }
 
 function callsOf(parts: ExecutorParts, running: Background): Calls {
-  const { database, perform, deliver, trouble, mostAtOnce, now } = parts;
+  const { database, perform, deliver, trouble, mostAtOnce, now, sleep = systemClock.sleep } = parts;
   const atOnce = Semaphore.makeUnsafe(mostAtOnce);
   const delivered = (key: string, callKey: CallKey, result: CallAnsweredResult): Effect.Effect<void> =>
     deliver(callKey, result).pipe(
@@ -121,7 +137,7 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
       ),
     );
   const settled: Settled = (key, call, result) =>
-    Effect.flatMap(writtenUntilItIs(answeredRow(database, key, result), trouble), (written) =>
+    Effect.flatMap(writtenUntilItIs(answeredRow(database, key, result), trouble, sleep), (written) =>
       written ? delivered(key, call.key, result) : Effect.void,
     );
   const answeredIfEnded = ({ key, call, child }: WaitingCall): Effect.Effect<void, DatabaseFailed> =>
@@ -129,7 +145,7 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
       ended === undefined ? Effect.void : settled(key, call, ended),
     );
   const waited = (key: string, call: StartCall, { child, resumesAfterMs }: Waiting) =>
-    writtenUntilItIs(waitingRow(database, key, { child, at: now(), resumesAfterMs }), trouble).pipe(
+    writtenUntilItIs(waitingRow(database, key, { child, at: now(), resumesAfterMs }), trouble, sleep).pipe(
       Effect.andThen(answeredIfEnded({ key, call, child })),
     );
   const answered = (key: string, call: StartCall, answer: CallAnswer): Effect.Effect<void, DatabaseFailed> =>

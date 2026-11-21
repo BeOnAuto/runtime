@@ -7,3 +7,5 @@ export {
   type ProjectingOptions,
 } from '../folder-testing/projected-folders.ts';
 export { workflowHostOnALedger, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
+export { signals, type Signals } from './signals.ts';
+export { steppedClock, type SteppedClock } from './stepped-clock.ts';

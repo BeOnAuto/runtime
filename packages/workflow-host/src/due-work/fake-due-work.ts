@@ -2,6 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 
+import { signals, type Signals } from '../testing/signals.ts';
 import type { DueItem, DueWork } from './due-work.ts';
 
 interface PerformedRow {
@@ -25,6 +26,8 @@ export interface FakeDueWork {
   readonly mostAtOnce: () => number;
   readonly failReads: (times: number) => void;
   readonly reads: () => { readonly due: number; readonly next: number };
+  readonly when: Signals['when'];
+  readonly changed: () => void;
 }
 
 interface StoredRow {
@@ -67,7 +70,7 @@ interface Flight {
   readonly most: () => number;
 }
 
-function rowStore(): RowStore {
+function rowStore(changed: () => void): RowStore {
   const added = new Map<string, AddedRow>();
   const locals = new Set<string>();
   const endings = new Map<string, number>();
@@ -96,6 +99,7 @@ function rowStore(): RowStore {
     done: (row) => {
       added.delete(row.key);
       performed.push(row);
+      changed();
     },
     dueBy: (now, most, callsOut) =>
       rows()
@@ -115,7 +119,7 @@ function rowStore(): RowStore {
   };
 }
 
-function flight(): Flight {
+function flight(changed: () => void): Flight {
   const failing = new Set<string>();
   const hanging = new Set<string>();
   const attempts: PerformedRow[] = [];
@@ -127,6 +131,7 @@ function flight(): Flight {
       attempts.push(row);
       counts.now += 1;
       counts.most = Math.max(counts.most, counts.now);
+      changed();
       await (holding.gate?.promise ?? setTimeout(performMs));
       counts.now -= 1;
       return failing.has(row.key);
@@ -148,6 +153,7 @@ function flight(): Flight {
     attempts: () => attempts,
     stopped: (key) => {
       interrupted.push(key);
+      changed();
     },
     interrupted: () => interrupted,
     most: () => counts.most,
@@ -187,37 +193,56 @@ export interface FakeOptions {
   readonly nextReadMs?: number;
 }
 
+interface CountedReads {
+  readonly read: <A>(kind: 'due' | 'next', answer: () => A) => Effect.Effect<A, Error>;
+  readonly failReads: (times: number) => void;
+  readonly reads: () => { readonly due: number; readonly next: number };
+}
+
+function countedReads(changed: () => void): CountedReads {
+  const counts = { failing: 0, due: 0, next: 0 };
+  return {
+    read: (kind, answer) =>
+      Effect.suspend(() => {
+        counts.failing -= 1;
+        return counts.failing < 0
+          ? Effect.sync(() => {
+              counts[kind] += 1;
+              changed();
+              return answer();
+            })
+          : Effect.fail(new Error('The rows are out of reach'));
+      }),
+    failReads: (times) => {
+      counts.failing = times;
+    },
+    reads: () => ({ due: counts.due, next: counts.next }),
+  };
+}
+
 export function fakeDueWork(
   performMs = 0,
   { reportsRowsInFlight = false, nextReadMs = 0 }: FakeOptions = {},
 ): FakeDueWork {
-  const store = rowStore();
-  const flown = flight();
-  const reads = { failing: 0, due: 0, next: 0 };
-  const read = <A>(answer: () => A): Effect.Effect<A, Error> =>
-    Effect.suspend(() => {
-      reads.failing -= 1;
-      return reads.failing < 0 ? Effect.sync(answer) : Effect.fail(new Error('The rows are out of reach'));
-    });
+  const seen = signals();
+  const store = rowStore(seen.changed);
+  const flown = flight(seen.changed);
+  const { read, failReads, reads } = countedReads(seen.changed);
   return {
     work: (by) => ({
       name: 'the fake rows',
       due: (now, most, callsOut) =>
-        read(() => {
-          reads.due += 1;
-          return store
+        read('due', () =>
+          store
             .dueBy(now, most, callsOut)
             .map(({ key, endsAt }) =>
               itemOf(store, flown, { key, by }, { performMs, callsOut: endsAt === null || endsAt > now }),
-            );
-        }),
+            ),
+        ),
       nextDueAt: (after, callsOut) =>
         Effect.andThen(
           Effect.sleep(nextReadMs),
-          read(() => {
-            reads.next += 1;
-            return reportsRowsInFlight ? store.soonest(callsOut) : store.nextAfter(after, callsOut);
-          }),
+          read('next', () => (reportsRowsInFlight ? store.soonest(callsOut) : store.nextAfter(after, callsOut))),
         ),
     }),
     add: store.add,
@@ -231,9 +256,8 @@ export function fakeDueWork(
     attempts: flown.attempts,
     interrupted: flown.interrupted,
     mostAtOnce: flown.most,
-    failReads: (times) => {
-      reads.failing = times;
-    },
-    reads: () => ({ due: reads.due, next: reads.next }),
+    failReads,
+    reads,
+    ...seen,
   };
 }

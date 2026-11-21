@@ -5,8 +5,8 @@ import { Effect } from 'effect';
 import { startOf, workflow } from '../testing/host-documents.ts';
 import { connectedOn, type SettingsOf } from '../testing/host-files.ts';
 import { recordedOptionsOf, type RecordedOptions } from '../testing/host-runs.ts';
+import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import { until } from '../testing/until.ts';
-import { steppedClock, type SteppedClock } from '../views-testing/stepped-sweeps.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { closingHostOver, runKey, runId, type ClosingHost, type End } from './closing-host.ts';
 
