@@ -11,8 +11,10 @@ import { connectionTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { waitingRequestsOf, type WaitingParts } from '@on.auto/interaction';
 import type { DispatcherServices, Ledger } from '@on.auto/operations';
 import {
+  identitiesReadOf,
   subscriptionLoopOf,
   type ProviderList,
+  type SubscriptionLoopPorts,
   type SubscriptionPlace,
   type ThroughTheConnection,
 } from '@on.auto/providers';
@@ -47,22 +49,30 @@ export function subscriptionLoopPartsOf(serving: SubscriptionsServing): Subscrip
   };
 }
 
+export interface IdentitiesReading {
+  readonly connectionsOf: SubscriptionLoopPorts['connectionsOf'];
+  readonly read: ReturnType<typeof identitiesReadOf>;
+}
+
 export interface ServedSubscriptions extends SubscriptionRounds {
   readonly wakeUpsOver: (listening: ChangesListening) => readonly WakeUpWith[];
+  readonly identities: IdentitiesReading;
 }
 
 export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubscriptions {
   const { ledger, receivesOverHttp, eventsAddressOf } = serving;
   const arrangesAWay = receivesOverHttp && eventsAddressOf !== undefined;
+  const ports = subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving));
   const rounds = subscriptionRoundsOf({
-    round: subscriptionRoundOf({
-      loop: subscriptionLoopOf(subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving))),
-      ledger,
-    }),
+    round: subscriptionRoundOf({ loop: subscriptionLoopOf(ports), ledger }),
     ledger,
     arrangesAWay,
   });
-  return { ...rounds, wakeUpsOver: connectionChangesWakeUpsOf({ ledger, asked: rounds.asked, arrangesAWay }) };
+  return {
+    ...rounds,
+    wakeUpsOver: connectionChangesWakeUpsOf({ ledger, asked: rounds.asked, arrangesAWay }),
+    identities: { connectionsOf: ports.connectionsOf, read: identitiesReadOf(ports) },
+  };
 }
 
 interface TheServersOwn {

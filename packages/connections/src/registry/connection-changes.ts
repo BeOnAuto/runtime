@@ -24,6 +24,13 @@ function connectionChangedBy(fact: ChangedFact): readonly ResourceChange[] {
   return [connectionChanged.of({ connection: decodeConnectionFact(fact).data.connection })];
 }
 
+function accountRecordedBy(fact: ChangedFact): readonly ResourceChange[] {
+  const decoded = decodeConnectionFact(fact);
+  return decoded.type === 'connection_identified' && decoded.data.account !== undefined
+    ? [connectionChanged.of({ connection: decoded.data.connection })]
+    : [];
+}
+
 function scopesAddedBy(fact: ChangedFact): readonly ResourceChange[] {
   const { connection, says } = decodeConsentStarted(fact).data;
   return Object.keys(says).length === 0 ? [] : [connectionChanged.of({ connection })];
@@ -46,7 +53,7 @@ const named: Readonly<
   connection_account_type_set: connectionChangedBy,
   connection_signing_secret_set: connectionChangedBy,
   connection_signing_secret_removed: connectionChangedBy,
-  connection_identified: null,
+  connection_identified: accountRecordedBy,
 };
 
 export const connectionChanges: ChangeNaming<ChangedFact> = {

@@ -2,17 +2,20 @@ import { appCredentialRefused, connectionsStream } from '@on.auto/connections';
 import type { ConnectionWake } from '@on.auto/interaction';
 import type { StreamSignal } from '@on.auto/ledger';
 import { orgOfStreamPrefix } from '@on.auto/operations';
+import { activePlaybooksOf } from '@on.auto/playbooks';
 import {
   receivingOverASocket,
   socketStepsOf,
   stillRefused,
+  type ArrivalReading,
   type OpensASocket,
   type SocketEnd,
   type SocketListening,
 } from '@on.auto/providers';
-import { background, oneWakeAtATime, type HostWakeUp, type WakeSignal } from '@on.auto/workflow-host';
+import { background, oneWakeAtATime, type HostWakeUp, type TakeIn, type WakeSignal } from '@on.auto/workflow-host';
 import { Clock, Effect, Option, type Context } from 'effect';
 
+import { owedIdentitiesOf, type IdentityParts } from './socket-identities.ts';
 import {
   memberKeyOf,
   registriesOf,
@@ -21,9 +24,13 @@ import {
   type WantedSocket,
 } from './socket-registries.ts';
 
+type ArrivalEvent = NonNullable<ArrivalReading['event']>;
+
 export interface SocketParts extends RegistryParts {
   readonly opens: OpensASocket;
   readonly wake: ConnectionWake;
+  readonly takeIn: TakeIn;
+  readonly identities: IdentityParts['identities'];
   readonly appended: StreamSignal;
   readonly context: Context.Context<never> | undefined;
   readonly roundEveryMs?: number;
@@ -31,6 +38,10 @@ export interface SocketParts extends RegistryParts {
 }
 
 const socketTimes = { roundEveryMs: 60_000, wakesApartMs: 1000 } as const;
+
+function roundEveryMsOf({ roundEveryMs = socketTimes.roundEveryMs }: Pick<SocketParts, 'roundEveryMs'>): number {
+  return roundEveryMs;
+}
 
 const servedWords = {
   unread: 'The registries of the connections could not be read for their sockets; the next round reads them again',
@@ -66,6 +77,7 @@ function heldAs(first: WantedSocket): Held {
 class SocketSet {
   readonly #parts: SocketParts;
   readonly #registries: ReturnType<typeof registriesOf>;
+  readonly #owed: ReturnType<typeof owedIdentitiesOf>;
   readonly #sockets: ReturnType<typeof background>;
   readonly #running = new Map<string, Held>();
   readonly #wokenAt = new Map<string, number>();
@@ -74,6 +86,7 @@ class SocketSet {
   constructor(parts: SocketParts) {
     this.#parts = parts;
     this.#registries = registriesOf(parts);
+    this.#owed = owedIdentitiesOf({ registry: parts.registries.registry, identities: parts.identities });
     this.#sockets = background(parts.context);
   }
 
@@ -81,7 +94,12 @@ class SocketSet {
     return this.#parts.wakesApartMs ?? socketTimes.wakesApartMs;
   }
 
+  get #roundMs(): number {
+    return roundEveryMsOf(this.#parts);
+  }
+
   readonly round: Effect.Effect<void, unknown> = Effect.gen({ self: this }, function* () {
+    const startedAt = yield* Clock.currentTimeMillis;
     const wanted = yield* this.#registries.wanted;
     this.#refused = stillRefused(this.#refused, wanted);
     const steps = socketStepsOf({
@@ -105,6 +123,8 @@ class SocketSet {
       }
     }
     yield* this.#forgetWakesBefore(yield* Clock.currentTimeMillis);
+    const members = [...wanted.values()].flatMap((each) => each.members);
+    yield* this.#owed.read(members, startedAt + this.#roundMs);
   });
 
   readonly stop = (): Effect.Effect<void> => this.#sockets.stop();
@@ -130,8 +150,8 @@ class SocketSet {
       ...held.current().opening,
       opens: this.#parts.opens,
       arrived: ({ reading }) => {
-        const conversation = reading.wake?.conversation;
-        return conversation === undefined ? Effect.void : this.#wokenEach(members(), conversation);
+        const present = members();
+        return Effect.andThen(this.#wokenBy(present, reading), this.#takenIn(present, reading));
       },
       opened: Effect.suspend(() => this.#wokenEach(members())),
       ended: (end) => this.#endedAs(held.current(), end),
@@ -146,6 +166,30 @@ class SocketSet {
     return Effect.forEach(members, ({ org, holder }) => appCredentialRefused(this.#parts.registries, org, holder), {
       discard: true,
     });
+  }
+
+  #wokenBy(members: readonly SocketMember[], { wake }: ArrivalReading): Effect.Effect<void> {
+    const conversation = wake?.conversation;
+    return conversation === undefined ? Effect.void : this.#wokenEach(members, conversation);
+  }
+
+  #takenIn(members: readonly SocketMember[], { event, connection }: ArrivalReading): Effect.Effect<void> {
+    const account = connection?.account;
+    if (event === undefined || account === undefined) {
+      return Effect.void;
+    }
+    const tied = members.filter(({ holder }) => holder.account === account);
+    return Effect.forEach(tied, (member) => this.#offeredTo(member, event), { discard: true });
+  }
+
+  #offeredTo({ org, holder }: SocketMember, event: ArrivalEvent): Effect.Effect<void> {
+    return Effect.flatMap(activePlaybooksOf(this.#parts.registries.registry, { org }), (playbooks) =>
+      Effect.forEach(
+        playbooks,
+        (playbook) => Effect.orDie(this.#parts.takeIn({ playbook, connection: holder.name, event })),
+        { discard: true },
+      ),
+    );
   }
 
   #wokenEach(members: readonly SocketMember[], conversation?: string): Effect.Effect<void> {
@@ -186,7 +230,7 @@ export function socketWakeUpOf(parts: SocketParts): (signal: WakeSignal) => Host
         signal.raised();
       }
     });
-    const roundEveryMs = parts.roundEveryMs ?? socketTimes.roundEveryMs;
+    const roundEveryMs = roundEveryMsOf(parts);
     return {
       wakeUp: oneWakeAtATime(({ now }) =>
         Effect.gen(function* () {

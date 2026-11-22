@@ -146,19 +146,33 @@ const context = { at: '2026-10-05T09:00:00.000Z', by: 'ada' };
 
 const catalog = changeCatalogOf([connectionChanges]);
 
-describe('the change the account a connection acts as makes', () => {
-  it('names nothing, since no read of the connection answers it', () => {
-    expect(
-      catalog.changesOf({
-        id: 'm1',
-        stream: 'connections',
-        type: 'connection_identified',
-        data: { connection: 'c1', connected_at: context.at, user: { id: 'h-7' } },
-        context,
-      }),
-    ).toEqual([]);
+describe('the change the answer for a connecting makes', () => {
+  it('names the connection by its id where it holds the account the connection is in, which a read of the connection answers, and nothing where it holds only the account it acts as', () => {
+    const identified = { id: 'm1', stream: 'connections', type: 'connection_identified', context };
+    const data = { connection: 'c1', connected_at: context.at, user: { id: 'h-7' } };
+
+    expect([
+      catalog.changesOf({ ...identified, data }),
+      catalog.changesOf({ ...identified, data: { ...data, account: { id: 'S-0042' } } }),
+    ]).toEqual([[], [{ kind: 'connection', connection: 'c1' }]]);
   });
 });
+
+const typesThatNameAConnection = [
+  'connection_added',
+  'connection_way_chosen',
+  'connection_client_given',
+  'connection_consent_started',
+  'connection_connected',
+  'connection_broken',
+  'connection_app_credential_refused',
+  'connection_removed',
+  'connection_playbooks_set',
+  'connection_account_type_set',
+  'connection_signing_secret_set',
+  'connection_signing_secret_removed',
+  'connection_identified',
+];
 
 describe('the changes the facts of the connections of an org make', () => {
   it('name a connection broken or removed by its id to a caller who may read the org, and nothing for the steps of its consent', () => {
@@ -192,20 +206,7 @@ describe('the changes the facts of the connections of an org make', () => {
       [{ kind: 'connection', connection: 'c2' }],
       [],
       ['connections'],
-      [
-        'connection_added',
-        'connection_way_chosen',
-        'connection_client_given',
-        'connection_consent_started',
-        'connection_connected',
-        'connection_broken',
-        'connection_app_credential_refused',
-        'connection_removed',
-        'connection_playbooks_set',
-        'connection_account_type_set',
-        'connection_signing_secret_set',
-        'connection_signing_secret_removed',
-      ],
+      typesThatNameAConnection,
       false,
     ]);
   });

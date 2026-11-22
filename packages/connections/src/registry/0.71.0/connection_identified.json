@@ -1,0 +1,18 @@
+{
+  "type": "connection_identified",
+  "data": {
+    "connection": "connection-1",
+    "connected_at": "2026-10-29T10:00:00.000Z",
+    "user": {
+      "id": "7001",
+      "name": "sam"
+    },
+    "account": {
+      "id": "T0042"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

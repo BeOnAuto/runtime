@@ -6,16 +6,16 @@ import type { HostWakeUp, WakeSignal } from '@on.auto/workflow-host';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import type { Settings } from '../settings/settings.ts';
+import { connectionIntakeServedBy, type IntakeServing } from '../workflows/connection-intake.ts';
 import { socketWakeUpOf, type SocketParts } from './served-sockets.ts';
 
-export interface SocketsServing extends Pick<SocketParts, 'secrets' | 'opens'> {
-  readonly store: { readonly database: { readonly store: SocketParts['streams'] } };
-}
+export interface SocketsServing
+  extends Pick<SocketParts, 'secrets' | 'opens' | 'identities'>, Omit<IntakeServing, 'providers'> {}
 
 export function socketsOfTheServer(
   runtime: AppRuntime<DispatcherServices>,
   { providers }: Pick<Settings, 'providers'>,
-  { store, secrets, opens }: SocketsServing,
+  { store, secrets, opens, identities, filters, now }: SocketsServing,
 ): (signal: WakeSignal) => HostWakeUp {
   const ledger = runtimeLedger(runtime);
   return socketWakeUpOf({
@@ -24,6 +24,8 @@ export function socketsOfTheServer(
     secrets,
     opens,
     wake: connectionWake({ ledger }),
+    takeIn: connectionIntakeServedBy(runtime, { store, filters, providers, now }),
+    identities,
     appended: streamAppends,
     context: runtime.context,
   });

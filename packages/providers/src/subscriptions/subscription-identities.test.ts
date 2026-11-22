@@ -3,7 +3,7 @@ import { Effect, Option, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { IdentitySchema } from '../events/event-calls.ts';
+import { IdentitySchema } from '../events/identity-call.ts';
 import { ofEachSubscription, whoItActsAs, whoItActsAsThroughATool } from '../testing/event-destinations.ts';
 import { declaredDestinations } from '../testing/subscription-apps.ts';
 import { alpha, loopOver, portsOf, roundAt, startedAt } from '../testing/subscription-loops.ts';
@@ -184,5 +184,25 @@ describe('the accounts of connections read on their own, as a shell reads those 
     expect([...unread]).toEqual([['chat', expect.objectContaining({ kind: 'unreachable', because: 'timed_out' })]]);
     expect(loop.identified().map(({ connection }) => connection.id)).toEqual(['id-of-tracker']);
     expect(loop.connections.now().map(({ identify }) => identify !== undefined)).toEqual([true, false, false]);
+  });
+});
+
+describe('the account a connection is in, where its entry says where the same call names it', () => {
+  it('is read beside the account it acts as and reaches the recorder as a member of its own, none where the answer names none there, and none where the entry says nothing of it', async () => {
+    const connections = [
+      through('chat', { ...whoItActsAs, account: '/team/key' }),
+      through('mail', { ...whoItActsAs, account: '/team/name' }),
+      owing,
+    ];
+    const loop = loopOver(connections);
+    await Effect.runPromise(
+      identitiesReadOf(portsOf(loop, {}))(alpha, connections).pipe(Effect.provide(TestClock.layer())),
+    );
+
+    expect(loop.identified().map(({ connection, ...identification }) => [connection.id, identification])).toEqual([
+      ['id-of-chat', { user: { id: 'member-7', name: 'sam' }, account: { id: 'team-3' } }],
+      ['id-of-mail', { user: { id: 'member-7', name: 'sam' } }],
+      ['id-of-tracker', { user: { id: 'member-7', name: 'sam' } }],
+    ]);
   });
 });

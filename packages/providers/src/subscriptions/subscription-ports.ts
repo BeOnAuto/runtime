@@ -3,7 +3,7 @@ import type { CalledOnce, OneCall, RequestOnce } from '@on.auto/tool-servers';
 import type { Effect, Redacted } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
-import type { IdentitySchema } from '../events/event-calls.ts';
+import type { IdentitySchema } from '../events/identity-call.ts';
 import type {
   SubscriptionCallFailed,
   SubscriptionFailedBecause,
@@ -73,16 +73,25 @@ interface Identifying {
   readonly place: SubscriptionPlace;
 }
 
-export interface IdentifiedUser {
+interface IdentifiedUser {
   readonly id: string;
   readonly name?: string;
+}
+
+interface IdentifiedAccount {
+  readonly id: string;
+}
+
+export interface Identification {
+  readonly user: IdentifiedUser;
+  readonly account?: IdentifiedAccount;
 }
 
 export interface SubscriptionCalls {
   readonly subscribe: <E, R>(asked: Subscribing<E, R>) => Effect.Effect<Subscribed, SubscriptionCallFailed | E, R>;
   readonly renew: (asked: Renewing) => Effect.Effect<Renewed, SubscriptionCallFailed>;
   readonly unsubscribe: (asked: Unsubscribing) => Effect.Effect<void, SubscriptionCallFailed>;
-  readonly identify: (asked: Identifying) => Effect.Effect<IdentifiedUser, SubscriptionCallFailed>;
+  readonly identify: (asked: Identifying) => Effect.Effect<Identification, SubscriptionCallFailed>;
 }
 
 export interface SubscriptionKey {
@@ -171,7 +180,7 @@ export interface SubscriptionLoopPorts extends SubscriptionPorts {
   readonly identified: (
     playbook: PlaybookAddress,
     connection: IdentifiedConnection,
-    user: IdentifiedUser,
+    identification: Identification,
   ) => Effect.Effect<void>;
   readonly mostPerConnection: number;
 }

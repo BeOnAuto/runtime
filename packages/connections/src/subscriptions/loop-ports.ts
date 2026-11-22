@@ -45,13 +45,14 @@ function receivesOf({
 
 function identifiedOf({ registry, providers }: SubscriptionLoopParts): SubscriptionLoopPorts['identified'] {
   const decider = registryDeciderOf(providers);
-  return ({ org }, { id, connected }, user) =>
+  return ({ org }, { id, connected }, { user, account }) =>
     Effect.gen(function* () {
       const identifying = {
         type: 'identify',
         connection: id,
         connected_at: connected,
         user,
+        ...(account === undefined ? {} : { account }),
         by: byTheRuntime,
         at: DateTime.formatIso(yield* DateTime.now),
       } as const;

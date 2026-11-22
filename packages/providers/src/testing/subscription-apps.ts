@@ -87,7 +87,7 @@ interface AtTheApp {
 
 type Act = 'subscribe' | 'renew' | 'unsubscribe' | 'identify';
 
-const itsAccount = { member: { key: 'member-7', handle: 'sam' }, self: { uid: 7 } };
+const itsAccount = { member: { key: 'member-7', handle: 'sam' }, self: { uid: 7 }, team: { key: 'team-3' } };
 
 export interface AppAnswering {
   readonly reusesIds?: boolean;

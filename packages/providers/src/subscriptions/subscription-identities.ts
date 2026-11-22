@@ -31,7 +31,7 @@ function readOf(ports: IdentityPorts, calls: Pick<SubscriptionCalls, 'identify'>
     const place = { ...playbook, connection: owing.connection };
     return Effect.matchEffect(calls.identify({ identity: owing.identify, place }), {
       onFailure: ({ kind, because }: ReadFailure) => Effect.succeed(Option.some({ kind, because })),
-      onSuccess: (user) => Effect.as(ports.identified(playbook, owing, user), Option.none()),
+      onSuccess: (identification) => Effect.as(ports.identified(playbook, owing, identification), Option.none()),
     });
   };
 }

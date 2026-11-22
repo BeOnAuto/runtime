@@ -10,6 +10,7 @@ import {
   registryDeciderOf,
 } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
+import { identityOwedBy } from '../subscriptions/owed-identities.ts';
 
 export interface SocketHolder {
   readonly connection: string;
@@ -22,6 +23,8 @@ export interface SocketHolder {
   readonly label: string;
   readonly secretId: string;
   readonly failureCodes?: NonNullable<ProviderEntry['failure_codes']>;
+  readonly account?: string;
+  readonly identityOwed: boolean;
 }
 
 export interface HeldSockets {
@@ -55,12 +58,14 @@ function labelsOf({ credentials }: ProviderEntry, credential: string): readonly 
 }
 
 function holdersOf(kept: KeptConnection, providers: ProviderList): readonly SocketHolder[] {
-  const { id, name, provider, status, connected_at: connectedAt } = kept.connection;
+  const { id, name, provider, status, connected_at: connectedAt, account } = kept.connection;
   const entry = providerFoundBy(providers, provider)?.entry;
   if (entry === undefined || status !== 'connected' || connectedAt === null) {
     return [];
   }
   const codes = entry.failure_codes === undefined ? {} : { failureCodes: entry.failure_codes };
+  const recorded = account === null ? {} : { account: account.id };
+  const identityOwed = identityOwedBy(providers, kept) !== undefined;
   return (entry.events?.destinations ?? []).flatMap((destination, at): readonly SocketHolder[] => {
     const { type, credential } = destination;
     const secretId = credential === undefined ? undefined : secretIdOf(kept, credential);
@@ -78,6 +83,8 @@ function holdersOf(kept: KeptConnection, providers: ProviderList): readonly Sock
             label,
             secretId,
             ...codes,
+            ...recorded,
+            identityOwed,
           },
         ]
       : [];

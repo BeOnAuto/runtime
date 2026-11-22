@@ -7,11 +7,11 @@ import { Effect, Redacted, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import { failedBecause, refusedAs, requestRefusedAs, type SubscriptionCallFailed } from './subscription-failed.ts';
-import type { IdentifiedUser, Identity, Renewed, Subscribed, SubscriptionSecret } from './subscription-ports.ts';
+import type { Identification, Identity, Renewed, Subscribed, SubscriptionSecret } from './subscription-ports.ts';
 
 type Pointers = NonNullable<Destination['subscribe']>['subscribed'];
 
-type IdentifiedPointers = Identity['identified'];
+type IdentityPointers = Pick<Identity, 'identified' | 'account'>;
 
 type RenewedPointers = NonNullable<Destination['renew']>['renewed'];
 
@@ -106,13 +106,18 @@ function namedIn(document: Schema.Json, pointer: string | undefined): { readonly
   return name === undefined ? {} : { name };
 }
 
+function accountIn(document: Schema.Json, pointer: string | undefined): Pick<Identification, 'account'> {
+  const id = pointer === undefined ? undefined : textIn(document, pointer);
+  return id === undefined ? {} : { account: { id } };
+}
+
 export function identifiedIn(
   document: Answered,
-  pointers: IdentifiedPointers,
-): Effect.Effect<IdentifiedUser, SubscriptionCallFailed> {
-  const id = document === undefined ? undefined : textIn(document, pointers.id);
+  { identified, account }: IdentityPointers,
+): Effect.Effect<Identification, SubscriptionCallFailed> {
+  const id = document === undefined ? undefined : textIn(document, identified.id);
   if (document === undefined || id === undefined) {
     return Effect.fail(failedBecause('unreadable'));
   }
-  return Effect.succeed({ id, ...namedIn(document, pointers.name) });
+  return Effect.succeed({ user: { id, ...namedIn(document, identified.name) }, ...accountIn(document, account) });
 }

@@ -93,6 +93,10 @@ describe('the account that did what a message Slack’s Socket Mode sends report
       slacksEventOf({ subtype: 'bot_message', bot_id: 'B0APP' })?.actor,
       slacksEventOf({})?.actor,
     ]).toEqual(['B0APP', 'B0APP', undefined]);
-    expect(slackBot.entry.events?.identity).toEqual({ tool: 'auth_test', identified: { id: '/bot_id' } });
+    expect(slackBot.entry.events?.identity).toEqual({
+      tool: 'auth_test',
+      identified: { id: '/bot_id' },
+      account: '/team_id',
+    });
   });
 });

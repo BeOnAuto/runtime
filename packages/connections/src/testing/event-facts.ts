@@ -39,3 +39,16 @@ export const identifiedByTheRuntime: readonly (typeof ConnectionEventSchema.Type
     context: { at: recordedAt, by: 'runtime' },
   },
 ];
+
+export const identifiedInItsAccount: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_identified',
+    data: {
+      connection: 'connection-1',
+      connected_at: recordedAt,
+      user: { id: '7001', name: 'sam' },
+      account: { id: 'T0042' },
+    },
+    context: { at: recordedAt, by: 'runtime' },
+  },
+];

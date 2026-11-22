@@ -9,7 +9,8 @@ import {
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
-import { answerIssuesOf, callIssuesOf, IdentitySchema, identityTemplates, readsTheSubject } from './event-calls.ts';
+import { answerIssuesOf, callIssuesOf, identityTemplates, readsTheSubject } from './event-calls.ts';
+import { IdentitySchema } from './identity-call.ts';
 import { pathOf } from './json-texts.ts';
 import { subscriptionIssuesOf } from './subscription-checks.ts';
 
@@ -131,6 +132,7 @@ function identityIssuesOf(identity: Identity): readonly DestinationIssue[] {
     ...answerIssuesOf([
       ['/identity/identified/id', id],
       ['/identity/identified/name', name],
+      ['/identity/account', identity.account],
     ]),
   ].map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
 }

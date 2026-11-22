@@ -16,8 +16,12 @@ export {
 } from './fixture-providers.ts';
 export {
   appLevelToken,
+  cardMoved,
   ofEachSubscription,
   overASocket,
+  overTheBoardsSocket,
   throughItsTools,
   trackerOverASocket,
+  whichSpace,
+  whoItActsAsThroughATool,
 } from './event-destinations.ts';

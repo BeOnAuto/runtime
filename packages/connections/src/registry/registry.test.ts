@@ -377,6 +377,43 @@ describe('the account a connection acts as, as the stream folds it', () => {
   });
 });
 
+function identifiedInSpace(connectedAt: string, space: string): ConnectionEvent {
+  return {
+    type: 'connection_identified',
+    data: { connection: '0199-crm', connected_at: connectedAt, user: { id: '7001' }, account: { id: space } },
+  };
+}
+
+const signedInForItsAccount: ConnectionEvent = {
+  type: 'connection_connected',
+  data: {
+    connection: '0199-crm',
+    secret_id: 'secret-1',
+    account: { id: 'T-1', name: 'Acme' },
+    connected_by: { id: 'person:grace', name: 'Grace Hopper' },
+  },
+};
+
+describe('the account a connection is in, as the answer for its connecting folds it', () => {
+  it('becomes the account the answer names where the connecting named none, kept apart from the account it acts as', () => {
+    const identified = crmAfter(approval, connection, identifiedInSpace(later.at, 'S-0042'));
+
+    expect([identified?.connection.account, identified?.identified]).toEqual([{ id: 'S-0042' }, { id: '7001' }]);
+  });
+
+  it('never replaces the account a connecting named, is cleared by a new connecting, and an answer of an earlier connecting changes nothing', () => {
+    const anHourBefore = '2026-10-15T13:05:00.000Z';
+    const inSpace = identifiedInSpace(later.at, 'S-0042');
+
+    expect([
+      crmAfter(approval, signedInForItsAccount, inSpace)?.connection.account,
+      crmAfter(approval, connection, inSpace, connection)?.connection.account,
+      crmAfter(approval, connection, identifiedInSpace(anHourBefore, 'S-0042'))?.connection.account,
+      crmAfter(approval, connection, inSpace, identifiedInSpace(anHourBefore, 'S-9'))?.connection.account,
+    ]).toEqual([{ id: 'T-1', name: 'Acme' }, null, null, { id: 'S-0042' }]);
+  });
+});
+
 describe('a later link of a connection, as the stream folds it', () => {
   it('takes the place of the one before, keeping the digest of one it replaced and none of one used up', () => {
     const nextLink: ConnectionEvent = {
@@ -572,6 +609,28 @@ describe('a connection connected for its account, as a release before the member
         connected_by: { id: 'key_7f3a', name: 'key_7f3a' },
       },
       context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+    });
+  });
+});
+
+const IdentifiedBeforeTheAccount = factOf(
+  'connection_identified',
+  Schema.Struct({
+    connection: Schema.String,
+    connected_at: Schema.String,
+    user: Schema.Struct({ id: Schema.String, name: Schema.optionalKey(Schema.String) }),
+  }),
+  ActedContextSchema,
+);
+
+describe('the answer for a connecting that names the account it is in, as a release before the member reads it', () => {
+  it('reads the fact recorded in 0.71.0 through that release’s schema, passing over the account it does not know', () => {
+    const readBeforeTheAccount = Schema.decodeUnknownResult(Schema.toCodecJson(IdentifiedBeforeTheAccount));
+
+    expect(Result.getOrThrow(readBeforeTheAccount(recordedIn('0.71.0/connection_identified.json')))).toEqual({
+      type: 'connection_identified',
+      data: { connection: 'connection-1', connected_at: '2026-10-29T10:00:00.000Z', user: { id: '7001', name: 'sam' } },
+      context: { at: '2026-10-29T10:00:00.000Z', by: 'runtime' },
     });
   });
 });

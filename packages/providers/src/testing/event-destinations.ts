@@ -134,6 +134,33 @@ export const overASocket = {
   connection: { account: '$message.payload#/payload/team_id', user: '$message.payload#/payload/event/user' },
 };
 
+export const cardMoved = {
+  type: 'com.example.boards.card.moved',
+  title: 'A card is moved',
+  subject: { title: 'Board', required: false },
+  data: { type: 'object', properties: { column: { type: 'string' } } },
+};
+
+export const overTheBoardsSocket = {
+  type: 'websocket',
+  open: { method: 'GET', url: 'https://api.boards.example.com/v3/stream', address: '/stream/href' },
+  credential: 'app_level_token',
+  acknowledge: '$message.payload#/delivery',
+  filter: { when: { '$message.payload#/kind': ['card', 'note'] }, conversation: '$message.payload#/board' },
+  events: [
+    {
+      type: cardMoved.type,
+      when: { '$message.payload#/kind': ['card'] },
+      id: ['$message.payload#/board', '$message.payload#/card/serial'],
+      subject: '$message.payload#/board',
+      data: { column: '$message.payload#/card/column' },
+    },
+  ],
+  connection: { account: '$message.payload#/space/key' },
+};
+
+export const whichSpace = { tool: 'whoami', identified: { id: '/self/uid' }, account: '/self/space' };
+
 export const intoAQueue = {
   type: 'queue',
   per: 'subscription',

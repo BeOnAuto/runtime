@@ -8,6 +8,7 @@ import {
   overASocket,
   providersOf,
   trackerOverASocket,
+  whichSpace,
 } from '@on.auto/providers/testing';
 import { Effect, Logger, Option, Redacted, Result, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -33,6 +34,12 @@ const providers = providersOf(
     credentials: [aKey],
     events: { destinations: [overASocket] },
     failure_codes: failureCodes,
+  },
+  {
+    ...trackerOverASocket,
+    name: 'spaces',
+    title: 'Spaces',
+    events: { identity: whichSpace, destinations: [overASocket] },
   },
 );
 
@@ -134,6 +141,39 @@ describe('the sockets a registry holds', () => {
     const held = await Effect.runPromise(socketsHeldIn({ registry: await aRegistry(), providers }, 'globex'));
 
     expect(held).toEqual({ version: 0, holders: [] });
+  });
+});
+
+describe('what a socket holder carries of its connection', () => {
+  it('is the id of the account its connection is recorded in, where there is one, and whether the service is still to be asked who the connection is', async () => {
+    const registry = memoryLedger().service;
+    const signedIn = {
+      type: 'connection_connected',
+      data: { ...connected('connection-1', appToken).data, account: { id: 'T-1', name: 'Acme' } },
+    } as const;
+    const identifiedInItsSpace = {
+      type: 'connection_identified',
+      data: { connection: 'connection-3', connected_at: connectedAt, user: { id: 'B-3' }, account: { id: 'S-9' } },
+    } as const;
+    await Effect.runPromise(
+      registry.execute(connectionsStreamOfOrg('acme'), recordedAt(connectedAt), [
+        added('connection-1', 'tracker'),
+        signedIn,
+        added('connection-2', 'spaces'),
+        connected('connection-2', appToken),
+        added('connection-3', 'spaces'),
+        connected('connection-3', appToken),
+        identifiedInItsSpace,
+      ]),
+    );
+
+    const held = await Effect.runPromise(socketsHeldIn({ registry, providers }, 'acme'));
+
+    expect(held.holders.map(({ connection, account, identityOwed }) => [connection, account, identityOwed])).toEqual([
+      ['connection-1', 'T-1', false],
+      ['connection-2', undefined, true],
+      ['connection-3', 'S-9', false],
+    ]);
   });
 });
 

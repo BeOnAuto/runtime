@@ -118,21 +118,23 @@ const anHourLater = { by: 'person:grace', at: '2026-10-15T15:00:00.000Z' };
 
 type Acted = Readonly<typeof acted>;
 
-function identifying(connectedAt: string, id = '7001'): ConnectionCommand {
+function identifying(connectedAt: string, id = '7001', account?: string): ConnectionCommand {
   return {
     type: 'identify',
     connection: 'crm-id',
     connected_at: connectedAt,
     user: { id, name: 'sam' },
+    ...(account === undefined ? {} : { account: { id: account } }),
     by: 'runtime',
     at: '2026-10-15T14:01:00.000Z',
   };
 }
 
-function identifiedAs(connectedAt: string, id = '7001'): ConnectionEvent {
+function identifiedAs(connectedAt: string, id = '7001', account?: string): ConnectionEvent {
+  const named = account === undefined ? {} : { account: { id: account } };
   return {
     type: 'connection_identified',
-    data: { connection: 'crm-id', connected_at: connectedAt, user: { id, name: 'sam' } },
+    data: { connection: 'crm-id', connected_at: connectedAt, user: { id, name: 'sam' }, ...named },
   };
 }
 
@@ -145,11 +147,16 @@ function decidedAfter(command: ConnectionCommand, ...history: readonly (readonly
 }
 
 describe('recording the account a connection acts as', () => {
-  it('records the answer once for a connecting, and nothing for a second answer of the same connecting', () => {
+  it('records the answer once for a connecting, with the account it is in where the answer names one, and nothing for a second answer of the same connecting', () => {
     expect([
       decided(identifying(acted.at), crmAdded, connected),
-      decided(identifying(acted.at, '9'), crmAdded, connected, identifiedAs(acted.at)),
-    ]).toEqual([Result.succeed([identifiedAs(acted.at)]), Result.succeed([])]);
+      decided(identifying(acted.at, '7001', 'S-0042'), crmAdded, connected),
+      decided(identifying(acted.at, '9', 'S-0042'), crmAdded, connected, identifiedAs(acted.at)),
+    ]).toEqual([
+      Result.succeed([identifiedAs(acted.at)]),
+      Result.succeed([identifiedAs(acted.at, '7001', 'S-0042')]),
+      Result.succeed([]),
+    ]);
   });
 
   it('records nothing for an answer of an earlier connecting, nor for a connection pending, broken or removed', () => {

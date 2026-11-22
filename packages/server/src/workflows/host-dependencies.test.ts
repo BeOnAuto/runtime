@@ -1,7 +1,7 @@
 import { loadedMessage, type RoleAssignments } from '@on.auto/access-control';
 import { makeAppRuntime } from '@on.auto/api';
 import { playbookOwnNamesOf } from '@on.auto/definitions';
-import { echo } from '@on.auto/definitions/testing';
+import { decidedIn, echo } from '@on.auto/definitions/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
 import {
   Ledger,
@@ -12,7 +12,14 @@ import {
   undecidedMessage,
 } from '@on.auto/operations';
 import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
-import { providersShippedRoots, readProviders } from '@on.auto/providers';
+import { providersShippedRoots, readProviders, type ThroughTheConnection } from '@on.auto/providers';
+import {
+  cardMoved,
+  overTheBoardsSocket,
+  providersOf,
+  trackerOverASocket,
+  whichSpace,
+} from '@on.auto/providers/testing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   filterSandboxOf,
@@ -24,19 +31,26 @@ import {
   sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
 import { openWorkflowStore, StartRefused, StartRejected } from '@on.auto/workflow-host';
-import { Cause, Effect, Exit, Layer, Logger, Result } from 'effect';
+import { Cause, Effect, Exit, Layer, Logger, Redacted, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { applicationLayer } from '../composition/application-layer.ts';
+import { keptByTheLedgerWith } from '../composition/kept-by-the-ledger.ts';
 import { decisionPointServing } from '../composition/served-access-control.ts';
 import { ledgerConnectionIn } from '../database/ledger-database.ts';
 import { shippedRoots } from '../server-options/shipped-roots.ts';
+import { socketsOfTheServer } from '../sockets/sockets-of-the-server.ts';
+import { subscriptionsOfTheServer } from '../subscriptions/served-subscriptions.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
+import { workflowSource } from '../testing/servers/workflow-server.ts';
+import { aCardMovedIn, answeredWith, noSecretsKept } from '../testing/sockets/held-sockets.ts';
+import { ServiceSockets } from '../testing/sockets/service-sockets.ts';
 import {
   addedAndConnected,
   connectionsRecorded,
   playbooksCreated,
   playbooksRetired,
+  type ConnectionFact,
 } from '../testing/subscriptions/connections-followed.ts';
 import { connectionIntakeServedBy } from './connection-intake.ts';
 import { type HostDispatch, hostDispatchesOf, hostOperationsOf, hostRegistrationsOf } from './host-operations.ts';
@@ -398,5 +412,124 @@ describe('an event a connection reports, taken in through the ports the server g
     );
 
     expect(answer).toEqual({ outcome: 'not_taken', reasons: ['playbook_retired'] });
+  });
+});
+
+const boards = providersOf({
+  ...trackerOverASocket,
+  name: 'boards',
+  title: 'Boards',
+  events: { types: [cardMoved], identity: whichSpace, destinations: [overTheBoardsSocket] },
+});
+
+const ada = { id: 'person:ada', name: 'Ada' };
+
+const boardsHeld: readonly ConnectionFact[] = [
+  {
+    type: 'connection_added',
+    data: {
+      connection: 'connection-1',
+      name: 'boards',
+      server_type: 'mcp',
+      provider: 'boards',
+      placeholders: null,
+      entry: { url: 'https://boards.example.com/mcp' },
+      credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+      says: {},
+      added_by: ada,
+    },
+  },
+  {
+    type: 'connection_connected',
+    data: {
+      connection: 'connection-1',
+      secret_id: 'key-1',
+      app_secret_ids: { app_level_token: 'app-1' },
+      connected_by: ada,
+    },
+  },
+];
+
+const onACardMoved = { type: cardMoved.type, source: '/connections/boards' };
+
+/** A workflow whose trigger names the boards connection, saved through the ledger, since no such trigger can be saved through the API yet. */
+function savedOnACardMoved(ledger: Ledger['Service']): Promise<void> {
+  const schedule = `schedule:\n  on: { one: { with: ${JSON.stringify(onACardMoved)} } }\n`;
+  const source = workflowSource('on-a-card', `${schedule}do:\n  - noted: { set: { seen: true } }\n`);
+  const filters = [{ reference: '/schedule/on/one', type: cardMoved.type, attributes: onACardMoved }];
+  const created = {
+    type: 'create',
+    name: 'on-a-card',
+    content: { source, triggers: [{ kind: 'event', reference: '/schedule/on', filters }] },
+    created_by: ada,
+    definition_id: crypto.randomUUID(),
+    by: ada.id,
+    at: '2026-11-20T09:00:00.000Z',
+  } as const;
+  return Effect.runPromise(decidedIn(ledger, { org: 'acme', playbook: 'alpha' }, 'workflow', created));
+}
+
+const inItsSpace: ThroughTheConnection = {
+  callOnce: () => Effect.succeed(answeredWith({ self: { uid: 'B-1', space: 'S1' } })),
+  requestOnce: () => Effect.die('a request was sent'),
+  mostRequestBytesTo: () => 1_048_576,
+};
+
+async function publishedIn(ledger: Ledger['Service']) {
+  const page = await Effect.runPromise(
+    ledger.readRecorded(
+      { org: 'acme', playbook: 'alpha' },
+      { kind: 'everything' },
+      { order: 'asc', limit: 10, types: ['event_published'] },
+    ),
+  );
+  return page.records.map(({ type, data }) => ({ type, data }));
+}
+
+describe('an event that arrives over a socket of a server given no webhook address', () => {
+  it('is taken in once through the intake the sockets are given, once the service has answered the account the connection is in, and records nothing more when the service sends it again', async () => {
+    const runtime = await makeAppRuntime(
+      applicationLayer(ledgerLayer({ fileName: ':memory:', ...keptByTheLedgerWith([]) })),
+    );
+    onTestFinished(() => runtime.dispose());
+    const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
+    await connectionsRecorded(ledger, 'acme', boardsHeld);
+    await playbooksCreated(ledger, 'acme', ['alpha']);
+    await savedOnACardMoved(ledger);
+    const service = new ServiceSockets();
+    const { identities } = subscriptionsOfTheServer(
+      runtime,
+      { providers: boards, receiving: { overHttp: false, webhookUrl: undefined } },
+      { tools: inItsSpace, secrets: noSecretsKept },
+    );
+    const appCredential = { value: Redacted.make('xapp-1'), version: 1, claimedUntil: undefined };
+    const sockets = socketsOfTheServer(
+      runtime,
+      { providers: boards },
+      {
+        store: await openWorkflowStore(await ledgerConnectionIn(runtime), []),
+        secrets: { read: () => Effect.succeed(appCredential) },
+        opens: service.opens,
+        identities,
+        filters: filterSandboxOf(freshInstances(sandboxModule)),
+        now: () => Date.parse('2026-11-20T09:00:00.000Z'),
+      },
+    )({ raised: () => {}, renewed: () => {} });
+    onTestFinished(() => Effect.runPromise(sockets.stop()));
+
+    await Effect.runPromise(sockets.wakeUp({ now: 0, sweep: false }));
+    await service.whenOpened('xapp-1');
+    await Effect.runPromise(sockets.wakeUp({ now: 60_000, sweep: false }));
+    await Effect.runPromise(service.sends('xapp-1', aCardMovedIn('S1', 7)));
+    await service.whenAcknowledged('xapp-1', 1);
+    const takenOnce = await publishedIn(ledger);
+    await Effect.runPromise(service.sends('xapp-1', aCardMovedIn('S1', 7)));
+    await service.whenAcknowledged('xapp-1', 2);
+
+    expect(takenOnce).toMatchObject([
+      { type: 'event_published', data: { event: { source: '/connections/boards', id: 'B1/7', type: cardMoved.type } } },
+    ]);
+    expect(await publishedIn(ledger)).toEqual(takenOnce);
+    expect(service.opened).toEqual(['xapp-1']);
   });
 });

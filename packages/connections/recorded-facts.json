@@ -31,6 +31,7 @@
   "src/registry/0.70.0/connection_added.json": "83647f5e0875e25d79939366c2a7a4adeffa13d6ca5a2d7683c42a56e405d929",
   "src/registry/0.70.0/connection_way_chosen.json": "b0ba8c73d2feb74808808ae739b496c39cc97e9826410929c684126ee4b5ee54",
   "src/registry/0.71.0/connection_added.json": "41cf726ed584981534b33b1ffc785e0e06de89c5fe03aea68b5e46932719ca7f",
+  "src/registry/0.71.0/connection_identified.json": "fae980ba4ecc8b3065b84e75686411f436a173043e0ae614b2727f1a2648168f",
   "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
   "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",
   "src/subscriptions/0.64.0/event_subscription_removed.json": "25607b688406a95f66de1bbf44714309a90c18c58b275afe822fbc2751e34b8e"

@@ -6,7 +6,7 @@ import { Cause, Effect, Exit, Redacted, Result, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { IdentitySchema } from '../events/event-calls.ts';
+import { IdentitySchema } from '../events/identity-call.ts';
 import { intoAQueue, ofEachSubscription, whoItActsAs } from '../testing/event-destinations.ts';
 import {
   aService,
@@ -197,8 +197,8 @@ describe('the account a connection acts as, as the call that asks it answers', (
     const service = aService([answeredWith({ self: { uid: 7, nick: 'sam' } }), answeredWith({ self: { uid: 'u-7' } })]);
 
     expect([await identifiedThrough(service), await identifiedThrough(service)]).toEqual([
-      Result.succeed({ id: '7', name: 'sam' }),
-      Result.succeed({ id: 'u-7' }),
+      Result.succeed({ user: { id: '7', name: 'sam' } }),
+      Result.succeed({ user: { id: 'u-7' } }),
     ]);
     expect(service.sent()).toMatchObject([
       {
@@ -217,7 +217,9 @@ describe('the account a connection acts as, as the call that asks it answers', (
     const service = aServiceAnsweringRequests([requestedWith({ member: { key: 'member-7', handle: 'sam' } })]);
     const identity = Schema.decodeUnknownSync(IdentitySchema)(whoItActsAs);
 
-    expect(await identifiedThrough(service, identity)).toEqual(Result.succeed({ id: 'member-7', name: 'sam' }));
+    expect(await identifiedThrough(service, identity)).toEqual(
+      Result.succeed({ user: { id: 'member-7', name: 'sam' } }),
+    );
     expect(service.sent()).toEqual([
       { request: { org: 'acme', playbook: 'alpha', server: 'tracker', method: 'GET', url: whoItActsAs.url } },
     ]);

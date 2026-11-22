@@ -200,6 +200,7 @@ export const ConnectionEventSchema = Schema.Union([
       ...ofTheConnection,
       connected_at: Schema.String,
       user: Schema.Struct({ id: Schema.String, name: Schema.optionalKey(Schema.String) }),
+      account: Schema.optionalKey(AccountSchema),
     }),
     ActedContextSchema,
   ),

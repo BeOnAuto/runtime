@@ -125,8 +125,7 @@ export const ConnectionSchema = Schema.Struct({
       'Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing',
   }),
   account: Schema.NullOr(AccountSchema).annotate({
-    description:
-      'The account at the service the connection is for, as the service named it when the connection was connected; null where it named none',
+    description: 'The account at the service the connection is for, as the service named it; null where it named none',
   }),
   app_credentials: Schema.Array(AppCredentialHeldSchema).annotate({
     description:

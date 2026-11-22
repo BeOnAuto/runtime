@@ -172,7 +172,7 @@ export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls
     },
     identify: ({ identity, place }) =>
       Effect.flatMap(sentThrough(ports, { place, call: identity, variables: {}, topic: noTopic }), (document) =>
-        identifiedIn(document, identity.identified),
+        identifiedIn(document, identity),
       ),
   };
 }

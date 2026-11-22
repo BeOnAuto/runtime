@@ -804,6 +804,10 @@
                         "required": ["id"],
                         "additionalProperties": false,
                         "description": "Where what the call answered names that account"
+                      },
+                      "account": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the call answered, to the id of the account at the service the connection is for, such as a workspace, where the answer gives one"
                       }
                     },
                     "required": ["identified"],

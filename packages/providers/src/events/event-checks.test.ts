@@ -169,9 +169,10 @@ describe('the account a connection acts as, and the account that did what an eve
   });
 
   it('refuse a pointer into what the call answered that is not one', () => {
-    expect(askedBy({ identified: { id: 'member/key', name: '' } })).toEqual([
+    expect(askedBy({ identified: { id: 'member/key', name: '' }, account: 'team/key' })).toEqual([
       '/events/identity/identified/id',
       '/events/identity/identified/name',
+      '/events/identity/account',
     ]);
   });
 
@@ -185,6 +186,28 @@ describe('the account a connection acts as, and the account that did what an eve
     expect(pathsOf(reporting([mapping(ofTheApp, aRoomOpened, byAMember)]))).toEqual([
       '/events/destinations/0/events/1/actor',
     ]);
+  });
+});
+
+describe('the account a connection is in, where the call that asks which account it acts as names it', () => {
+  it('may say where the same answer names the account the connection is in, beside the account it acts as, and need not', () => {
+    expect([
+      askedBy({ account: '/team/key' }),
+      pathsOf(
+        identifying({ ...whoItActsAsThroughATool, account: '/self/space' }, [mapping(overASocket, aRoomOverASocket)]),
+      ),
+      askedBy({}),
+    ]).toEqual([[], [], []]);
+    expect(
+      decodedEntry({
+        ...tracker,
+        events: {
+          identity: { ...whoItActsAs, account: '/team/key' },
+          destinations: postedByAMember,
+          types: [postType, roomType],
+        },
+      }).events?.identity?.account,
+    ).toBe('/team/key');
   });
 });
 

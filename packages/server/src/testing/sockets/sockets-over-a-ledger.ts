@@ -1,38 +1,35 @@
-import { ConnectionEventSchema, connectionsStreamOfOrg } from '@on.auto/connections';
+import { ConnectionEventSchema, connectionsStreamOfOrg, eventSubscriptions } from '@on.auto/connections';
 import { wakesHeard } from '@on.auto/interaction/testing';
 import { streamSignalOf } from '@on.auto/ledger';
-import type { Decided, StreamReader } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { SocketEnded, type OpensASocket, type SocketFrame, type SocketOpening } from '@on.auto/providers';
-import { ledgers, overASocket, providersOf, trackerOverASocket } from '@on.auto/providers/testing';
-import { Effect, Function, Option, Queue, Redacted, Result, Struct, type Context } from 'effect';
+import { Effect, Redacted, Result, type Context } from 'effect';
 
 import { socketWakeUpOf, type SocketParts } from '../../sockets/served-sockets.ts';
+import { subscriptionsServedBy } from '../../subscriptions/served-subscriptions.ts';
+import { playbooksCreated, playbooksRetired } from '../subscriptions/connections-followed.ts';
+import {
+  answeringBy,
+  connectedAt,
+  noSecretsKept,
+  socketProviders,
+  type Fact,
+  type ServiceAnswer,
+} from './held-sockets.ts';
+import { ServiceSockets } from './service-sockets.ts';
 
-export type Fact = Decided<typeof ConnectionEventSchema.Type>;
+type TakeIn = SocketParts['takeIn'];
 
-export const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
+type Arrival = Parameters<TakeIn>[0];
 
-const [aKey] = trackerOverASocket.credentials;
-
-const providers = providersOf(
-  { ...trackerOverASocket, events: { destinations: [overASocket] } },
-  {
-    ...Struct.omit(ledgers, ['headers', 'placeholders']),
-    base_url: 'https://api.ledgers.example.com/v2',
-    credentials: [aKey],
-    events: { destinations: [overASocket] },
-    failure_codes: failureCodes,
-  },
-);
-
-const recordedAt = {
-  initialState: null,
-  evolve: () => null,
-  eventSchema: ConnectionEventSchema,
-  decide: (facts: readonly Fact[]) => Result.succeed(facts),
-  context: () => ({ at: '2026-11-19T08:00:00.000Z', by: 'person:ada' }),
-};
+function recordedAt(at: string) {
+  return {
+    initialState: null,
+    evolve: () => null,
+    eventSchema: ConnectionEventSchema,
+    decide: (facts: readonly Fact[]) => Result.succeed(facts),
+    context: () => ({ at, by: 'person:ada' }),
+  };
+}
 
 const typesOfTheFacts = {
   initialState: [],
@@ -40,81 +37,37 @@ const typesOfTheFacts = {
   eventSchema: ConnectionEventSchema,
 };
 
-function stateOf({ state }: { readonly state: readonly string[] }): readonly string[] {
+const theIdentified = {
+  initialState: [],
+  evolve: (identified: readonly object[], fact: typeof ConnectionEventSchema.Type) =>
+    fact.type === 'connection_identified' ? [...identified, fact.data] : identified,
+  eventSchema: ConnectionEventSchema,
+};
+
+function stateOf<State>({ state }: { readonly state: State }): State {
   return state;
 }
 
-export function heldBy(connection: string, appSecretId?: string, provider = 'tracker'): readonly Fact[] {
-  return [
-    {
-      type: 'connection_added',
-      data: {
-        connection,
-        name: `chat-${connection}`,
-        server_type: 'mcp',
-        provider,
-        placeholders: null,
-        entry: { url: 'https://tracker.example.com/mcp' },
-        credential: { kind: 'secret', name: 'Authorization', in: 'header' },
-        says: {},
-        added_by: { id: 'person:ada', name: 'Ada' },
-      },
-    },
-    {
-      type: 'connection_connected',
-      data: {
-        connection,
-        secret_id: `key-${connection}`,
-        app_secret_ids: appSecretId === undefined ? {} : { app_level_token: appSecretId },
-        connected_by: { id: 'person:ada', name: 'Ada' },
-      },
-    },
-  ];
-}
+const taken: ReturnType<TakeIn> = Effect.succeed({ outcome: 'taken' });
 
-export function inTheChannel(channel: string): object {
-  return {
-    type: 'events_api',
-    envelope_id: `e-${channel}`,
-    payload: { team_id: 'T1', event: { channel, user: 'U1' } },
-  };
-}
-
-export class SocketsOverALedger {
-  readonly ledger = memoryLedger().service;
+/**
+ * The socket set of a server over a ledger in memory: the registries of its orgs, the playbooks of each, the wakes
+ * and the intake it hands each message to, each kept in order, and the service asked who a connection is.
+ */
+export class SocketsOverALedger extends ServiceSockets {
+  readonly ledger = memoryLedger(undefined, [eventSubscriptions]).service;
   readonly wakes = wakesHeard();
   readonly appended = streamSignalOf();
-  readonly opened: string[] = [];
-  readonly closed: string[] = [];
   readonly loads: string[] = [];
-  readonly refusing = new Set<string>();
-  readonly codes: SocketOpening['failureCodes'][] = [];
-  readonly #downs = new Map<string, Queue.Queue<SocketFrame | 'closed'>>();
+  readonly handed: Arrival[] = [];
+  readonly happened: string[] = [];
+  readonly asked: string[] = [];
+  readonly answers = new Map<string, ServiceAnswer>();
+  readonly lateBy = new Map<string, number>();
   readonly #orgs = new Set<string>();
+  #intake: readonly ReturnType<TakeIn>[] = [];
   #raised = 0;
   #listingFails = false;
-
-  readonly opens: OpensASocket = ({ credential, failureCodes: codes }) =>
-    Effect.gen({ self: this }, function* () {
-      const value = Redacted.value(credential);
-      this.opened.push(value);
-      this.codes.push(codes);
-      if (this.refusing.has(value)) {
-        return yield* Effect.fail(new SocketEnded({ end: 'refused' }));
-      }
-      const down = yield* Queue.unbounded<SocketFrame | 'closed'>();
-      this.#downs.set(value, down);
-      yield* Effect.addFinalizer(() => Effect.sync(() => this.closed.push(value)));
-      const next = Effect.flatMap(Queue.take(down), (frame) =>
-        frame === 'closed' ? Effect.fail(new SocketEnded({ end: 'closed', code: 1001 })) : Effect.succeed(frame),
-      );
-      return { next, send: Function.constant(Effect.void), ping: Effect.asVoid(Queue.offer(down, { kind: 'pong' })) };
-    });
-
-  readonly sends = (value: string, payload: object): Effect.Effect<void> =>
-    this.#down(value, { kind: 'message', text: JSON.stringify(payload) });
-
-  readonly closes = (value: string): Effect.Effect<void> => this.#down(value, 'closed');
 
   readonly forgotten = (org: string): void => {
     this.#orgs.delete(org);
@@ -124,11 +77,28 @@ export class SocketsOverALedger {
     this.#listingFails = failing;
   };
 
-  readonly recorded = (org: string, facts: readonly Fact[]): Effect.Effect<void> =>
+  /** The intake answers each arrival in turn as given, and takes each one after them. */
+  readonly takesInAs = (...answers: readonly ReturnType<TakeIn>[]): void => {
+    this.#intake = answers;
+  };
+
+  readonly handedTo = (): readonly (readonly [string, string, string])[] =>
+    this.handed.map(({ playbook, connection }) => [playbook.org, playbook.playbook, connection]);
+
+  readonly recorded = (org: string, facts: readonly Fact[], at = connectedAt): Effect.Effect<void> =>
     Effect.andThen(
       Effect.sync(() => this.#orgs.add(org)),
-      Effect.asVoid(Effect.orDie(this.ledger.execute(connectionsStreamOfOrg(org), recordedAt, facts))),
+      Effect.asVoid(Effect.orDie(this.ledger.execute(connectionsStreamOfOrg(org), recordedAt(at), facts))),
     );
+
+  readonly identifiedIn = (org: string): Effect.Effect<readonly object[]> =>
+    Effect.map(this.ledger.load(connectionsStreamOfOrg(org), theIdentified), stateOf);
+
+  readonly playbooksMade = (org: string, playbooks: readonly string[], retired: readonly string[] = []) =>
+    Effect.promise(async () => {
+      await playbooksCreated(this.ledger, org, [...playbooks, ...retired]);
+      await playbooksRetired(this.ledger, org, retired);
+    });
 
   readonly typesIn = (org: string): Effect.Effect<readonly string[]> =>
     Effect.map(this.ledger.load(connectionsStreamOfOrg(org), typesOfTheFacts), stateOf);
@@ -141,11 +111,18 @@ export class SocketsOverALedger {
         orgStreams: () =>
           this.#listingFails ? Promise.reject(new Error('the ledger is down')) : Effect.runPromise(this.#listed()),
       },
-      registries: { registry: { load: this.#load, execute: this.ledger.execute }, providers },
+      registries: { registry: { load: this.#load, execute: this.ledger.execute }, providers: socketProviders },
       secrets: { read: this.#secret },
       opens: this.opens,
       wake: (woken, now) =>
-        woken.conversation === 'broken' ? Effect.die(new Error('the ledger is down')) : this.wakes.wake(woken, now),
+        woken.conversation === 'broken'
+          ? Effect.die(new Error('the ledger is down'))
+          : Effect.andThen(
+              Effect.sync(() => this.happened.push('woken')),
+              this.wakes.wake(woken, now),
+            ),
+      takeIn: this.#takeIn,
+      identities: this.#identities.identities,
       appended: this.appended,
       context,
     })({
@@ -157,17 +134,34 @@ export class SocketsOverALedger {
       },
     });
 
-  readonly #load: StreamReader['load'] = (stream, fold) =>
+  readonly #takeIn: TakeIn = (arrival) =>
+    Effect.suspend(() => {
+      const answer = this.#intake[this.handed.length] ?? taken;
+      this.handed.push(arrival);
+      this.happened.push('taken in');
+      return answer;
+    });
+
+  readonly #identities = subscriptionsServedBy({
+    ledger: this.ledger,
+    tools: answeringBy({
+      answers: this.answers,
+      lateBy: this.lateBy,
+      asked: (connection) => {
+        this.asked.push(connection);
+      },
+    }),
+    secrets: noSecretsKept,
+    providers: socketProviders,
+    receivesOverHttp: false,
+    opensSockets: true,
+  });
+
+  readonly #load: SocketParts['registries']['registry']['load'] = (stream, fold) =>
     Effect.andThen(
       Effect.sync(() => this.loads.push(stream)),
       this.ledger.load(stream, fold),
     );
-
-  #down(value: string, frame: SocketFrame | 'closed'): Effect.Effect<void> {
-    return Effect.suspend(() =>
-      Effect.asVoid(Queue.offer(Option.getOrThrow(Option.fromNullishOr(this.#downs.get(value))), frame)),
-    );
-  }
 
   readonly #secret: SocketParts['secrets']['read'] = (id) => {
     const kept = { value: Redacted.make(`xapp-${id}`), version: 1, claimedUntil: undefined };
@@ -180,7 +174,10 @@ export class SocketsOverALedger {
 
   #listed() {
     return Effect.forEach([...this.#orgs].toSorted(), (org) =>
-      Effect.map(this.ledger.load(connectionsStreamOfOrg(org), recordedAt), ({ version }) => ({ org, version })),
+      Effect.map(this.ledger.load(connectionsStreamOfOrg(org), recordedAt(connectedAt)), ({ version }) => ({
+        org,
+        version,
+      })),
     );
   }
 }

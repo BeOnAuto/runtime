@@ -58,6 +58,7 @@ events:
     tool: auth_test
     identified:
       id: /bot_id
+    account: /team_id
   destinations:
     - type: websocket
       open:

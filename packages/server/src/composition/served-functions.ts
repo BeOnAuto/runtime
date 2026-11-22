@@ -41,16 +41,26 @@ async function forecasterServedOn(
   return foldedBeforeItRuns({ capability, folders, database });
 }
 
-interface WakingParts extends SocketsServing {
+interface WakingParts extends Pick<SocketsServing, 'store' | 'opens'> {
   readonly subscriptions: Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptions'];
+  readonly tools: Pick<SocketsServing, 'secrets'> & { readonly now?: SocketsServing['now'] };
+  readonly computation: Pick<ServedWiring['computation'], 'pool'>;
 }
 
 function wakeUpsOf(
   runtime: ServingRuntime,
   settings: ServedSettings,
-  { subscriptions, ...sockets }: WakingParts,
+  { subscriptions, tools, computation, store, opens }: WakingParts,
 ): readonly ReturnType<typeof socketsOfTheServer>[] {
-  const following = subscriptions.wakeUpsOver({ streams: sockets.store.database.store });
+  const following = subscriptions.wakeUpsOver({ streams: store.database.store });
+  const sockets = {
+    store,
+    opens,
+    secrets: tools.secrets,
+    identities: subscriptions.identities,
+    filters: computation.pool.evaluations.filters,
+    now: tools.now ?? Date.now,
+  };
   return [socketsOfTheServer(runtime, settings, sockets), ...following];
 }
 
@@ -96,7 +106,7 @@ export async function functionsServedBy(
       capabilityOperations: [generation],
       dueWork: lists.dueWork,
       consumers: [...lists.consumers, subscriptions.consumer],
-      wakeUps: wakeUpsOf(runtime, settings, { store: projections.store, secrets: tools.secrets, opens, subscriptions }),
+      wakeUps: wakeUpsOf(runtime, settings, { store: projections.store, opens, subscriptions, tools, computation }),
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

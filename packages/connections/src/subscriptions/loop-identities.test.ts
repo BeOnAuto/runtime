@@ -40,10 +40,15 @@ const ofEachBoard = {
   ],
 };
 
-const boards = providersOf(
-  { ...tracker, name: 'boards', events: { types: [commented], identity: viewing, destinations: [ofEachBoard] } },
-  { ...tracker, events: { destinations: [ofEachSubscription] } },
-);
+const boardsEntry = {
+  ...tracker,
+  name: 'boards',
+  events: { types: [commented], identity: viewing, destinations: [ofEachBoard] },
+};
+
+const trackerEntry = { ...tracker, events: { destinations: [ofEachSubscription] } };
+
+const boards = providersOf(boardsEntry, trackerEntry);
 
 function connected(connection: string, by = 'person:ada') {
   return { type: 'connection_connected', data: { connection, connected_by: { id: by, name: 'Ada' } } } as const;
@@ -95,7 +100,9 @@ function aService() {
     callOnce: ({ reference }) =>
       Effect.sync(() => {
         sent.push(reference.tool);
-        return answered({ data: { viewer: { handle_id: 'h-7', label: 'sam' } } });
+        return answered({
+          data: { viewer: { handle_id: 'h-7', label: 'sam' }, space: { key: 'sp-3', label: 'North' } },
+        });
       }),
     requestOnce: ({ method }) =>
       Effect.sync(() => {
@@ -158,6 +165,44 @@ describe('a round through a connection whose entry declares how to ask the accou
     expect(await identifiedIn(registry)).toMatchObject([
       { connected_at: connectedAt },
       { connected_at: connectedAgainAt },
+    ]);
+  });
+});
+
+const inItsSpace = { ...viewing, account: '/data/space/key' };
+
+const spaces = providersOf(
+  { ...boardsEntry, name: 'spaces', events: { ...boardsEntry.events, identity: inItsSpace } },
+  boardsEntry,
+  trackerEntry,
+);
+
+describe('a round through a connection whose entry says where the same answer names the account it is in', () => {
+  it('records the account it acts as and the account it is in as two members of one fact, by id alone, and the first alone for an entry that says nothing of the second', async () => {
+    const registry = await registryOf(
+      [addedAt, [added[0], addedFact('connection-5', 'spaces', 'spaces')]],
+      [connectedAt, [connected('connection-1'), connected('connection-5')]],
+    );
+    const parts = {
+      ...partsOver(registry, aService().tools),
+      providers: spaces,
+      triggersIn: () =>
+        Effect.succeed([
+          { connection: 'boards', type: commented.type, subject: 'B0SITE' },
+          { connection: 'spaces', type: commented.type, subject: 'B0SITE' },
+        ]),
+    };
+    await Effect.runPromise(subscriptionLoopOf(subscriptionLoopPortsOf(parts))(alpha));
+
+    expect(await identifiedIn(registry)).toEqual([
+      { connection: 'connection-1', connected_at: connectedAt, user: { id: 'h-7', name: 'sam' }, by: 'runtime' },
+      {
+        connection: 'connection-5',
+        connected_at: connectedAt,
+        user: { id: 'h-7', name: 'sam' },
+        account: { id: 'sp-3' },
+        by: 'runtime',
+      },
     ]);
   });
 });

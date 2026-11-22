@@ -6,6 +6,7 @@ import type { RecordedConnection } from '../registry/connection.ts';
 import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import { holdsItUnrefused } from '../sockets/socket-holders.ts';
+import { identityOwedBy } from './owed-identities.ts';
 
 export interface LoopConnectionsParts {
   readonly registry: Pick<StreamReader, 'load'>;
@@ -35,27 +36,18 @@ function declaredFor(providers: ProviderList, { provider, events }: RecordedConn
   return Option.match(asGivenByHand(events), { onNone: () => [], onSome: ({ destinations }) => destinations });
 }
 
-function identityOwedBy(
-  providers: ProviderList,
-  { connection, identified }: KeptConnection,
-): Pick<LoopConnection, 'identify'> {
-  const identity = providerFoundBy(providers, connection.provider)?.entry.events?.identity;
-  return identity === undefined || identified !== undefined || connection.status !== 'connected'
-    ? {}
-    : { identify: identity };
-}
-
 export function loopConnectionOf(providers: ProviderList, kept: KeptConnection): LoopConnection {
   const { connection } = kept;
   const { id, name, connected_at: connectedAt, account } = connection;
   const destinations = takenThrough(connection, declaredFor(providers, connection));
+  const identify = identityOwedBy(providers, kept);
   return {
     id,
     connection: name,
     ...(connectedAt === null ? {} : { connected: connectedAt }),
     ...(account === null ? {} : { account: account.id }),
     destinations,
-    ...identityOwedBy(providers, kept),
+    ...(identify === undefined ? {} : { identify }),
   };
 }
 

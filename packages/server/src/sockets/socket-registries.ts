@@ -43,7 +43,7 @@ const registryWords = {
 } as const;
 
 export function memberKeyOf({ org, holder }: SocketMember): string {
-  return JSON.stringify([org, holder.connection, holder.connectedAt, holder.credential]);
+  return JSON.stringify([org, holder.connection, holder.connectedAt, holder.credential, holder.account ?? null]);
 }
 
 function openingOf({ destination, failureCodes }: SocketHolder, credential: Redacted.Redacted): SocketOpening {

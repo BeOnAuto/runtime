@@ -125,6 +125,7 @@ export interface ConnectionIdentification {
   readonly connection: string;
   readonly connected_at: string;
   readonly user: IdentifiedUser;
+  readonly account?: Account;
 }
 
 export interface ConnectionReconnection {

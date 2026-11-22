@@ -11,12 +11,13 @@ function isUnidentifiedAt(kept: KeptConnection, connectedAt: string): boolean {
 }
 
 export function decideIdentification(
-  { connection, connected_at: connectedAt, user }: ConnectionIdentification,
+  { connection, connected_at: connectedAt, user, account }: ConnectionIdentification,
   registry: Registry,
 ): Result.Result<readonly ConnectionEvent[], NotFound> {
+  const named = account === undefined ? {} : { account };
   return Result.map(keptConnectionOf(registry, connection), (kept): readonly ConnectionEvent[] =>
     isUnidentifiedAt(kept, connectedAt)
-      ? [{ type: 'connection_identified', data: { connection, connected_at: connectedAt, user } }]
+      ? [{ type: 'connection_identified', data: { connection, connected_at: connectedAt, user, ...named } }]
       : [],
   );
 }

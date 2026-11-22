@@ -251,7 +251,7 @@ function evolvedConnection(
     return settingAfter(kept, event);
   }
   if (event.type === 'connection_identified') {
-    return { ...kept, identified: identifiedAfter(kept.identified, kept.connection, event) };
+    return identifiedAfter(kept, event);
   }
   if (isOfItsSealedValues(event)) {
     return withItsSealedValues(kept, event);

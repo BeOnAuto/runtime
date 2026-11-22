@@ -6,8 +6,8 @@ import type { Destination } from '../events/destination-fields.ts';
 import { subscriptionLoopOf } from '../subscriptions/subscription-loop.ts';
 import type {
   Asker,
+  Identification,
   IdentifiedConnection,
-  IdentifiedUser,
   LoopConnection,
   MadeSubscription,
   Positions,
@@ -183,9 +183,8 @@ function takingAStep(records: SubscriptionRecords, stepMs: number | undefined): 
       };
 }
 
-interface Identified {
+interface Identified extends Identification {
   readonly connection: IdentifiedConnection;
-  readonly user: IdentifiedUser;
 }
 
 export interface Loop {
@@ -223,9 +222,9 @@ export function loopOver(
 }
 
 function identifiedIn(loop: Loop): SubscriptionLoopPorts['identified'] {
-  return (_playbook, { id, connected }, user) =>
+  return (_playbook, { id, connected }, identification) =>
     Effect.sync(() => {
-      loop.identifies({ connection: { id, connected }, user });
+      loop.identifies({ connection: { id, connected }, ...identification });
     });
 }
 

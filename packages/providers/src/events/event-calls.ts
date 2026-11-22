@@ -12,9 +12,9 @@ import { Result, Schema } from 'effect';
 
 import { textsIn } from './json-texts.ts';
 
-const ArgumentsSchema = Schema.Record(Schema.String, Schema.Json);
+export const ArgumentsSchema = Schema.Record(Schema.String, Schema.Json);
 
-const callFields = {
+export const callFields = {
   tool: Schema.optionalKey(
     Schema.String.annotate({
       description: 'A tool of the connection that makes the call, named as the server lists it',
@@ -73,31 +73,6 @@ export const RenewSchema = Schema.Struct({
 
 export const UnsubscribeSchema = Schema.Struct(callFields).annotate({
   description: 'The call that removes a subscription, without which none is made',
-});
-
-export const IdentitySchema = Schema.Struct({
-  tool: callFields.tool,
-  with: Schema.optionalKey(
-    ArgumentsSchema.annotate({ description: 'Beside tool, its arguments, written out as they are' }),
-  ),
-  method: callFields.method,
-  url: Schema.optionalKey(
-    Schema.String.annotate({ description: 'Beside method, the https URL of the request, written out whole' }),
-  ),
-  body: Schema.optionalKey(
-    ArgumentsSchema.annotate({
-      description: 'Beside method and url, the JSON body of the request, written out as it is',
-    }),
-  ),
-  identified: Schema.Struct({
-    id: Schema.String.annotate({ description: "A JSON Pointer into what the call answered, to the account's id" }),
-    name: Schema.optionalKey(
-      Schema.String.annotate({ description: "A JSON Pointer to the account's name, where the answer gives one" }),
-    ),
-  }).annotate({ description: 'Where what the call answered names that account' }),
-}).annotate({
-  description:
-    'The call that asks the service which account the connection acts as, a tool of the connection or an HTTP request',
 });
 
 type Call = typeof UnsubscribeSchema.Type;
