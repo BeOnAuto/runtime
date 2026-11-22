@@ -115,9 +115,18 @@ const aPullRequest = {
 
 const aClosedPullRequest = { ...aPullRequest, closed_at: '2026-11-20T09:30:00Z', merged: true };
 
-function readOf(event: string, body: Readonly<Record<string, Schema.Json>>) {
+type Body = Readonly<Record<string, Schema.Json>>;
+
+function readOf(event: string, body: Body) {
   return arrivalReadingOf(githubsWebhook, aDeliveryOfGitHub(event, { ...body, repository: theRepository }));
 }
+
+const aDeliveryOfEachType: readonly (readonly [string, Body])[] = [
+  ['issues', { action: 'opened', issue: anOpenedIssue, sender: theAuthor }],
+  ['issue_comment', { action: 'created', issue: anOpenedIssue, comment: aComment }],
+  ['pull_request', { action: 'opened', number: 1348, pull_request: aPullRequest }],
+  ['pull_request', { action: 'closed', number: 1348, pull_request: aClosedPullRequest }],
+];
 
 const inTheRepository = { subject: 'octo-org/hello-world' };
 
@@ -149,6 +158,20 @@ const aCommentAdded = {
   },
 };
 
+const aPullRequestOpened = {
+  type: 'com.github.pull_request.opened',
+  id: 'PR_kwDOABCDEF5Q7r6s',
+  time: '2026-11-20T09:20:00Z',
+  ...inTheRepository,
+  data: {
+    number: 1348,
+    title: 'Fix the bug',
+    body: 'Closes #1347',
+    author: 'octocat',
+    html_url: 'https://github.com/octo-org/hello-world/pull/1348',
+  },
+};
+
 const aPullRequestClosed = {
   type: 'com.github.pull_request.closed',
   id: 'PR_kwDOABCDEF5Q7r6s/2026-11-20T09%3A30%3A00Z',
@@ -172,15 +195,10 @@ const reported = [
 
 describe('the event a delivery GitHub’s webhook sends is', () => {
   it('a new issue, a new comment, a new pull request or a closed one, in the repository it happened in', () => {
-    expect([
-      readOf('issues', { action: 'opened', issue: anOpenedIssue, sender: theAuthor }),
-      readOf('issue_comment', { action: 'created', issue: anOpenedIssue, comment: aComment }),
-      readOf('pull_request', { action: 'opened', number: 1348, pull_request: aPullRequest }).event,
-      readOf('pull_request', { action: 'closed', number: 1348, pull_request: aClosedPullRequest }),
-    ]).toEqual([
+    expect(aDeliveryOfEachType.map(([event, body]) => readOf(event, body))).toEqual([
       { event: { ...anIssueOpened, actor: '1' } },
       { wake: { subscription: hookId }, event: aCommentAdded },
-      expect.objectContaining({ type: 'com.github.pull_request.opened', id: 'PR_kwDOABCDEF5Q7r6s' }),
+      { event: aPullRequestOpened },
       { event: aPullRequestClosed },
     ]);
   });
@@ -217,6 +235,16 @@ describe('the event a delivery GitHub’s webhook sends is', () => {
     ];
 
     expect(passedOver).toEqual([{}, { wake: { subscription: hookId } }, {}, {}, {}]);
+  });
+});
+
+describe('each type GitHub’s entry lists', () => {
+  it('is read from a delivery of a kind its webhook asks GitHub for when it subscribes', () => {
+    const read = aDeliveryOfEachType.map(([kind, body]) => readOf(kind, body).event?.type);
+    const kinds = aDeliveryOfEachType.map(([kind]) => kind);
+
+    expect(read).toEqual(reported);
+    expect(githubsWebhook.subscribe?.body?.['events']).toEqual(expect.arrayContaining(kinds));
   });
 });
 

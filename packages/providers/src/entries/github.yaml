@@ -26,9 +26,9 @@ credentials:
       Make a token at [GitHub](https://github.com/settings/personal-access-tokens/new), under **Settings**, **Developer
       settings**, **Personal access tokens**, **Fine-grained tokens**. As **Resource owner**, choose the account or
       organization that owns the repositories, and under **Repository access** select the repositories your functions
-      use. Under **Permissions**, give **Contents** read-only access, and **Issues** and **Pull requests** read and
-      write access. An organization that requires approval keeps the token pending, reading public resources alone,
-      until an organization administrator approves it. The token starts with `github_pat_`.
+      use. Under **Permissions**, give **Contents** read-only access, and **Issues**, **Pull requests** and
+      **Webhooks** read and write access. An organization that requires approval keeps the token pending, reading
+      public resources alone, until an organization administrator approves it. The token starts with `github_pat_`.
     key_page: https://github.com/settings/personal-access-tokens/new
     key_page_title: Open GitHub's key page
     steps:
@@ -38,7 +38,7 @@ credentials:
           - Under **Resource owner**, choose the account or organization that owns the repositories.
           - Under **Repository access**, choose **Only select repositories** and pick the ones your playbooks use.
           - Under **Permissions**, set **Contents** to read-only.
-          - Set **Issues** and **Pull requests** to read and write.
+          - Set **Issues**, **Pull requests** and **Webhooks** to read and write.
           - Under **Expiration**, choose how long the token lasts. When it ends, reconnect with a new token.
 
           If the organization that owns the repositories requires approval, GitHub keeps the token pending until an owner of that organization approves it. Until then, the token can read only what is public on GitHub.
@@ -157,7 +157,7 @@ events:
         body:
           name: web
           active: true
-          events: [issue_comment, pull_request_review, pull_request_review_comment]
+          events: [issue_comment, pull_request_review, pull_request_review_comment, issues, pull_request]
           config:
             url: '{{ webhook_url }}'
             content_type: json
