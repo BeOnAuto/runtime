@@ -1,7 +1,8 @@
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { describe, expect, it } from 'vitest';
 
-import { guideFiles, guideOfThePage } from '../testing/guide-shelves.ts';
+import { renderedGuidePages, type GuidePages } from '../guide-pages/guide-pages.ts';
+import { everyTypeAndInteraction, guideFiles, guideOfThePage, servedWithEverything } from '../testing/guide-shelves.ts';
 import { guideShelfFrom, type ServedType } from './served-guides.ts';
 
 function withChanged(path: string, changed: (text: string) => string): ShippedFiles {
@@ -73,6 +74,26 @@ describe('a page that marks a passage for another reader', () => {
   it('cannot be served when its marking is broken', async () => {
     await expect(servedFrom(withChanged('reference/workflow-format.md', withABrokenMarking))).rejects.toThrow(
       /^The page reference\/workflow-format\.md cannot be served as a guide\. The line "A workflow coordinates a playbook's functions through steps<span data-audience="…" names no audience a page may name in data-audience="admin"/u,
+    );
+  });
+});
+
+describe('the guides of a server given the renditions of its pages', () => {
+  it('take the text of every page an agent reads from them, and are the guides it renders itself when they render as it does', async () => {
+    const asked: string[] = [];
+    const renditions: GuidePages = {
+      ...renderedGuidePages,
+      forTheAgent: (path, written, variables) => {
+        asked.push(path);
+        return renderedGuidePages.forTheAgent(path, written, variables);
+      },
+    };
+
+    const shelf = await guideShelfFrom(guideFiles, everyTypeAndInteraction, { pages: true, renditions });
+
+    expect(JSON.stringify(shelf)).toBe(JSON.stringify(servedWithEverything));
+    expect(asked).toEqual(
+      expect.arrayContaining(['concepts/terminology.md', 'reference/workflow-format.md', 'reference/page-format.md']),
     );
   });
 });

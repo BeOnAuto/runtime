@@ -2,11 +2,11 @@ import { makeModelAccess, type ModelRequest } from '@on.auto/reasoning';
 import { scriptedLanguageModel, type ScriptedReplies } from '@on.auto/reasoning/testing';
 import { Effect } from 'effect';
 
-import { compositionRootWith } from '../../composition/composition-root.ts';
 import { heardFrom, sleepsTold, somethingHappened } from '../waiting/happenings.ts';
 import { statementsInHand, steppedServerClock, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 export { testServersStartAt } from '../waiting/stepped-server-clock.ts';
 import { requestThrough, type Answering, type RequestOptions, type TestResponse } from './http-client.ts';
+import { compositionOfATestServer } from './prepared-parts.ts';
 import { composedOnTheClock, composedWithTheParts, offloadingSetBy, type ServedParts } from './served-parts.ts';
 import { startedOver, type StartedServer } from './started-servers.ts';
 import { patientThreadPool } from './worker-pools.ts';
@@ -98,7 +98,7 @@ function scriptedAccess(
   fetch: Fetch,
   generating: ScriptedModel,
   admit: ServedParts['admit'],
-): Parameters<typeof compositionRootWith>[0] {
+): Parameters<typeof compositionOfATestServer>[0] {
   return (settings) =>
     Effect.map(makeModelAccess(settings, { fetch }), (access) => ({
       ...access,
@@ -130,18 +130,18 @@ export async function servingReasoning(
     keptOutside,
     key,
     over,
+    preparingItself,
     ...given
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const clock = clockOf(given);
-  const composing = { ...given, clock };
   const scripted = scriptedLanguageModel(...replies);
   const generating = toldOfModelCalls(scripted.languageModel);
-  const composition = compositionRootWith(scriptedAccess(fetch, generating, admit), {
-    programPoolOf,
-    ...composing,
-    clock: sleepsTold(clock),
-  });
+  const composition = compositionOfATestServer(
+    scriptedAccess(fetch, generating, admit),
+    { programPoolOf, ...given, clock: sleepsTold(clock) },
+    preparingItself,
+  );
   const composed = composedWithTheParts(composedOnTheClock(composition, clock.now), {
     ledgerOver: countedOver(clock, ledgerOver),
     meter,

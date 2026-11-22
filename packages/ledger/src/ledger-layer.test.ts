@@ -6,10 +6,10 @@ import { Cause, Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ledgerLayoutFloor } from './layout/ledger-layout.ts';
-import { aSQLiteFileInLayout, ledgerLayer } from './sqlite.ts';
+import { aSQLiteFileInLayout, ledgerLayer, sqliteLedgerFile } from './sqlite.ts';
 import { openLedgerWith } from './testing/open-ledger.ts';
 import { tally, tallyInterruptedBy } from './testing/tally.ts';
-import { temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';
+import { imageOfTheDatabaseIn, temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';
 
 const databases: TemporaryDatabase[] = [];
 
@@ -34,6 +34,14 @@ function opensTheFile(descriptor: number, device: number, inode: number): boolea
   } catch {
     return false;
   }
+}
+
+async function imageOfALedgerHolding(amounts: readonly number[]): Promise<Uint8Array> {
+  const fileName = aDatabaseFile();
+  const template = await openLedgerWith(ledgerLayer({ fileName }));
+  await Effect.runPromise(template.ledger.execute(tallies, tally, amounts));
+  await template.dispose();
+  return imageOfTheDatabaseIn(fileName);
 }
 
 function failureToBuild(fileName: string): Promise<Cause.Cause<never>> {
@@ -154,5 +162,36 @@ describe('a ledger in a private in-memory database', () => {
       ],
       directory: false,
     });
+  });
+});
+
+describe('a ledger in a private in-memory database opened from the image of a ledger', () => {
+  it('holds what the image holds, each ledger opened from it its own, and leaves the image as it was', async () => {
+    const image = await imageOfALedgerHolding([2, 3]);
+    const before = Buffer.from(image);
+    const first = await openLedgerWith(sqliteLedgerFile(':memory:', image).ledgerLayer());
+    await Effect.runPromise(first.ledger.execute(tallies, tally, [1]));
+    const second = await openLedgerWith(sqliteLedgerFile(':memory:', image).ledgerLayer());
+
+    const loaded = await Effect.runPromise(
+      Effect.all([first.ledger.load(tallies, tally), second.ledger.load(tallies, tally)]),
+    );
+    await Promise.all([first.dispose(), second.dispose()]);
+
+    expect(loaded).toEqual([
+      { state: 6, version: 3 },
+      { state: 5, version: 2 },
+    ]);
+    expect(Buffer.from(image).equals(before)).toBe(true);
+  });
+
+  it('is never what a ledger on a database file opens: it opens its file', async () => {
+    const image = await imageOfALedgerHolding([2, 3]);
+    const onAFile = await openLedgerWith(sqliteLedgerFile(aDatabaseFile(), image).ledgerLayer());
+
+    const loaded = await Effect.runPromise(onAFile.ledger.load(tallies, tally));
+    await onAFile.dispose();
+
+    expect(loaded).toEqual({ state: 0, version: 0 });
   });
 });

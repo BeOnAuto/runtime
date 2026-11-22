@@ -3,9 +3,23 @@ import type { AppendObserver } from '@on.auto/ledger';
 import type { MiddlewareHandler } from 'hono';
 
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
+import type { Served } from '../../server-options/server-options.ts';
 import type { Telemetry } from '../../telemetry/telemetry.ts';
 import { inAWaitsRead, readByAWaitHeader, somethingHappened } from '../waiting/happenings.ts';
 import type { WorkInHand } from '../waiting/work-in-hand.ts';
+
+export function servingAlso(composed: ComposedServerOptions, servedAlso: Partial<Served>): ComposedServerOptions {
+  return {
+    ...composed,
+    composed: async (settings, telemetry, shippedFiles) => {
+      const composing = await composed.composed(settings, telemetry, shippedFiles);
+      return {
+        ...composing,
+        serve: async (runtime, ownOrigin) => ({ ...(await composing.serve(runtime, ownOrigin)), ...servedAlso }),
+      };
+    },
+  };
+}
 
 /** A request the server answered, as its first middleware saw the answer leave. */
 interface AnsweredRequest {

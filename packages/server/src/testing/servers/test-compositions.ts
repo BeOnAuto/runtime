@@ -1,14 +1,14 @@
 import { Effect, Layer } from 'effect';
 
-import { compositionRootWith, type CompositionParts } from '../../composition/composition-root.ts';
+import type { CompositionParts } from '../../composition/composition-root.ts';
 import { loggedModelAccess, type ModelAccessOf } from '../../composition/served-reasoning.ts';
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
-import type { Served } from '../../server-options/server-options.ts';
 import { heardFrom, sleepsTold } from '../waiting/happenings.ts';
 import { steppedServerClock, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import { statementsInHand, workInHand } from '../waiting/work-in-hand.ts';
-import { composedOnTheClock, composedWithTheLedgerOver } from './served-parts.ts';
-import { toldOf, type ToldComposition } from './told-composition.ts';
+import { compositionOfATestServer } from './prepared-parts.ts';
+import { composedOnTheClock, composedWithTheLedgerOver, type ServedParts } from './served-parts.ts';
+import { servingAlso, toldOf, type ToldComposition } from './told-composition.ts';
 
 export { patientThreadPool } from './worker-pools.ts';
 
@@ -16,12 +16,13 @@ export interface TestCompositionParts extends Omit<CompositionParts, 'clock'> {
   /** The models the server reaches, the shipped access unless given. */
   readonly modelAccessOf?: ModelAccessOf;
   /** Ports the server is served beside what it composes, as a later composition gives them. */
-  readonly servedAlso?: Partial<Served>;
+  readonly servedAlso?: Parameters<typeof servingAlso>[1];
   /**
    * Why the server runs on the system's clock in place of a stepped one. Time a test does not step is a wait on the real
    * clock, so only what is itself the subject (a clock of a process's own, say) is a reason; convenience is not.
    */
   readonly onTheSystemClockBecause?: string;
+  readonly preparingItself?: ServedParts['preparingItself'];
 }
 
 /** The shipped composition, told to the waiting tests, with the stepped clock it runs on unless its test said why not. */
@@ -29,19 +30,6 @@ export interface TestComposition extends ComposedServerOptions {
   readonly clock: SteppedServerClock | undefined;
   readonly answered: ToldComposition['answered'];
   readonly arrived: ToldComposition['arrived'];
-}
-
-function servingAlso(composed: ComposedServerOptions, servedAlso: Partial<Served>): ComposedServerOptions {
-  return {
-    ...composed,
-    composed: async (settings, telemetry, shippedFiles) => {
-      const composing = await composed.composed(settings, telemetry, shippedFiles);
-      return {
-        ...composing,
-        serve: async (runtime, ownOrigin) => ({ ...(await composing.serve(runtime, ownOrigin)), ...servedAlso }),
-      };
-    },
-  };
 }
 
 /**
@@ -82,16 +70,16 @@ export function testComposition({
   onTheSystemClockBecause,
   goals = true,
   goalsResults = true,
+  preparingItself,
   servedAlso,
   ...parts
 }: TestCompositionParts = {}): TestComposition {
   const clock = onTheSystemClockBecause === undefined ? steppedServerClock() : undefined;
-  const composition = compositionRootWith(modelAccessOf, {
-    goals,
-    goalsResults,
-    ...parts,
-    ...(clock === undefined ? {} : { clock: sleepsTold(clock) }),
-  });
+  const composition = compositionOfATestServer(
+    modelAccessOf,
+    { goals, goalsResults, ...parts, ...(clock === undefined ? {} : { clock: sleepsTold(clock) }) },
+    preparingItself,
+  );
   const served = servedAlso === undefined ? composition : servingAlso(composition, servedAlso);
   const told = toldOf(served, clock === undefined ? workInHand() : clock.inHand);
   return {

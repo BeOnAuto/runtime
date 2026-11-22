@@ -80,13 +80,14 @@ interface LedgerWiring extends StartWiring {
   readonly appended?: AppendObserver | undefined;
   readonly appends?: AppendSignal;
   readonly floor?: number;
+  readonly ledgerImage?: Parameters<typeof ledgerDatabaseOf>[2];
 }
 
 export async function ledgerOpenedAtStart(
   settings: Parameters<typeof madeAtStart>[0],
-  { appended, appends, floor, ...wiring }: LedgerWiring,
+  { appended, appends, floor, ledgerImage, ...wiring }: LedgerWiring,
 ): Promise<LedgerAtStart> {
-  const database = await ledgerDatabaseOf(settings, appended);
+  const database = await ledgerDatabaseOf(settings, appended, ledgerImage);
   const made = await madeAtStart(settings, wiring);
   const ledgerLayer = ledgerLayerFor(settings, database, {
     declared: made.prediction.provided.capability.facts.onRuns,

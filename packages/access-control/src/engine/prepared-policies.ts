@@ -15,6 +15,8 @@ export interface PreparedPolicies {
   readonly policies: number;
 }
 
+export type PreparePolicies = (cedar: Cedar, texts: PolicyTexts) => PreparedPolicies;
+
 interface Refusal {
   readonly policyId: string;
   readonly error: DescribedError;

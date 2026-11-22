@@ -23,6 +23,7 @@ export interface NodeSqliteClientOptions {
   readonly skipDatabasePragmas?: boolean;
   readonly minimumSQLiteVersion?: string;
   readonly serializer: JSONSerializer;
+  readonly image?: Readonly<Uint8Array>;
 }
 
 export interface CommandOptions {
@@ -87,6 +88,9 @@ export function nodeSqliteClient(options: NodeSqliteClientOptions): NodeSqliteCl
   };
   const connected = (): Promise<void> => {
     database.open();
+    if (options.image !== undefined) {
+      database.deserialize(options.image);
+    }
     return connectedWith({ ...options, database, answered, pragmas });
   };
   return {

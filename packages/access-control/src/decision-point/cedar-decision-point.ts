@@ -11,7 +11,7 @@ import { Cause, Effect, Predicate } from 'effect';
 import { decidedFailingClosed, messageOf } from '../engine/cedar-decisions.ts';
 import { cedarCallOf, orgOfResource } from '../engine/cedar-request.ts';
 import { cedarOf, type CedarModuleSource } from '../engine/cedar.ts';
-import { preparedPolicies, type PreparedPolicies } from '../engine/prepared-policies.ts';
+import { preparedPolicies, type PreparedPolicies, type PreparePolicies } from '../engine/prepared-policies.ts';
 import { accessSchemaFile, builtInPoliciesFile } from '../files/access-control-files.ts';
 import type { RoleAssignment, RoleAssignments } from '../roles/role-assignments.ts';
 import { accessSchemaOf, type DeclaredAction } from '../schema/access-schema.ts';
@@ -21,6 +21,7 @@ export interface CedarDecisionPointParts {
   readonly files: ShippedFiles;
   readonly operations: readonly DeclaredAction[];
   readonly roles: RoleAssignments;
+  readonly preparing?: PreparePolicies;
 }
 
 export const loadedMessage = 'The policy decision point loaded its engine and its policies';
@@ -30,13 +31,18 @@ export const unloadedMessage =
 
 export const unreadRoles = 'The roles of the principal could not be read';
 
-async function loaded({ module, files, operations }: CedarDecisionPointParts): Promise<PreparedPolicies> {
+async function loaded({
+  module,
+  files,
+  operations,
+  preparing = preparedPolicies,
+}: CedarDecisionPointParts): Promise<PreparedPolicies> {
   const [compiled, declared, policies] = await Promise.all([
     module(),
     files.text(accessSchemaFile),
     files.text(builtInPoliciesFile),
   ]);
-  return preparedPolicies(cedarOf(compiled), {
+  return preparing(cedarOf(compiled), {
     schema: accessSchemaOf(declared, allPermissions, operations),
     policies,
   });

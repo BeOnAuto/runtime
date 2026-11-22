@@ -54,7 +54,7 @@ async function startedBy<R, Running>(
   starting: (given: Starting<R>) => Promise<Running>,
 ): Promise<Running> {
   const [settings, pageStyle] = await Promise.all([
-    settingsAtStart(environment, options.shippedFiles, options.defaultIdentityProvider),
+    settingsAtStart(environment, options.shippedFiles, options.defaultIdentityProvider, options.shippedSettings),
     readPageStyle(options.shippedFiles),
   ]);
   const { mode, answering, companySignIn } = await admittingBy(settings);

@@ -41,8 +41,8 @@ export function debugStyleOnDisk(): Promise<DebugStyle> {
   return readDebugStyle(shippedFilesOnDisk(apiShippedRoots()));
 }
 
-export async function debugPageServer(): Promise<DebugPageServer> {
-  const debug = debugRoutes(debugServing, await debugStyleOnDisk());
+export async function debugPageServer(renditions?: Parameters<typeof debugRoutes>[2]): Promise<DebugPageServer> {
+  const debug = debugRoutes(debugServing, await debugStyleOnDisk(), renditions);
   const server = await operationServer({ operations: debugOperations, routes: [debug] });
   const listening = listenInProcess(server.handler);
   const fetched = fetcherOf(server);

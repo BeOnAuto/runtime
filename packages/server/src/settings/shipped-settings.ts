@@ -14,6 +14,7 @@ export async function settingsAtStart(
   environment: Environment,
   shippedFiles: ShippedFiles,
   defaults?: Parameters<typeof readSettings>[2],
+  shipped?: ShippedSettings,
 ): Promise<Settings> {
-  return readSettings(environment, await readShippedSettings(shippedFiles), defaults);
+  return readSettings(environment, shipped ?? (await readShippedSettings(shippedFiles)), defaults);
 }

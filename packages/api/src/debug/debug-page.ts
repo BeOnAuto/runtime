@@ -1,5 +1,4 @@
 import { html, raw } from 'hono/html';
-import { marked } from 'marked';
 
 import type { Guide } from '../guides/guide-shelf.ts';
 import type { AgentSurface, ShownPrompt, SurfaceConnection, SurfaceShelf } from './agent-surface.ts';
@@ -8,9 +7,7 @@ import type { ShownArgument, ShownTool, ToolGroup } from './shown-tools.ts';
 
 type Markup = ReturnType<typeof html>;
 
-function markdownOf(text: string): Markup {
-  return raw(marked.parse(text, { async: false }));
-}
+type AsHtml = (markdown: string) => string;
 
 function idOf(prefix: string, part: string): string {
   return `${prefix}${part}`;
@@ -117,7 +114,7 @@ function promptArgumentsOf(prompt: ShownPrompt): Markup | string {
   </ul>`;
 }
 
-function promptOf(prefix: string, prompt: ShownPrompt): Markup {
+function promptOf(prefix: string, prompt: ShownPrompt, asHtml: AsHtml): Markup {
   return html`<article class="prompt" id="${idOf(prefix, `prompt-${prompt.name}`)}" data-title="${prompt.name}">
     <h3>${prompt.name}</h3>
     <p class="subtitle">${prompt.title}</p>
@@ -125,13 +122,13 @@ function promptOf(prefix: string, prompt: ShownPrompt): Markup {
     ${promptArgumentsOf(prompt)}
     <details class="raw">
       <summary>What the client receives when it is picked</summary>
-      ${prompt.texts.map((text) => html`<div class="md">${markdownOf(text)}</div>`)}
+      ${prompt.texts.map((text) => html`<div class="md">${raw(asHtml(text))}</div>`)}
       ${prompt.attached.map((uri) => html`<p class="subtitle">Attached resource: <code>${uri}</code></p>`)}
     </details>
   </article>`;
 }
 
-function promptsOf(connection: SurfaceConnection): Markup {
+function promptsOf(connection: SurfaceConnection, asHtml: AsHtml): Markup {
   const { prefix, prompts, path } = connection;
   return html`<section class="view" id="${idOf(prefix, 'prompts')}" data-title="Prompts">
     <p class="eyebrow">Prompts</p>
@@ -141,22 +138,22 @@ function promptsOf(connection: SurfaceConnection): Markup {
       where the connection lists every tool it calls. Placeholders in braces stand for the person’s words.
     </p>
     ${prompts.length === 0 ? html`<p>This connection offers no prompts.</p>` : ''}
-    ${prompts.map((prompt) => promptOf(prefix, prompt))}
+    ${prompts.map((prompt) => promptOf(prefix, prompt, asHtml))}
   </section>`;
 }
 
-function connectionOf(connection: SurfaceConnection, version: string): Markup {
+function connectionOf(connection: SurfaceConnection, version: string, asHtml: AsHtml): Markup {
   return html`<div class="connection" data-connection="${connection.key}">
     <h2 class="connection-name reading-only">${connection.label}, <code>${connection.path}</code></h2>
-    ${instructionsOf(connection, version)} ${toolsOf(connection)} ${promptsOf(connection)}
+    ${instructionsOf(connection, version)} ${toolsOf(connection)} ${promptsOf(connection, asHtml)}
   </div>`;
 }
 
-function guideOf(prefix: string, guide: Guide): Markup {
+function guideOf(prefix: string, guide: Guide, asHtml: AsHtml): Markup {
   return html`<section class="view" id="${idOf(prefix, `guide-${guide.name}`)}" data-title="${guide.name}">
     <p class="eyebrow">Guide · <code>get_guide({ guide: "${guide.name}" })</code></p>
     <p class="lead">${guide.description} The agent receives this as Markdown; this page renders it.</p>
-    <div class="md">${markdownOf(guide.text)}</div>
+    <div class="md">${raw(asHtml(guide.text))}</div>
     <details class="raw markdown">
       <summary>Raw Markdown</summary>
       <pre class="verbatim">${guide.text}</pre>
@@ -164,11 +161,11 @@ function guideOf(prefix: string, guide: Guide): Markup {
   </section>`;
 }
 
-function shelfOf(shelf: SurfaceShelf, labels: ReadonlyMap<string, string>): Markup {
+function shelfOf(shelf: SurfaceShelf, labels: ReadonlyMap<string, string>, asHtml: AsHtml): Markup {
   const holders = shelf.connections.map((key) => labels.get(key)).join(', ');
   return html`<div class="shelf" data-connections="${shelf.connections.join(' ')}" data-label="Guide">
     <h2 class="connection-name reading-only">Guides of ${holders}</h2>
-    ${shelf.guides.map((guide) => guideOf(shelf.prefix, guide))}
+    ${shelf.guides.map((guide) => guideOf(shelf.prefix, guide, asHtml))}
   </div>`;
 }
 
@@ -220,7 +217,7 @@ function switchOf(connection: SurfaceConnection): Markup {
   </li>`;
 }
 
-export function debugPageOf(surface: AgentSurface, head: string): Markup {
+export function debugPageOf(surface: AgentSurface, head: string, asHtml: AsHtml): Markup {
   const { connections, shelves, serverInfo } = surface;
   const labels = new Map(connections.map(({ key, label }) => [key, label]));
   return html`<!doctype html>
@@ -253,8 +250,8 @@ export function debugPageOf(surface: AgentSurface, head: string): Markup {
           </nav>
           <main>
             <div class="doc">
-              ${connections.map((connection) => connectionOf(connection, serverInfo.version))}
-              ${shelves.map((shelf) => shelfOf(shelf, labels))}
+              ${connections.map((connection) => connectionOf(connection, serverInfo.version, asHtml))}
+              ${shelves.map((shelf) => shelfOf(shelf, labels, asHtml))}
             </div>
           </main>
         </div>

@@ -56,6 +56,8 @@ export interface WorkflowParts
   readonly answerStores?: ServedCatalog['answerStores'];
   readonly eventStores?: Omit<NonNullable<ServedCatalog['eventStores']>, 'takeIn'> | undefined;
   readonly shippedFiles: ServedCatalog['shippedFiles'];
+  readonly guidePages?: ServedCatalog['guidePages'];
+  readonly preparingPolicies?: Parameters<typeof accessControlServing>[2]['preparingPolicies'];
 }
 
 function eventsTakenInBy(runtime: HostRuntime, parts: WorkflowParts): ServedCatalog['eventStores'] {
@@ -132,7 +134,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
   const runOperations = [defineListQueuedStarts(queued), defineSendRunEvent(runs, names)];
   const { catalog, directoryCatalog } = catalogsOf(parts, capabilities, runOperations);
   const dispatched = { catalogs: [catalog, directoryCatalog], host: hostOperations };
-  const { decisionPoint, callContext } = await accessControlServing(runtime, dispatched, shippedFiles);
+  const { decisionPoint, callContext } = await accessControlServing(runtime, dispatched, parts);
   const dispatcher = makeDispatcher([], { decidedBy: decisionPoint });
   const host = await openedHost(
     runtime,
@@ -156,6 +158,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     answerStores,
     eventStores: eventsTakenInBy(runtime, parts),
     shippedFiles,
+    guidePages: parts.guidePages,
   };
   return { routes: await routesFor(runtime, served), stopWork: host.stop, callContext };
 }

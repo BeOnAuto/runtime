@@ -4,6 +4,7 @@ import type { DispatcherServices } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
 import { exitDeadlineMs, shutdownTimeoutMs } from '../lifecycle/shutdown.ts';
+import type { ShippedSettings } from '../settings/served-settings.ts';
 import type { ServerOptions } from './server-options.ts';
 import { shippedRoots } from './shipped-roots.ts';
 
@@ -11,6 +12,15 @@ export type ServerServices = DispatcherServices | LedgerConnection | LedgerChore
 
 export type ComposedServerOptions = ServerOptions<ServerServices>;
 
-export function serverOptionsComposing<R>(composed: ServerOptions<R>['composed']): ServerOptions<R> {
-  return { composed, shutdownTimeoutMs, exitDeadlineMs, shippedFiles: shippedFilesOnDisk(shippedRoots) };
+export function serverOptionsComposing<R>(
+  composed: ServerOptions<R>['composed'],
+  shippedSettings?: ShippedSettings,
+): ServerOptions<R> {
+  return {
+    composed,
+    shutdownTimeoutMs,
+    exitDeadlineMs,
+    shippedFiles: shippedFilesOnDisk(shippedRoots),
+    ...(shippedSettings === undefined ? {} : { shippedSettings }),
+  };
 }

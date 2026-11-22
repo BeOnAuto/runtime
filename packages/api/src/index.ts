@@ -76,6 +76,7 @@ export {
   type RecipeWords,
 } from './guides/guide-shelf.ts';
 export { guideAddress, guideMediaType } from './guides/guide-resources.ts';
+export { renderedGuidePages, type GuidePages } from './guide-pages/guide-pages.ts';
 export { guideShelfFrom, type ServedType } from './guides/served-guides.ts';
 export { defaultsTypedIn, markingFaultsOf, withDefaultsWritten } from './guide-pages/agent-rendition.ts';
 export {

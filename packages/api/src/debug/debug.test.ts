@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { renderedGuidePages } from '../guide-pages/guide-pages.ts';
 import {
   debugPageServer,
   type DebugPageServer,
@@ -209,5 +210,23 @@ describe('what the page at /debug shows of each connection', () => {
     expect(text).toContain('Attached resource: <code>guide://notebook</code>');
     expect(text).toContain('Create a playbook in Auto with one function');
     expect(text).toContain('<p>This connection offers no prompts.</p>');
+  });
+});
+
+describe('the page at /debug, given how a guide is rendered as HTML', () => {
+  it('renders each guide and prompt through it, and is the page it renders itself when it renders as it does', async () => {
+    const rendered: string[] = [];
+    const renditions = {
+      ...renderedGuidePages,
+      asHtml: (markdown: string) => {
+        rendered.push(markdown);
+        return renderedGuidePages.asHtml(markdown);
+      },
+    };
+    const given = await debugPageServer(renditions);
+    await given.close();
+
+    expect(given.page.text).toBe(served.page.text);
+    expect(rendered).toEqual(expect.arrayContaining(debugServing.shelf.guides.map(({ text }) => text)));
   });
 });

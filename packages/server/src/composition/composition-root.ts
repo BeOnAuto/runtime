@@ -25,6 +25,10 @@ export interface CompositionParts {
   readonly loadAws?: NonNullable<Parameters<typeof signInAndStoresOpened>[1]['loadAws']>;
   /** How the documents of answers are read, in the pool of processes unless given. */
   readonly documents?: NonNullable<Parameters<MadeAtStart['registry']['openedIn']>[2]['documents']>;
+  readonly guidePages?: NonNullable<WorkflowParts['guidePages']>;
+  readonly preparingPolicies?: NonNullable<WorkflowParts['preparingPolicies']>;
+  readonly shippedSettings?: NonNullable<ComposedServerOptions['shippedSettings']>;
+  readonly ledgerImage?: NonNullable<Parameters<typeof ledgerOpenedAtStart>[1]['ledgerImage']>;
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -47,17 +51,23 @@ interface Serving {
   readonly goalsPortsOver?: ServedWiring['goalsPortsOver'];
   readonly loadAws?: Parameters<typeof signInAndStoresOpened>[1]['loadAws'];
   readonly documents?: Parameters<MadeAtStart['registry']['openedIn']>[2]['documents'];
+  readonly guidePages?: CompositionParts['guidePages'];
+  readonly preparingPolicies?: CompositionParts['preparingPolicies'];
 }
 
 function optionalPartsOf({
   clock,
   startingWork,
   consumersOf,
-}: Pick<Serving, 'clock' | 'startingWork' | 'consumersOf'>) {
+  guidePages,
+  preparingPolicies,
+}: Pick<Serving, 'clock' | 'startingWork' | 'consumersOf' | 'guidePages' | 'preparingPolicies'>) {
   return {
     ...(clock === undefined ? {} : { clock }),
     ...(startingWork === undefined ? {} : { startingWork }),
     ...(consumersOf === undefined ? {} : { consumersOf }),
+    ...(guidePages === undefined ? {} : { guidePages }),
+    ...(preparingPolicies === undefined ? {} : { preparingPolicies }),
   };
 }
 
@@ -181,17 +191,20 @@ export function compositionRootWith(
     goals = false,
     goalsResults,
     goalsMessages,
+    shippedSettings,
+    ledgerImage,
     ...goalsParts
   }: CompositionParts = {},
 ): ComposedServerOptions {
   const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
-  return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
+  const composing: ComposedServerOptions['composed'] = async (settings, telemetry, shippedFiles) => {
     const { database, made, ledgerLayer } = await ledgerOpenedAtStart(settings, {
       programPoolOf: wiring.programPoolOf,
       shippedFiles,
       installed,
       appended: telemetry.appended,
       appends: wiring.projections.appends,
+      ...(ledgerImage === undefined ? {} : { ledgerImage }),
     });
     const holding = attemptHoldingOf(settings, clock);
     const meter = meterOf(settings, { signers, features });
@@ -212,7 +225,8 @@ export function compositionRootWith(
         ...goalsParts,
       }),
     };
-  });
+  };
+  return serverOptionsComposing(composing, shippedSettings);
 }
 
 export const compositionRoot = compositionRootWith(loggedModelAccess, { goals: true, goalsResults: true });

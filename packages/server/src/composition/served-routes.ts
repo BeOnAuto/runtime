@@ -9,6 +9,7 @@ import {
   operationRoutes,
   readDebugStyle,
   type AppRuntime,
+  type GuidePages,
   type RegisterRoutes,
   type RetryStateKeys,
 } from '@on.auto/api';
@@ -43,6 +44,22 @@ export interface ServedCatalog extends DeliveryStores {
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: ContentAddressKey;
   readonly shippedFiles: ShippedFiles;
+  readonly guidePages?: GuidePages | undefined;
+}
+
+function shelvingOf({
+  pages,
+  goals,
+  messages,
+  guidePages,
+}: Pick<ServedCatalog, 'pages' | 'goals' | 'messages' | 'guidePages'>) {
+  return {
+    pages,
+    goals,
+    messages,
+    companions: renderCompanionGuides,
+    ...(guidePages === undefined ? {} : { renditions: guidePages }),
+  };
 }
 
 export async function routesFor(
@@ -61,9 +78,10 @@ export async function routesFor(
     answerStores,
     eventStores,
     shippedFiles,
+    guidePages,
   }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
-  const shelving = { pages, goals, messages, companions: renderCompanionGuides };
+  const shelving = shelvingOf({ pages, goals, messages, guidePages });
   const shelf = await guideShelfFrom(shippedFiles, capabilities, shelving);
   const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), shelving);
   const directoryListing = { catalog: directoryCatalog, shelf: directoryShelf };
@@ -74,7 +92,7 @@ export async function routesFor(
     contentAddressRoutes({ key: contentAddressKey, content: runtimeLedger(runtime).content }),
     ...deliveryRoutesOf(runtime, { answerStores, eventStores }),
     guideRoutes(shelf),
-    debugRoutes({ catalog, shelf, serverInfo: release, directoryListing }, debugStyle),
+    debugRoutes({ catalog, shelf, serverInfo: release, directoryListing }, debugStyle, guidePages),
     apiCatalogRoutes(shelf),
     mcpRoutes({
       catalog,

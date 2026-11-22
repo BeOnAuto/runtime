@@ -4,9 +4,17 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { accessSchemaFile, builtInPoliciesFile } from '../files/access-control-files.ts';
 import { accessSchemaOf } from '../schema/access-schema.ts';
-import { cedarOnDisk, declaredOperations, filesOnDisk } from '../testing/access-testing.ts';
+import {
+  builtIn,
+  cedarOnDisk,
+  decidedBy,
+  declaredOperations,
+  filesOnDisk,
+  requestOf,
+  rolesHeld,
+} from '../testing/access-testing.ts';
 import { cedarOf, type Cedar } from './cedar.ts';
-import { policiesById, preparedPolicies } from './prepared-policies.ts';
+import { policiesById, preparedPolicies, type PreparePolicies } from './prepared-policies.ts';
 
 const texts = { schema: '', policies: '' };
 
@@ -207,5 +215,47 @@ describe('policies the engine is not given', () => {
     expect(() => preparedPolicies({ ...cedar, preparsePolicySet: failing }, texts)).toThrow(
       'The policies could not be read in: refused',
     );
+  });
+});
+
+describe('policies a decision point is given the way to prepare', () => {
+  it('are the policies its files hold, prepared that way, and decide every request as the policies it prepares itself', async () => {
+    const asked: string[] = [];
+    const preparing: PreparePolicies = (engine, read) => {
+      asked.push(read.policies);
+      return preparedPolicies(engine, read);
+    };
+    const roles = rolesHeld({ editor: [builtIn('editor', { type: 'org', id: 'acme' })] });
+    const principal: Parameters<typeof requestOf>[0]['principal'] = { type: 'person', id: 'editor' };
+    const requests = [
+      ...declaredOperations
+        .filter(({ scope }) => scope === 'playbook')
+        .map((operation) =>
+          requestOf({ principal, operation, resource: { type: 'playbook', id: 'alpha', org: 'acme' } }),
+        ),
+      ...declaredOperations
+        .filter(({ scope }) => scope === 'org')
+        .map((operation) => requestOf({ principal, operation, resource: { type: 'org', id: 'acme' } })),
+    ];
+
+    const [asGiven, itself] = [decidedBy(roles, declaredOperations, preparing), decidedBy(roles)];
+    const decidedAsGiven = await Promise.all(requests.map((request) => asGiven(request)));
+    const decidedItself = await Promise.all(requests.map((request) => itself(request)));
+
+    expect(asked).toEqual([texts.policies]);
+    expect(
+      decidedAsGiven.map(({ decision, determiningPolicies, errors }) => ({
+        decision,
+        determiningPolicies: determiningPolicies.toSorted(),
+        errors,
+      })),
+    ).toEqual(
+      decidedItself.map(({ decision, determiningPolicies, errors }) => ({
+        decision,
+        determiningPolicies: determiningPolicies.toSorted(),
+        errors,
+      })),
+    );
+    expect(decidedItself.map(({ decision }) => decision)).toContain('allow');
   });
 });

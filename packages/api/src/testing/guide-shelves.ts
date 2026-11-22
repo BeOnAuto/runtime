@@ -96,7 +96,9 @@ export const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [
 
 export const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning], { pages: false });
 
-export const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: true });
+export const everyTypeAndInteraction = [...everyType, interaction];
+
+export const servedWithEverything = await guideShelfFrom(guideFiles, everyTypeAndInteraction, { pages: true });
 
 export const servedWithEverythingAndGoals = await guideShelfFrom(guideFiles, [...everyType, interaction], {
   pages: true,

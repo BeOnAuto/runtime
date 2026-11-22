@@ -27,6 +27,7 @@ export {
 export { cedarModuleBundled } from './engine/cedar-module-bundled.ts';
 export { cedarModuleIn } from './engine/cedar-module.ts';
 export type { CedarModuleSource } from './engine/cedar.ts';
+export { preparedPolicies, type PreparePolicies } from './engine/prepared-policies.ts';
 export { accessControlShippedRoots, cedarNoticeFiles } from './files/access-control-files.ts';
 export { getCaller } from './operations/get-caller.ts';
 export {

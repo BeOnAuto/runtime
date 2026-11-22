@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import { JSONSerializer, SQL } from '@event-driven-io/dumbo';
 import { describe, expect, it } from 'vitest';
@@ -49,5 +50,23 @@ describe('a client of node:sqlite, as it opens', () => {
 
     const notOpen = { status: 'rejected', reason: { errorCode: 500, message: 'database is not open' } };
     expect([before, await settled(client.query(SQL`SELECT 1`))]).toMatchObject([notOpen, notOpen]);
+  });
+});
+
+describe('a client of node:sqlite given an image of a database', () => {
+  it('opens a database in memory from the image it is given, and what it writes there leaves the image as it was', async () => {
+    const template = new DatabaseSync(':memory:');
+    template.exec("CREATE TABLE notes (note TEXT); INSERT INTO notes VALUES ('kept')");
+    const image = template.serialize();
+    template.close();
+    const before = Buffer.from(image);
+
+    const one = await aConnectedClient({ image });
+    await one.command(SQL`INSERT INTO notes VALUES ('written')`);
+    const other = await aConnectedClient({ image });
+
+    expect(await rowsOf(one, 'SELECT note FROM notes')).toEqual([{ note: 'kept' }, { note: 'written' }]);
+    expect(await rowsOf(other, 'SELECT note FROM notes')).toEqual([{ note: 'kept' }]);
+    expect(Buffer.from(image).equals(before)).toBe(true);
   });
 });

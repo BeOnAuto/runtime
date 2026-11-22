@@ -4,6 +4,7 @@ import {
   cedarModuleIn,
   roleAssignmentsFrom,
   type DeclaredAction,
+  type PreparePolicies,
   type RoleAssignments,
 } from '@on.auto/access-control';
 import type { AppRuntime, CallContext } from '@on.auto/api';
@@ -44,8 +45,11 @@ export function decisionPointOver(
   operations: readonly DeclaredAction[],
   shippedFiles: ShippedFiles,
   roles: RoleAssignments,
+  preparing?: PreparePolicies,
 ): Effect.Effect<PolicyDecisionPoint, UnusableAccessPoliciesError> {
-  return cedarDecisionPointLoaded({ module: cedarModuleIn(shippedFiles), files: shippedFiles, operations, roles }).pipe(
+  const module = cedarModuleIn(shippedFiles);
+  const parts = { module, files: shippedFiles, operations, roles, ...(preparing === undefined ? {} : { preparing }) };
+  return cedarDecisionPointLoaded(parts).pipe(
     Effect.mapError(
       (because) => new UnusableAccessPoliciesError({ message: `The access policies cannot be used: ${because}` }),
     ),
@@ -56,8 +60,9 @@ export function decisionPointServing(
   dispatched: Dispatched,
   shippedFiles: ShippedFiles,
   roles: RoleAssignments,
+  preparing?: PreparePolicies,
 ): Effect.Effect<PolicyDecisionPoint, UnusableAccessPoliciesError> {
-  return decisionPointOver(operationsDispatched(dispatched), shippedFiles, roles);
+  return decisionPointOver(operationsDispatched(dispatched), shippedFiles, roles, preparing);
 }
 
 function callContextDecidedBy(decisionPoint: PolicyDecisionPoint, roles: RoleAssignments): CallContext {
@@ -65,14 +70,19 @@ function callContextDecidedBy(decisionPoint: PolicyDecisionPoint, roles: RoleAss
   return () => context;
 }
 
+interface PolicyFiles {
+  readonly shippedFiles: ShippedFiles;
+  readonly preparingPolicies?: PreparePolicies | undefined;
+}
+
 export async function accessControlServing(
   runtime: AppRuntime<DispatcherServices>,
   dispatched: Dispatched,
-  shippedFiles: ShippedFiles,
+  { shippedFiles, preparingPolicies: preparing }: PolicyFiles,
 ): Promise<ServedAccessControl> {
   const roles = roleAssignmentsFrom('role_assignments', runtimeLedger(runtime));
   const decisionPoint = await Effect.runPromise(
-    inRuntime(runtime, decisionPointServing(dispatched, shippedFiles, roles)),
+    inRuntime(runtime, decisionPointServing(dispatched, shippedFiles, roles, preparing)),
   );
   return { decisionPoint, callContext: callContextDecidedBy(decisionPoint, roles) };
 }

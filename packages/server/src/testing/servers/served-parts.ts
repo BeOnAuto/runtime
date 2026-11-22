@@ -45,6 +45,11 @@ export interface ServedParts {
    * unless `ledger` names a file.
    */
   readonly over?: 'http';
+  /**
+   * The server prepares its guide pages, access policies and providers itself and migrates its own ledger, as a real
+   * start does, in place of taking them from `preparedParts`: for a test whose subject is that preparation.
+   */
+  readonly preparingItself?: true;
 }
 
 export function composedWithTheLedgerOver(
@@ -118,13 +123,19 @@ function composedPatiently(options: ComposedServerOptions): ComposedServerOption
   };
 }
 
+function shippedOver(
+  { shippedSettings: _readFromTheFilesItShipped, ...options }: ComposedServerOptions,
+  shippedFilesOver: ShippedFilesOver,
+): ComposedServerOptions {
+  return { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
+}
+
 export function composedWithTheParts(
   given: ComposedServerOptions,
   { ledgerOver, meter, shippedFilesOver }: ComposedParts,
 ): ComposedServerOptions {
   const options = composedPatiently(given);
-  const shipped =
-    shippedFilesOver === undefined ? options : { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
+  const shipped = shippedFilesOver === undefined ? options : shippedOver(options, shippedFilesOver);
   const metered = meter === undefined ? shipped : composedWithTheMeter(shipped, meter);
   return composedWithTheLedgerOver(metered, ledgerOver);
 }

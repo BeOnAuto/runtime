@@ -14,6 +14,7 @@ import { Effect } from 'effect';
 
 import { cedarDecisionPoint } from '../decision-point/cedar-decision-point.ts';
 import { cedarModuleIn } from '../engine/cedar-module.ts';
+import { preparedPolicies, type PreparePolicies } from '../engine/prepared-policies.ts';
 import { accessControlShippedRoots } from '../files/access-control-files.ts';
 import type { RoleAssignment, RoleAssignments } from '../roles/role-assignments.ts';
 import type { DeclaredAction } from '../schema/access-schema.ts';
@@ -160,7 +161,8 @@ export function requestOf({
 export function decidedBy(
   roles: RoleAssignments,
   operations: readonly DeclaredAction[] = declaredOperations,
+  preparing: PreparePolicies = preparedPolicies,
 ): (request: AccessRequest) => Promise<AccessDecision> {
-  const decisionPoint = cedarDecisionPoint({ module: cedarOnDisk, files: filesOnDisk, operations, roles });
+  const decisionPoint = cedarDecisionPoint({ module: cedarOnDisk, files: filesOnDisk, operations, roles, preparing });
   return (request) => Effect.runPromise(decisionPoint.decide(request));
 }

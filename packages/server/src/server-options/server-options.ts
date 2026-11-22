@@ -4,6 +4,7 @@ import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
 import type { MiddlewareHandler } from 'hono';
 
+import type { ShippedSettings } from '../settings/served-settings.ts';
 import type { Settings } from '../settings/settings.ts';
 import type { SignInServed } from '../sign-in/company-sign-in.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
@@ -65,6 +66,7 @@ export interface ServerOptions<R> {
   readonly shutdownTimeoutMs: number;
   readonly exitDeadlineMs: number;
   readonly shippedFiles: ShippedFiles;
+  readonly shippedSettings?: ShippedSettings;
   readonly localServingIn?: (mode: AccessMode) => LocalServing;
   readonly usagePing?: UsagePing;
   readonly defaultIdentityProvider?: DefaultIdentityProvider;

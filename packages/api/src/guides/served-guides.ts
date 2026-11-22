@@ -2,7 +2,7 @@ import { inDefinitionTypeOrder, type CapabilityGuide, type GuideVariables } from
 import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
-import { forTheAgent } from '../guide-pages/agent-rendition.ts';
+import { renderedGuidePages, type GuidePages } from '../guide-pages/guide-pages.ts';
 import { documentation } from './guide-files.ts';
 import {
   eventsGuideName,
@@ -83,11 +83,13 @@ interface ServedOptions {
   readonly messages?: boolean;
   readonly companions?: readonly CompanionGuide[];
   readonly variables?: GuideVariables;
+  readonly renditions?: GuidePages;
 }
 
 interface Shelving {
   readonly shippedFiles: ShippedFiles;
   readonly variables: GuideVariables;
+  readonly renditions: GuidePages;
 }
 
 function pageOfGuide(guide: string): string {
@@ -99,11 +101,12 @@ function pageText(shippedFiles: ShippedFiles, page: string): Promise<string> {
 }
 
 async function pageGuideOf(
-  { shippedFiles, variables }: Shelving,
+  { shippedFiles, variables, renditions }: Shelving,
   page: string,
   about: Omit<Guide, 'text'>,
 ): Promise<Guide> {
-  return { ...about, text: withLinksResolved(forTheAgent(page, await pageText(shippedFiles, page), variables), page) };
+  const text = renditions.forTheAgent(page, await pageText(shippedFiles, page), variables);
+  return { ...about, text: withLinksResolved(text, page) };
 }
 
 function variablesOf(served: readonly ServedType[], host: GuideVariables): GuideVariables {
@@ -116,6 +119,14 @@ function variablesOf(served: readonly ServedType[], host: GuideVariables): Guide
     throw new Error(`The value ${repeated} is declared more than once for the guides of the server`);
   }
   return Object.fromEntries(declared);
+}
+
+function shelvingOf(
+  shippedFiles: ShippedFiles,
+  served: readonly ServedType[],
+  { variables = {}, renditions = renderedGuidePages }: ServedOptions,
+): Shelving {
+  return { shippedFiles, variables: variablesOf(served, variables), renditions };
 }
 
 async function typeGuideOf(
@@ -141,10 +152,11 @@ async function typeGuideOf(
 export async function guideShelfFrom(
   shippedFiles: ShippedFiles,
   served: readonly ServedType[],
-  { pages, goals = false, messages: messagesAsked = false, companions = [], variables = {} }: ServedOptions,
+  options: ServedOptions,
 ): Promise<GuideShelf> {
+  const { pages, goals = false, messages: messagesAsked = false, companions = [] } = options;
   const messages = goals && messagesAsked;
-  const shelving: Shelving = { shippedFiles, variables: variablesOf(served, variables) };
+  const shelving = shelvingOf(shippedFiles, served, options);
   const types = inDefinitionTypeOrder(served);
   const companionsOf = (type: string): readonly CompanionGuide[] =>
     companions.filter((companion) => companion.type === type);

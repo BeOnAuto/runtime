@@ -32,12 +32,13 @@ function prepareDirectoryOf(fileName: string): void {
   }
 }
 
-function ledgerFileOptionsOf(fileName: string) {
+function ledgerFileOptionsOf(fileName: string, image?: Readonly<Uint8Array>) {
   prepareDirectoryOf(fileName);
+  const startingFrom = fileName === privateMemory && image !== undefined ? { image } : {};
   return {
     driver: nodeSqliteEventStoreDriver,
     fileName,
-    connectionOptions: { ...modestConnections, minimumSQLiteVersion },
+    connectionOptions: { ...modestConnections, minimumSQLiteVersion, ...startingFrom },
   };
 }
 
@@ -76,9 +77,9 @@ export function ledgerLayer({
   });
 }
 
-export function sqliteLedgerFile(fileName: string): SQLiteLedgerFile {
+export function sqliteLedgerFile(fileName: string, image?: Readonly<Uint8Array>): SQLiteLedgerFile {
   return sqliteLedgerFileOn(
-    { optionsOf: () => ledgerFileOptionsOf(fileName), inMemory: fileName === privateMemory },
+    { optionsOf: () => ledgerFileOptionsOf(fileName, image), inMemory: fileName === privateMemory },
     fileName,
   );
 }

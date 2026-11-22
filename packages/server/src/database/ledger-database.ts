@@ -44,10 +44,11 @@ export interface LedgerDatabase {
 export async function ledgerDatabaseOf(
   { ledger, proxy }: Pick<Settings, 'ledger' | 'proxy'>,
   observer?: AppendObserver,
+  imageOf?: () => Readonly<Uint8Array>,
 ): Promise<LedgerDatabase> {
   if (ledger.store === 'sqlite') {
     const { sqliteLedgerDatabase } = await import('./sqlite-ledger-database.ts');
-    return sqliteLedgerDatabase(ledger.file, observer);
+    return sqliteLedgerDatabase(ledger.file, observer, imageOf?.());
   }
   const { postgresqlLedgerDatabaseOf } = await import('./postgresql-ledger-database.ts');
   return postgresqlLedgerDatabaseOf(ledger, proxy, observer);

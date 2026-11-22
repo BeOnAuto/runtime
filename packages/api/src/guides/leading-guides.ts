@@ -1,7 +1,7 @@
 import type { GuideVariables } from '@on.auto/definitions';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
-import { forTheAgent } from '../guide-pages/agent-rendition.ts';
+import type { GuidePages } from '../guide-pages/guide-pages.ts';
 import { goalsGuideIn } from './goals-guide-renditions.ts';
 import { documentation, goalsGuideFile } from './guide-files.ts';
 import { goalsGuideName, type Guide } from './guide-shelf.ts';
@@ -31,14 +31,15 @@ async function goalsGuideOf(shippedFiles: ShippedFiles, messages: boolean): Prom
 interface Reading {
   readonly shippedFiles: ShippedFiles;
   readonly variables: GuideVariables;
+  readonly renditions: GuidePages;
 }
 
 export async function leadingGuidesOf(
-  { shippedFiles, variables }: Reading,
+  { shippedFiles, variables, renditions }: Reading,
   nouns: readonly string[],
   kept: GoalsKept,
 ): Promise<readonly Guide[]> {
   const page = await shippedFiles.text(shippedFileIn(documentation, terminologyPage));
-  const terminology = terminologyGuideOf(forTheAgent(terminologyPage, page, variables), nouns, kept);
+  const terminology = terminologyGuideOf(renditions.forTheAgent(terminologyPage, page, variables), nouns, kept);
   return kept.goals ? [terminology, await goalsGuideOf(shippedFiles, kept.messages)] : [terminology];
 }
