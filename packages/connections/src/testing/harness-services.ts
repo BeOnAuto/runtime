@@ -13,7 +13,7 @@ import {
 import { inProcessFetch } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, Redacted } from 'effect';
 
-import type { SecretKeeping } from '../operations/connection-services.ts';
+import type { ChatModels, SecretKeeping } from '../operations/connection-services.ts';
 import type { AppCredentialOpening, SocketChecks } from '../page/given-checks.ts';
 import type { ValueChecked } from '../page/tested-keys.ts';
 import { makeClientRegistrations } from '../registrations/client-registrations.ts';
@@ -200,5 +200,12 @@ export function fakeSockets(byValue: Readonly<Record<string, ValueChecked>>): Fa
         return byValue[given] ?? { kind: 'taken' };
       }),
     opened: () => [...opened],
+  };
+}
+
+export function fakeChatModels(offered: readonly string[]): ChatModels {
+  return {
+    refusalOf: (model) =>
+      Effect.succeed(offered.includes(model) ? undefined : `${model} is not one of the models this server offers`),
   };
 }

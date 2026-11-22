@@ -38,6 +38,7 @@ interface DeclaredOperation {
   readonly irreversible: boolean;
   readonly permissionsManagement: boolean;
   readonly enrolment: boolean;
+  readonly connectionsManagement: boolean;
 }
 
 export interface AccessContext {

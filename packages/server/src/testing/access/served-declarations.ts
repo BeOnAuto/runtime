@@ -38,6 +38,7 @@ export const servedDeclarations: readonly string[] = [
   'org/retire_playbook: org:write (names a playbook)',
   'org/search: org:read,playbook:read (names a playbook)',
   'org/set_connection_account_type: org:write',
+  'org/set_connection_model: org:write (manages connections)',
   'org/set_connection_playbooks: org:write',
   'org/set_connection_signing_secret: org:write',
   'org/start: org:write',

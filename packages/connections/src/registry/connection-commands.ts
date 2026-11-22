@@ -51,8 +51,17 @@ interface Connecting extends LinkUse {
   readonly connected_by: RecordedCaller;
 }
 
-export interface ConnectionApproval extends Connecting, PlaybooksChoice {
+interface ConnectionApproval extends Connecting, PlaybooksChoice {
   readonly type: 'approve';
+}
+
+export interface ModelGiven {
+  readonly model: string;
+  readonly notOffered?: string;
+}
+
+export interface ChatOffered {
+  readonly credential: string;
 }
 
 export interface CredentialGiving extends Connecting, PlaybooksChoice {
@@ -61,6 +70,8 @@ export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly algorithm?: string;
   readonly client_id?: string;
   readonly app_secret_ids?: Readonly<Record<string, string>>;
+  readonly model?: ModelGiven;
+  readonly chat?: ChatOffered;
 }
 
 export interface WayChoice extends LinkUse {
@@ -109,6 +120,13 @@ export interface AccountTypeSetting {
   readonly type: 'set_account_type';
   readonly connection: string;
   readonly account_type: AccountType;
+}
+
+export interface ModelSetting {
+  readonly type: 'set_model';
+  readonly connection: string;
+  readonly model: ModelGiven;
+  readonly chat?: ChatOffered;
 }
 
 export interface ConnectionRemoval {
@@ -194,6 +212,7 @@ export type ConnectionCommandData =
   | ConnectionRemoval
   | PlaybooksSetting
   | AccountTypeSetting
+  | ModelSetting
   | ConnectionBreaking
   | AppCredentialRefusal
   | ConnectionIdentification
@@ -206,6 +225,7 @@ export type CommandDecidedApart =
   | ConnectionIdentification
   | PlaceNaming
   | AccountTypeSetting
+  | ModelSetting
   | WayChoice
   | ConnectionRequest
   | RequestDecline;

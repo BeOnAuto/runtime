@@ -8,18 +8,24 @@ import { providersShowingMessages, providerTextScrubber } from '../settings/mess
 import type { ModelSettings } from '../settings/model-settings.ts';
 import type { ProviderStatus } from '../settings/provider-status.ts';
 import { LanguageModel } from './language-model.ts';
-import { modelResolution } from './model-resolution.ts';
+import { modelResolution, type ModelResolution } from './model-resolution.ts';
 
-export function resolvedLanguageModel(
+export interface ResolvedModels {
+  readonly languageModel: LanguageModel['Service'];
+  readonly resolution: ModelResolution;
+}
+
+export function resolvedModels(
   models: ReadonlyMap<string, ModelFactory>,
   settings: ModelSettings,
   status: ProviderStatus,
   options: ModelAccessOptions,
-): LanguageModel['Service'] {
+): ResolvedModels {
   const { reportProviderMessage, reportOperatorHint, telemetry, deadlineAfter } = options;
   const showing = providersShowingMessages(settings);
-  return LanguageModel.of(
-    generation(modelResolution(models, settings, status), {
+  const resolution = modelResolution(models, settings, status);
+  const languageModel = LanguageModel.of(
+    generation(resolution, {
       configured: status.configured,
       showsProviderMessages: (provider) => showing.has(provider),
       scrub: providerTextScrubber(settings, options),
@@ -30,4 +36,5 @@ export function resolvedLanguageModel(
       deadlineAfter,
     }),
   );
+  return { languageModel, resolution };
 }

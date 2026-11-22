@@ -1,3 +1,4 @@
+import type { ChatReading } from '../operations/connection-chat.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { bindsPerson } from '../policy/policy-rules.ts';
 import { defineFinishConsent } from './consent-finish.ts';
@@ -7,7 +8,7 @@ import { defineGiveCredential } from './give-credential.ts';
 import { defineApprove, defineReadLink } from './link-operations.ts';
 import { defineChooseWay } from './way-choices.ts';
 
-export function pageOperationsOf(connectionServices: ConnectionServices) {
+export function pageOperationsOf(connectionServices: ConnectionServices & ChatReading) {
   const services = { ...connectionServices, bindsPerson: bindsPerson(connectionServices.access) };
   const approving = defineApprove(services);
   return {

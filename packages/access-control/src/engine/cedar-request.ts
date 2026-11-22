@@ -111,6 +111,7 @@ function contextOf({ via, granted, operation }: AccessContext): Context {
       irreversible: operation.irreversible,
       permissions_management: operation.permissionsManagement,
       enrolment: operation.enrolment,
+      connections_management: operation.connectionsManagement,
     },
   };
 }

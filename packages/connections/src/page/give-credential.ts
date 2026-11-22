@@ -2,7 +2,6 @@ import { defineHttpOperation } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import type { ConnectionServices } from '../operations/connection-services.ts';
 import {
   actedNow,
   allowedToChoose,
@@ -15,9 +14,11 @@ import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { forgottenCredentialOf } from './forgotten-credentials.ts';
 import { GivenConnectionSchema, GivingSchema } from './given-fields.ts';
 import { givenValuesKept } from './given-values.ts';
+import { modelAtConnect } from './models-at-connect.ts';
 
-type GivingServices = Pick<ConnectionServices, 'consent' | 'pages'> &
-  Parameters<typeof givenValuesKept>[2] & {
+type GivingServices = Parameters<typeof givenValuesKept>[2] &
+  Parameters<typeof forgottenCredentialOf>[1] &
+  Parameters<typeof modelAtConnect>[2] & {
     readonly bindsPerson: boolean;
   };
 
@@ -41,10 +42,11 @@ export function defineGiveCredential(services: GivingServices) {
     inputSchema: GivingSchema,
     outputSchema: GivenConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
-    handle: Effect.fnUntraced(function* ({ playbooks, ...giving }) {
+    handle: Effect.fnUntraced(function* ({ playbooks, model, ...giving }) {
       yield* allowedToChoose(playbooks);
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
+      const atConnect = yield* modelAtConnect(kept, { model, appsGiven: giving.app_credentials ?? {} }, services);
       const values = yield* givenValuesKept(kept.connection, giving, services);
       const { given, secretId, appSecretIds } = values;
       const { before, after } = yield* recordChangeInRegistry(services, {
@@ -56,9 +58,14 @@ export function defineGiveCredential(services: GivingServices) {
         ...(given.clientId === undefined ? {} : { client_id: given.clientId }),
         app_secret_ids: appSecretIds,
         ...(playbooks === undefined ? {} : { playbooks }),
+        ...atConnect.choice,
       }).pipe(Effect.onError(() => Effect.forEach(values.kept, secrets.forget)));
       yield* forgottenCredentialOf(before, services);
-      return { ...connectionShown(after.connection, given.endsWith ?? null), ...values.formatMark };
+      return {
+        ...connectionShown(after.connection, given.endsWith ?? null),
+        ...values.formatMark,
+        ...atConnect.answerOf(after),
+      };
     }),
   });
 }

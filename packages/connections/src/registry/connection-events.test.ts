@@ -5,7 +5,7 @@ import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { actingAsAnAccount, keptWaysOfAServer, requested, wayChosenAgain } from '../testing/account-type-facts.ts';
-import { heldAppCredentials } from '../testing/app-credential-facts.ts';
+import { heldAppCredentials, modelSet } from '../testing/app-credential-facts.ts';
 import { givenItsEvents, identifiedByTheRuntime, identifiedInItsAccount, placeNamed } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
 import { addedAsAServiceAccount, wayChosenWithItsValues } from '../testing/way-value-facts.ts';
@@ -282,7 +282,7 @@ describe('the facts of the registry of connections', () => {
       '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
       '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
       '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
-      '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed, ...addedAsAServiceAccount],
+      '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed, ...addedAsAServiceAccount, ...modelSet],
     },
   });
 });

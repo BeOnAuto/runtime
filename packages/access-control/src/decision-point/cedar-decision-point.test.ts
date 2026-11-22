@@ -62,7 +62,7 @@ function misplacedEngine(): Promise<WebAssembly.Module> {
 const saidOnceLoaded = {
   message: loadedMessage,
   level: 'INFO',
-  annotations: { engine: 'Cedar 4.14.0', policies: 12, operations: declaredOperations.length },
+  annotations: { engine: 'Cedar 4.14.0', policies: 13, operations: declaredOperations.length },
 };
 
 async function decidedAs(id: string, operation: typeof getDefinition): Promise<string> {

@@ -25,6 +25,7 @@ import {
   requestOf,
   rolesHeld,
   runDefinition,
+  setConnectionModel,
   type TestOperation,
 } from '../testing/access-testing.ts';
 import { cedarDecisionPoint } from './cedar-decision-point.ts';
@@ -169,6 +170,44 @@ describe('what manages permissions, with the policies as shipped', () => {
       'deny by permissions-managed-by-admins-in-studio',
       'allow by editor',
     ]);
+  });
+});
+
+async function managingConnectionsAs(
+  principal: PrincipalReference,
+  via: ArrivedVia,
+  operation: TestOperation,
+): Promise<string> {
+  const decide = decidedBy(
+    rolesHeld({ ada: [builtIn('editor', acme)], grace: [builtIn('admin', acme)], ida: [builtIn('viewer', acme)] }),
+  );
+  const { decision, determiningPolicies } = await decide(requestOf({ principal, operation, resource: theOrg, via }));
+  return `${decision} by ${determiningPolicies.toSorted().join(', ')}`;
+}
+
+const ida: PrincipalReference = { type: 'person', id: 'ida' };
+
+describe('what manages connections, with the policies as shipped', () => {
+  it.each([
+    ['an Admin in Studio', grace, 'studio', 'allow by admin'],
+    ['an Admin through their agent', grace, 'agent', 'allow by admin'],
+    ['an Admin asking Auto in a conversation', grace, 'conversation', 'allow by admin'],
+    ['an Admin in a run they started', grace, 'run', 'allow by admin, run-as-started'],
+    ['an Editor in Studio', ada, 'studio', 'deny by connections-managed-by-admins'],
+    ['an Editor through their agent', ada, 'agent', 'deny by connections-managed-by-admins'],
+    ['an Editor in a run they started', ada, 'run', 'deny by connections-managed-by-admins'],
+    ['a Viewer in Studio', ida, 'studio', 'deny by connections-managed-by-admins'],
+    ['a key', { type: 'key', id: 'ci-key' }, 'key', 'allow by key'],
+    ['the local developer', { type: 'local_developer', id: 'local' }, 'local', 'allow by local-developer'],
+  ] as const)(
+    'is decided for %s by one forbid on what the operation declares',
+    async (_caller, principal, via, decided) => {
+      expect(await managingConnectionsAs(principal, via, setConnectionModel)).toBe(decided);
+    },
+  );
+
+  it('leaves an Editor what does not declare it', async () => {
+    expect(await managingConnectionsAs(ada, 'studio', createPlaybook)).toBe('allow by editor');
   });
 });
 

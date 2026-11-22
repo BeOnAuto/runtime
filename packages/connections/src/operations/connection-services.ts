@@ -31,6 +31,10 @@ export interface SecretKeeping {
   readonly forget: (id: string) => Effect.Effect<void>;
 }
 
+export interface ChatModels {
+  readonly refusalOf: (model: string) => Effect.Effect<string | undefined>;
+}
+
 export interface ConnectionServices extends StartsOfConnections {
   readonly secrets: SecretKeeping;
   readonly policy: ConnectionPolicy;
@@ -46,6 +50,7 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly fetch: typeof globalThis.fetch;
   readonly readOnceThrough: ReadOnceThrough;
   readonly sockets?: SocketChecks;
+  readonly chatModels?: ChatModels;
   readonly received?: EventsReceived;
 }
 

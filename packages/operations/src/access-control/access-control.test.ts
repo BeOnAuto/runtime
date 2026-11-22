@@ -54,6 +54,7 @@ describe('an operation of the org that makes its caller a member', () => {
         irreversible: false,
         permissionsManagement: false,
         enrolment: true,
+        connectionsManagement: false,
       },
     ]);
   });

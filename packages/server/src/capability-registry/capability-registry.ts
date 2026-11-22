@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
-import type { ModelAccess, ModelTelemetry } from '@on.auto/reasoning';
+import { modelChoiceOf, type ModelAccess, type ModelTelemetry } from '@on.auto/reasoning';
 import type { ThroughWays, ToolServerDocumentRefused } from '@on.auto/tool-servers';
 import { Effect, type Layer, type Scope } from 'effect';
 
@@ -19,6 +19,7 @@ import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 
 export interface CapabilityRegistry extends ThroughWays {
   readonly models: Effect.Effect<ModelAccess>;
+  readonly modelChoice: ReturnType<typeof modelChoiceOf>;
   readonly modelTelemetry: ModelTelemetry | undefined;
   readonly tools: Effect.Effect<MadeToolAccess, ToolServerDocumentRefused>;
   readonly processes: ServedProcesses;
@@ -58,6 +59,7 @@ function capabilityRegistryOf(
   }).pipe(
     Effect.map(({ models, modelTelemetry, tools }) => ({
       models,
+      modelChoice: modelChoiceOf(models),
       modelTelemetry,
       tools,
       processes,

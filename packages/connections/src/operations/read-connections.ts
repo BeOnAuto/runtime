@@ -62,7 +62,7 @@ export function defineGetConnection(reading: Reading) {
     body: { kind: 'none' },
     inputSchema: Schema.Struct({ id: ConnectionIdField }),
     outputSchema: ListedConnectionSchema,
-    reasons: ['not_found'],
+    reasons: ['not_found', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id }) {
       const [listed] = yield* listedOf([yield* foundConnection(reading, id)], reading);
       return yield* Effect.orDie(Effect.fromNullishOr(listed));

@@ -56,3 +56,8 @@ unless {
 forbid (principal, action, resource)
 when { context.operation.permissions_management }
 unless { principal in Role::"admin" && context.via == "studio" };
+
+@id("connections-managed-by-admins")
+forbid (principal is Person, action, resource)
+when { context.operation.connections_management }
+unless { principal in Role::"admin" };

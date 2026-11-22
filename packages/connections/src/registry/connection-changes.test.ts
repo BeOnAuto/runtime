@@ -172,6 +172,7 @@ const typesThatNameAConnection = [
   'connection_signing_secret_set',
   'connection_signing_secret_removed',
   'connection_identified',
+  'connection_model_set',
 ];
 
 describe('the changes the facts of the connections of an org make', () => {
@@ -246,7 +247,8 @@ describe('the change a setting of the account type or a choice of the way makes'
   it.each([
     ['connection_account_type_set', { connection: 'c5', account_type: 'service' }],
     ['connection_way_chosen', { connection: 'c5', credential: appWay, says: {} }],
-  ] as const)('names the connection of %s by its id, since its record then answers another type', (type, data) => {
+    ['connection_model_set', { connection: 'c5', model: 'acme/fast' }],
+  ] as const)('names the connection of %s by its id, since its record then answers another value', (type, data) => {
     expect(catalog.changesOf({ id: 'm1', stream: 'connections', type, data, context })).toEqual([
       { kind: 'connection', connection: 'c5' },
     ]);

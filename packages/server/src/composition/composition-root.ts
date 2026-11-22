@@ -112,7 +112,8 @@ function servedWith(serving: Serving): Serve {
     const { opened, signIn, members } = await signInAndStoresOpened(runtime, serving, ownOrigin);
     const { stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } = opened;
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
-    const { connections, offering } = connectionsReadingThrough(registry.readOnceThrough);
+    const { readOnceThrough, modelChoice } = registry;
+    const { connections, offering } = connectionsReadingThrough({ readOnceThrough, chatModels: modelChoice });
     await made.extensions.logged(runtime);
     const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
       ...wiring,

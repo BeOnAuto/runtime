@@ -68,6 +68,7 @@ export interface Definition<
   readonly irreversible?: boolean;
   readonly permissionsManagement?: boolean;
   readonly enrolment?: boolean;
+  readonly connectionsManagement?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly sameInEveryScope?: SameInEveryScope<K, Services | ReadServices>;
@@ -115,6 +116,7 @@ interface HttpFields<
   readonly irreversible?: boolean;
   readonly permissionsManagement?: boolean;
   readonly enrolment?: boolean;
+  readonly connectionsManagement?: boolean;
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];

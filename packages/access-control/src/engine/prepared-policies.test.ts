@@ -132,6 +132,7 @@ describe('the built-in policies', () => {
         'within-granted-permissions',
         'within-granted-playbooks',
         'permissions-managed-by-admins-in-studio',
+        'connections-managed-by-admins',
         'enrolment',
       ].toSorted(),
     );
@@ -160,6 +161,7 @@ describe('what the built-in policies read of a request', () => {
         'operation.targets_playbook',
         'operation.permissions_management',
         'operation.enrolment',
+        'operation.connections_management',
       ]),
     );
   });
@@ -177,7 +179,7 @@ describe('policies made ready for the engine', () => {
     expect([again.schemaName, again.policySetId, again.policies]).toEqual([
       prepared.schemaName,
       prepared.policySetId,
-      12,
+      13,
     ]);
     expect(other.schemaName).toBe(prepared.schemaName);
     expect(other.policySetId).not.toBe(prepared.policySetId);

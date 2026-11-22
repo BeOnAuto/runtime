@@ -25,6 +25,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly irreversible: boolean;
   readonly permissionsManagement: boolean;
   readonly enrolment?: true;
+  readonly connectionsManagement?: true;
   readonly repeatable: boolean;
   readonly whileRetired?: true;
   readonly sameInEveryScope?: true;

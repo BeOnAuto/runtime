@@ -48,6 +48,7 @@ const readingTheOrg = {
     irreversible: false,
     permissions_management: false,
     enrolment: false,
+    connections_management: false,
   },
 };
 

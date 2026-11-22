@@ -11,8 +11,8 @@ import {
   NextClientIdField,
   TokenField,
 } from '../operations/connection-fields.ts';
-import { ConnectionSchema, type RecordedConnection } from '../registry/connection.ts';
-import { connectedByConsent, takesNoCredential } from '../registry/registry-decisions.ts';
+import { ChatField, ConnectionSchema, ModelField, type RecordedConnection } from '../registry/connection.ts';
+import { connectedByConsent, takesNoCredential } from '../registry/link-decisions.ts';
 import { unavailableWords } from './consent-words.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
@@ -48,6 +48,12 @@ export const GivingSchema = Schema.Struct({
     }),
   ),
   playbooks: ChosenPlaybooksField,
+  model: Schema.optionalKey(
+    ModelField.annotate({
+      description:
+        'The id of the model Auto answers members with, as list_models writes it, given with the app credential that lets members write to Auto. Only an admin may give it.',
+    }),
+  ),
 });
 
 type Giving = typeof GivingSchema.Type;
@@ -64,6 +70,7 @@ export const GivenConnectionSchema = Schema.Struct({
         "Answered where the secret given does not match the pattern of a credential given by hand, which the runtime keeps all the same: the agent's pattern may be wrong as well as the key, for the page to ask the person to check that it is the key the instructions describe",
     }),
   ),
+  chat: ChatField,
 }).annotate({
   identifier: 'GivenConnection',
   description: 'The connection its credential was given to, and whether the secret given missed its pattern',
@@ -144,7 +151,7 @@ const keyFileOfAnotherKind: Issue = {
 
 const besidesAKeyFile = ['value', 'client_id', 'client_secret', 'private_key', 'algorithm', 'app_credentials'] as const;
 
-export function keyFileTextOf(giving: Omit<Giving, 'playbooks'>): Result.Result<string, InvalidInput> {
+export function keyFileTextOf(giving: Omit<Giving, 'playbooks' | 'model'>): Result.Result<string, InvalidInput> {
   const { key_file: keyFile } = giving;
   return keyFile === undefined || besidesAKeyFile.some((field) => giving[field] !== undefined)
     ? Result.fail(refused([{ pointer: '', detail: keyFileAlone }]))

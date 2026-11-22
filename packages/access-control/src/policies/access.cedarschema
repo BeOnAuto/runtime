@@ -22,6 +22,7 @@ type Declaration = {
   irreversible: Bool,
   permissions_management: Bool,
   enrolment: Bool,
+  connections_management: Bool,
 };
 
 type RequestContext = {

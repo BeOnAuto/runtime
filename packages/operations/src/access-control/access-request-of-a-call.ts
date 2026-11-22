@@ -26,6 +26,7 @@ export type OperationDeclaration = Pick<
   | 'irreversible'
   | 'permissionsManagement'
   | 'enrolment'
+  | 'connectionsManagement'
 >;
 
 export const InAConversation = Context.Reference<boolean>('@on.auto/operations/InAConversation', {
@@ -99,6 +100,7 @@ function contextOf(
       irreversible: declaration.irreversible,
       permissionsManagement: declaration.permissionsManagement,
       enrolment: declaration.enrolment === true,
+      connectionsManagement: declaration.connectionsManagement === true,
     },
   };
 }

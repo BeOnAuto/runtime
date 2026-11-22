@@ -92,6 +92,7 @@ const whatOnlyWritingPermits = [
   'org/restore_playbook',
   'org/retire_playbook',
   'org/set_connection_account_type',
+  'org/set_connection_model',
   'org/set_connection_playbooks',
   'org/set_connection_signing_secret',
   'org/start',
@@ -122,6 +123,12 @@ const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
 
 const everythingButWhatManagesPermissions = everything.filter((name) => !whatManagesPermissions.includes(name));
 
+const whatManagesConnections = ['org/set_connection_model'];
+
+const whatOnlyAnAdminChanges = [...whatManagesPermissions, ...whatManagesConnections].toSorted();
+
+const everythingButWhatOnlyAnAdminChanges = everything.filter((name) => !whatOnlyAnAdminChanges.includes(name));
+
 const whatPlaybookAlphaMayDoAsItself = [
   ...everything.filter((operation) => operation.startsWith('playbook/')),
   'org/get_caller',
@@ -142,15 +149,15 @@ const pinned = [
   { caller: 'Admin, through their connected agent', allowed: everythingButWhatManagesPermissions },
   { caller: 'Admin, asking @Auto in Slack', allowed: everythingButWhatManagesPermissions },
   { caller: 'Admin, in a run they started', allowed: everythingButWhatManagesPermissions },
-  { caller: 'Editor, in Studio', allowed: everythingButWhatManagesPermissions },
-  { caller: 'Editor, through their connected agent', allowed: everythingButWhatManagesPermissions },
-  { caller: 'Editor, asking @Auto in Slack', allowed: everythingButWhatManagesPermissions },
-  { caller: 'Editor, in a run they started', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Editor, in Studio', allowed: everythingButWhatOnlyAnAdminChanges },
+  { caller: 'Editor, through their connected agent', allowed: everythingButWhatOnlyAnAdminChanges },
+  { caller: 'Editor, asking @Auto in Slack', allowed: everythingButWhatOnlyAnAdminChanges },
+  { caller: 'Editor, in a run they started', allowed: everythingButWhatOnlyAnAdminChanges },
   { caller: 'Editor, through an agent they approved to read', allowed: whatReadingPermits },
   { caller: 'Viewer, in Studio', allowed: whatReadingPermits },
   { caller: 'Viewer, through their connected agent', allowed: whatReadingPermits },
   { caller: 'Viewer, asking @Auto in Slack', allowed: whatReadingPermits },
-  { caller: 'Viewer, in a run they started', allowed: everythingButWhatManagesPermissions },
+  { caller: 'Viewer, in a run they started', allowed: everythingButWhatOnlyAnAdminChanges },
   { caller: 'A person with no role, in Studio', allowed: [] },
   { caller: 'An Editor of another org, in Studio', allowed: [] },
   { caller: 'An API key', allowed: everythingButWhatManagesPermissions },
@@ -178,11 +185,11 @@ const refusedForTheRoleOrTheTokenType = [
   { caller: 'Admin, through their connected agent', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'Admin, asking @Auto in Slack', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'Admin, in a run they started', forTheRole: [], forTheTokenType: [] },
-  { caller: 'Editor, in Studio', forTheRole: whatManagesPermissions, forTheTokenType: [] },
-  { caller: 'Editor, through their connected agent', forTheRole: whatManagesPermissions, forTheTokenType: [] },
-  { caller: 'Editor, asking @Auto in Slack', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Editor, in Studio', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
+  { caller: 'Editor, through their connected agent', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
+  { caller: 'Editor, asking @Auto in Slack', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
   { caller: 'Editor, in a run they started', forTheRole: [], forTheTokenType: [] },
-  { caller: 'Editor, through an agent they approved to read', forTheRole: whatManagesPermissions, forTheTokenType: [] },
+  { caller: 'Editor, through an agent they approved to read', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
   { caller: 'Viewer, in Studio', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
   { caller: 'Viewer, through their connected agent', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
   { caller: 'Viewer, asking @Auto in Slack', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },

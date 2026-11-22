@@ -53,3 +53,15 @@ describe('an operation that declares enrolment', () => {
     expect(() => defineCommand('playbook', { ...probe, route: post, enrolment: true })).toThrow(refusal);
   });
 });
+
+describe('an operation that declares it manages connections', () => {
+  it('is registered so; every other operation says nothing of it', () => {
+    const managing = defineCommand('org', { ...probe, route: post, connectionsManagement: true });
+    const changing = defineCommand('org', { ...probe, route: post });
+
+    expect([managing, changing].map(({ registration }) => registration.connectionsManagement)).toEqual([
+      true,
+      undefined,
+    ]);
+  });
+});

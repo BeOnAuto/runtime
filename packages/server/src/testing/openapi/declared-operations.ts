@@ -45,6 +45,7 @@ function namesAPlaybook(described: DocumentedOperation): boolean {
 
 export interface ServedDeclaration extends DeclaredAction {
   readonly permissionsManagement: boolean;
+  readonly connectionsManagement?: boolean;
 }
 
 export function actionOf({ scope, name }: Pick<DeclaredAction, 'scope' | 'name'>): string {
@@ -57,8 +58,15 @@ const managingPermissions: ReadonlySet<string> = new Set(
     .map(({ registration }) => actionOf(registration)),
 );
 
+const managingConnections: ReadonlySet<string> = new Set(['org/set_connection_model']);
+
 function withWhatItManages(declared: DeclaredAction): ServedDeclaration {
-  return { ...declared, permissionsManagement: managingPermissions.has(actionOf(declared)) };
+  const action = actionOf(declared);
+  return {
+    ...declared,
+    permissionsManagement: managingPermissions.has(action),
+    connectionsManagement: managingConnections.has(action),
+  };
 }
 
 function declaredBy(described: DocumentedOperation, inPlaybooks: ReadonlySet<string>): ServedDeclaration {
@@ -83,7 +91,8 @@ function declaredBy(described: DocumentedOperation, inPlaybooks: ReadonlySet<str
 export function declarationLineOf(operation: ServedDeclaration): string {
   const named = operation.targetsPlaybook ? ' (names a playbook)' : '';
   const managing = operation.permissionsManagement ? ' (manages permissions)' : '';
-  return `${actionOf(operation)}: ${operation.permissions.join(',')}${named}${managing}`;
+  const connecting = operation.connectionsManagement === true ? ' (manages connections)' : '';
+  return `${actionOf(operation)}: ${operation.permissions.join(',')}${named}${managing}${connecting}`;
 }
 
 export function declaredIn(documented: readonly DocumentedOperation[]): readonly ServedDeclaration[] {

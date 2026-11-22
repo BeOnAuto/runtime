@@ -156,7 +156,7 @@ export function defineReadLink(reading: LinkReading) {
     permittedBy: ['org:write'],
     inputSchema: LinkSchema,
     outputSchema: LinkedSchema,
-    reasons: ['not_found', 'conflict'],
+    reasons: ['not_found', 'conflict', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const registry = yield* loadRegistry(reading);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };

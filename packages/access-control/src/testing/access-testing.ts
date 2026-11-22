@@ -27,6 +27,7 @@ export interface TestOperation extends DeclaredAction {
   readonly kind: OperationKind;
   readonly permissionsManagement: boolean;
   readonly enrolment?: boolean;
+  readonly connectionsManagement?: boolean;
 }
 
 interface Declared {
@@ -34,6 +35,7 @@ interface Declared {
   readonly targetsPlaybook?: boolean;
   readonly permissionsManagement?: boolean;
   readonly enrolment?: boolean;
+  readonly connectionsManagement?: boolean;
 }
 
 function declared(scope: TestOperation['scope'], kind: OperationKind, name: string, said: Declared): TestOperation {
@@ -45,6 +47,7 @@ function declared(scope: TestOperation['scope'], kind: OperationKind, name: stri
     targetsPlaybook: said.targetsPlaybook ?? false,
     permissionsManagement: said.permissionsManagement ?? false,
     ...(said.enrolment === true ? { enrolment: true } : {}),
+    ...(said.connectionsManagement === true ? { connectionsManagement: true } : {}),
   };
 }
 
@@ -74,6 +77,11 @@ export const assignARole = declared('org', 'command', 'assign_role', {
 
 export const joinTheOrg = declared('org', 'command', 'join_org', { permissions: ['org:write'], enrolment: true });
 
+export const setConnectionModel = declared('org', 'command', 'set_connection_model', {
+  permissions: ['org:write'],
+  connectionsManagement: true,
+});
+
 export const declaredOperations: readonly TestOperation[] = [
   listConnections,
   listPlaybooks,
@@ -85,6 +93,7 @@ export const declaredOperations: readonly TestOperation[] = [
   makeComment,
   assignARole,
   joinTheOrg,
+  setConnectionModel,
 ];
 
 export function builtIn(role: string, scope: RoleAssignment['scope']): RoleAssignment {
@@ -153,6 +162,7 @@ export function requestOf({
         irreversible,
         permissionsManagement,
         enrolment: operation.enrolment === true,
+        connectionsManagement: operation.connectionsManagement === true,
       },
     },
   };

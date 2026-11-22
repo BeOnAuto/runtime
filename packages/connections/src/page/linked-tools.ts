@@ -3,16 +3,18 @@ import { marksMeant, ToolMarkSchema } from '@on.auto/tool-servers';
 import { Effect, Schema } from 'effect';
 
 import { toolsOfTheDocument, type DocumentTool } from '../documents/document-tools.ts';
+import { chatsAnsweredOf, type ChatReading } from '../operations/connection-chat.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { providingOf } from '../providers/provider-providing.ts';
-import type { RecordedConnection } from '../registry/connection.ts';
+import { ChatField, type RecordedConnection } from '../registry/connection.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import { LinkedWaysField, linkedWaysOf } from './linked-ways.ts';
 
 export type LinkReading = Pick<
   ConnectionServices,
   'consent' | 'pages' | 'providers' | 'providerValues' | 'modelProviders' | 'policy'
->;
+> &
+  ChatReading;
 
 const LinkedToolSchema = Schema.Struct({
   name: Schema.String.annotate({ description: 'The name of the tool, which a function writes after the slash' }),
@@ -51,8 +53,10 @@ function linkedToolsOf(
   });
 }
 
-export const ListedOnThePageFields = { tools: LinkedToolsField, ways: LinkedWaysField };
+export const ListedOnThePageFields = { tools: LinkedToolsField, ways: LinkedWaysField, chat: ChatField };
 
-export function listedOnThePageOf(kept: KeptConnection, reading: LinkReading) {
-  return Effect.map(linkedToolsOf(kept.connection, reading), (tools) => ({ ...tools, ...linkedWaysOf(kept, reading) }));
-}
+export const listedOnThePageOf = Effect.fnUntraced(function* (kept: KeptConnection, reading: LinkReading) {
+  const tools = yield* linkedToolsOf(kept.connection, reading);
+  const [chat] = yield* chatsAnsweredOf([kept], reading);
+  return { ...tools, ...linkedWaysOf(kept, reading), ...chat };
+});

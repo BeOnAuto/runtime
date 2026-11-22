@@ -62,6 +62,7 @@ const request: AccessRequest = {
       irreversible: false,
       permissionsManagement: false,
       enrolment: false,
+      connectionsManagement: false,
     },
   },
 };

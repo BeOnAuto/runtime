@@ -27,5 +27,6 @@ export {
   whichSpace,
   whoItActsAsThroughATool,
 } from './event-destinations.ts';
+export { chatOverASocket } from './chat-destinations.ts';
 export { postTypeNamedBy, readingTheRoomsName } from './place-name-calls.ts';
 export { agents, asAServiceAccount, asTheCompanysApp, mail, signingInToMail } from './own-app-providers.ts';

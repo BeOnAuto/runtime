@@ -149,6 +149,37 @@ export const ConnectionSchema = Schema.Struct({
 
 export type Connection = typeof ConnectionSchema.Type;
 
+export const ModelField = Schema.String.annotate({
+  description: 'The id of the model Auto answers members with, as list_models writes it',
+});
+
+export const ChatField = Schema.optionalKey(
+  Schema.Struct({
+    credential: Schema.String.annotate({
+      description:
+        'The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials',
+    }),
+    held: Schema.Boolean.annotate({
+      description:
+        'true while the connection holds that credential, given when it was last connected, even if the service has refused it. false when it does not hold it.',
+    }),
+    model: Schema.NullOr(ModelField).annotate({
+      description: 'The id of the model Auto answers members with, as list_models writes it. null until one is chosen.',
+    }),
+    may_set_model: Schema.Boolean.annotate({
+      description: 'true when this caller may choose the model. false when it may not.',
+    }),
+  }).annotate({
+    description:
+      'Whether members can write to Auto through this connection, and the model Auto answers them with. Left out where they cannot.',
+  }),
+);
+
+export const ConnectionWithChatSchema = Schema.Struct({ ...ConnectionSchema.fields, chat: ChatField }).annotate({
+  identifier: 'ConnectionWithChat',
+  description: 'A connection, and whether members can write to Auto through it',
+});
+
 export interface RecordedConnection extends Omit<Connection, 'credential_ends_with' | 'credential' | 'permissions'> {
   readonly credential: RecordedCredential;
 }

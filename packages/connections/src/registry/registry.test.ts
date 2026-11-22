@@ -333,6 +333,7 @@ describe('an added connection, as the stream folds it', () => {
       algorithm: undefined,
       signing: undefined,
       appSecretIds: {},
+      model: null,
       placeNames: new Map(),
     });
   });
@@ -520,6 +521,27 @@ describe('the playbooks of a connection, as the stream folds them', () => {
       url: 'https://crm.example.com/mcp',
       headers: { 'X-Tenant': 'acme-eu' },
     });
+  });
+});
+
+const modelSet = (model: string): ConnectionEvent => ({
+  type: 'connection_model_set',
+  data: { connection: '0199-crm', model },
+});
+
+describe('the model of a connection, as the stream folds it', () => {
+  it('is null on a stream that holds no model set, as every stream a release before this one wrote, which folds as before', () => {
+    const kept = crmAfter(approval, connection);
+
+    expect(kept?.model).toBeNull();
+    expect(kept?.connection).toMatchObject({ status: 'connected', connected_by: { id: 'person:grace' } });
+  });
+
+  it('is the one set last, and is kept when the connection is connected again', () => {
+    expect(crmAfter(modelSet('acme/fast'), approval, connection)?.model).toBe('acme/fast');
+    expect(
+      crmAfter(approval, connection, modelSet('acme/fast'), modelSet('acme/deep'), approval, connection)?.model,
+    ).toBe('acme/deep');
   });
 });
 

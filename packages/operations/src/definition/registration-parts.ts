@@ -61,6 +61,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'irreversible'
   | 'permissionsManagement'
   | 'enrolment'
+  | 'connectionsManagement'
   | 'repeatable'
   | 'whileRetired'
   | 'permittedBy'
@@ -75,6 +76,19 @@ type RegisteredFields<S extends OperationScope, K extends OperationKind> = Omit<
   RegisteredFieldsOf<S, K>,
   'plainLanguage'
 >;
+
+function declaredWhereSo({
+  enrolment,
+  connectionsManagement,
+}: Pick<RegisteredDefinition<OperationKind>, 'enrolment' | 'connectionsManagement'>): Pick<
+  RegisteredFields<OperationScope, OperationKind>,
+  'enrolment' | 'connectionsManagement'
+> {
+  return {
+    ...(enrolment === true ? { enrolment: true } : {}),
+    ...(connectionsManagement === true ? { connectionsManagement: true } : {}),
+  };
+}
 
 function sameInEveryScopeWhereDeclared({
   sameInEveryScope,
@@ -106,7 +120,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     readsOnly: definition.readsOnly ?? false,
     irreversible: definition.irreversible ?? false,
     permissionsManagement: definition.permissionsManagement ?? false,
-    ...(definition.enrolment === true ? { enrolment: true } : {}),
+    ...declaredWhereSo(definition),
     repeatable: definition.repeatable ?? false,
     ...(definition.whileRetired === true ? { whileRetired: true } : {}),
     ...sameInEveryScopeWhereDeclared(definition),

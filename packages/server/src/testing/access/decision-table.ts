@@ -85,7 +85,10 @@ const roles: RoleAssignments = {
     ),
 };
 
-type Unsaid = Omit<AccessContext['operation'], 'targetsPlaybook' | 'permissionsManagement' | 'enrolment'>;
+type Unsaid = Omit<
+  AccessContext['operation'],
+  'targetsPlaybook' | 'permissionsManagement' | 'enrolment' | 'connectionsManagement'
+>;
 
 const whatTheDocumentDoesNotSay: readonly Unsaid[] = [
   {
@@ -122,6 +125,7 @@ function requestOf(kind: CallerKind, operation: ServedDeclaration, unsaid: Unsai
         targetsPlaybook: operation.targetsPlaybook,
         permissionsManagement: operation.permissionsManagement,
         enrolment: false,
+        connectionsManagement: operation.connectionsManagement === true,
       },
     },
   };

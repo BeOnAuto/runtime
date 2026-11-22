@@ -10,7 +10,7 @@ import { checkedBeforeKeeping, type CheckingServices } from './given-checks.ts';
 import { formatMarkOf, givenOf, unkeptRefusalOf, type GivingSchema } from './given-fields.ts';
 import { keyFileKept } from './given-key-files.ts';
 
-type Giving = Omit<typeof GivingSchema.Type, 'playbooks'>;
+type Giving = Omit<typeof GivingSchema.Type, 'playbooks' | 'model'>;
 
 type KeepingServices = CheckingServices & Pick<ConnectionServices, 'secrets' | 'fetch'>;
 

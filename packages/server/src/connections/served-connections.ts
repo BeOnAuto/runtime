@@ -24,10 +24,15 @@ interface ServedConnectionOperations {
 
 type ReadOnceThrough = ConnectionServices['readOnceThrough'];
 
+interface ThroughTheRegistry {
+  readonly readOnceThrough: ReadOnceThrough;
+  readonly chatModels: NonNullable<ConnectionServices['chatModels']>;
+}
+
 export interface StoresAndConnections extends OwnKeysRead {
   readonly stores: LedgerStores;
   readonly consent: ReturnType<typeof consentClientOf>;
-  readonly connectionsReadingThrough: (readOnceThrough: ReadOnceThrough) => ServedConnectionOperations;
+  readonly connectionsReadingThrough: (registry: ThroughTheRegistry) => ServedConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
   readonly clientMetadata: RegisterRoutes;
   readonly license: ServedLicense;
@@ -56,17 +61,16 @@ type ServingSettings = Pick<
   | 'receiving'
 >;
 
-interface Composed {
+interface Composed extends ThroughTheRegistry {
   readonly secrets: LedgerStores['secrets'];
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly pages: ConnectionServices['pages'];
-  readonly readOnceThrough: ReadOnceThrough;
   readonly opens: ConnectionOpens;
 }
 
 function connectionServicesOf(
   settings: ServingSettings,
-  { secrets, consent, pages, readOnceThrough, opens }: Composed,
+  { secrets, consent, pages, readOnceThrough, opens, chatModels }: Composed,
 ): ConnectionServices {
   return {
     consent,
@@ -82,6 +86,7 @@ function connectionServicesOf(
     fetch: outboundFetch,
     readOnceThrough,
     sockets: socketChecksOver(opens),
+    chatModels,
     received: eventsReceivedAt(settings.receiving),
   };
 }
@@ -124,8 +129,8 @@ export async function storesAndConnectionsOf(
     ...ownKeys,
     consent,
     opens,
-    connectionsReadingThrough: (readOnceThrough) => {
-      const composed = { secrets: stores.secrets, consent, pages, readOnceThrough, opens };
+    connectionsReadingThrough: ({ readOnceThrough, chatModels }) => {
+      const composed = { secrets: stores.secrets, consent, pages, readOnceThrough, chatModels, opens };
       const services = connectionServicesOf(settings, composed);
       return { connections: makeConnectionOperations(services), offering: makeProviderOffering(services) };
     },

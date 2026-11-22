@@ -22,3 +22,11 @@ export const heldAppCredentials: readonly (typeof ConnectionEventSchema.Type)[] 
     context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
   },
 ];
+
+export const modelSet: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_model_set',
+    data: { connection: 'connection-1', model: 'anthropic/claude-sonnet-4-5' },
+    context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+  },
+];

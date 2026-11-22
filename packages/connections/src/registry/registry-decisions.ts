@@ -5,19 +5,16 @@ import type {
   CommandDecidedApart,
   CommandMetadata,
   ConnectionAddition,
-  ConnectionApproval,
   ConnectionBreaking,
   ConnectionCommand,
   ConnectionReconnection,
   ConnectionRemoval,
   ConnectionReplacement,
-  CredentialGiving,
 } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
-import { decideFinish, decideStart, takesConsent } from './consent-decisions.ts';
-import { decideClientGiving } from './oauth-client-decisions.ts';
-import { decidePlaybooks, playbooksChosenOf } from './playbooks-decisions.ts';
-import { bindingRefusalOf, isConnectedAt, keptConnectionOf, linkedConnectionOf } from './registry-lookup.ts';
+import { decidedThroughTheLink, isThroughTheLink } from './link-decisions.ts';
+import { decidePlaybooks } from './playbooks-decisions.ts';
+import { bindingRefusalOf, isConnectedAt, keptConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 import { decideOnSigning, isSigning, type CommandWithoutSigning } from './signing-decisions.ts';
 
@@ -27,23 +24,7 @@ export type Decision = Result.Result<readonly ConnectionEvent[], Rejection<Regis
 
 const nothingToRecord: Decision = Result.succeed([]);
 
-const kindsGivenOnThePage: ReadonlySet<string> = new Set(['secret', 'client_credentials', 'jwt_bearer']);
-
 export const mostConnectionsOfAnOrg = 50;
-
-function takesAValue({ connection }: KeptConnection): boolean {
-  return kindsGivenOnThePage.has(connection.credential.kind);
-}
-
-export function takesNoCredential(name: string): Conflict {
-  return new Conflict({ detail: `The connection ${name} takes no credential to give, so it is approved as it is` });
-}
-
-export function connectedByConsent(name: string): Conflict {
-  return new Conflict({
-    detail: `The connection ${name} is connected by signing in to its provider and allowing Auto, which its page starts`,
-  });
-}
 
 export function additionRefusalOf(name: string, registry: Registry): Conflict | undefined {
   const kept = [...registry.values()].filter((each) => each.connection.status !== 'removed');
@@ -98,51 +79,6 @@ export function addedData({
     ...(events === undefined ? {} : { events }),
     added_by: addedBy,
   };
-}
-
-function decideApproval(command: ConnectionApproval & CommandMetadata, registry: Registry): Decision {
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
-    if (takesConsent(kept)) {
-      return Result.fail(connectedByConsent(kept.connection.name));
-    }
-    return takesAValue(kept)
-      ? Result.fail(
-          new Conflict({
-            detail: `The connection ${kept.connection.name} takes a credential, so it is approved by giving its credential`,
-          }),
-        )
-      : Result.succeed([
-          ...playbooksChosenOf(kept, command),
-          { type: 'connection_approved', data: { connection: command.connection } },
-          {
-            type: 'connection_connected',
-            data: { connection: command.connection, connected_by: command.connected_by },
-          },
-        ]);
-  });
-}
-
-function decideGiving(command: CredentialGiving & CommandMetadata, registry: Registry): Decision {
-  const { connection, secret_id: secretId, algorithm, client_id: clientId, connected_by: connectedBy } = command;
-  const signing = algorithm === undefined ? {} : { algorithm };
-  const client = clientId === undefined ? {} : { client_id: clientId };
-  const { app_secret_ids: appSecretIds = {} } = command;
-  const apps = Object.keys(appSecretIds).length === 0 ? {} : { app_secret_ids: appSecretIds };
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
-    if (takesConsent(kept)) {
-      return Result.fail(connectedByConsent(kept.connection.name));
-    }
-    return takesAValue(kept)
-      ? Result.succeed([
-          ...playbooksChosenOf(kept, command),
-          { type: 'connection_approved', data: { connection } },
-          {
-            type: 'connection_connected',
-            data: { connection, secret_id: secretId, ...signing, ...client, ...apps, connected_by: connectedBy },
-          },
-        ])
-      : Result.fail(takesNoCredential(kept.connection.name));
-  });
 }
 
 function decideRemoval({ connection }: ConnectionRemoval, registry: Registry): Decision {
@@ -246,30 +182,6 @@ function decideReplacement(command: ConnectionReplacement & CommandMetadata, reg
 
 export function registryContextOf({ by, at }: CommandMetadata): Context {
   return { at, by };
-}
-
-type ThroughTheLink = Extract<
-  CommandWithoutSigning,
-  { readonly type: 'approve' | 'give' | 'give_client' | 'start' | 'finish' }
->;
-
-const kindsThroughTheLink: ReadonlySet<string> = new Set(['approve', 'give', 'give_client', 'start', 'finish']);
-
-function isThroughTheLink(command: CommandWithoutSigning): command is ThroughTheLink {
-  return kindsThroughTheLink.has(command.type);
-}
-
-function decidedThroughTheLink(command: ThroughTheLink, registry: Registry): Decision {
-  if (command.type === 'approve') {
-    return decideApproval(command, registry);
-  }
-  if (command.type === 'give') {
-    return decideGiving(command, registry);
-  }
-  if (command.type === 'give_client') {
-    return decideClientGiving(command, registry);
-  }
-  return command.type === 'start' ? decideStart(command, registry) : decideFinish(command, registry);
 }
 
 type DecidedApart = CommandDecidedApart & CommandMetadata;

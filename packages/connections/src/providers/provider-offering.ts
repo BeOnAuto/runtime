@@ -77,7 +77,8 @@ function offeredAmong(listed: readonly ListedProvider[], money: ReadonlySet<stri
 }
 
 export function makeProviderOffering(services: ConnectionServices): ProviderOffering {
-  const adding = defineAddConnection(services, pageOperationsOf(services).approving.registration).registration;
+  const approving = pageOperationsOf({ ...services, chatting: undefined }).approving.registration;
+  const adding = defineAddConnection(services, approving).registration;
   return (caller) =>
     Effect.flatMap(addingRefusedTo(services, adding, caller), (refusal) =>
       refusal === null

@@ -205,7 +205,7 @@ describe('served access control', () => {
       const lines = logLinesOf(child);
 
       expect([created.status, listed.status, read.status]).toEqual([201, 200, 200]);
-      expect(atStart).toMatchObject([{ level: 'INFO', annotations: { engine: 'Cedar 4.14.0', policies: 12 } }]);
+      expect(atStart).toMatchObject([{ level: 'INFO', annotations: { engine: 'Cedar 4.14.0', policies: 13 } }]);
       expect(atStart[0]?.annotations['operations']).toBeGreaterThan(60);
       expect(lines.filter(({ message }) => message === loadedMessage)).toHaveLength(1);
       expect(lines.filter(({ message }) => message === undecidedMessage)).toEqual([]);

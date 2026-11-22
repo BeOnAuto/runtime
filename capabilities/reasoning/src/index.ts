@@ -11,6 +11,7 @@ export type {
 } from './providers/model-access-options.ts';
 export type { AccessTokenSource, AwsCredentials, CredentialSources } from './providers/credential-sources.ts';
 export { defineListModels } from './catalog/list-models.ts';
+export { modelChoiceOf } from './catalog/model-choice.ts';
 export type { ModelCatalog } from './catalog/catalog-listing.ts';
 export { ModelListSchema, type ModelEntry, type ModelList } from './catalog/model-list.ts';
 export { ContentRefused } from './failure/content-refused.ts';

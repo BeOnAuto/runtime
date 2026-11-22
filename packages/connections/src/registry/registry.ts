@@ -53,6 +53,7 @@ export interface KeptConnection extends KeptReads {
   readonly nextClient: GivenClient | undefined;
   readonly signing: KeptSigning | undefined;
   readonly appSecretIds: AppSecretIds;
+  readonly model: string | null;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -98,6 +99,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     nextClient: undefined,
     signing: undefined,
     appSecretIds: {},
+    model: null,
     ...noReads,
   };
 }
@@ -187,6 +189,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     nextClient: promoted === undefined ? kept.nextClient : undefined,
     signing: kept.signing,
     appSecretIds,
+    model: kept.model,
     ...noReads,
   };
 }

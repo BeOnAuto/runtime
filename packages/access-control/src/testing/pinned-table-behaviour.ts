@@ -157,9 +157,18 @@ const everythingButWhatManagesOrEnrols = [
 
 const joining = 'join_org on org';
 
-const everything = [...everythingButWhatManagesOrEnrols, joining];
+const managingConnections = 'set_connection_model on org';
 
-const everythingAnAdminInStudioDoes = [...everythingButWhatManagesOrEnrols, 'assign_role on org', joining];
+const everythingButWhatOnlyAnAdminDoes = [...everythingButWhatManagesOrEnrols, joining];
+
+const everything = [...everythingButWhatOnlyAnAdminDoes, managingConnections];
+
+const everythingAnAdminInStudioDoes = [
+  ...everythingButWhatManagesOrEnrols,
+  'assign_role on org',
+  joining,
+  managingConnections,
+];
 
 const reads = [
   'list_connections on org',
@@ -175,21 +184,21 @@ const pinned = [
   { caller: 'Admin, through an agent approved to read', allowed: reads },
   { caller: 'Admin, asking @Auto in a conversation', allowed: everything },
   { caller: 'Admin, in a run they started', allowed: everything },
-  { caller: 'Editor, in Studio', allowed: everything },
-  { caller: 'Editor, through an agent', allowed: everything },
+  { caller: 'Editor, in Studio', allowed: everythingButWhatOnlyAnAdminDoes },
+  { caller: 'Editor, through an agent', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'Editor, through an agent approved to read', allowed: reads },
-  { caller: 'Editor, asking @Auto in a conversation', allowed: everything },
-  { caller: 'Editor, in a run they started', allowed: everything },
+  { caller: 'Editor, asking @Auto in a conversation', allowed: everythingButWhatOnlyAnAdminDoes },
+  { caller: 'Editor, in a run they started', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'Viewer, in Studio', allowed: [...reads, joining] },
   { caller: 'Viewer, through an agent', allowed: reads },
   { caller: 'Viewer, through an agent approved to read', allowed: reads },
   { caller: 'Viewer, asking @Auto in a conversation', allowed: reads },
-  { caller: 'Viewer, in a run they started', allowed: everything },
+  { caller: 'Viewer, in a run they started', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'A person with no role, in Studio', allowed: [joining] },
   { caller: 'A person with no role, through an agent', allowed: [] },
   { caller: 'A person with no role, through an agent approved to read', allowed: [] },
   { caller: 'A person with no role, asking @Auto in a conversation', allowed: [] },
-  { caller: 'A person with no role, in a run they started', allowed: everything },
+  { caller: 'A person with no role, in a run they started', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'A key', allowed: everything },
   {
     caller: 'A key that reads playbook alpha alone',

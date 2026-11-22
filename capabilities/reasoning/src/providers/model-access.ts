@@ -2,7 +2,7 @@ import { Effect } from 'effect';
 
 import { modelCatalogOf } from '../catalog/model-catalog.ts';
 import { offeredModels, type OfferedModels } from '../model/offered-models.ts';
-import { resolvedLanguageModel } from '../model/resolved-language-model.ts';
+import { resolvedModels, type ResolvedModels } from '../model/resolved-language-model.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import { providerStatus, type ProviderStatus } from '../settings/provider-status.ts';
 import { transcriberOf } from '../voice/transcriber.ts';
@@ -11,7 +11,8 @@ import type { ModelAccessOptions } from './model-access-options.ts';
 import { modelFactories } from './model-factories.ts';
 
 export interface ModelAccess {
-  readonly languageModel: ReturnType<typeof resolvedLanguageModel>;
+  readonly languageModel: ResolvedModels['languageModel'];
+  readonly resolution: ResolvedModels['resolution'];
   readonly status: ProviderStatus;
   readonly offered: OfferedModels;
   readonly catalog: ReturnType<typeof modelCatalogOf>;
@@ -30,7 +31,7 @@ export const makeModelAccess = Effect.fnUntraced(function* (settings: ModelSetti
   const proxy = options.proxy ?? { enabled: false, environment: {} };
   const models = yield* Effect.promise(() => modelFactories(settings, { fetch, credentials, azureTokens, proxy }));
   const access: ModelAccess = {
-    languageModel: resolvedLanguageModel(models, settings, status, options),
+    ...resolvedModels(models, settings, status, options),
     status,
     offered: offeredModels(status.configured, settings.aliases, settings.allowed),
     catalog: modelCatalogOf(settings, status, { ...options, fetch }),

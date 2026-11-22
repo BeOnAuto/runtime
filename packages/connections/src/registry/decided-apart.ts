@@ -3,6 +3,7 @@ import type { ProviderList } from '@on.auto/providers';
 import { decideAppCredentialRefusal } from './app-credential-decisions.ts';
 import type { CommandDecidedApart, CommandMetadata, ConnectionCommand } from './connection-commands.ts';
 import { decideIdentification } from './identity-decisions.ts';
+import { decideModel } from './model-decisions.ts';
 import { decidePlaceNaming } from './place-name-decisions.ts';
 import type { Decision } from './registry-decisions.ts';
 import type { Registry } from './registry.ts';
@@ -16,6 +17,7 @@ const typesDecidedApart: ReadonlySet<string> = new Set([
   'identify',
   'name_place',
   'set_account_type',
+  'set_model',
   'choose_way',
   'request',
   'decline',
@@ -34,6 +36,9 @@ export function decideApart(command: DecidedApart, registry: Registry, providers
   }
   if (command.type === 'request' || command.type === 'decline') {
     return decideOnItsRequest(command, registry);
+  }
+  if (command.type === 'set_model') {
+    return decideModel(command, registry);
   }
   return command.type === 'name_place' ? decidePlaceNaming(command, registry) : decideIdentification(command, registry);
 }
