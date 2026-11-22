@@ -1,4 +1,4 @@
-import { messages, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { agents, messages, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { consentClientWith, inProcessFetch } from '@on.auto/tool-servers/testing';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -6,10 +6,11 @@ import { describe, expect, it } from 'vitest';
 import { makeProviderOffering } from '../index.ts';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { adding } from '../testing/additions.ts';
-import { gatewayHarnessAt, gatewayServed } from '../testing/gateways.ts';
+import { gatewayHarnessAt, gatewayServed, providersThrough } from '../testing/gateways.ts';
 import { connectionServicesWith, ada, harness, harnessPages, operationNamed } from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
+const namingTheOrigin = (origin: string): unknown => expect.stringContaining(origin);
 
 const notHere =
   "The provider messages connects through a service that Auto's cloud runs, which this runtime does not have";
@@ -190,6 +191,22 @@ describe('a server given by hand at the address of a gateway', () => {
       reason: 'forbidden',
       detail: `A connection given by hand may not reach ${gateway.origin}, which the provider messages connects through; add the provider messages instead`,
     });
+  });
+});
+
+describe('a provider whose whole address a person gives, at the address of a gateway', () => {
+  it('is refused as it is added, naming the address, and nothing is recorded', async () => {
+    const gateway = gatewayServed();
+    const h = gatewayHarnessAt(gateway, {
+      providers: providerListOf(providerOf(agents), ...providersThrough(gateway).providers),
+    });
+
+    expect(await adding(h, { provider: 'agents', placeholders: { address: `${gateway.origin}/mcp` } })).toMatchObject({
+      status: 'rejected',
+      reason: 'forbidden',
+      detail: namingTheOrigin(gateway.origin),
+    });
+    expect(await h.facts()).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { calledOpeningLinks } from '@on.auto/api/testing';
-import { hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto/providers';
+import { addressGivenWholeIn, hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto/providers';
 import { Option, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
@@ -16,7 +16,9 @@ const ListedSchema = Schema.Struct({
 });
 
 function hostsOf(provider: Provider): readonly (readonly string[])[] {
-  return provider.entry.credentials.flatMap((way) => hostAlternativesOf(provider, way));
+  const givenWhole = `{${addressGivenWholeIn(provider.entry) ?? ''}}`;
+  const hosts = provider.entry.credentials.flatMap((way) => hostAlternativesOf(provider, way));
+  return hosts.map((each) => each.filter((host) => host !== givenWhole));
 }
 
 const github = Option.getOrThrow(Option.fromNullishOr(shippedProviders.find(({ entry }) => entry.name === 'github')));
@@ -89,9 +91,7 @@ describe('the providers a server lists over HTTP', () => {
   });
 
   it('are those the rules of its operator could allow', async () => {
-    const allowed = Option.getOrThrow(
-      Option.fromNullishOr(hostsOf(Option.getOrThrow(Option.fromNullishOr(shippedProviders[0])))[0]),
-    );
+    const [allowed = []] = hostsOf(Option.getOrThrow(Option.fromNullishOr(shippedProviders[0])));
     const reached = shippedProviders.filter((provider) =>
       hostsOf(provider).some((hosts) => hosts.every((host) => allowed.includes(host))),
     );
@@ -102,14 +102,11 @@ describe('the providers a server lists over HTTP', () => {
     expect(reached.length).toBeLessThan(names.length);
   });
 
-  it('take no name a built-in model provider has, which every runtime would refuse a connection', () => {
+  it('take no name a built-in model provider has, which every runtime would refuse a connection, and refer to no variable the runtime reads for itself, whose value a connection would send to the vendor', () => {
     const { modelProviders } = readSettingsOf({});
 
     expect(names.filter((name) => modelProviders.includes(name))).toEqual([]);
     expect(modelProviders.length).toBeGreaterThan(5);
-  });
-
-  it('refer to no variable the runtime reads for itself, whose value a connection would send to the vendor', () => {
     expect(operatorVariablesIn(shippedList).filter((name) => variablesTheRuntimeReads.includes(name))).toEqual([]);
     expect(variablesTheRuntimeReads.length).toBeGreaterThan(10);
   });
@@ -158,6 +155,7 @@ const waysWithoutAClient = {
   'adobe-analytics-mcp': ['authorization offered'],
   'amazon-ads': [underTheOrgsOAuthClientAlone],
   'amazon-ads-mcp': [underTheOrgsOAuthClientAlone],
+  'apollo-graphos-agent-services': ['secret offered'],
   atlassian: ['authorization offered'],
   buffer: ['secret offered'],
   github: ['secret offered', underTheOrgsOAuthClientAlone],
@@ -182,6 +180,7 @@ const waysWithAClient = {
   'adobe-analytics-mcp': ['authorization offered'],
   'amazon-ads': ['authorization offered'],
   'amazon-ads-mcp': ['authorization offered'],
+  'apollo-graphos-agent-services': ['secret offered'],
   atlassian: ['authorization offered'],
   buffer: ['secret offered'],
   github: ['authorization offered', 'secret offered'],

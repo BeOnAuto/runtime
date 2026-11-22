@@ -46,6 +46,14 @@ const slackManifest: unknown = JSON.parse(slackKeyPage.searchParams.get('manifes
 describe('the ways of a key of the shipped providers', () => {
   it('each name the key, the page where it is made and, where the vendor documents its start, the format of a key', () => {
     expect(waysOfAKey.map((each) => shownOf(each))).toEqual([
+      [
+        'apollo-graphos-agent-services',
+        'API key',
+        'https://constellation.apollographql.com',
+        '/',
+        undefined,
+        undefined,
+      ],
       ['buffer', 'Buffer API key', 'https://publish.buffer.com', '/settings/api', undefined, undefined],
       [
         'github',
@@ -62,6 +70,7 @@ describe('the ways of a key of the shipped providers', () => {
 
   it('link their key page in their instructions, except one that makes an app, and name the start of a key a pattern holds it to', () => {
     expect(waysOfAKey.map((each) => linkedIn(each))).toEqual([
+      ['apollo-graphos-agent-services', true, true],
       ['buffer', true, true],
       ['github', true, true],
       ['profound', true, true],
@@ -69,6 +78,18 @@ describe('the ways of a key of the shipped providers', () => {
     ]);
   });
 
+  it('test the key with a tool where the vendor offers one, and take app credentials only where an entry opens a socket', () => {
+    expect(waysOfAKey.map((each) => furtherOf(each))).toEqual([
+      ['apollo-graphos-agent-services', undefined, []],
+      ['buffer', undefined, []],
+      ['github', undefined, []],
+      ['profound', undefined, []],
+      ['slack-bot', 'auth_test', [['app_level_token', 'Slack app-level token', undefined, 'xapp-…', '^xapp-.+$']]],
+    ]);
+  });
+});
+
+describe('the patterns of the keys of the shipped providers', () => {
   it('take the keys their vendors document, and refuse a key of another kind', () => {
     expect([
       matchesKeyPattern('^github_pat_.+$', 'github_pat_11ABC_def'),
@@ -78,15 +99,6 @@ describe('the ways of a key of the shipped providers', () => {
       matchesKeyPattern('^xapp-.+$', 'xapp-1-A0APP-2-abc'),
       matchesKeyPattern('^xapp-.+$', 'xoxb-1-2-abc'),
     ]).toEqual([true, false, true, false, true, false]);
-  });
-
-  it('test the key with a tool where the vendor offers one, and take app credentials only where an entry opens a socket', () => {
-    expect(waysOfAKey.map((each) => furtherOf(each))).toEqual([
-      ['buffer', undefined, []],
-      ['github', undefined, []],
-      ['profound', undefined, []],
-      ['slack-bot', 'auth_test', [['app_level_token', 'Slack app-level token', undefined, 'xapp-…', '^xapp-.+$']]],
-    ]);
   });
 });
 

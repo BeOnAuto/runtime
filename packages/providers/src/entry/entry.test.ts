@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { hostAlternativesOf, isPinnableTemplate, pinnedTemplateShape } from '../index.ts';
 import { problemsOf } from '../testing/entry-problems.ts';
 import { ledgers, providerOf, regions, tracker } from '../testing/fixture-providers.ts';
+import { agentServerAddress, agents, asARegisteredClient } from '../testing/own-app-providers.ts';
 
 const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['revoked'] };
 
@@ -34,7 +35,7 @@ function regionsSetting(...apiHosts: readonly string[]) {
 }
 
 describe('an address of an entry', () => {
-  it('is never a placeholder, whole or in its scheme, and writes out its scheme and :// before its host', () => {
+  it('is never a placeholder in its scheme, nor one whole but of format uri, and writes out its scheme and :// before its host', () => {
     expect([
       problemsOf({ ...tracker, url: '{site}' }),
       problemsOf({ ...tracker, url: '{site}://tracker.example.com/mcp' }),
@@ -67,6 +68,120 @@ describe('an address of an entry', () => {
     expect(providerOf(taken).entry.credentials.map((way) => hostAlternativesOf(providerOf(taken), way))).toEqual([
       [['api-na.regions.example.com'], ['api-eu.regions.example.com']],
     ]);
+  });
+});
+
+function wholeAddressOnly(name: string): string {
+  return `Holds {${name}}, a placeholder of format uri, which stands only as the whole url of an mcp provider`;
+}
+
+const agentsCalledAt = {
+  name: 'agents',
+  title: agents.title,
+  description: agents.description,
+  website: agents.website,
+  placeholders: { address: agentServerAddress },
+  credentials: [asARegisteredClient],
+};
+
+const mcpAt = { type: 'mcp', url: 'https://agents.example.com/mcp' };
+
+const placedElsewhere: readonly (readonly [string, Readonly<Record<string, unknown>>, string])[] = [
+  ['before a path of the address', { type: 'mcp', url: '{address}/mcp' }, '/url'],
+  ['after the scheme of the address', { type: 'mcp', url: 'https://{address}' }, '/url'],
+  ['in the host of the address', { type: 'mcp', url: 'https://{address}.example.com/mcp' }, '/url'],
+  ['in the path of the address', { type: 'mcp', url: 'https://agents.example.com/{address}' }, '/url'],
+  ['in a header', { ...mcpAt, headers: { 'X-Server': '{address}' } }, '/headers/X-Server'],
+  ['as the document of an HTTP API', { type: 'openapi', document: '{address}' }, '/document'],
+  [
+    'as the base address of an HTTP API',
+    { type: 'openapi', document: 'https://agents.example.com/openapi.json', base_url: '{address}' },
+    '/base_url',
+  ],
+  [
+    'as the issuer of a way',
+    { ...mcpAt, credentials: [{ kind: 'client_credentials', issuer: '{address}' }] },
+    '/credentials/0/issuer',
+  ],
+];
+
+const takenNowhere: readonly (readonly [string, Readonly<Record<string, unknown>>, string])[] = [
+  ['a pattern', { pattern: '^https://.+$' }, '/placeholders/address/pattern'],
+  ['required', { required: false }, '/placeholders/address/required'],
+  ['choices', { choices: [{ value: 'https://a.example.com', title: 'A' }] }, '/placeholders/address/choices'],
+];
+
+const withoutAnExample = {
+  title: agentServerAddress.title,
+  description: agentServerAddress.description,
+  format: agentServerAddress.format,
+};
+
+const examplesRefused: readonly (readonly [string, Readonly<Record<string, string>>])[] = [
+  ['none', withoutAnExample],
+  ['one that is no address', { ...agentServerAddress, example: 'agents.acme.example.com/mcp' }],
+  ['one that is not https', { ...agentServerAddress, example: 'http://agents.acme.example.com/mcp' }],
+];
+
+describe('a placeholder of format uri', () => {
+  it('stands as the whole url of an mcp provider, the one place it is taken', () => {
+    expect(problemsOf(agents)).toEqual([]);
+  });
+
+  it.each(placedElsewhere)('is refused %s', (_case, fields, path) => {
+    expect(problemsOf({ ...agentsCalledAt, ...fields })).toContainEqual([path, wholeAddressOnly('address')]);
+  });
+
+  it('is refused in the issuer of a way that asks it as its own value', () => {
+    const way = { kind: 'client_credentials', issuer: '{server}', placeholders: { server: agentServerAddress } };
+
+    expect(problemsOf({ ...agentsCalledAt, ...mcpAt, placeholders: {}, credentials: [way] })).toContainEqual([
+      '/credentials/0/issuer',
+      wholeAddressOnly('server'),
+    ]);
+  });
+
+  it.each(takenNowhere)(
+    'takes no %s, since its value is checked as an address given by hand',
+    (_case, fields, path) => {
+      expect(problemsOf({ ...agents, placeholders: { address: { ...agentServerAddress, ...fields } } })).toContainEqual(
+        [path, expect.any(String)],
+      );
+    },
+  );
+
+  it.each(examplesRefused)('takes an example that is an https URL, refusing %s', (_case, address) => {
+    expect(problemsOf({ ...agents, placeholders: { address } })).toEqual([
+      ['/placeholders/address/example', expect.any(String)],
+    ]);
+  });
+});
+
+const referencesSent: readonly (readonly [string, Readonly<Record<string, unknown>>, string])[] = [
+  ['as a header value', { headers: { 'X-Token': '${OPS_TOKEN}' } }, '/headers/X-Token'],
+  ['inside a header value', { headers: { 'X-Token': 'Token ${OPS_TOKEN}' } }, '/headers/X-Token'],
+  ['with the env: prefix', { headers: { 'X-Token': '${env:OPS_TOKEN}' } }, '/headers/X-Token'],
+  ['with a default', { headers: { 'X-Region': '${OPS_REGION:-eu}' } }, '/headers/X-Region'],
+];
+
+describe('a reference to an environment variable in an entry whose url a person gives whole', () => {
+  it.each(referencesSent)(
+    'is refused %s, since its value would be sent to the address the person gives',
+    (_case, fields, path) => {
+      expect(problemsOf({ ...agentsCalledAt, ...fields, type: 'mcp', url: '{address}' })).toEqual([
+        [path, expect.any(String)],
+      ]);
+    },
+  );
+
+  it.each(referencesSent)('is taken %s where the entry writes its own address', (_case, fields) => {
+    expect(problemsOf({ ...agentsCalledAt, ...mcpAt, ...fields, placeholders: {} })).toEqual([]);
+  });
+
+  it('is no escaped $, which is sent as written', () => {
+    expect(problemsOf({ ...agentsCalledAt, type: 'mcp', url: '{address}', headers: { 'X-Currency': 'US$$' } })).toEqual(
+      [],
+    );
   });
 });
 

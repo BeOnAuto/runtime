@@ -14,7 +14,7 @@ export { scopesIn, scopeWith, type ScopeGroup } from './entry/scope-groups.ts';
 export { wayAddresses, type WayAddress } from './entry/templates.ts';
 export { keyFieldNames, keyFields, type AppCredential, type KeyFieldName } from './keys/key-fields.ts';
 export { matchesKeyPattern } from './keys/key-patterns.ts';
-export { clientIdPlaceholder, type Choice, type Placeholder } from './entry/placeholders.ts';
+export { addressGivenWholeIn, clientIdPlaceholder, type Choice, type Placeholder } from './entry/placeholders.ts';
 export {
   AddedProviderEntrySchema,
   ProviderEntrySchema,

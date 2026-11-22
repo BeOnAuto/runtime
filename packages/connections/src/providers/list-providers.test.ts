@@ -1,5 +1,5 @@
 import type { CallerIdentity, Outcome } from '@on.auto/operations';
-import { providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { agents, providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -105,7 +105,10 @@ async function addingOf(options: HarnessOptions, caller = ada) {
 }
 
 async function waysListedUnder(policy: ConnectionPolicyFields): Promise<readonly string[]> {
-  const answer = await listing({ policy: connectionPolicyOf(policy), providers: providersOf(tracker, regions) });
+  const answer = await listing({
+    policy: connectionPolicyOf(policy),
+    providers: providersOf(tracker, regions, agents),
+  });
   return listedOf(answer).output.providers.map(
     ({ name, credentials }) => `${name}: ${credentials.map(({ kind }) => kind).join(', ')}`,
   );
@@ -187,7 +190,7 @@ const selfHostedProvider = providerOf({
 const loopbackProvider = providerOf({ ...intranetProvider.entry, name: 'loopback', url: 'http://127.0.0.1:8931/mcp' });
 
 describe('the providers the rules of the runtime could allow', () => {
-  it('are those whose hosts a pattern could take, a host with a placeholder by its shape or its fixed end', async () => {
+  it('are those whose hosts a pattern could take, a host with a placeholder by its shape or its fixed end, and an address a person gives whole wherever some host is', async () => {
     const policies: readonly ConnectionPolicyFields[] = [
       {},
       { allowed_hosts: [] },
@@ -198,12 +201,12 @@ describe('the providers the rules of the runtime could allow', () => {
     ];
 
     expect(await Promise.all(policies.map((policy) => waysListedUnder(policy)))).toEqual([
-      ['tracker: secret, none', 'regions: secret'],
+      ['tracker: secret, none', 'regions: secret', 'agents: secret'],
       [],
-      ['tracker: secret, none'],
-      ['tracker: secret, none', 'regions: secret'],
-      ['regions: secret'],
-      [],
+      ['tracker: secret, none', 'agents: secret'],
+      ['tracker: secret, none', 'regions: secret', 'agents: secret'],
+      ['regions: secret', 'agents: secret'],
+      ['agents: secret'],
     ]);
   });
 

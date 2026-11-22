@@ -1,6 +1,9 @@
+import { isPinnableUrl } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 export const clientIdPlaceholder = 'client_id';
+
+const addressFormat = 'uri';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
@@ -28,6 +31,12 @@ const PlaceholderFieldsSchema = Schema.Struct({
     }),
   ),
   description: NamedSchema,
+  format: Schema.optionalKey(
+    Schema.Literal(addressFormat).annotate({
+      description:
+        'uri for a value that is a whole address, an https URL or an http URL on a loopback address, which stands only as the whole url of an mcp provider',
+    }),
+  ),
   pattern: Schema.optionalKey(Schema.String),
   example: Schema.optionalKey(Schema.String),
   required: Schema.optionalKey(Schema.Boolean),
@@ -86,7 +95,53 @@ function choiceIssuesOf(choices: readonly Choice[]): readonly PlaceholderIssue[]
 
 const takenWithChoices: readonly (keyof Placeholder)[] = ['pattern', 'example', 'required'];
 
+const takenWithAnAddress: readonly (keyof Placeholder)[] = ['pattern', 'required', 'choices'];
+
+export function isAnAddress({ format }: Placeholder): boolean {
+  return format === addressFormat;
+}
+
+interface Addressed {
+  readonly type: string;
+  readonly url?: string | undefined;
+  readonly placeholders?: Readonly<Record<string, Placeholder>> | undefined;
+}
+
+export function addressGivenWholeIn({ type, url, placeholders = {} }: Addressed): string | undefined {
+  const given = Object.entries(placeholders).find(
+    ([name, placeholder]: readonly [string, Placeholder]) =>
+      type === 'mcp' && url === `{${name}}` && isAnAddress(placeholder),
+  );
+  return given?.[0];
+}
+
+function addressIssuesOf(placeholder: Placeholder): readonly PlaceholderIssue[] {
+  const { example } = placeholder;
+  return [
+    ...takenWithAnAddress
+      .filter((field) => placeholder[field] !== undefined)
+      .map((field) => ({
+        path: [field],
+        issue: `Expected no ${field}: a placeholder of format uri takes a description and an example, and its value is checked as the address of a server given by hand`,
+      })),
+    ...(example === undefined
+      ? [{ path: ['example'], issue: 'Expected example, which a placeholder of format uri takes' }]
+      : []),
+    ...(example === undefined || isPinnableUrl(example)
+      ? []
+      : [
+          {
+            path: ['example'],
+            issue: 'Expected an example that is an https URL, or an http URL on a loopback address',
+          },
+        ]),
+  ];
+}
+
 function placeholderIssuesOf(placeholder: Placeholder): readonly PlaceholderIssue[] {
+  if (isAnAddress(placeholder)) {
+    return addressIssuesOf(placeholder);
+  }
   if (placeholder.choices === undefined) {
     return patternIssuesOf(placeholder);
   }

@@ -21,6 +21,7 @@ import {
   regions,
   tracker,
 } from '../testing/fixture-providers.ts';
+import { agents } from '../testing/own-app-providers.ts';
 
 function waysOf(provider: Provider) {
   return provider.entry.credentials.map((way) => hostAlternativesOf(provider, way));
@@ -77,6 +78,12 @@ describe('the hosts a way of a provider reaches', () => {
         ['api-eu.campaigns.example.com', fixed, fixed, 'auth-eu.campaigns.example.com', fixed],
       ],
     ]);
+  });
+});
+
+describe('the host of an address a person gives whole', () => {
+  it('is the placeholder whole, which the person’s value takes the place of', () => {
+    expect(waysOf(providerOf(agents))).toEqual([[['{address}']]]);
   });
 });
 

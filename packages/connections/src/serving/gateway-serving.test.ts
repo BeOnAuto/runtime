@@ -1,3 +1,4 @@
+import { agents, providerListOf, providerOf } from '@on.auto/providers/testing';
 import type { ConnectionUnready } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -10,6 +11,7 @@ import { ada, harness, operationNamed } from '../testing/harness.ts';
 import { servedAs, sourceOver } from '../testing/served-connections.ts';
 
 const anyWords: unknown = expect.any(String);
+const namingTheOrigin = (origin: string): unknown => expect.stringContaining(origin);
 
 const askingWho = { server: 'messages', tool: 'who_am_i', arguments: {} };
 
@@ -70,6 +72,24 @@ describe('a connection made through its gateway whose key the gateway no longer 
           detail: anyWords,
         },
       },
+    });
+  });
+});
+
+describe('a connection whose whole address a person gave, at the address of a gateway', () => {
+  it('is refused when it is used, naming the address', async () => {
+    const gateway = gatewayServed();
+    const open = providerOf({ ...agents, credentials: [{ kind: 'none' }] });
+    const h = harness({ policy: onTheLoopback, providers: providerListOf(open) });
+    const { id, token } = await added(h, { provider: 'agents', placeholders: { address: `${gateway.origin}/mcp` } });
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
+
+    const both = providerListOf(open, ...providersThrough(gateway).providers);
+    const refusal = await refusalOf(sourceOver(h, { policy: onTheLoopback, providers: both }), id);
+
+    expect(refusal).toEqual({
+      because: 'connection_not_allowed',
+      detail: namingTheOrigin(gateway.origin),
     });
   });
 });

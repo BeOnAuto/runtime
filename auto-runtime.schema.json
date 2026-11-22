@@ -1397,6 +1397,11 @@
                       "type": "string",
                       "minLength": 1
                     },
+                    "format": {
+                      "type": "string",
+                      "enum": ["uri"],
+                      "description": "uri for a value that is a whole address, an https URL or an http URL on a loopback address, which stands only as the whole url of an mcp provider"
+                    },
                     "pattern": {
                       "type": "string"
                     },
@@ -1613,6 +1618,11 @@
                           "description": {
                             "type": "string",
                             "minLength": 1
+                          },
+                          "format": {
+                            "type": "string",
+                            "enum": ["uri"],
+                            "description": "uri for a value that is a whole address, an https URL or an http URL on a loopback address, which stands only as the whole url of an mcp provider"
                           },
                           "pattern": {
                             "type": "string"

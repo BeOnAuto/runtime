@@ -1,9 +1,11 @@
+import { pinnedUrlShape } from '@on.auto/tool-servers';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, type GivenToProvider, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
 import { campaigns, drive, messages, tracker } from '../testing/fixture-providers.ts';
+import { agents } from '../testing/own-app-providers.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -198,5 +200,37 @@ describe('the addition a provider of consent makes with a choice', () => {
         scope: 'campaigns.read',
       },
     ]);
+  });
+});
+
+const heldCredential =
+  'Looks like a credential, which a placeholder never holds: the person gives the credential on the page the link opens';
+
+describe('the value of a placeholder of format uri', () => {
+  it.each([
+    'https://agents.acme.example.com/mcp',
+    'https://agents.acme.example.com:8443/v1/mcp?region=eu',
+    'http://127.0.0.1:8931/mcp',
+  ])('is the address of the connection exactly as it is given: %s', (address) => {
+    expect(resolved(agents, { placeholders: { address } }).entry.url).toBe(address);
+  });
+
+  it.each([
+    ['an http URL on a host that is not a loopback address', 'http://agents.acme.example.com/mcp', pinnedUrlShape],
+    ['no URL', 'agents.acme.example.com/mcp', pinnedUrlShape],
+    ['another scheme', 'wss://agents.acme.example.com/mcp', pinnedUrlShape],
+    ['a password in it', 'https://ada:sk-live-0123456789abcdefghij@agents.acme.example.com/mcp', heldCredential],
+    ['a key in its query', 'https://agents.acme.example.com/mcp?api_key=sk-live-0123456789abcdefghij', heldCredential],
+    [
+      'a $, with which a reference begins',
+      '${AGENTS_ADDRESS}',
+      'Holds a $, which a placeholder never holds, since a reference to an environment variable begins with it',
+    ],
+  ])('is refused where an address given by hand would be, as for %s', (_, address, detail) => {
+    expect(refused(agents, { placeholders: { address } })).toEqual([{ pointer: '/placeholders/address', detail }]);
+  });
+
+  it('is asked of the person, since a provider whose address is given whole has no address without it', () => {
+    expect(refused(agents, {})).toEqual([{ pointer: '/placeholders/address', detail: anyWords }]);
   });
 });

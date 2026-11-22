@@ -110,5 +110,8 @@ export function isAddress(text: string): boolean {
 
 export function hostTemplateOf(address: string, valueOf: (name: string) => string | undefined): string {
   const { text, markers } = marked(address, valueOf);
-  return unmarked(new URL(text).hostname, markers, (name) => `{${name}}`);
+  const givenWhole = markers.get(text);
+  return givenWhole === undefined
+    ? unmarked(new URL(text).hostname, markers, (name) => `{${name}}`)
+    : `{${givenWhole}}`;
 }

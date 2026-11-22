@@ -1,0 +1,35 @@
+name: apollo-graphos-agent-services
+title: Apollo GraphOS Agent Services
+description: Lets your playbooks use the services your company connected in Apollo GraphOS Agent Services, under the rules your company set there. Connecting it takes the address of your company's GraphOS Agent Services and the API key of a client registered in Apollo.
+website: https://www.apollographql.com/docs/graphos-agent-services
+type: mcp
+url: '{mcp_address}'
+placeholders:
+  mcp_address:
+    title: MCP address
+    description: The address of your company's GraphOS Agent Services. Whoever set it up has it.
+    format: uri
+    example: https://agent-services.example.com/mcp
+credentials:
+  - kind: secret
+    permissions: application
+    in: header
+    name: Authorization
+    scheme: Bearer
+    description: API key
+    instructions: >-
+      In [Apollo GraphOS Agent Services](https://constellation.apollographql.com), open the **Clients** page and select
+      **Register client**. Name the client and pick the services your playbooks need: its API key works only for those
+      services. Then copy the client's API key. Apollo shows it only once.
+    key_page: https://constellation.apollographql.com
+    key_page_title: Open Apollo GraphOS Agent Services
+    steps:
+      key_page:
+        title: Register a client in Apollo
+        instructions: |-
+          - On the **Clients** page, select **Register client**.
+          - Name it, and pick the services your playbooks need. Its API key works only for those services.
+          - Copy the client's API key. Apollo shows it only once.
+      key:
+        title: Enter its details here
+        instructions: Paste the API key you copied from Apollo.

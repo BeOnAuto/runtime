@@ -1,8 +1,15 @@
-import { placeholderNamePattern } from '@on.auto/config';
+import { placeholderNamePattern, referencedVariablesOf } from '@on.auto/config';
 import type { Schema } from 'effect';
 
 import { holdsAClientId, waysHoldingAClientId, type WayKind } from './credential-ways.ts';
-import { clientIdPlaceholder, isRequired, setNamesOfEach, type Placeholder } from './placeholders.ts';
+import {
+  addressGivenWholeIn,
+  clientIdPlaceholder,
+  isAnAddress,
+  isRequired,
+  setNamesOfEach,
+  type Placeholder,
+} from './placeholders.ts';
 import { namesIn, templatedFieldsOf, type TemplatedField, type WayParts } from './templates.ts';
 
 type Placeholders = Readonly<Record<string, Placeholder>>;
@@ -13,6 +20,7 @@ interface TemplatedWay extends WayParts {
 }
 
 interface Templated {
+  readonly type: string;
   readonly url?: string;
   readonly document?: string;
   readonly base_url?: string;
@@ -158,6 +166,36 @@ function optionalIssuesOf({ placeholders, fields }: Scope): readonly EntryIssue[
   );
 }
 
+function wholeAddressOnly(name: string): string {
+  return `Holds {${name}}, a placeholder of format uri, which stands only as the whole url of an mcp provider`;
+}
+
+function addressIssuesOf({ placeholders, fields }: Scope, wholeAddress: string | undefined): readonly EntryIssue[] {
+  const addresses = new Set(
+    Object.entries(placeholders)
+      .filter(([, placeholder]: readonly [string, Placeholder]) => isAnAddress(placeholder))
+      .map(([name]: readonly [string, Placeholder]) => name),
+  );
+  return fields.flatMap((field) =>
+    namesIn(field.text)
+      .filter((name) => addresses.has(name) && !(field.path[0] === 'url' && name === wholeAddress))
+      .map((name) => ({ path: field.path, issue: wholeAddressOnly(name) })),
+  );
+}
+
+function referenceSentToAGivenAddress(name: string): string {
+  return `Holds a reference to an environment variable, which a provider never holds when a person gives its whole url in {${name}}, since the variable's value would be sent to the address that person chose`;
+}
+
+function givenAddressIssuesOf(entry: Templated, wholeAddress: string | undefined): readonly EntryIssue[] {
+  if (wholeAddress === undefined) {
+    return [];
+  }
+  return templatedFieldsOf(entry)
+    .filter(({ holds, text }) => holds === 'value' && referencedVariablesOf(text).length > 0)
+    .map(({ path }) => ({ path, issue: referenceSentToAGivenAddress(wholeAddress) }));
+}
+
 interface Named {
   readonly name: string;
   readonly path: readonly string[];
@@ -210,18 +248,32 @@ function ofTheWays({ credentials }: Templated): ReadonlySet<string> {
   );
 }
 
-function scopeIssuesOf(scope: Scope, clientIdPlaced: boolean, ofWays: ReadonlySet<string>): readonly EntryIssue[] {
+interface Placing {
+  readonly clientIdPlaced: boolean;
+  readonly ofWays: ReadonlySet<string>;
+  readonly wholeAddress: string | undefined;
+}
+
+function scopeIssuesOf(scope: Scope, { clientIdPlaced, ofWays, wholeAddress }: Placing): readonly EntryIssue[] {
   const names = namesOf(scope, clientIdPlaced);
   return [
     ...nameIssuesOf(scope),
     ...unknownIssuesOf(scope.fields, names, ofWays),
     ...unusedIssuesOf(scope, names),
     ...optionalIssuesOf(scope),
+    ...addressIssuesOf(scope, wholeAddress),
   ];
 }
 
 export function placementIssuesOf(entry: Templated): readonly EntryIssue[] {
-  const clientIdPlaced = entry.credentials.every(({ kind }) => holdsAClientId(kind));
-  const ofWays = ofTheWays(entry);
-  return [...ownedIssuesOf(entry), ...scopesOf(entry).flatMap((scope) => scopeIssuesOf(scope, clientIdPlaced, ofWays))];
+  const placing = {
+    clientIdPlaced: entry.credentials.every(({ kind }) => holdsAClientId(kind)),
+    ofWays: ofTheWays(entry),
+    wholeAddress: addressGivenWholeIn(entry),
+  };
+  return [
+    ...ownedIssuesOf(entry),
+    ...givenAddressIssuesOf(entry, placing.wholeAddress),
+    ...scopesOf(entry).flatMap((scope) => scopeIssuesOf(scope, placing)),
+  ];
 }

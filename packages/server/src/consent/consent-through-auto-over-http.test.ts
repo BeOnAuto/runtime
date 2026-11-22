@@ -20,7 +20,7 @@ const ListedSchema = Schema.Struct({
       credentials: Schema.Array(
         Schema.Struct({
           offered: Schema.Boolean,
-          oauth_client: Schema.String,
+          oauth_client: Schema.optionalKey(Schema.String),
           client_source: Schema.optionalKey(Schema.String),
         }),
       ),

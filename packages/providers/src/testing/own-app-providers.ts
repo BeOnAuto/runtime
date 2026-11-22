@@ -39,6 +39,35 @@ export const asTheCompanysApp = {
   description: 'The ID and secret of an app your company registers at Mail.',
 } as const;
 
+export const agentServerAddress = {
+  title: 'Server address',
+  description: 'The address of your company’s agent server.',
+  format: 'uri',
+  example: 'https://agents.acme.example.com/mcp',
+} as const;
+
+export const asARegisteredClient = {
+  kind: 'secret',
+  permissions: 'application',
+  in: 'header',
+  name: 'Authorization',
+  scheme: 'Bearer',
+  description: 'Client API key',
+  instructions: 'Register a client on the **Clients** page, and copy its API key.',
+  key_page: 'https://admin.agents.example.com/clients',
+} as const;
+
+export const agents: ProviderEntry = decodeEntry({
+  name: 'agents',
+  title: 'Agents',
+  description: 'Use the services your company connected to its own agent server.',
+  website: 'https://developer.agents.example.com',
+  type: 'mcp',
+  url: '{address}',
+  placeholders: { address: agentServerAddress },
+  credentials: [asARegisteredClient],
+});
+
 export const asAServiceAccount = {
   kind: 'jwt_bearer',
   issuer: 'https://login.mail.example.com',

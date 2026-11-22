@@ -1,3 +1,4 @@
+import { agents, providersOf } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { adding, billing, crmWithTenant, notes } from '../testing/additions.ts';
@@ -65,6 +66,19 @@ describe('a server of a connection on an address only its operator may name', ()
       refusedFor('192.168.0.3', 'a private address'),
     ]);
   });
+
+  it.each(refusedServers)(
+    'is refused where a person gives it as the whole address of a provider and it is %s, and nothing is recorded',
+    async (_, address, reached) => {
+      const h = harness({ providers: providersOf(agents) });
+      const host = new URL(address).hostname;
+
+      expect(await adding(h, { provider: 'agents', placeholders: { address } })).toEqual(
+        refusedFor(host, reached, unlessFor(reached)),
+      );
+      expect(await h.facts()).toEqual([]);
+    },
+  );
 
   it('is refused whatever the hosts the operator allows beside it', async () => {
     const h = harness({ policy: connectionPolicyOf({ allowed_hosts: ['*.example.com'] }) });

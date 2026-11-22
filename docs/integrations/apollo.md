@@ -22,7 +22,7 @@ In the first path, the function only sees the values your agent passes in. It do
 - Your agent is connected to Auto. The [quick start](../get-started/cloud.md) sets this up.
 - You have a playbook with a reasoning function to give the data to, or you are about to write one. [Reasoning function format](../reference/reasoning-format.md) describes the document.
 - You may read the data you need through your graph.
-- For the second path, you have the remote MCP address and application API key from Apollo GraphOS Agent Services, and may connect it to your Auto organization.
+- For the second path, you have the address of your company's GraphOS Agent Services, you can register a client in Apollo, and you may connect it to your Auto organization.
 
 Decide which data the function needs, and confirm that it may be sent to Auto and to the function's model provider. A function's inputs and results become part of its recorded run. So do the graph's answers to a function's tool calls, unless the tool server's entry turns `record_content` off.
 
@@ -80,15 +80,19 @@ Apollo GraphOS Agent Services fronts the systems your organization connected to 
 
 ### 1. Connect the graph to Auto
 
-Get an application API key from Apollo for the application that should serve your playbook. Keep the key out of the conversation. Ask your agent:
+Apollo GraphOS Agent Services is one of the apps Auto connects. It needs two things: the address of your company's GraphOS Agent Services and the API key of a client registered in Apollo. Whoever set up Agent Services has the address. The steps below call the connection `graph`: give it that name when you add it, or use its own name wherever this page says `graph`.
+
+In Studio, open **Settings**, then **Connections**, and select **Apollo GraphOS Agent Services** under **Add a connection**. Studio asks for the address and the key, and shows the steps in Apollo: on the **Clients** page, select **Register client**, name the client, pick the services your playbooks need, and copy its API key. Apollo shows the key only once.
+
+Or ask your agent, and keep the key out of the conversation:
 
 ```text
-Add an MCP connection named graph to my Auto organization, using
-<the remote MCP address Apollo gave me>. It authenticates with a bearer
-API key. Show me the connection page so I can enter the key there.
+Connect Apollo GraphOS Agent Services to my Auto organization as a connection
+named graph, at <the address of our GraphOS Agent Services>. Show me the page
+where I enter its API key.
 ```
 
-Open the Studio link your agent gives you, review the request and enter the key. The connection should show as connected. It belongs to your organization; give individual functions only the tools they need.
+Open the Studio link your agent gives you, review the request and enter the key. The connection should show as connected. It belongs to your organization and acts as the client you registered, not as a person; give individual functions only the tools they need.
 
 If Auto refuses the address or the connection type, ask your agent to show the reason. [Contact Auto](https://on.auto/contact-us) if the service needs configuration you cannot change.
 

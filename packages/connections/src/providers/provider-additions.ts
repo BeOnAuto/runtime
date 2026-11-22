@@ -214,7 +214,7 @@ export function gatewayRefusalOfTheAddition(
   addition: GivenAddition,
   { providers }: Pick<ProviderServices, 'providers'>,
 ): Forbidden | undefined {
-  return gatewayRefusalOf(addition, gatewayOriginsOf(providers));
+  return gatewayRefusalOf(addition, gatewayOriginsOf(providers), providers);
 }
 
 export function refusalOfTheAddition(

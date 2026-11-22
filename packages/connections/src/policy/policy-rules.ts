@@ -11,7 +11,7 @@ import {
   type Resolve,
 } from '@on.auto/outbound';
 import { articled, listed } from '@on.auto/phrasing';
-import { wayAddresses } from '@on.auto/providers';
+import { addressGivenWholeIn, providerFoundBy, wayAddresses, type ProviderList } from '@on.auto/providers';
 import type { WayGateway } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
@@ -144,11 +144,28 @@ function originsOf({ type, entry }: Addition): readonly string[] {
   });
 }
 
+interface Reached {
+  readonly origin: string;
+  readonly provider: string;
+}
+
+function gatewayWordsOf({ origin, provider }: Reached, givenByHand: boolean): string {
+  return givenByHand
+    ? `A connection given by hand may not reach ${origin}, which the provider ${provider} connects through; add the provider ${provider} instead`
+    : `A connection may not reach ${origin}, which another app connects through. Give the address of the server this connection is for.`;
+}
+
+function isAddressGivenByAPerson({ provider }: Addition, providers: ProviderList): boolean {
+  const entry = providerFoundBy(providers, provider)?.entry;
+  return provider === null || (entry !== undefined && addressGivenWholeIn(entry) !== undefined);
+}
+
 export function gatewayRefusalOf(
   addition: Addition,
   gatewayOrigins: ReadonlyMap<string, string>,
+  providers: ProviderList,
 ): Forbidden | undefined {
-  if (addition.provider !== null) {
+  if (!isAddressGivenByAPerson(addition, providers)) {
     return undefined;
   }
   const [reached] = originsOf(addition).flatMap((origin) => {
@@ -157,9 +174,7 @@ export function gatewayRefusalOf(
   });
   return reached === undefined
     ? undefined
-    : new Forbidden({
-        detail: `A connection given by hand may not reach ${reached.origin}, which the provider ${reached.provider} connects through; add the provider ${reached.provider} instead`,
-      });
+    : new Forbidden({ detail: gatewayWordsOf(reached, addition.provider === null) });
 }
 
 const variablesRule = 'A reference may name only a variable the operator lists in connections.variables';

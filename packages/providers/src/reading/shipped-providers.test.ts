@@ -91,6 +91,7 @@ const addressesOfTheShipped = [
   ['adobe-analytics-mcp', 'https://aa-mcp.adobe.io/mcp'],
   ['amazon-ads', 'https://{api_host}'],
   ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
+  ['apollo-graphos-agent-services', '{mcp_address}'],
   ['atlassian', 'https://mcp.atlassian.com/v2/mcp?tools=all'],
   ['buffer', 'https://mcp.buffer.com/mcp'],
   ['campaign-manager-360', 'https://dfareporting.googleapis.com/dfareporting/v5'],
@@ -132,7 +133,7 @@ describe('the shipped providers', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
     expect(names).toEqual(addressesOfTheShipped.map(([name]: readonly string[]) => name));
-    expect(names).toHaveLength(38);
+    expect(names).toHaveLength(39);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -141,10 +142,10 @@ describe('the shipped providers', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('reach their servers, their pages and their issuers over https alone', () => {
+  it('reach their servers, their pages and their issuers over https alone, but for an address a person gives whole, which is held to the rule of a server given by hand', () => {
     const addresses = shipped.providers.flatMap((provider) => addressesOf(provider));
 
-    expect(addresses.filter((address) => !address.startsWith('https://'))).toEqual([]);
+    expect(addresses.filter((address) => !address.startsWith('https://'))).toEqual(['{mcp_address}']);
     expect(addresses.length).toBeGreaterThan(5);
   });
 });
@@ -154,6 +155,7 @@ const waysOfTheShipped = [
   ['adobe-analytics-mcp', ['authorization'], []],
   ['amazon-ads', ['authorization'], []],
   ['amazon-ads-mcp', ['authorization'], []],
+  ['apollo-graphos-agent-services', ['secret'], []],
   ['atlassian', ['authorization'], []],
   ['buffer', ['secret'], []],
   ['campaign-manager-360', ['authorization'], []],

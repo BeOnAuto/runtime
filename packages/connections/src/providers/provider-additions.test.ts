@@ -10,7 +10,7 @@ import {
   roleRefusalDetail,
 } from '@on.auto/operations';
 import { decidingEach } from '@on.auto/operations/testing';
-import { drive, providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { agents, drive, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { shippedDocumentOf } from '@on.auto/tool-servers';
 import { consentClientWith, fakeApiDocument, registeredAt } from '@on.auto/tool-servers/testing';
 import { Effect, Schema } from 'effect';
@@ -320,6 +320,26 @@ describe('the rules a connection added by a provider passes', () => {
         detail: 'A connection may not take a none credential on this runtime, which allows secret',
       },
       { reason: 'conflict', kind: 'taken' },
+    ]);
+  });
+
+  it('judge the host of an address a person gives whole by the hosts the operator allows, as for a server given by hand', async () => {
+    const h = harness({
+      policy: connectionPolicyOf({ allowed_hosts: ['*.acme.example.com'] }),
+      providers: providersOf(agents),
+    });
+    const at = (address: string) => adding(h, { provider: 'agents', placeholders: { address } });
+
+    expect([
+      await at('https://agents.other.example.org/mcp'),
+      await at('https://agents.acme.example.com/mcp'),
+    ]).toMatchObject([
+      {
+        reason: 'forbidden',
+        detail:
+          'A connection may not reach the host agents.other.example.org on this runtime, which allows *.acme.example.com',
+      },
+      { status: 'succeeded', output: { provider: 'agents', entry: { url: 'https://agents.acme.example.com/mcp' } } },
     ]);
   });
 

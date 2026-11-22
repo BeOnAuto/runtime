@@ -27,7 +27,7 @@ export function preparedServer(serving: Serving): Effect.Effect<ConnectionServer
   return Effect.gen(function* () {
     const refusal =
       useRefusalOf(policy, connection, checking.providing) ??
-      gatewayRefusalOf(connection, gatewayOriginsOf(serving.services.providers));
+      gatewayRefusalOf(connection, gatewayOriginsOf(serving.services.providers), serving.services.providers);
     if (refusal !== undefined) {
       return yield* Effect.fail(notAllowed(refusal.detail));
     }

@@ -2,10 +2,11 @@ import { credentialProblems, referencedVariablesOf, substituted } from '@on.auto
 import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Schema } from 'effect';
 
-import { setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
+import { addressGivenWholeIn, setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
 import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayParts } from './templates.ts';
 
 interface Written {
+  readonly type: string;
   readonly url?: string;
   readonly document?: string;
   readonly base_url?: string;
@@ -145,9 +146,15 @@ interface Judged {
   readonly fields: readonly TemplatedField[];
 }
 
+function isGivenWhole({ path }: TemplatedField, written: Written): boolean {
+  return path[0] === 'url' && addressGivenWholeIn(written) !== undefined;
+}
+
 function judgedOf(written: Written): readonly Judged[] {
   const { placeholders, credentials } = written;
-  const fields = templatedFieldsOf(written).filter((field) => field.holds === 'address' && !isALocalDocument(field));
+  const fields = templatedFieldsOf(written).filter(
+    (field) => field.holds === 'address' && !isALocalDocument(field) && !isGivenWhole(field, written),
+  );
   return [
     { combinations: setCombinationsOf(placeholders ?? {}), fields: fields.filter(({ way }) => way === undefined) },
     ...credentials.map((way, index) => ({

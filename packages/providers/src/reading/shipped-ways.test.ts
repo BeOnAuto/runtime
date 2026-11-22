@@ -37,6 +37,7 @@ const hostsOfTheWays = [
       ['advertising-ai-fe.amazon.com', amazon],
     ],
   ],
+  [[['{mcp_address}']]],
   [[['mcp.atlassian.com', 'auth.atlassian.com']]],
   [[['mcp.buffer.com']]],
   [[['dfareporting.googleapis.com', google]]],

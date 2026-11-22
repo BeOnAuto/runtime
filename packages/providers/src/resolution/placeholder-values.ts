@@ -1,10 +1,11 @@
 import { credentialProblems, placeholdersReplaced } from '@on.auto/config';
 import type { Issue } from '@on.auto/operations';
 import { alternatives, listed } from '@on.auto/phrasing';
+import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Option, Result } from 'effect';
 
 import type { CredentialWay } from '../entry/credential-ways.ts';
-import { isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
+import { isAnAddress, isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress, marked, templatedFieldsOf, type TemplatedField } from '../entry/templates.ts';
 
@@ -33,18 +34,29 @@ function pointerOf(name: string): string {
   return `/placeholders/${JsonPointer.escapeToken(name)}`;
 }
 
+function credentialIssueOf(name: string, value: string): string | undefined {
+  return credentialProblems(name, value, '', [name]).length > 0 ? heldCredential : undefined;
+}
+
 function patternIssueOf(name: string, { pattern, example }: Placeholder, value: string): string | undefined {
   const written = Option.getOrThrow(Option.fromNullishOr(pattern));
   if (!Option.getOrThrow(Option.fromNullishOr(patternOf(written))).test(value)) {
     return `Expected a value that matches ${written}, such as ${Option.getOrThrow(Option.fromNullishOr(example))}`;
   }
-  return credentialProblems(name, value, '', [name]).length > 0 ? heldCredential : undefined;
+  return credentialIssueOf(name, value);
+}
+
+function addressIssueOf(name: string, value: string): string | undefined {
+  return isPinnableUrl(value) ? credentialIssueOf(name, value) : pinnedUrlShape;
 }
 
 function valueIssueOf(name: string, placeholder: Placeholder, value: string): string | undefined {
   const { choices } = placeholder;
   if (value.includes('$')) {
     return heldDollar;
+  }
+  if (isAnAddress(placeholder)) {
+    return addressIssueOf(name, value);
   }
   if (choices === undefined) {
     return patternIssueOf(name, placeholder, value);
