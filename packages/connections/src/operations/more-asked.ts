@@ -59,16 +59,24 @@ function heldByNothingYet(given: Admitted): Holding {
   return { ...given, asked_scopes: [], granted_scope: null };
 }
 
+export const additionMoreChecked = Effect.fnUntraced(function* (
+  given: Admitted,
+  more: string | undefined,
+  services: MoreAsking,
+) {
+  if (more !== undefined) {
+    yield* askableMore(heldByNothingYet(given), more, services, 'added');
+  }
+});
+
 export const additionLinkIssuedFor = Effect.fnUntraced(function* (
   given: Admitted,
   more: string | undefined,
   services: MoreAsking,
 ) {
-  if (more === undefined) {
-    return yield* issuedLink;
-  }
-  yield* askableMore(heldByNothingYet(given), more, services, 'added');
-  return { ...(yield* issuedLink), more };
+  yield* additionMoreChecked(given, more, services);
+  const link = yield* issuedLink;
+  return more === undefined ? link : { ...link, more };
 });
 
 function withMore(connection: Connection, more: readonly GroupOfMore[], providers: MoreAsking['providers']): WithMore {

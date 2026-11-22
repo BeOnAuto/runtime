@@ -117,6 +117,12 @@ export const ConnectionEventSchema = Schema.Union([
     ActedContextSchema,
   ),
   factOf(
+    'connection_requested',
+    Schema.Struct({ ...ofTheConnection, message: Schema.optionalKey(Schema.String) }),
+    ActedContextSchema,
+  ),
+  factOf('connection_request_declined', Schema.Struct(ofTheConnection), ActedContextSchema),
+  factOf(
     'connection_way_chosen',
     Schema.Struct({
       ...ofTheConnection,
@@ -211,6 +217,8 @@ export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
 export type ConnectionEvent = Decided<RecordedConnectionEvent>;
 
 export type ConnectionAdded = Extract<RecordedConnectionEvent, { readonly type: 'connection_added' }>;
+
+export type ConnectionRequested = Extract<RecordedConnectionEvent, { readonly type: 'connection_requested' }>;
 
 export type WayChosen = Extract<RecordedConnectionEvent, { readonly type: 'connection_way_chosen' }>;
 

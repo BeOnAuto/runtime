@@ -40,6 +40,8 @@ const named: Readonly<
   Record<RecordedConnectionEvent['type'], ((fact: ChangedFact) => readonly ResourceChange[]) | null>
 > = {
   connection_added: connectionChangedBy,
+  connection_requested: null,
+  connection_request_declined: null,
   connection_way_chosen: connectionChangedBy,
   connection_link_issued: null,
   connection_client_given: connectionChangedBy,

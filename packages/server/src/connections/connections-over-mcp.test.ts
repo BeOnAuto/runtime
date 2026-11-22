@@ -133,6 +133,28 @@ describe('add_connection over MCP', () => {
   });
 });
 
+describe('the message of add_connection, over MCP', () => {
+  it('is taken, and where the caller may approve the connection it adds, the answer is its link as before, with no request', async () => {
+    const connection = { url: `${server.origin}/mcp`, headers: {} };
+    const asked = { ...notes(), name: 'notes-asked', message: 'To send the weekly summary.' };
+    const anAddress: unknown = expect.any(String);
+
+    const answer: unknown = await withMcpSession('current revision', connection, async (session) => {
+      const called: unknown = await session.callTool('add_connection', asked);
+      return called;
+    });
+
+    expect(answer).toMatchObject({
+      structuredContent: {
+        name: 'notes-asked',
+        status: 'pending',
+        request: null,
+        connect: { url: anAddress },
+      },
+    });
+  });
+});
+
 describe('a server given by hand that says how its service sends, over MCP', () => {
   it('is added with its events, and list_connections answers them as add_connection was given them', async () => {
     const events = { destinations: [throughItsTools] };

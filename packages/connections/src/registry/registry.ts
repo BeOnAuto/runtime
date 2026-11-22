@@ -17,6 +17,7 @@ import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './c
 import type { Credential } from './credential.ts';
 import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
 import { identifiedAfter } from './kept-identities.ts';
+import { changesNothingButItsRequest, requestedAfter } from './kept-requests.ts';
 import { isASetting, settingAfter } from './kept-settings.ts';
 import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
 
@@ -79,6 +80,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       status: 'pending',
       added_by,
       added_at: context.at,
+      request: null,
       connected_at: null,
       connected_by: null,
       asked_scopes: scopesSaid(credential.scope, says),
@@ -241,7 +243,7 @@ function evolvedConnection(
   if (event.type === 'connection_consent_started') {
     return withConsent(kept, event);
   }
-  if (event.type === 'connection_approved') {
+  if (changesNothingButItsRequest(event)) {
     return kept;
   }
   if (event.type === 'connection_connected') {
@@ -268,7 +270,9 @@ export function evolveRegistry(registry: Registry, event: RecordedConnectionEven
     return withConnection(registry, addedConnection(event));
   }
   const kept = registry.get(event.data.connection);
-  return kept === undefined ? registry : withConnection(registry, evolvedConnection(kept, event));
+  return kept === undefined
+    ? registry
+    : withConnection(registry, requestedAfter(evolvedConnection(kept, event), event));
 }
 
 export function heldClientOf({ connection, clientSecretId }: KeptConnection): GivenClient | undefined {

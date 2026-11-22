@@ -132,7 +132,14 @@ function groupAskedOf(
   return more === undefined ? undefined : groupNamed(connection, providers, more);
 }
 
+function requestedWordsOf({ name }: Pick<Connection, 'name'>): string {
+  return `The person may not approve connections in this organization, so a request to connect ${quoted(name)} was sent to its admins, and there is no link to show. Tell the person that an admin has to approve it. list_connections shows when it is connected.`;
+}
+
 export function addedWordsOf(added: AddedConnection, providers: ProviderList, more: string | undefined): string {
+  if (added.request !== null) {
+    return requestedWordsOf(added);
+  }
   return linkedWordsOf(
     (named) => `Added ${named}.`,
     added,

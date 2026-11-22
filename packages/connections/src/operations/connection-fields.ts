@@ -18,6 +18,7 @@ import {
   credentialDescription,
   credentialFieldIssuesOf,
 } from '../registry/credential.ts';
+import { MessageField } from './request-fields.ts';
 
 export const ClientSourceField = ClientSourceSchema;
 
@@ -121,6 +122,7 @@ const AdditionFieldsSchema = Schema.Struct({
     }),
   ),
   events: Schema.optionalKey(AddedEventsSchema),
+  message: Schema.optionalKey(MessageField),
 });
 
 export type AdditionGiven = typeof AdditionFieldsSchema.Type;

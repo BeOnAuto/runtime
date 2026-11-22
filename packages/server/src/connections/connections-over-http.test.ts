@@ -492,6 +492,22 @@ describe('connections over http', () => {
     });
   });
 
+  describe('declining the request of a connection over HTTP', () => {
+    it('answers 409 for a connection with no open request, which stays pending with no request, and 404 for an id the org does not hold', async () => {
+      const served = await serving();
+      const { id } = await added(served);
+
+      const [declined, unknown, read] = [
+        await served.call('POST', `${connections}/${id}/decline`),
+        await served.call('POST', `${connections}/nowhere/decline`),
+        await served.call('GET', `${connections}/${id}`),
+      ];
+
+      expect([declined.status, unknown.status]).toEqual([409, 404]);
+      expect(read).toMatchObject({ status: 200, body: { id, status: 'pending', request: null } });
+    });
+  });
+
   describe('giving the credential of a connection over HTTP', () => {
     it('connects it, keeps the value sealed and its ending beside it, uses the link up, and forgets both on removal', async () => {
       const served = await serving();

@@ -1,5 +1,5 @@
 import { isSignedInPerson } from '@on.auto/identity';
-import { Forbidden, type CallerIdentity } from '@on.auto/operations';
+import { Forbidden, type CallAsked, type CallerIdentity, type Runnable } from '@on.auto/operations';
 import {
   loopbackHostOf,
   operatorMayNameHost,
@@ -198,6 +198,10 @@ export function adderRefusalOf(access: RuntimeAccess, caller: CallerIdentity): F
           'A connection is added by a person, through an agent signed in as them, and a key cannot add or reconnect one',
       })
     : undefined;
+}
+
+export function approvingAskedOf(approving: Runnable<'org'>, caller: CallerIdentity): CallAsked {
+  return { operation: approving, caller, org: caller.org };
 }
 
 export function signerRefusalOf(access: RuntimeAccess, caller: CallerIdentity): Forbidden | undefined {

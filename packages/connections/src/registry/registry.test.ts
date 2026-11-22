@@ -316,6 +316,7 @@ describe('an added connection, as the stream folds it', () => {
         status: 'pending',
         added_by: { id: 'person:ada', name: 'Ada Lovelace' },
         added_at: '2026-10-15T14:00:00.000Z',
+        request: null,
         connected_at: null,
         connected_by: null,
         asked_scopes: [],

@@ -4,6 +4,7 @@ import { Effect, Schema } from 'effect';
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import { opensSockets } from '../operations/connection-services.ts';
 import { startOf, type ConnectionStart, type StartsOfConnections } from '../policy/connection-starts.ts';
+import { approvingAskedOf } from '../policy/policy-rules.ts';
 import { ProvidersSchema, type ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 import { addingRefusedTo, type OfferingServices } from './provider-offering.ts';
@@ -53,7 +54,7 @@ export function defineListProviders(listing: OfferingServices & StartsOfConnecti
     handle: Effect.fnUntraced(function* () {
       const caller = yield* Caller;
       const refusal = yield* addingRefusedTo(listing, adding, caller);
-      const mayApprove = yield* mayCall({ operation: approving, caller, org: caller.org });
+      const mayApprove = yield* mayCall(approvingAskedOf(approving, caller));
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return {
         providers: yield* Effect.forEach(

@@ -18,6 +18,7 @@ import type {
   ConnectionAddition,
   ConnectionCommandData,
   ConnectionReplacement,
+  ConnectionRequest,
   ConsentFinish,
   ConsentStart,
   CredentialGiving,
@@ -94,7 +95,7 @@ export const actedNow = Effect.gen(function* () {
   return { by, at: DateTime.formatIso(yield* DateTime.now) };
 });
 
-export function additionOf(
+function addedOf(
   {
     name,
     type,
@@ -108,11 +109,9 @@ export function additionOf(
     says = {},
     events,
   }: DescribedAddition,
-  link: OpenLink,
   addedBy: RecordedCaller,
-): ConnectionAddition {
+): Omit<ConnectionAddition, 'type' | 'link'> {
   return {
-    type: 'add',
     connection: randomUUIDv7(),
     name,
     server_type: type,
@@ -126,8 +125,19 @@ export function additionOf(
     says,
     ...(events === undefined ? {} : { events }),
     added_by: addedBy,
-    link,
   };
+}
+
+export function additionOf(given: DescribedAddition, link: OpenLink, addedBy: RecordedCaller): ConnectionAddition {
+  return { type: 'add', ...addedOf(given, addedBy), link };
+}
+
+export function requestOf(
+  given: DescribedAddition,
+  message: string | undefined,
+  addedBy: RecordedCaller,
+): ConnectionRequest {
+  return { type: 'request', ...addedOf(given, addedBy), ...(message === undefined ? {} : { message }) };
 }
 
 const executedInRegistry = Effect.fnUntraced(function* ({ providers }: Named, data: ConnectionCommandData) {

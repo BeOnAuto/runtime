@@ -27,6 +27,16 @@ export interface ConnectionAddition {
   readonly link: OpenLink;
 }
 
+export interface ConnectionRequest extends Omit<ConnectionAddition, 'type' | 'link'> {
+  readonly type: 'request';
+  readonly message?: string;
+}
+
+export interface RequestDecline {
+  readonly type: 'decline';
+  readonly connection: string;
+}
+
 export interface PlaybooksChoice {
   readonly playbooks?: readonly string[] | null;
 }
@@ -160,6 +170,8 @@ export interface SigningSecretRemoval {
 
 export type ConnectionCommandData =
   | ConnectionAddition
+  | ConnectionRequest
+  | RequestDecline
   | SigningSecretSetting
   | SigningSecretRemoval
   | ConnectionApproval
@@ -177,7 +189,13 @@ export type ConnectionCommandData =
   | ConnectionReconnection
   | ConnectionReplacement;
 
-export type CommandDecidedApart = AppCredentialRefusal | ConnectionIdentification | AccountTypeSetting | WayChoice;
+export type CommandDecidedApart =
+  | AppCredentialRefusal
+  | ConnectionIdentification
+  | AccountTypeSetting
+  | WayChoice
+  | ConnectionRequest
+  | RequestDecline;
 
 export interface CommandMetadata {
   readonly by: string;

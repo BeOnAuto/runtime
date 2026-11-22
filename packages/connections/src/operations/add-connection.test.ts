@@ -1,8 +1,15 @@
 import { createHash } from 'node:crypto';
 
 import { servedStudio } from '@on.auto/identity/testing';
+import {
+  localDeveloperId,
+  type AccessDecision,
+  type CallerIdentity,
+  type PolicyDecisionPoint,
+} from '@on.auto/operations';
+import { decidingEach } from '@on.auto/operations/testing';
 import { fixtureProviders, providerListOf, providerOf, tracker } from '@on.auto/providers/testing';
-import { Effect, Schema } from 'effect';
+import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -28,6 +35,8 @@ import {
   operationNamed,
   type Harness,
 } from '../testing/harness.ts';
+import { AdditionSchema } from './connection-fields.ts';
+import { messageFieldOf, mostMessageCharacters } from './request-fields.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -231,15 +240,15 @@ describe('the name of a connection', () => {
 });
 
 describe('the description of adding a connection', () => {
-  it("opens with a person's account at a service, by a provider search lists or a server given by hand, says that once approved the connection's tools serve the org's playbooks, says to ask in one consent for what the runs and the setting up take, with more, says an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, keeps the page the person finishes on, and ends with what the call does not grant", () => {
+  it("opens with a person's account at a service, by a provider search lists or a server given by hand, says that once approved the connection's tools serve the org's playbooks, says to ask in one consent for what the runs and the setting up take, says an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, keeps the page the person finishes on, says a request goes to the admins where the person may not approve it, and ends with what the call does not grant", () => {
     expect(operationNamed(harness().operations, 'add_connection').registration.description).toBe(
       [
         "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
         "Once approved, the connection's tools serve the org's playbooks.",
         'Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how.',
-        'With more, a group the provider offers beyond its first consent, the page asks its scopes too.',
         'An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page.',
         "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
+        'If the person may not approve the connection, it sends the admins a request and answers no link.',
         'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),
     );
@@ -540,5 +549,105 @@ describe('reading one connection', () => {
       reason: 'not_found',
       detail: 'There is no connection nowhere in this org',
     });
+  });
+});
+
+const allowedByTheTest: AccessDecision = { decision: 'allow', determiningPolicies: ['by-the-test'], errors: [] };
+
+function approvingDecided(approving: AccessDecision): PolicyDecisionPoint {
+  return decidingEach((request) => Effect.succeed(request.action.name === 'approve' ? approving : allowedByTheTest));
+}
+
+const deniedByTheTest: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: [] };
+
+const undecidedByTheTest: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: ['by-the-test'] };
+
+const grace: CallerIdentity = { ...ada, id: 'person:grace', name: 'Grace Hopper', permissions: ['org:write'] };
+
+const askedWhy = { ...notes, message: 'To send the weekly summary.' };
+
+const aKey: CallerIdentity = { ...ada, id: 'acme-key', name: 'acme-key' };
+
+const linked = { status: 'succeeded', facts: ['connection_added', 'connection_link_issued'] } as const;
+
+const refusedAsBefore = { status: 'rejected', facts: [] } as const;
+
+function takes(message: string): boolean {
+  return Result.isSuccess(Schema.decodeUnknownResult(AdditionSchema)({ ...notes, message }));
+}
+
+describe('adding a connection the caller may not approve, as the decision point decides', () => {
+  it('records the connection and a request to the admins with the message, and answers no link and no token', async () => {
+    const h = harness({ decidedBy: approvingDecided(deniedByTheTest) });
+
+    const outcome = await adding(h, askedWhy, grace);
+
+    expect(outcome).toMatchObject({
+      status: 'succeeded',
+      output: {
+        name: 'notes',
+        status: 'pending',
+        added_by: { id: grace.id },
+        request: {
+          message: 'To send the weekly summary.',
+          requested_by: grace.id,
+          requested_at: '2026-10-15T14:00:00.000Z',
+        },
+      },
+    });
+    expect(outcome).not.toHaveProperty('output.connect');
+    expect(JSON.stringify(outcome)).not.toMatch(/token/u);
+    expect((await h.facts()).map(({ type }) => type)).toEqual(['connection_added', 'connection_requested']);
+  });
+
+  it('is refused as unavailable, recording nothing, where the decision point cannot decide whether it may approve', async () => {
+    const h = harness({ decidedBy: approvingDecided(undecidedByTheTest) });
+
+    expect(await adding(h, askedWhy, grace)).toMatchObject({ status: 'rejected', reason: 'unavailable' });
+    expect(await h.facts()).toEqual([]);
+  });
+});
+
+describe('adding a connection the caller may approve', () => {
+  it('answers its link as before, with no request, and leaves the message aside', async () => {
+    const h = harness({ decidedBy: approvingDecided(allowedByTheTest) });
+
+    expect(await adding(h, askedWhy, grace)).toMatchObject({
+      status: 'succeeded',
+      output: { status: 'pending', request: null, connect: { url: anyWords } },
+    });
+    expect((await h.facts()).map(({ type }) => type)).toEqual(['connection_added', 'connection_link_issued']);
+  });
+
+  it.each([
+    ['a person with every permission', 'people', ada, linked],
+    ['a person who may write the org', 'people', grace, linked],
+    ['a key, where people sign in', 'people', aKey, refusedAsBefore],
+    ['the local developer', 'local', { ...ada, id: localDeveloperId, name: 'ada' }, linked],
+    ['a key, in local mode', 'local', aKey, linked],
+  ] as const)(
+    'answers %s exactly as before: a link, or the refusal a key gets',
+    async (_case, access, caller, answered) => {
+      const h = harness({ access });
+
+      expect(await adding(h, askedWhy, caller)).toMatchObject({ status: answered.status });
+      expect((await h.facts()).map(({ type }) => type)).toEqual(answered.facts);
+    },
+  );
+});
+
+describe('the message of a request', () => {
+  it.each([
+    ['at most the most it takes', 'ab', true],
+    ['longer than that', 'abc', false],
+  ])('is taken %s, a limit given as a parameter', (_case, message, taken) => {
+    expect(Schema.is(messageFieldOf(2))(message)).toBe(taken);
+  });
+
+  it(`is taken up to the ${mostMessageCharacters} characters that ship`, () => {
+    expect([takes('a'.repeat(mostMessageCharacters)), takes('a'.repeat(mostMessageCharacters + 1))]).toEqual([
+      true,
+      false,
+    ]);
   });
 });

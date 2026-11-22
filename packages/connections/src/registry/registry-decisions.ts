@@ -23,7 +23,7 @@ import { decideOnSigning, isSigning, type CommandWithoutSigning } from './signin
 
 export type RegistryRefusal = 'not_found' | 'conflict' | 'forbidden' | 'invalid_input';
 
-type Decision = Result.Result<readonly ConnectionEvent[], Rejection<RegistryRefusal>>;
+export type Decision = Result.Result<readonly ConnectionEvent[], Rejection<RegistryRefusal>>;
 
 const nothingToRecord: Decision = Result.succeed([]);
 
@@ -68,7 +68,7 @@ function decideAddition({ link, ...added }: ConnectionAddition, registry: Regist
     : Result.fail(refusal);
 }
 
-function addedData({
+export function addedData({
   connection,
   name,
   server_type: serverType,
@@ -82,7 +82,7 @@ function addedData({
   says,
   events,
   added_by: addedBy,
-}: Omit<ConnectionAddition, 'link'>) {
+}: Omit<ConnectionAddition, 'type' | 'link'>) {
   return {
     connection,
     name,

@@ -80,6 +80,7 @@ const whatOnlyWritingPermits = [
   'org/assign_role',
   'org/choose_way',
   'org/create_playbook',
+  'org/decline_connection_request',
   'org/finish',
   'org/give_client',
   'org/give_credential',
@@ -214,5 +215,22 @@ describe('every operation the server serves, as the server refuses it, for each 
       })),
     ).toEqual(refusedForTheRoleOrTheTokenType);
     expect(table.flatMap(({ enforcedOtherwise }) => enforcedOtherwise)).toEqual([]);
+  });
+});
+
+interface DecidedRow {
+  readonly caller: string;
+  readonly allowed: readonly string[];
+}
+
+function approvingOfThoseAdding(rows: readonly DecidedRow[]): readonly (readonly [string, boolean])[] {
+  return rows
+    .filter((row) => row.allowed.includes('org/add_connection'))
+    .map((row) => [row.caller, row.allowed.includes('org/approve')] as const);
+}
+
+describe('adding a connection, as the decision point the server loads decides who may also approve it', () => {
+  it('lets every caller it lets add a connection approve one too, so each is answered a link as before and none a request', () => {
+    expect(approvingOfThoseAdding(table)).toEqual(approvingOfThoseAdding(pinned).map(([caller]) => [caller, true]));
   });
 });

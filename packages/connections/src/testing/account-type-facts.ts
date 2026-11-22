@@ -87,3 +87,12 @@ export const keptWaysOfAServer: readonly (typeof ConnectionEventSchema.Type)[] =
     context: acted,
   },
 ];
+
+export const requested: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_requested',
+    data: { ...ofTheConnection, message: 'To send the weekly summary.' },
+    context: acted,
+  },
+  { type: 'connection_request_declined', data: ofTheConnection, context: acted },
+];

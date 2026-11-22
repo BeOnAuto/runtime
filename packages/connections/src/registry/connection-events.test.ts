@@ -5,7 +5,7 @@ import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { actingAsAnAccount, keptWaysOfAServer, wayChosenAgain } from '../testing/account-type-facts.ts';
+import { actingAsAnAccount, keptWaysOfAServer, requested, wayChosenAgain } from '../testing/account-type-facts.ts';
 import { heldAppCredentials } from '../testing/app-credential-facts.ts';
 import { givenItsEvents, identifiedByTheRuntime, identifiedInItsAccount } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
@@ -280,7 +280,7 @@ describe('the facts of the registry of connections', () => {
       '0.67.0': heldAppCredentials,
       '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
       '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
-      '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount],
+      '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
     },
   });
 });

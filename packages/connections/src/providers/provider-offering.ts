@@ -12,6 +12,7 @@ import { Effect } from 'effect';
 import { studioBaseFor } from '../links/connect-page.ts';
 import { defineAddConnection } from '../operations/add-connection.ts';
 import { opensSockets, type ConnectionServices } from '../operations/connection-services.ts';
+import { pageOperationsOf } from '../page/page-operations.ts';
 import { addingRefusalOf, adderRefusalOf } from '../policy/policy-rules.ts';
 import type { ListedProvider } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
@@ -76,7 +77,7 @@ function offeredAmong(listed: readonly ListedProvider[], money: ReadonlySet<stri
 }
 
 export function makeProviderOffering(services: ConnectionServices): ProviderOffering {
-  const adding = defineAddConnection(services).registration;
+  const adding = defineAddConnection(services, pageOperationsOf(services).approving.registration).registration;
   return (caller) =>
     Effect.flatMap(addingRefusedTo(services, adding, caller), (refusal) =>
       refusal === null

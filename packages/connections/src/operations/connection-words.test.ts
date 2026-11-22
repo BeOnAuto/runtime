@@ -1,6 +1,7 @@
-import type { LinkToOpen, Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
+import type { AccessDecision, AccessRequest, LinkToOpen, Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
+import { decidingEach } from '@on.auto/operations/testing';
 import { drive, providersOf } from '@on.auto/providers/testing';
-import { Option } from 'effect';
+import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes, reconnecting, statusesOf, type Added } from '../testing/additions.ts';
@@ -70,6 +71,21 @@ describe('the words of adding a connection', () => {
 
     expect(link?.message).toContain('“crm”');
     expect(link?.url).toMatch(/^https:\/\/studio\.on\.auto\/connect\?server=http%3A%2F%2Flocalhost%3A5555&org=acme&/u);
+  });
+});
+
+function approvingDenied(request: AccessRequest): Effect.Effect<AccessDecision> {
+  const decision = request.action.name === 'approve' ? 'deny' : 'allow';
+  return Effect.succeed({ decision, determiningPolicies: [], errors: [] });
+}
+
+describe('the words of a request to connect', () => {
+  it('name the connection asked for, and offer no link to open', async () => {
+    const h = harness({ decidedBy: decidingEach(approvingDenied) });
+    const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, notes));
+
+    expect(wordsOf(h, 'add_connection').outcome(output, notes)).toContain('“notes”');
+    expect(linkingOf(h).toOpen(output)).toBeUndefined();
   });
 });
 

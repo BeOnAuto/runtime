@@ -71,6 +71,16 @@ const AppCredentialHeldSchema = Schema.Struct({
 
 export type AppCredentialHeld = typeof AppCredentialHeldSchema.Type;
 
+const OpenRequestSchema = Schema.Struct({
+  message: Schema.NullOr(Schema.String).annotate({
+    description: 'What the person who asked needs the app for, in their own words. It is null when they gave none.',
+  }),
+  requested_by: Schema.String.annotate({ description: 'The id of the caller who asked for it.' }),
+  requested_at: Schema.String.annotate({ description: 'When it was asked for, in ISO 8601 UTC.' }),
+});
+
+export type OpenRequest = typeof OpenRequestSchema.Type;
+
 const EventsAsGivenSchema = Schema.Record(Schema.String, Schema.Json)
   .annotate({
     description:
@@ -99,6 +109,10 @@ export const ConnectionSchema = Schema.Struct({
   }),
   added_by: RecordedCallerSchema.annotate({ description: 'The caller who added it, by id and name' }),
   added_at: Schema.String.annotate({ description: 'When it was added, in ISO 8601 UTC' }),
+  request: Schema.NullOr(OpenRequestSchema).annotate({
+    description:
+      'Someone who may not approve connections here asked the admins to connect it. The request stays open until an admin connects the connection or declines the request, or the connection is removed. It is null when there is no open request.',
+  }),
   connected_at: Schema.NullOr(Schema.String).annotate({ description: 'When it was connected, in ISO 8601 UTC' }),
   connected_by: Schema.NullOr(RecordedCallerSchema).annotate({
     description: 'The caller who connected it, approving it or giving its credential, by id and name',

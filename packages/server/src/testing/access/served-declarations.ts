@@ -6,6 +6,7 @@ export const servedDeclarations: readonly string[] = [
   'org/assign_role: org:write (manages permissions)',
   'org/choose_way: org:write',
   'org/create_playbook: org:write (names a playbook)',
+  'org/decline_connection_request: org:write',
   'org/finish: org:write',
   'org/get_caller: org:read,playbook:read',
   'org/get_connection: org:read',
