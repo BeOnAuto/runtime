@@ -1,4 +1,4 @@
-import { until } from '../waiting/until.ts';
+import type { HoldingServer } from './spawned-server.ts';
 
 export async function isAcceptingConnections(port: number): Promise<boolean> {
   try {
@@ -9,9 +9,13 @@ export async function isAcceptingConnections(port: number): Promise<boolean> {
   }
 }
 
-export async function untilRefusingConnections(port: number): Promise<void> {
-  await until(
-    () => isAcceptingConnections(port),
-    (accepting) => !accepting,
-  );
+/**
+ * The line the test entry says to its test after each stop signal, once the server's handlers of that signal ran: the
+ * first closed its listener then, so the server takes no new connection.
+ */
+export const listenerClosedLine = 'listener closed';
+
+/** Answers once a server the test entry runs has closed its listener after a stop signal, as it says to its test. */
+export async function untilItsListenerClosed({ child, line }: Pick<HoldingServer, 'child' | 'line'>): Promise<void> {
+  await line.said(listenerClosedLine, child.exited);
 }

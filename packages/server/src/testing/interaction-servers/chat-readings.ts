@@ -1,8 +1,25 @@
+import { firstReadWaitMs } from '@on.auto/interaction/testing';
 import type { FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 
 import { alpha } from '../servers/reasoning-server.ts';
+import { ownClockOf } from '../waiting/stepped-server-clock.ts';
 import type { InteractionServer } from './interaction-server.ts';
+
+/** The first reads of a conversation's replies, each the first read's wait apart, that a wait steps at most. */
+const firstReads = { atMost: 3 };
+
+/**
+ * The read once it holds, the server's clock stepped by the wait before the first read of a conversation's replies,
+ * one wait at a time while the server is at rest, so the server reads the replies it was told of.
+ */
+export function whenRepliesRead<A>(
+  server: InteractionServer,
+  read: () => A | Promise<A>,
+  holds: (value: A) => boolean,
+): Promise<A> {
+  return ownClockOf(server).steppedEvery(firstReadWaitMs).until(read, holds, firstReads);
+}
 
 const readingOf = (conversation: readonly string[], to: readonly string[]): readonly string[] => [
   'replies:',
@@ -73,8 +90,4 @@ export function readAndTold(events: string): boolean {
 
 export function readsOf(chat: Pick<FakeMcpServer, 'received'>): Promise<readonly unknown[]> {
   return Promise.resolve(chat.received().filter(({ tool }) => tool === 'thread_replies'));
-}
-
-export function someRead(reads: readonly unknown[]): boolean {
-  return reads.length > 0;
 }

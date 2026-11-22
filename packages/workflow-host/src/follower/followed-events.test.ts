@@ -16,11 +16,13 @@ import {
   playbookCreated,
   published,
   recorded,
+  runOfTheTestsStarted,
 } from '../reaction-testing/playbook-writes.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
 import { definitionKeyOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
 import { heldFollower } from '../waiting-testing/held-follower.ts';
 import { parentId, parentRun } from '../waiting-testing/waiting-parent.ts';
@@ -346,10 +348,12 @@ describe('the ending of a run a call waits for, appended after the host opened a
       answer: () => Effect.succeed({ status: 'waiting', child }),
     });
     hosted.know(parentId);
+    await runOfTheTestsStarted(database.store, parentId);
     await Effect.runPromise(hosted.host.start(runAt(parentId), startOf(asking)));
-    await hosted.whenRead(
+    await hosted.sweeps.until(
       () => Effect.runPromise(waitingCallsOf(database, parentRun)),
       (waiting) => waiting.length === 1,
+      fewSweeps,
     );
     await recorded(
       database.store,

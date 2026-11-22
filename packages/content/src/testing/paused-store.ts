@@ -1,4 +1,6 @@
-import { Effect, Function } from 'effect';
+import { Effect, Function, ManagedRuntime } from 'effect';
+import { TestClock } from 'effect/testing';
+import { onTestFinished } from 'vitest';
 
 import type { ContentStore } from '../content/recorded-content.ts';
 
@@ -83,15 +85,30 @@ export function pausableStore(store: ContentStore): PausableStore {
   };
 }
 
-export const longEnoughForAPutToSettle = 50;
-
-export function settledWithin(work: Promise<unknown>, ms: number): Promise<boolean> {
-  const waited = new Promise<boolean>((resolve) => {
-    setTimeout(() => {
+/** Whether the work has settled by the turn after every step it could take without waiting on anything. */
+export function settledYet(work: Promise<unknown>): Promise<boolean> {
+  const turned = new Promise<boolean>((resolve) => {
+    setImmediate(() => {
       resolve(false);
-    }, ms);
+    });
   });
-  return Promise.race([work.then(Function.constTrue, Function.constTrue), waited]);
+  return Promise.race([work.then(Function.constTrue, Function.constTrue), turned]);
+}
+
+export interface OnATestClock {
+  readonly run: <A, E>(effect: Effect.Effect<A, E>) => Promise<A>;
+  readonly advance: (milliseconds: number) => Promise<void>;
+}
+
+/** Runs effects on one test clock set to the moment given, which sleeps only as far as the test advances it. */
+export function onATestClock(moment: number = Date.now()): OnATestClock {
+  const runtime = ManagedRuntime.make(TestClock.layer());
+  onTestFinished(() => runtime.dispose());
+  const set = runtime.runPromise(TestClock.setTime(moment));
+  return {
+    run: (effect) => set.then(() => runtime.runPromise(effect)),
+    advance: (milliseconds) => set.then(() => runtime.runPromise(TestClock.adjust(milliseconds))),
+  };
 }
 
 export function defectOf<E>(work: Effect.Effect<unknown, E>): Effect.Effect<unknown, E> {

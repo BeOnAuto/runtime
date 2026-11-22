@@ -31,7 +31,7 @@ const tiers = {
 const placeholders = [
   "{origin} stands for the server's own address.",
   'Where a text is received, {org} and {playbook} stand for the ids in the address, and a required argument of a prompt in braces for the words the person gives.',
-  'The instructions are as the page at /debug shows them: on a real connection they hold one more sentence, just before the last, which names the caller and the org.',
+  'The instructions are as the page at /debug shows them: on a real connection they hold one more sentence, which names the caller and the organization, just before the last sentence or before the one that says to ask questions first.',
 ].join(' ');
 
 function agentTextsDocumentOf(texts: readonly AgentText[]): string {

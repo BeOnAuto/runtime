@@ -17,6 +17,7 @@ import {
 } from '@on.auto/phrasing';
 
 import { problemOfOutcome } from '../problem/outcome-problem.ts';
+import type { Problem } from '../problem/problem-document.ts';
 
 export interface ToolWords {
   readonly kind: OperationKind;
@@ -32,20 +33,30 @@ export interface RefusalWords extends RefusalTerms {
   readonly attempt: string;
 }
 
+function unsuccessfulResultWith(words: string, problem: Problem): CallToolResult {
+  return {
+    isError: true,
+    content: [textOf(withinCharacters(words, mostRefusalCharacters)), textOf(JSON.stringify(problem))],
+  };
+}
+
 export function unsuccessfulResultOf(
   settled: Rejected | Failed | Cancelled,
   clientClosedRequest: boolean,
   { kind, attempt, remedies, explanations }: RefusalWords,
 ): CallToolResult {
-  return {
-    isError: true,
-    content: [
-      textOf(
-        withinCharacters(unsuccessfulWords(attempt, kind, settled, { remedies, explanations }), mostRefusalCharacters),
-      ),
-      textOf(JSON.stringify(problemOfOutcome(settled, clientClosedRequest))),
-    ],
-  };
+  return unsuccessfulResultWith(
+    unsuccessfulWords(attempt, kind, settled, { remedies, explanations }),
+    problemOfOutcome(settled, clientClosedRequest),
+  );
+}
+
+/**
+ * A call refused before it reached any tool, in the shape of every refused call: the refusal's own words, with
+ * nothing around them, then its problem document.
+ */
+export function refusedResultOf(refusal: Rejected): CallToolResult {
+  return unsuccessfulResultWith(refusal.detail, problemOfOutcome(refusal, false));
 }
 
 interface WordsOfTheOutput {

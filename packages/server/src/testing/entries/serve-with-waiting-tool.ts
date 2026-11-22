@@ -8,7 +8,7 @@ import { servedBy } from '../../server-options/server-options.ts';
 import { shortShutdownTimeoutMs } from '../processes/shutdown-timeouts.ts';
 import { compositionRootWithoutGoals } from '../servers/composition-without-goals.ts';
 import { playbookOperations } from '../servers/pageless-playbooks.ts';
-import { waitForeverAnnouncedIn } from './calls-in-flight.ts';
+import { toldToTheTest, waitForeverAnnounced } from './calls-in-flight.ts';
 
 await runServer<DispatcherServices>(
   process,
@@ -18,7 +18,7 @@ await runServer<DispatcherServices>(
       ...(await compositionRootWithoutGoals.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
-          await routesServing([...playbookOperations, waitForeverAnnouncedIn(process.env)], {
+          await routesServing([...playbookOperations, waitForeverAnnounced(toldToTheTest())], {
             authorizationServer: settings.signIn?.publicUrl,
             retryStateKeys: { current: keyInHandOf({ from: 'start' }) },
             contentAddressKey: keyInHandOf({ from: 'start' }),

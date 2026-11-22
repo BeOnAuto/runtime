@@ -6,6 +6,7 @@ import {
   mayHaveActed,
   notAnsweredInTime,
   quickCalls,
+  callEndsOnceItSleeps,
   refusingTheArguments,
   unknown,
   unworkable,
@@ -31,7 +32,10 @@ export const afterSending: Rows = [
   ],
   [
     'a call that took longer than a call may',
-    { server: { hints: { sleep: mayChange }, timing: quickCalls }, document: calling('sleep', ['    ms: 5000']) },
+    {
+      server: { hints: { sleep: mayChange }, timing: quickCalls, toldBounds: callEndsOnceItSleeps },
+      document: calling('sleep', ['    ms: 5000']),
+    },
     unknown('server_failed', notAnsweredInTime),
   ],
 ];

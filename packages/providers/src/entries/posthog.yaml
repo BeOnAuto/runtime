@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.posthog.com/mcp?mode=tools
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://oauth.posthog.com
     scope: organization:read project:read user:read query:read action:read event_definition:read property_definition:read person:read activity_log:read web_analytics:read heatmap:read session_recording:read session_recording_playlist:read error_tracking:read logs:read warehouse_table:read warehouse_view:read external_data_source:read dashboard_template:read insight:write dashboard:write feature_flag:write experiment:write experiment_holdout:write experiment_saved_metric:write survey:write
     says:

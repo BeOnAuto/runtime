@@ -91,13 +91,17 @@ describe('an MCP server given by hand that names its authorization server', () =
 });
 
 describe('the other kinds given for an MCP server given by hand that names its authorization server', () => {
-  it('take client credentials as they are given, since they take their token from an authorization server too', async () => {
+  it('take client credentials as they are given, since they take their token from an authorization server too, and keep the sign-in the server names as a second way', async () => {
     const fake = consenting(signingIn);
     const credential = { kind: 'client_credentials', issuer: fake.origin, client_id: 'files' };
+    const h = harnessByHand();
 
-    expect(await adding(harnessByHand(), givenAt(fake, credential))).toMatchObject({
-      status: 'succeeded',
-      output: { credential },
+    expect(await adding(h, givenAt(fake, credential))).toMatchObject({ status: 'succeeded', output: { credential } });
+    expect((await h.facts())[0]?.data).toMatchObject({
+      ways: [
+        { ...credential, permissions: 'application' },
+        { kind: 'authorization', permissions: 'delegated', issuer: fake.origin, clients: ['dynamic'] },
+      ],
     });
   });
 

@@ -4,6 +4,7 @@ import { Context } from 'effect';
 import { expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import {
   causesOf,
   heldUntil,
@@ -13,7 +14,6 @@ import {
   notesReaching,
   type Holding,
 } from './followed-rows.ts';
-import { movedClock } from './moved-clock.ts';
 import {
   alpha,
   at,
@@ -23,18 +23,14 @@ import {
   published,
   recorded,
 } from './playbook-writes.ts';
-import { reactingHost } from './reacting-host.ts';
-
-const startedAt = Date.parse(at) + 1000;
+import { steppedReacting } from './stepped-reactions.ts';
 
 async function unreadableBefore(settingsOf: SettingsOf, keptOutside: boolean): Promise<Holding> {
-  const clock = movedClock(startedAt);
-  const reacting = await reactingHost({
+  const holding = await steppedReacting({
     settings: await settingsOf(),
-    clock,
     context: Context.make(PayloadOffloading, keptOutside),
   });
-  const { store } = reacting.database;
+  const { store } = holding.reacting.database;
   await definitionRecorded(store, {
     name: 'watch',
     version: 1,
@@ -42,7 +38,7 @@ async function unreadableBefore(settingsOf: SettingsOf, keptOutside: boolean): P
   });
   await recorded(store, `${alpha}runs/r-bad`, { type: 'run_started', data: { input: {}, calls_tools: 7 } });
   await published(store, { id: 's1', type: 'com.acme.sentinel' });
-  return { reacting, clock };
+  return holding;
 }
 
 function heldWhileKeptOutside(settingsOf: SettingsOf) {
@@ -50,10 +46,14 @@ function heldWhileKeptOutside(settingsOf: SettingsOf) {
     const holding = await unreadableBefore(settingsOf, true);
 
     const first = await holdReaching(holding, (state) => state.holds === 1);
+    const heldAt = holding.clock.now();
     holding.clock.moveTo(heldUntil(first));
     const second = await holdReaching(holding, (state) => state.holds === 2);
 
-    expect(second).toMatchObject({ held_since: startedAt, held_for: 'unreadable', attempts: 0 });
+    expect([first.held_since, second]).toMatchObject([
+      heldAt,
+      { held_since: heldAt, held_for: 'unreadable', attempts: 0 },
+    ]);
     expect(causesOf(holding)).toEqual([]);
     const tries = await notesReaching(holding, 'content_hold', 2);
     expect(notesOf(holding, 'fact_unreadable')).toEqual([
@@ -77,9 +77,10 @@ function passedWhileKeptInline(settingsOf: SettingsOf) {
   it('passes a fact this release cannot read over, said, as before, while payloads are kept inline', async () => {
     const holding = await unreadableBefore(settingsOf, false);
 
-    const started = await holding.reacting.whenRead(
-      () => Promise.resolve(causesOf(holding)),
+    const started = await holding.sweeps.until(
+      () => causesOf(holding),
       (causes) => causes.length === 1,
+      fewSweeps,
     );
 
     expect(started).toEqual([messageIdOf(`${alpha}events/s1`, 1)]);
@@ -90,14 +91,11 @@ function passedWhileKeptInline(settingsOf: SettingsOf) {
 
 function passedWhenItsTypeIsUnknown(settingsOf: SettingsOf) {
   it('passes a definition record of a type it does not know over, said, while payloads are kept outside', async () => {
-    const clock = movedClock(startedAt);
-    const reacting = await reactingHost({
+    const holding: Holding = await steppedReacting({
       settings: await settingsOf(),
-      clock,
       context: Context.make(PayloadOffloading, true),
     });
-    const holding: Holding = { reacting, clock };
-    const { store } = reacting.database;
+    const { store } = holding.reacting.database;
     await definitionRecorded(store, {
       name: 'watch',
       version: 1,
@@ -111,9 +109,10 @@ function passedWhenItsTypeIsUnknown(settingsOf: SettingsOf) {
     );
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
 
-    const started = await holding.reacting.whenRead(
-      () => Promise.resolve(causesOf(holding)),
+    const started = await holding.sweeps.until(
+      () => causesOf(holding),
       (causes) => causes.length === 1,
+      fewSweeps,
     );
 
     expect(started).toEqual([messageIdOf(`${alpha}events/s1`, 1)]);

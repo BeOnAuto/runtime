@@ -21,7 +21,6 @@ function hostsOf(provider: Provider): readonly (readonly string[])[] {
 }
 
 const github = Option.getOrThrow(Option.fromNullishOr(shippedProviders.find(({ entry }) => entry.name === 'github')));
-
 function wayOf({ entry }: Provider, kind: string) {
   return Option.getOrThrow(Option.fromNullishOr(entry.credentials.find((way) => way.kind === kind)));
 }
@@ -69,7 +68,6 @@ const WaysListedSchema = Schema.Struct({
 const refusedName = 'There is no provider named crm here; search lists the providers a person may connect';
 
 let server: ReasoningServer;
-
 beforeAll(async () => {
   server = await servingReasoning([]);
 });
@@ -205,10 +203,12 @@ const waysWithAClient = {
 
 describe('the ways of the providers a server lists', () => {
   it('offer consent beside the organization’s own OAuth client where whoever runs it registered a client at the issuer or the server registers one itself, under the organization’s own OAuth client alone elsewhere, and search offers every provider', async () => {
+    const withoutClients = await servingReasoning([]);
     const withClients = await servingReasoning([], registeredAtTheIssuers);
-    onTestFinished(() => withClients.stop());
+    onTestFinished(withoutClients.stop);
+    onTestFinished(withClients.stop);
 
-    expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
+    expect([await waysListedBy(withoutClients), await namesSearchedBy(withoutClients)]).toEqual([
       waysExpected(waysWithoutAClient, [underTheOrgsOAuthClientAlone]),
       names,
     ]);

@@ -1,5 +1,4 @@
 import type { Lineage, Settlement } from '@on.auto/operations';
-import type { StartCall } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -16,6 +15,9 @@ import {
   signals,
   type Signals,
 } from './recording-reports.ts';
+import { steppedBy, steppedClock, type SteppedClock, type SteppedSweeps } from './stepped-clock.ts';
+
+type StartCall = Parameters<HostOptions['perform']>[0];
 
 interface HostRecords {
   readonly calls: () => readonly StartCall[];
@@ -27,17 +29,22 @@ interface HostRecords {
   readonly know: (runId: string) => void;
   /** Answers once a read of what the host called, settled or reported holds, read again after each record. */
   readonly when: Signals['when'];
-  /** Answers once a read that answers later holds, read again after each record and each time the host rests. */
-  readonly whenRead: Signals['whenRead'];
 }
 
 export interface HostedRuns extends HostRecords {
   readonly host: WorkflowHost;
+  /** The clock the host sleeps on, which moves only when the test steps it. */
+  readonly clock: SteppedClock;
+  /** Waits for what the host keeps, stepping the clock a sweep at a time while the host is at rest. */
+  readonly sweeps: SteppedSweeps;
 }
 
 export interface RecordedOptions extends HostRecords {
   readonly options: Omit<HostOptions, 'database'>;
 }
+
+/** The moment the clock of a host opened by `hostedOn` starts at, unless the test gives a clock of its own. */
+export const hostedStartsAt = Date.parse('2026-10-05T09:00:00.000Z');
 
 export interface HostedOptions {
   readonly answer?: (call: StartCall) => ReturnType<HostOptions['perform']>;
@@ -108,13 +115,37 @@ export function recordedOptionsOf(options: HostedOptions = {}): RecordedOptions 
     notes: recorded.notes,
     know: settling.know,
     when: seen.when,
-    whenRead: seen.whenRead,
   };
 }
 
-export async function hostedOn(database: HostedDatabase, options: HostedOptions = {}): Promise<HostedRuns> {
+/**
+ * A host on a clock that is not stepped, such as a skipping clock that moves the time on as each loop sleeps, for a test
+ * about what a long stretch of time does that no test steps through sweep by sweep.
+ */
+export async function hostedOnItsClock(
+  database: HostedDatabase,
+  options: HostedOptions & Required<Pick<HostedOptions, 'clock'>>,
+): Promise<HostRecords & { readonly host: WorkflowHost }> {
   const { options: hostOptions, ...records } = recordedOptionsOf(options);
   const host = await openWorkflowHost({ database: await storeSettingsOf(database), ...hostOptions });
   onTestFinished(() => host.stop());
   return { host, ...records };
+}
+
+export interface SteppedHostedOptions extends Omit<HostedOptions, 'clock'> {
+  /** The clock the host sleeps on: one of its own, starting at `hostedStartsAt`, unless the test gives one. */
+  readonly clock?: SteppedClock;
+}
+
+/** A host on a stepped clock: none of its loops sleeps on a real timer, and time moves only when the test steps it. */
+export async function hostedOn(database: HostedDatabase, options: SteppedHostedOptions = {}): Promise<HostedRuns> {
+  const clock = options.clock ?? steppedClock(hostedStartsAt);
+  const { options: hostOptions, ...records } = recordedOptionsOf({
+    ...options,
+    clock,
+    context: clock.watching(options.context),
+  });
+  const host = await openWorkflowHost({ database: await storeSettingsOf(database), ...hostOptions });
+  onTestFinished(() => host.stop());
+  return { host, clock, sweeps: steppedBy(clock, hostOptions.sweepEveryMs), ...records };
 }

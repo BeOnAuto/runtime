@@ -15,7 +15,7 @@ import {
   settledRun,
   workflowSource,
 } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const workflowFormatBlocks = blocksInOrderOf('reference/workflow-format.md').map(({ body }) => body);
 
@@ -61,7 +61,7 @@ const glancedAfterOneApproval = {
 };
 
 function reviewAndApproveOnceGlanced(): Promise<unknown> {
-  return until(
+  return whenHeld(
     async () => (await server.call('GET', `${alpha}/definitions/workflow/review-and-approve`)).body,
     (definition) => JSON.stringify(definition).includes('"folded":1'),
   );
@@ -88,7 +88,7 @@ describe('the example of the workflow format, through the server', () => {
     const started = await server.call('POST', `${alpha}/definitions/workflow/review-and-approve/run`, {
       body: { input: { brief: 'Spring sale for returning customers.', owner: 'ada@example.com' } },
     });
-    const [request] = await until(
+    const [request] = await whenHeld(
       async () => decodeListed((await server.call('GET', `${alpha}/interactions`)).body).interactions,
       (interactions) => interactions.length > 0,
     );

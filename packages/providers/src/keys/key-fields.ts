@@ -77,7 +77,7 @@ const StepsSchema = Schema.Struct({
   ),
 }).annotate({
   description:
-    'For secret, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
+    'For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
 });
 
 export const ValueNameSchema = Schema.String.check(
@@ -145,11 +145,13 @@ export const keyWayFields = {
     ),
   ),
   key_page: Schema.optionalKey(
-    keyFields.key_page('For secret, the https address of the page where a person makes the key'),
+    keyFields.key_page(
+      'For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client',
+    ),
   ),
   key_page_title: Schema.optionalKey(
     described(
-      'For secret, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
+      'For secret and client_credentials, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
     ).check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyPageTitleCharacters)),
   ),
   steps: Schema.optionalKey(StepsSchema),

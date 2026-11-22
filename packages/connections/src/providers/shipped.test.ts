@@ -166,10 +166,14 @@ describe('every way of every shipped provider, resolved with the examples of its
 });
 
 describe('the listing of the shipped providers', () => {
-  it('says of no way what a connection made through it acts as, with gateways switched on or off, since no shipped entry declares it', async () => {
+  it('says of each way that sends a credential what a connection made through it acts as, and the kinds of account of each that acts as an account, with gateways switched on or off', async () => {
     const listed = [await waysListedWith(false), await waysListedWith(true)];
 
-    expect(listed.map((ways) => ways.filter((way) => Object.hasOwn(way, 'permissions')))).toEqual([[], []]);
+    expect(
+      listed.map(
+        (ways) => new Set(ways.map((way) => [way['permissions'], Object.hasOwn(way, 'account_types')].join())),
+      ),
+    ).toEqual([new Set(['application,false', 'delegated,true']), new Set(['application,false', 'delegated,true'])]);
     expect(listed.map((ways) => ways.length > 0)).toEqual([true, true]);
   });
 });

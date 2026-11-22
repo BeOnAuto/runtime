@@ -16,18 +16,32 @@ export interface NodeSqlitePoolOptions extends Omit<NodeSqliteConnectionOptions,
   readonly driverType?: NodeSqliteDriverType;
   readonly readerPoolSize?: number;
   readonly maxTaskIdleTime?: number;
+  readonly onWaitingForTheWriter?: () => void;
 }
 
 export function nodeSqlitePool({
   serializer = JSONSerializer,
   readerPoolSize,
   maxTaskIdleTime,
+  onWaitingForTheWriter,
   ...given
 }: NodeSqlitePoolOptions): NodeSqlitePool {
   const connectionOptions = { ...given, serializer };
   const connectionOf = (options: NodeSqliteConnectionOptions) => nodeSqliteConnection({ ...options, serializer });
   const context = connectionContext();
   return locationOf(given) === InMemorySQLiteDatabase
-    ? writerPool({ getConnection: () => connectionOf(connectionOptions), context, maxTaskIdleTime })
-    : writerAndReadersPool({ connectionOf, connectionOptions, context, readerPoolSize, maxTaskIdleTime });
+    ? writerPool({
+        getConnection: () => connectionOf(connectionOptions),
+        context,
+        maxTaskIdleTime,
+        onWaitingForTheWriter,
+      })
+    : writerAndReadersPool({
+        connectionOf,
+        connectionOptions,
+        context,
+        readerPoolSize,
+        maxTaskIdleTime,
+        onWaitingForTheWriter,
+      });
 }

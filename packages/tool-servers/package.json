@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./policy": "./src/policy.ts",
     "./served-fakes": "./src/testing/served-fakes.ts",
-    "./testing": "./src/testing/index.ts"
+    "./testing": "./src/testing/index.ts",
+    "./consent-contract": "./src/consent-testing/consent-service-behaviour.ts",
+    "./gateway-contract": "./src/consent-testing/connection-gateway-behaviour.ts"
   },
   "scripts": {
     "measure": "node measure/bridge-overhead.ts",

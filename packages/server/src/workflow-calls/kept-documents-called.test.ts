@@ -1,6 +1,5 @@
-import { firstTryAgainMs, mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { answers, textResult } from '@on.auto/reasoning/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -8,8 +7,8 @@ import { aLedger, minute, movedOn, nineOClock } from '../testing/accounts/refuse
 import { waitingAgain } from '../testing/accounts/waiting-workflows.ts';
 import { contentReads } from '../testing/servers/content-reads.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { isStarted, runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { isStarted, runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
+import { fewSweeps, steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
 
 const summary = [
   '---',
@@ -63,12 +62,10 @@ async function keepingTheSummary(replies: number, switched: Switched = switchedO
 type Kept = Awaited<ReturnType<typeof keepingTheSummary>>;
 
 function settledAsTheClockMovesOn(server: Kept['server'], clock: Kept['clock'], path: string) {
-  return until(
-    () => {
-      movedOn(clock, minute);
-      return server.call('GET', path);
-    },
+  return clock.steppedEvery(minute).until(
+    () => server.call('GET', path),
     ({ body }) => !isStarted(body),
+    fewSweeps,
   );
 }
 
@@ -118,9 +115,9 @@ interface Saved {
 async function savedByAnotherServerKeptDocumentsScheduled(ledger: TemporaryLedger): Promise<Saved> {
   const saving = await servingReasoning([], {}, undefined, { ledger, keptOutside: true });
   await saving.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  const from = Date.now();
+  const from = saving.runsOn.now();
   await saving.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'tick', source: ticking } });
-  const by = Date.now();
+  const by = saving.runsOn.now();
   await saving.stop();
   return { from, by };
 }
@@ -138,7 +135,7 @@ describe('a workflow whose step calls a function whose document its playbook kee
     expect(waiting?.summary).toContain('The step “ask” waits until what it calls can be read from storage.');
     expect(settled.body).toMatchObject({ status: 'succeeded' });
     expect(server.modelCalls()).toBe(1);
-  }, 60_000);
+  });
 });
 
 describe('a function whose document its playbook keeps outside its facts, run again and again', () => {
@@ -147,7 +144,7 @@ describe('a function whose document its playbook keeps outside its facts, run ag
 
     expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
     expect(content.reads()).toBe(1);
-  }, 60_000);
+  });
 
   it('has its document read from the store by no run of the server that kept it, which keeps what it put', async () => {
     const content = contentReads();
@@ -164,7 +161,7 @@ describe('a function whose document its playbook keeps outside its facts, run ag
 
     expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
     expect(content.reads()).toBe(0);
-  }, 60_000);
+  });
 });
 
 describe('a server whose payloads are not kept outside, over a ledger where the document of a function was', () => {
@@ -173,7 +170,7 @@ describe('a server whose payloads are not kept outside, over a ledger where the 
 
     expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
     expect(content.reads()).toBe(1);
-  }, 60_000);
+  });
 });
 
 describe('a server whose payloads are not kept outside, over a ledger whose documents a server with it off saved', () => {
@@ -182,7 +179,7 @@ describe('a server whose payloads are not kept outside, over a ledger whose docu
 
     expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
     expect(content.reads()).toBe(0);
-  }, 60_000);
+  });
 });
 
 describe('a schedule whose workflow its playbook keeps outside its facts', () => {
@@ -190,7 +187,7 @@ describe('a schedule whose workflow its playbook keeps outside its facts', () =>
     const ledger = aLedger();
     const saved = await savedByAnotherServerKeptDocumentsScheduled(ledger);
     const content = contentReads();
-    const clock = movedClock(Date.now());
+    const clock = steppedServerClock();
     const server = await servingReasoning([], {}, undefined, {
       clock,
       ledger,
@@ -201,24 +198,33 @@ describe('a schedule whose workflow its playbook keeps outside its facts', () =>
     content.fail(true);
 
     clock.moveTo(saved.by + 5 * minute + 1000);
-    await until(
+    await clock.swept.until(
       () => content.reads(),
       (reads) => reads > 0,
+      fewSweeps,
     );
     const whileUnread = await runsOfTheSchedule(server);
     content.fail(false);
-    await new Promise((resolve) => {
-      setTimeout(resolve, firstTryAgainMs);
-    });
     movedOn(clock, minute);
-    const {
-      runs: [started],
-    } = await until(async () => scheduledIn((await server.call('GET', `${alpha}/runs?type=workflow&name=tick`)).body));
-    const run = settledIn((await settledRun(server, `${alpha}/runs/${started.run_id}`)).body);
+    const listed = await clock.swept.until(
+      async () => (await server.call('GET', `${alpha}/runs?type=workflow&name=tick`)).body,
+      Schema.is(ScheduledRuns),
+      fewSweeps,
+    );
+    const [started] = scheduledIn(listed).runs;
+    const run = settledIn(
+      (
+        await clock.swept.until(
+          () => server.call('GET', `${alpha}/runs/${started.run_id}`),
+          ({ body }) => !isStarted(body),
+          fewSweeps,
+        )
+      ).body,
+    );
     const due = Date.parse(run.output.input.schedule.due);
 
     expect(whileUnread).toEqual([]);
     expect(due).toBeGreaterThanOrEqual(saved.from + 5 * minute);
     expect(due).toBeLessThanOrEqual(saved.by + 5 * minute);
-  }, 60_000);
+  });
 });

@@ -1,0 +1,49 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "files",
+    "server_type": "mcp",
+    "provider": null,
+    "placeholders": null,
+    "entry": {
+      "url": "https://mcp.files.example.com/mcp"
+    },
+    "credential": {
+      "kind": "authorization",
+      "permissions": "delegated",
+      "issuer": "https://auth.files.example.com",
+      "scope": "files.read",
+      "clients": [
+        "dynamic"
+      ]
+    },
+    "ways": [
+      {
+        "kind": "authorization",
+        "permissions": "delegated",
+        "issuer": "https://auth.files.example.com",
+        "scope": "files.read",
+        "clients": [
+          "dynamic"
+        ]
+      },
+      {
+        "kind": "client_credentials",
+        "permissions": "application",
+        "issuer": "https://auth.files.example.com",
+        "scope": "files.read"
+      }
+    ],
+    "account_type": "personal",
+    "says": {},
+    "added_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -3,8 +3,14 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledRun,
+  whenSwept,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const ListedRuns = Schema.Struct({
   runs: Schema.Array(
@@ -75,7 +81,8 @@ async function servingWith(...definitions: readonly (readonly [string, string])[
 }
 
 function runsOf(name: string): Promise<readonly ListedRun[]> {
-  return until(
+  return whenSwept(
+    server,
     async () => runsIn((await server.call('GET', `${alpha}/runs?type=workflow&name=${name}`)).body).runs,
     (runs) => runs.some(({ status }) => status !== 'started'),
   );
@@ -123,7 +130,7 @@ describe('a run waiting for an event whose type its filter names', () => {
     await servingWith(['approval', approving]);
     const started = await server.call('POST', `${alpha}/definitions/workflow/approval/run`, { body: { input: {} } });
     const path = `${alpha}/runs/${runIdIn(started.body)}`;
-    await until(
+    await whenHeld(
       () => historyOf(path),
       (history) => history.includes('step_waiting'),
     );

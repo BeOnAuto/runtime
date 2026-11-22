@@ -6,7 +6,6 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { onPostgreSQLAt } from '../testing/host-files.ts';
 import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
-import { untilAWholeWakeHasPassed, watchedSystemClock } from '../testing/watched-clock.ts';
 import { rowsSuite } from '../views-testing/rows-suite.ts';
 import { collecting, foldedAll, isLive } from '../views-testing/view-documents.ts';
 import { viewHarness } from '../views-testing/view-harness.ts';
@@ -44,13 +43,12 @@ describeOnPostgreSQL('the views of the projector', (aDatabase) => {
       const connectionString = await aDatabase();
       const views = await viewHarness(onPostgreSQLAt(connectionString));
       await views.saved('outputs', collecting);
-      const clock = watchedSystemClock();
-      views.start({ clock });
+      views.start();
       await views.folded('outputs', isLive);
       const open = await aRunLeftOpen(connectionString, 'late');
 
       await views.ran('reasoning/after', 'after');
-      await untilAWholeWakeHasPassed(clock);
+      await views.sweptOnce();
       const held = await views.viewOf('outputs');
       await open.query('COMMIT');
       const folded = await views.folded('outputs', foldedAll(2));

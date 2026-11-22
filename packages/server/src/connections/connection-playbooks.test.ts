@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { aSecretHeader, connectedWith, connectionsOfAcme } from '../testing/servers/connected-servers.ts';
 import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
 
 const crmKey = 'crm-api-key-6e2b9d41';
 
@@ -96,10 +95,7 @@ describe('a connection given to other playbooks than the one a function runs in'
     const release = crm.holdNextOf('tools/call');
 
     const ran = running(server);
-    await until(
-      () => callsAt(crm),
-      (calls) => calls === 1,
-    );
+    await crm.once(() => callsAt(crm) === 1);
     await settingPlaybooks(server, id, ['beta']);
     release();
 

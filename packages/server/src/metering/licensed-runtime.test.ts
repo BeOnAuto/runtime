@@ -15,7 +15,7 @@ import {
 } from '../testing/accounts/licensed-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { tallied } from '../testing/servers/tally-server.ts';
-import { runIdIn } from '../testing/servers/workflow-server.ts';
+import { runIdIn, whenHeld } from '../testing/servers/workflow-server.ts';
 
 describe('a runtime given its license key in AUTO_RUNTIME_LICENSE_KEY', () => {
   it('activates it with the account at Auto as it starts, and admits each run itself, once per run id, asking Auto nothing', async () => {
@@ -35,7 +35,10 @@ describe('a runtime given its license key in AUTO_RUNTIME_LICENSE_KEY', () => {
     const accounts = await accountsServed();
     accounts.account.revoke(accounts.key, 'key_rotated');
     const server = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key });
-    await expect.poll(async () => (await standingOf(server)).state, { timeout: 60_000 }).toBe('limited');
+    await whenHeld(
+      () => standingOf(server),
+      ({ state }) => state === 'limited',
+    );
 
     expect((await tallied(server)).status).toBe(200);
     expect((await server.call('GET', '/v1/orgs/acme/license')).body).toMatchObject({
@@ -80,7 +83,7 @@ describe('a key activated through the API', () => {
       body: { state: 'licensed', runtime_id: installation, org: 'acme', plan: 'free', runs_left: 1000 },
     });
     expect(await standingOf(after)).toMatchObject({ state: 'licensed', licensed: 2 });
-  }, 60_000);
+  });
 });
 
 describe('a key activated over MCP', () => {

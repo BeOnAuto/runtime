@@ -1,7 +1,6 @@
 import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
 import { type FakeMcpServer, servedForConsent, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { consentSecret, hostOf } from '@on.auto/tool-servers/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
@@ -17,6 +16,7 @@ import {
   servedStudioReturn,
 } from '../testing/servers/consents-over-http.ts';
 import { noNetwork, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
 
 const connections = '/v1/orgs/local/connections';
 
@@ -240,7 +240,7 @@ describe('consent over http', () => {
       const { port, returnAddress } = await servedStudioReturn();
       const fake = await servedForConsent({ redirectUris: [returnAddress] });
       const ledger = temporaryLedger();
-      const clock = movedClock(Date.now());
+      const clock = steppedServerClock();
       const served = await servingReasoning(
         [],
         {

@@ -14,7 +14,6 @@ import { eventAppenderOf, VersionConflict } from '../index.ts';
 import { stamped } from '../testing/happenings.ts';
 import { outcomeOf } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
-import { until } from '../testing/until.ts';
 import { dataAsJsonText } from './json-text.ts';
 import { lostConnectionLogged, lostConnectionsLoggedWith } from './lost-connections.ts';
 import { type Connection, postgresqlConnectionOn } from './postgresql-connection.ts';
@@ -307,17 +306,16 @@ describe('the data of an event kept as its JSON text', () => {
 describe('a connection to the PostgreSQL database that the database ends', () => {
   it('is logged as a warning with the message of the database, through the loggers of the runtime', async () => {
     const logged: string[] = [];
+    const firstLogged = Promise.withResolvers<void>();
     const capture = Logger.map(Logger.formatJson, (line: string) => {
       logged.push(line);
+      firstLogged.resolve();
     });
     const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(Logger.layer([capture]))));
 
     lostConnectionsLoggedWith(context)(new Error('terminating connection due to administrator command'));
 
-    await until(
-      () => logged.length,
-      (count) => count > 0,
-    );
+    await firstLogged.promise;
     expect(logged).toEqual([expect.stringContaining(lostConnectionWarning)]);
     expect(logged[0]).toContain('"annotations":{"error":"terminating connection due to administrator command"}');
   });

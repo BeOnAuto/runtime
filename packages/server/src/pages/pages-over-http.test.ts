@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { answering, servingPages } from '../testing/servers/page-server.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const pageData = [
   'data:',
@@ -85,7 +85,7 @@ async function playbookWithThePage(): Promise<string> {
     body: { name: 'draft-posts', source: draftPosts, diagram: 'none' },
   });
   const ran = await server.call('POST', `${draftPostsAt}/run`, { body: { input: {} } });
-  await until(async () => {
+  await whenHeld(async () => {
     const { body } = await server.call('GET', draftPostsAt);
     expect(Option.getOrUndefined(decodeStanding(body))?.page.standing).toEqual({ state: 'live', folded: 1 });
   });
@@ -167,7 +167,7 @@ describe('the page of the playbook over HTTP', () => {
       body: { id: 'alpha', name: 'Alpha', page: { source: playbookPage } },
     });
     expect(read).toMatchObject({ status: 200, body: { page: { source: playbookPage } } });
-    await until(async () => {
+    await whenHeld(async () => {
       expect(await server.call('POST', `${alpha}/render`)).toMatchObject({
         status: 200,
         body: {

@@ -2,9 +2,9 @@ import { answers, jsonResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
-import { patientWorkerPool } from '../servers/worker-pools.ts';
-import { workflowSource } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { patientThreadPool } from '../servers/worker-pools.ts';
+import { whenSwept, workflowSource } from '../servers/workflow-server.ts';
+import { whenHeld } from '../waiting/until.ts';
 import type { InteractionServer } from './interaction-server.ts';
 import type { OpenStore } from './kept-answer-servers.ts';
 
@@ -40,8 +40,10 @@ const RunsSchema = Schema.Struct({
   runs: Schema.Array(Schema.Struct({ run_id: Schema.String, status: Schema.String })),
 });
 
+/** The first ended run of a workflow, the server's sweeps stepped until its trigger started it and it ended. */
 export async function endedRunOf(server: InteractionServer, workflow: string): Promise<string> {
-  const [run] = await until(
+  const [run] = await whenSwept(
+    server,
     async () =>
       Schema.decodeUnknownSync(RunsSchema)(
         (await server.call('GET', `${alpha}/runs?type=workflow&name=${workflow}`)).body,
@@ -91,7 +93,7 @@ export async function postsDraftedOnThePage(store: OpenStore, keeping: boolean):
     store.environment,
     undefined,
     {
-      programPoolOf: patientWorkerPool,
+      programPoolOf: patientThreadPool,
       ...store.served,
       keptOutside: keeping,
     },
@@ -102,7 +104,7 @@ export async function postsDraftedOnThePage(store: OpenStore, keeping: boolean):
       body: { name: 'draft-posts', source: draftPosts, diagram: 'none' },
     });
     await server.call('POST', `${draftPostsAt}/run`, { body: { input: {} } });
-    return await until(
+    return await whenHeld(
       async () => Schema.decodeUnknownSync(PageRuns)((await server.call('GET', draftPostsAt)).body).page.runs,
       (runs) => !runs.startsWith('Since it began, 0'),
     );

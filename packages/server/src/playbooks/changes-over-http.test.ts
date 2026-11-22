@@ -6,9 +6,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import type { RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { request } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const summary = [
   '---',
@@ -56,12 +57,6 @@ function asAdmin(method: string, path: string, body?: unknown) {
 
 function asReader(path: string) {
   return request(serverChangesWithKeys.port, 'GET', path, { key: alphaReader.key });
-}
-
-function elapsed(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 describe('changes over http', () => {
@@ -112,19 +107,19 @@ describe('changes over http', () => {
   describe('the changes of a playbook over HTTP, while nothing changed', () => {
     it('hold the request until a definition is saved, and answer then', async () => {
       const now = await cursorOf(`${alpha}/changes`);
+      const arrivedBefore = server.arrived().length;
 
-      const started = performance.now();
       const held = server.call('GET', `${alpha}/changes?since=${now}&wait=20`);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 200);
-      });
+      await whenHeld(
+        () => server.arrived().slice(arrivedBefore),
+        (arrived: ReturnType<ReasoningServer['arrived']>) => arrived.some(({ path }) => path.endsWith('/changes')),
+      );
       await summaryCreated();
 
       expect(await held).toMatchObject({
         status: 200,
         body: { changes: [{ kind: 'definition', type: 'reasoning', name: 'summary' }] },
       });
-      expect(performance.now() - started).toBeLessThan(10_000);
     });
 
     it('refuse a cursor the ledger does not hold with its own problem type, and a wait past 25 seconds', async () => {
@@ -160,7 +155,7 @@ describe('changes with keys', () => {
         LEDGER_FILE: ledger.fileName,
         API_KEYS: JSON.stringify([acmeAdmin.entry, alphaReader.entry]),
       },
-      compositionRootWithoutGoals,
+      testComposition({ goals: false }),
     );
   });
 
@@ -176,14 +171,11 @@ describe('changes with keys', () => {
       await asAdmin('PUT', '/v1/orgs/acme/playbooks/beta', { name: 'Bet', description: '' });
       await asAdmin('POST', '/v1/orgs/acme/playbooks/beta/retire');
 
-      const started = performance.now();
-      const unseen = await asReader(`/v1/orgs/acme/changes?since=${now}&wait=1`);
-      const held = performance.now() - started;
+      const unseen = await asReader(`/v1/orgs/acme/changes?since=${now}&wait=0`);
       await asAdmin('POST', '/v1/orgs/acme/playbooks', { playbook: 'alpha', name: 'Alpha' });
       const seen = await asReader(`/v1/orgs/acme/changes?since=${now}&wait=0`);
 
       expect(unseen).toMatchObject({ status: 200, body: { cursor: now, changes: [], more: false } });
-      expect(held).toBeGreaterThanOrEqual(900);
       expect(seen).toMatchObject({ status: 200, body: { changes: [{ kind: 'playbook', playbook: 'alpha' }] } });
     });
   });
@@ -191,18 +183,25 @@ describe('changes with keys', () => {
 
 describe('a held request for the changes of a playbook, when the server stops', () => {
   it('is answered at once with the cursor it was given and no changes, and the stop does not wait for it', async () => {
-    const serverHeldChanges = await servingReasoning([]);
+    const waiting = Promise.withResolvers<void>();
+    const serverHeldChanges = await servingReasoning([], {}, undefined, {
+      ledgerOver: (kept) => ({
+        ...kept,
+        waitForAppend: (scope, after, deadline) => {
+          waiting.resolve();
+          return kept.waitForAppend(scope, after, deadline);
+        },
+      }),
+    });
     await serverHeldChanges.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const now = Schema.decodeUnknownSync(AnswerSchema)(
       (await serverHeldChanges.call('GET', `${alpha}/changes`)).body,
     ).cursor;
 
     const held = serverHeldChanges.call('GET', `${alpha}/changes?since=${now}&wait=25`);
-    await elapsed(200);
-    const started = performance.now();
+    await waiting.promise;
     await serverHeldChanges.stop();
 
     expect(await held).toMatchObject({ status: 200, body: { cursor: now, changes: [], more: false } });
-    expect(performance.now() - started).toBeLessThan(5000);
   });
 });

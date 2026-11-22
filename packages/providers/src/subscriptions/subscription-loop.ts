@@ -5,8 +5,16 @@ import type { Destination } from '../events/destination-fields.ts';
 import { actedOn, type Round } from './subscription-acts.ts';
 import { subscriptionCallsOf } from './subscription-calls.ts';
 import { decided, type Step, type Wanted } from './subscription-decisions.ts';
-import type { LoopConnection, Reconciled, SubscriptionKey, SubscriptionLoopPorts } from './subscription-ports.ts';
-import { earliest, isArranging, type Arranging } from './subscription-records.ts';
+import type { SubscriptionCallFailed } from './subscription-failed.ts';
+import { identitiesReadWith } from './subscription-identities.ts';
+import type {
+  Asking,
+  LoopConnection,
+  Reconciled,
+  SubscriptionKey,
+  SubscriptionLoopPorts,
+} from './subscription-ports.ts';
+import { earliest, isArranging, keyOf, type Arranging } from './subscription-records.ts';
 
 function isTakenBy(ports: SubscriptionLoopPorts, place: PlaybookAddress & { readonly connection: string }) {
   return ({ type }: Destination): boolean =>
@@ -47,6 +55,46 @@ function wantedIn(
   });
 }
 
+function owingThrough(connections: readonly LoopConnection[], wanted: readonly Wanted[]): readonly LoopConnection[] {
+  const through = new Set(wanted.map(({ connection }) => connection));
+  return connections.filter(({ connection, identify }) => identify !== undefined && through.has(connection));
+}
+
+interface Triggered {
+  readonly owing: readonly LoopConnection[];
+  readonly keys: readonly SubscriptionKey[];
+}
+
+const nothingTriggered: Triggered = { owing: [], keys: [] };
+
+function triggeredThrough(
+  ports: SubscriptionLoopPorts,
+  asking: Asking,
+  owing: readonly LoopConnection[],
+): Effect.Effect<Triggered> {
+  if (owing.length === 0) {
+    return Effect.succeed(nothingTriggered);
+  }
+  return Effect.map(ports.triggersAsker(asking), (keys) => {
+    const asked = new Set(keys.map(({ connection }) => connection));
+    return { owing: owing.filter(({ connection }) => asked.has(connection)), keys };
+  });
+}
+
+type ReadFailure = Pick<SubscriptionCallFailed, 'kind' | 'because'>;
+
+function unreadForEach(
+  keys: readonly SubscriptionKey[],
+  unread: ReadonlyMap<string, ReadFailure>,
+): ReadonlyMap<string, ReadFailure> {
+  return new Map(
+    keys.flatMap((key) => {
+      const failure = unread.get(key.connection);
+      return failure === undefined ? [] : [[keyOf(key), failure] as const];
+    }),
+  );
+}
+
 interface Acted {
   readonly later: readonly number[];
   readonly cutAt?: number;
@@ -77,22 +125,30 @@ export function subscriptionLoopOf(
   ports: SubscriptionLoopPorts,
 ): (playbook: PlaybookAddress, deadline?: number) => Effect.Effect<Reconciled> {
   const calls = subscriptionCallsOf(ports);
+  const identitiesRead = identitiesReadWith(ports, calls);
   return (playbook, deadline) =>
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const connections = yield* ports.connectionsOf(playbook);
-      const arranged = arrangedOf(ports, playbook, connections);
-      const asked = yield* Effect.forEach(ports.askers, (asker) => asker({ ...playbook, arranged }));
+      const asking = { ...playbook, arranged: arrangedOf(ports, playbook, connections) };
+      const asked = yield* Effect.forEach(ports.askers, (asker) => asker(asking));
       const recorded = yield* ports.records.read(playbook);
       const byName = new Map(connections.map((each) => [each.connection, each]));
+      const wanted = wantedIn(ports, asking.arranged, asked.flat());
       const { steps, nextDueAt } = decided({
         now,
         mostPerConnection: ports.mostPerConnection,
         connections: byName,
-        wanted: wantedIn(ports, arranged, asked.flat()),
+        wanted,
         recorded,
       });
-      const round = { ports, calls, playbook, now, connections: byName };
+      const triggered = yield* triggeredThrough(ports, asking, owingThrough(connections, wanted));
+      const { unread, cutAt: cutReading } = yield* identitiesRead(playbook, triggered.owing, deadline);
+      if (cutReading !== undefined) {
+        return reconciledOf(earliest(nextDueAt, cutReading), cutReading);
+      }
+      const unreadFor = unreadForEach(triggered.keys, unread);
+      const round = { ports, calls, playbook, now, connections: byName, unreadFor };
       const { later, cutAt } = yield* actedOnBefore(round, steps, deadline);
       return reconciledOf(earliest(nextDueAt, cutAt, ...later), cutAt);
     });

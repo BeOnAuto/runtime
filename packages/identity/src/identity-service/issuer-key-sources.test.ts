@@ -148,7 +148,7 @@ describe('the key set given', () => {
   it('refuses a token signed with a key it does not hold', async () => {
     const fake = fakeIssuer('https://login.example');
     const identityService = await serviceOf(fake, unreachable, issuerKeysGiven(await keySetOf(fake)));
-    const another = fakeIssuer('https://login.example');
+    const another = fakeIssuer('https://login.example', { keys: 'its own' });
 
     expect(await identityService.personOf(await signedBy(another), '/mcp')).toEqual({
       because: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',

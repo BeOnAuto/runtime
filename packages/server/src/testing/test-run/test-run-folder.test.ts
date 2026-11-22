@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loggedTo, startInBackgroundOf } from '../../background-start/background-process.ts';
 import { logFileIn, runtimeHomeIn } from '../../local-runtime/local-control.ts';
-import { until } from '../waiting/until.ts';
+import { aLineToTheTest } from '../processes/lines-to-the-test.ts';
 import theFolderOfTheServersTestRun from './test-run-folder.ts';
 
 const stayingEntry = join(import.meta.dirname, '../entries/stay-until-signalled.ts');
@@ -25,22 +25,25 @@ function aHomeLeftIn(folder: string): string {
   return realpathSync(mkdtempSync(join(folder, 'auto-runtime-left-')));
 }
 
+const pathAndCoverage = { PATH: process.env['PATH'], NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'] };
+
 describe("the teardown of the temporary folder of a run of the server's tests", () => {
   it('ends a runtime a test left running in the background in a home it left there, and names the runtime with the home', async () => {
     const teardown = theFolderOfTheServersTestRun(run);
     const home = aHomeLeftIn(tmpdir());
+    const line = await aLineToTheTest();
     const started = startInBackgroundOf({
       execPath: process.execPath,
       execArgv: [],
       entry: stayingEntry,
       home,
-      environment: { PATH: process.env['PATH'], NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'] },
+      environment: { ...pathAndCoverage, ...line.environment },
       report: Function.constVoid,
       log: loggedTo(home, Function.constVoid),
     })();
     const pid = Number(started.pid);
     endWithTheTest(pid);
-    await until(() => existsSync(join(runtimeHomeIn(home), 'started.json')), Boolean);
+    await line.said('started', started.ended);
 
     await expect(teardown()).rejects.toThrow(
       new Error(

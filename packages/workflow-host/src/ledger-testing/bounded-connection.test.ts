@@ -2,7 +2,6 @@ import { sqliteMostBoundValues, statement, statementOf } from '@on.auto/ledger';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { aSQLiteFile } from '../testing/host-files.ts';
 import { hostDatabaseOpenedOn, type ClosingHostDatabase } from './ledger-connections.ts';
 
 const table = statement`CREATE TABLE IF NOT EXISTS amounts (amount BIGINT NOT NULL)`;
@@ -24,7 +23,7 @@ function summed(count: number) {
 }
 
 async function opened(mostBoundValues?: number): Promise<ClosingHostDatabase> {
-  const database = await hostDatabaseOpenedOn({ store: 'sqlite', file: aSQLiteFile(), mostBoundValues }, [table]);
+  const database = await hostDatabaseOpenedOn({ store: 'sqlite', file: ':memory:', mostBoundValues }, [table]);
   onTestFinished(database.close);
   return database;
 }

@@ -1,12 +1,11 @@
 import { defaultOrg } from '@on.auto/openid-connect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import {
   delivered,
   eventsPathOf,
-  hookMadeAt,
+  itsAccountInRooms,
   loggedLines,
   receivingAt,
   roomsDelivery,
@@ -20,8 +19,9 @@ import {
 import { postedInARoom, servedListeningInTheRoom } from '../testing/interaction-servers/shipped-rooms.ts';
 import { connectionsIn } from '../testing/servers/connected-servers.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
-import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
+import { signingInWithRooms, signingPeopleIn, tracedWithRooms } from '../testing/webhooks/signed-in-rooms.ts';
+import { hookSweptAt, postedSwept, settledByAReplyRead } from '../testing/webhooks/swept-hooks.ts';
 
 const arrivedLine = '"outcome":"arrived"';
 
@@ -29,42 +29,17 @@ const alpha = `/v1/orgs/${defaultOrg}/playbooks/alpha`;
 
 const eventsOf = (playbook: string, connection: string) => eventsPathOf(playbook, connection, defaultOrg);
 
-async function signingPeopleIn() {
-  const signing = await personSigningIn();
-  return {
-    signingIn: { ...signing.environment, WEBHOOK_URL: theWebhookUrl },
-    asThePerson: { key: (origin: string) => signing.tokenAt(origin, 'Ada') },
-  };
-}
-
-async function signingInWithRooms(environment: Readonly<Record<string, string>> = {}) {
-  const rooms = await roomsServer();
-  const { signingIn, asThePerson } = await signingPeopleIn();
-  const server = await servedWithRooms(rooms, { ...signingIn, ...environment }, asThePerson, defaultOrg);
-  return { rooms, server };
-}
-
-async function tracedWithRooms() {
-  const receiver = await receivingOtlp();
-  onTestFinished(receiver.close);
-  const { rooms, server } = await signingInWithRooms({
-    OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
-    OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
-  });
-  return { receiver, rooms, server };
-}
-
 describe('a server that signs people in, given WEBHOOK_URL, whose request waits through a connection that declares a webhook per subscription', () => {
   it('subscribes at its service with its events address, which ends with the connection’s id, shows it among the playbook’s events, and takes a delivery the service signs with the secret it gave at that address', async () => {
     const lines = loggedLines();
     const { receiver, rooms, server } = await tracedWithRooms();
     await server.ask('approve-brief');
 
-    const hook = await hookMadeAt(rooms);
+    const hook = await hookSweptAt(server, rooms);
     const roomsId = String(new URL(hook.callback).searchParams.get('connection_id'));
     const listed = await server.call('GET', connectionsIn(defaultOrg));
     const taken = await takenOnceRecorded(server, hook);
-    const arrived = await until(lines, (seen) => seen.some((line) => line.includes(arrivedLine)));
+    const arrived = await whenHeld(lines, (seen) => seen.some((line) => line.includes(arrivedLine)));
     const made = await server.call('GET', `${alpha}/events?type=event_subscription_made`);
     const kept = [
       JSON.stringify((await server.call('GET', `${alpha}/events`)).body),
@@ -100,7 +75,7 @@ describe('a server given WEBHOOK_URL whose workflow’s trigger names a connecti
     const rooms = await roomsServer();
     const { signingIn, asThePerson } = await signingPeopleIn();
     const server = await servedListeningInTheRoom(rooms.url, signingIn, asThePerson, defaultOrg);
-    const hook = await hookMadeAt(rooms);
+    const hook = await hookSweptAt(server, rooms);
     const text = 'a post no line of the log may hold';
     const posted = JSON.stringify({ kind: 'posted', room: theRoom, id: 'm-1', text });
 
@@ -127,11 +102,35 @@ describe('a server given WEBHOOK_URL whose workflow’s trigger names a connecti
   });
 });
 
+const postedBy = (by: string, id: string) => JSON.stringify({ kind: 'posted', room: theRoom, id, text: 'hi', by });
+
+describe('a server given WEBHOOK_URL whose workflow’s trigger names a connection whose entry says who made a post and how to ask which account the connection acts as', () => {
+  it('asks the connection which account it acts as before it subscribes, and takes in no post that account made, which the trigger does not ask for, while it takes one someone else made', async () => {
+    const rooms = await roomsServer();
+    const { signingIn, asThePerson } = await signingPeopleIn();
+    const server = await servedListeningInTheRoom(rooms.url, signingIn, asThePerson, defaultOrg);
+    const hook = await hookSweptAt(server, rooms);
+
+    const answers = [
+      await takenOnceRecorded(server, hook, postedBy(itsAccountInRooms, 'm-own')),
+      await takenOnceRecorded(server, hook, postedBy('u-someone-else', 'm-theirs')),
+    ];
+    const recorded = await server.call('GET', `${alpha}/events?type=event_published`);
+
+    expect(rooms.received().map(({ tool }) => tool)).toEqual(['who_am_i', 'create_hook']);
+    expect(answers).toEqual(['200 ', '200 ']);
+    expect(recorded).toMatchObject({
+      status: 200,
+      body: { events: [{ type: 'event_published', data: { event_id: '%23approvals-ada/m-theirs' } }] },
+    });
+  });
+});
+
 describe('a delivery to the events address that no subscription of the playbook proves', () => {
   it('is refused alike, signed with another secret, for another playbook, through a connection holding no subscription or unknown, or naming a subscription other than the one whose secret signs it', async () => {
     const { rooms, server } = await signingInWithRooms();
     await server.ask('approve-brief');
-    const hook = await hookMadeAt(rooms);
+    const hook = await hookSweptAt(server, rooms);
     await takenOnceRecorded(server, hook);
     const boards = { 'x-boards-event': 'card', 'x-boards-token': hook.secret };
 
@@ -165,13 +164,10 @@ describe('a self-hosted runtime that nothing outside can reach', () => {
     const rooms = await roomsServer();
     const server = await servedWithRooms(rooms, {});
     const asked = await server.ask('approve-brief');
-    await until(
-      () => rooms.chat.posted(),
-      (posted) => posted.length > 0,
-    );
-    rooms.chat.reply({ channel: theRoom, user: 'ada', text: 'approve', at: Date.now() / 1000 });
+    await postedSwept(server, rooms);
+    rooms.chat.reply({ channel: theRoom, user: 'ada', text: 'approve', at: server.runsOn.now() / 1000 });
 
-    const settled = await server.settled(asked);
+    const settled = await settledByAReplyRead(server, `/v1/orgs/acme/playbooks/alpha/runs/${asked}`);
     const answer = await server.call('POST', eventsPathOf('alpha', 'rooms'), { body: {} });
 
     expect(settled).toMatchObject({ status: 'succeeded', output: { choice: 'approve' } });

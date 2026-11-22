@@ -1,7 +1,6 @@
 import type { CallingClient } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
-import { entryServing } from './connection-entry.ts';
 import {
   isOfItsSealedValues,
   type ClientGiven,
@@ -9,14 +8,16 @@ import {
   type ConnectionBroken,
   type ConnectionConnected,
   type ConsentStarted,
+  type IdentifiedUser,
   type LinkIssued,
   type OfItsSealedValues,
-  type PlaybooksSet,
   type RecordedConnectionEvent,
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
 import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
+import { identifiedAfter } from './kept-identities.ts';
+import { isASetting, settingAfter } from './kept-settings.ts';
 import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
 
 export interface OpenLink {
@@ -43,6 +44,7 @@ export interface GivenClient {
 
 export interface KeptConnection {
   readonly connection: RecordedConnection;
+  readonly ways: readonly RecordedConnection['credential'][] | undefined;
   readonly link: OpenLink | undefined;
   readonly replacedLinks: ReadonlySet<string>;
   readonly consent: StartedConsent | undefined;
@@ -52,6 +54,7 @@ export interface KeptConnection {
   readonly nextClient: GivenClient | undefined;
   readonly signing: KeptSigning | undefined;
   readonly appSecretIds: AppSecretIds;
+  readonly identified: IdentifiedUser | undefined;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -60,7 +63,7 @@ export const initialRegistry: Registry = new Map();
 
 function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
   const { connection: id, name, server_type: type, provider, placeholders, entry, credential, says, added_by } = data;
-  const { document, events } = data;
+  const { document, events, account_type: accountType, ways } = data;
   return {
     connection: {
       id,
@@ -72,6 +75,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       ...(document === undefined ? {} : { document }),
       ...(events === undefined ? {} : { events }),
       credential,
+      account_type: accountType ?? null,
       status: 'pending',
       added_by,
       added_at: context.at,
@@ -85,6 +89,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       account: null,
       app_credentials: [],
     },
+    ways,
     link: undefined,
     replacedLinks: new Set(),
     consent: undefined,
@@ -94,6 +99,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     nextClient: undefined,
     signing: undefined,
     appSecretIds: {},
+    identified: undefined,
   };
 }
 
@@ -173,6 +179,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
       account: data.account ?? null,
       app_credentials: appCredentialsHeldOf(appSecretIds),
     },
+    ways: kept.ways,
     link: undefined,
     replacedLinks: kept.replacedLinks,
     consent: undefined,
@@ -182,6 +189,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     nextClient: promoted === undefined ? kept.nextClient : undefined,
     signing: kept.signing,
     appSecretIds,
+    identified: undefined,
   };
 }
 
@@ -191,11 +199,6 @@ function broken(kept: KeptConnection, { data, context }: ConnectionBroken): Kept
     ...kept,
     connection: { ...kept.connection, status: 'broken', broken: { kind, detail: reason, at: context.at } },
   };
-}
-
-function withPlaybooks(kept: KeptConnection, { data }: PlaybooksSet): KeptConnection {
-  const { connection } = kept;
-  return { ...kept, connection: { ...connection, entry: entryServing(connection.entry, data.playbooks) } };
 }
 
 function removed(kept: KeptConnection): KeptConnection {
@@ -244,8 +247,11 @@ function evolvedConnection(
   if (event.type === 'connection_connected') {
     return connected(kept, event);
   }
-  if (event.type === 'connection_playbooks_set') {
-    return withPlaybooks(kept, event);
+  if (isASetting(event)) {
+    return settingAfter(kept, event);
+  }
+  if (event.type === 'connection_identified') {
+    return { ...kept, identified: identifiedAfter(kept.identified, kept.connection, event) };
   }
   if (isOfItsSealedValues(event)) {
     return withItsSealedValues(kept, event);

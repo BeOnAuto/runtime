@@ -1,14 +1,19 @@
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { assessing, savedWorkflow, succeededRunsOf, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import {
+  assessing,
+  minuteByMinute,
+  ranOnItsSchedule,
+  savedWorkflow,
+  succeededRunsOf,
+  type Assessing,
+} from '../../testing/goals/assessed-runs.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
-import { until } from '../../testing/waiting/until.ts';
+import { whenHeld } from '../../testing/waiting/until.ts';
 
 const day = 86_400_000;
-
-const minute = 61_000;
 
 const controlsText = [
   '- id: controls-hold',
@@ -67,19 +72,11 @@ async function served(results: boolean): Promise<Assessing> {
 
 async function ranTwiceOverTwoDays(assessed: Assessing): Promise<number> {
   expect(await savedWorkflow(assessed.server, 'check', failingCheck)).toBe(201);
-  await until(
-    () => {
-      assessed.ranAMinuteOn();
-      return succeededRunsOf(assessed, 'check');
-    },
-    (runs) => runs > 0,
-  );
+  await ranOnItsSchedule(assessed, 'check');
   assessed.clock.moveTo(assessed.clock.now() + 2 * day);
-  return until(
-    () => {
-      assessed.clock.moveTo(assessed.clock.now() + minute);
-      return succeededRunsOf(assessed, 'check');
-    },
+  return minuteByMinute(
+    assessed,
+    () => succeededRunsOf(assessed, 'check'),
     (runs) => runs > 1,
   );
 }
@@ -129,7 +126,7 @@ describe('a Node server that keeps goals with results off', () => {
     const assessed = await served(true);
     await ranTwiceOverTwoDays(assessed);
 
-    const bell = await until(
+    const bell = await whenHeld(
       () => bellOf(assessed),
       ({ rows }) => rows.length > 0,
     );
@@ -152,11 +149,9 @@ const checking = (failed: number) => [
 ];
 
 function ranUntil(assessed: Assessing, runs: number): Promise<number> {
-  return until(
-    () => {
-      assessed.ranAMinuteOn();
-      return succeededRunsOf(assessed, 'check');
-    },
+  return minuteByMinute(
+    assessed,
+    () => succeededRunsOf(assessed, 'check'),
     (succeeded) => succeeded >= runs,
   );
 }
@@ -182,7 +177,7 @@ describe('a Node server whose results are turned on after runs ended with them o
     expect(await on.server.call('POST', `${alpha}/definitions/workflow/check/resume`)).toMatchObject({ status: 200 });
     const before = await succeededRunsOf(on, 'check');
     await ranUntil(on, before + 1);
-    const rows = await until(
+    const rows = await whenHeld(
       () => on.rowsOf('goal_assessments'),
       (held) => Object.values(held).some((row) => row['observed_at'] !== null),
     );

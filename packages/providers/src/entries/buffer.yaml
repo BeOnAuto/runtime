@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.buffer.com/mcp
 credentials:
   - kind: secret
+    account_types: [personal]
     in: header
     name: Authorization
     scheme: Bearer

@@ -7,13 +7,15 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runsOfAlpha } from '../payload-testing/kept-payloads.ts';
+import { startsReaching } from '../reaction-testing/kept-triggers.ts';
 import { emittingInto, publishedEventIdsIn } from '../reaction-testing/ledger-emissions.ts';
-import { movedClock } from '../reaction-testing/moved-clock.ts';
 import { at, definitionRecorded, eventTrigger } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
+import { steppedReacting } from '../reaction-testing/stepped-reactions.ts';
 import { runLogStreamOf } from '../runs/run-address.ts';
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { ledgerEmitter } from './ledger-emitter.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
@@ -75,9 +77,10 @@ describe('a workflow run by the host that emits an event', () => {
     const attributes = { ...start.attributes, definition: { name: 'close', version: 3 }, caller: { id: 'acme-admin' } };
 
     await Effect.runPromise(reacting.host.start(runAt(runId), { ...start, attributes }));
-    const emissions = await reacting.whenRead(
+    const emissions = await reacting.sweeps.until(
       () => Promise.resolve(reacting.reactions.emissions()),
       (found) => found.length > 0,
+      fewSweeps,
     );
 
     expect(emissions).toMatchObject([
@@ -93,9 +96,13 @@ describe('a workflow run by the host that emits an event', () => {
 
 describe('the same event emitted in each turn of a loop by a workflow the host runs', () => {
   it('is recorded by the playbook for each turn, under the id of that turn, and starts a workflow whose trigger takes it once for each turn', async () => {
-    const settings = await onSQLite();
+    const settings = await aLedgerInMemory();
     const { store } = await openedOn(settings);
-    const reacting = await reactingHost({ settings, clock: movedClock(Date.parse(at)), emit: emittingInto(store) });
+    const { reacting, sweeps } = await steppedReacting({
+      settings,
+      startsAt: Date.parse(at),
+      emit: emittingInto(store),
+    });
     await definitionRecorded(store, {
       name: 'tally',
       version: 1,
@@ -116,10 +123,7 @@ describe('the same event emitted in each turn of a loop by a workflow the host r
     });
 
     await Effect.runPromise(reacting.host.start(runAt(runId), startOf(ticking)));
-    const starts = await reacting.whenRead(
-      () => Promise.resolve(reacting.reactions.starts()),
-      (found) => found.length >= 2,
-    );
+    const starts = await startsReaching(sweeps, reacting.reactions.starts, 2);
 
     expect(await publishedEventIdsIn(store)).toEqual([idOfTurn(1), idOfTurn(2)]);
     expect(starts.map(({ workflow: started, input }) => [started, input])).toEqual([

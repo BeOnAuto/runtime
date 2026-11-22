@@ -30,17 +30,35 @@ function endedIn(home: string): readonly number[] {
   );
 }
 
-function stillTheOneStarted({ pid, instance }: Started): boolean {
-  return spawnSync('ps', ['-o', 'command=', '-p', String(pid)], { encoding: 'utf8' }).stdout.includes(instance);
+function isThere(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
+/** The command lines of the pids, from one `ps` for them all. */
+function commandLinesOf(pids: readonly number[]): string {
+  return pids.length === 0
+    ? ''
+    : spawnSync('ps', ['-o', 'command=', '-p', pids.join(',')], { encoding: 'utf8' }).stdout;
+}
+
+/**
+ * The runtimes the log names as started and not as ended that still run as the instance they were started as, asked of
+ * one `ps`; each is then still running while its pid is there, which signal 0 asks without starting a process.
+ */
 export function runtimesStillRunningInTheBackgroundIn(home: string): readonly RunningProcess[] {
   const ended = endedIn(home);
-  return startedInTheBackgroundIn(home)
-    .filter((started) => !ended.includes(started.pid) && stillTheOneStarted(started))
+  const left = startedInTheBackgroundIn(home).filter(({ pid }) => !ended.includes(pid));
+  const commandLines = commandLinesOf(left.map(({ pid }) => pid));
+  return left
+    .filter(({ instance }) => commandLines.includes(instance))
     .map((started) => ({
       name: `Auto Runtime, process ${started.pid}, instance ${started.instance}`,
       pid: started.pid,
-      isStillRunning: () => stillTheOneStarted(started),
+      isStillRunning: () => isThere(started.pid),
     }));
 }

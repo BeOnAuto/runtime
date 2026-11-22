@@ -1,5 +1,5 @@
 import { statementOf } from '@on.auto/ledger';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import {
   answerDigest,
@@ -56,8 +56,8 @@ function nested(levels: number): unknown {
 
 let server: ReasoningServer;
 
-async function playbookWithAWaitingWorkflow(environment: Readonly<Record<string, string>>): Promise<void> {
-  server = await servingReasoning([], environment);
+async function playbookWithAWaitingWorkflow(): Promise<void> {
+  server = await servingReasoning([]);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'waiting', source: waiting } });
 }
@@ -203,14 +203,16 @@ describe('a trigger, a listener and a page given the output a run keeps outside'
 });
 
 describe('nested values over http', () => {
-  afterEach(async () => {
+  beforeAll(async () => {
+    await playbookWithAWaitingWorkflow();
+  });
+
+  afterAll(async () => {
     await server.stop();
   });
 
   describe('values nested as deep as a run holds them, over HTTP', () => {
     it('are taken as a run input, as the data of a sent event and of a published one', async () => {
-      await playbookWithAWaitingWorkflow({});
-
       const startedNestedValues = await server.call('POST', `${alpha}/definitions/workflow/waiting/run`, {
         body: { input: nested(512), run_id: runId },
       });
@@ -228,8 +230,7 @@ describe('nested values over http', () => {
     });
 
     it('are refused deeper than that, as invalid input, before anything is recorded', async () => {
-      await playbookWithAWaitingWorkflow({});
-
+      const runsBefore = await server.call('GET', `${alpha}/runs`);
       const ran = await server.call('POST', `${alpha}/definitions/workflow/waiting/run`, {
         body: { input: nested(3000) },
       });
@@ -245,7 +246,7 @@ describe('nested values over http', () => {
         [422, { reason: 'invalid_input', errors: [{ pointer: '/event/data' }] }],
         [422, { reason: 'invalid_input', errors: [{ pointer: '/event/data' }] }],
       ]);
-      expect(await server.call('GET', `${alpha}/runs`)).toMatchObject({ body: { runs: [] } });
+      expect((await server.call('GET', `${alpha}/runs`)).body).toEqual(runsBefore.body);
     });
   });
 });

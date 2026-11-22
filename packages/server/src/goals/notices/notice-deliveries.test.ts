@@ -1,10 +1,10 @@
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { playbookToldBy, servingGoalNotices, type NoticeServer } from '../../testing/goals/notice-servers.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
-import { until } from '../../testing/waiting/until.ts';
+import { settledAsSwept, whenSwept } from '../../testing/servers/workflow-server.ts';
+import { fewSweeps, steppedServerClock } from '../../testing/waiting/stepped-server-clock.ts';
 
 const GapsSchema = Schema.Struct({
   goals: Schema.Array(
@@ -60,8 +60,9 @@ describe('the link in a notice, on a Node server that keeps goals', () => {
   it('opens the goal and its thing in Studio on this runtime, with no request in progress, and reads delivered once sent', async () => {
     const served = await servingGoalNotices();
     await playbookToldBy(served);
-    const { passedRun } = await served.assessed('now', Date.now());
-    await until(
+    const { passedRun } = await served.assessed('now', served.server.runsOn.now());
+    await whenSwept(
+      served.server,
       () => served.runs(),
       (runs) => runs.includes(passedRun),
     );
@@ -80,21 +81,23 @@ describe('the link in a notice, on a Node server that keeps goals', () => {
 
 describe('a notice that was started and not delivered, on a Node server that keeps goals', () => {
   it('reads undelivered and shows as the gap notice_undelivered once its run ends expired, and no fact repeats it', async () => {
-    const at = Date.now();
-    const clock = movedClock(at);
+    const clock = steppedServerClock();
+    const at = clock.now();
     const served = await servingGoalNotices({ clock });
     await playbookToldBy(served);
     await served.chat.close();
     const { passedRun } = await served.assessed('now', at);
-    await until(
+    await clock.swept.until(
       () => served.runs(),
       (runs) => runs.includes(passedRun),
+      fewSweeps,
     );
     clock.moveTo(at + 5 * hour);
-    const settled = await served.server.settled(passedRun);
-    const gaps = await until(
+    const settled = (await settledAsSwept(served.server, clock, `${alpha}/runs/${passedRun}`)).body;
+    const gaps = await clock.swept.until(
       () => noticeGapsOf(served),
       (found) => found.length > 0,
+      fewSweeps,
     );
 
     expect(settled).toMatchObject({ status: 'rejected' });

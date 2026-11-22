@@ -1,12 +1,216 @@
 import { once } from 'node:events';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { setTimeout } from 'node:timers/promises';
 
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { stoppedWithinMs } from './process-endings.ts';
-import { endWithTheTest, spawnForTheTest, type PidReader, type TestFinish } from './test-processes.ts';
+import { endedWhileItRuns, endedWithin, realTimer, signalled, stoppedWithinMs, type Timer } from './process-endings.ts';
+import { aFakeChild, boundMs, collected, counted, fakeProcesses, followed, lookEveryMs } from './process-fakes.ts';
+import { endingOfChild, endWithTheTest, spawnForTheTest } from './test-processes.ts';
+
+/** The timer of the fake clock: a promise its `setTimeout` settles, which the fake timers of the test replace. */
+const fakeTimer: Timer = {
+  after: (ms, stop) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, ms);
+      stop.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timer);
+          reject(new Error('stopped'));
+        },
+        { once: true },
+      );
+    }),
+};
+
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('a process known by its pid alone, at the finish of its test', () => {
+  it.each([
+    ['at once', 0, lookEveryMs],
+    ['part way through the bound', 120, 150],
+  ])(
+    'is sent SIGTERM and found gone at the first look after it went, when it goes %s',
+    async (_when, goesAfterMs, foundAtMs) => {
+      const processes = fakeProcesses();
+      const pid = processes.started({ obeys: 'SIGTERM', goesAfterMs });
+      const { finish, finished } = collected(processes.signaller, fakeTimer);
+      endWithTheTest(pid, finish);
+
+      const ended = followed(finished());
+      await vi.advanceTimersByTimeAsync(foundAtMs - 1);
+      const before = ended();
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect([before, ended(), processes.sent()]).toEqual([false, true, ['SIGTERM']]);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('is sent SIGKILL once the bound has passed if it is still there, no sooner, and found gone after', async () => {
+    const processes = fakeProcesses();
+    const pid = processes.started({ obeys: 'SIGKILL', goesAfterMs: 10 });
+    const { finish, finished } = collected(processes.signaller, fakeTimer);
+    endWithTheTest(pid, finish);
+
+    const ended = followed(finished());
+    await vi.advanceTimersByTimeAsync(boundMs - 1);
+    const beforeTheBound = [...processes.sent()];
+    await vi.advanceTimersByTimeAsync(1);
+    const atTheBound = [...processes.sent()];
+    await vi.advanceTimersByTimeAsync(lookEveryMs);
+
+    expect([beforeTheBound, atTheBound, ended()]).toEqual([['SIGTERM'], ['SIGTERM', 'SIGKILL'], true]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('is sent no signal when it is already gone', async () => {
+    const processes = fakeProcesses();
+    const { finish, finished } = collected(processes.signaller, fakeTimer);
+    endWithTheTest(4242, finish);
+
+    await finished();
+
+    expect(processes.sent()).toEqual([]);
+  });
+});
+
+describe('a process whose pid is read once its test finished', () => {
+  it.each([
+    ['at once', 1],
+    ['again, every look, while it is still to come, and ended once it is read', 3],
+  ])('is read %s', async (_how, fromRead) => {
+    const processes = fakeProcesses();
+    const pid = processes.started({ obeys: 'SIGTERM', goesAfterMs: 0 });
+    const reading = counted({ answer: { pid, fromRead }, stillToCome: true });
+    const { finish, finished } = collected(processes.signaller, fakeTimer);
+    endWithTheTest(reading.reader, finish);
+
+    const ended = followed(finished());
+    await vi.advanceTimersByTimeAsync((fromRead - 1) * lookEveryMs + lookEveryMs);
+
+    expect([ended(), reading.reads(), processes.sent()]).toEqual([true, fromRead, ['SIGTERM']]);
+  });
+
+  it('is read once when none is still to come, and nothing is signalled', async () => {
+    const processes = fakeProcesses();
+    const reading = counted({ stillToCome: false });
+    const { finish, finished } = collected(processes.signaller, fakeTimer);
+    endWithTheTest(reading.reader, finish);
+
+    await finished();
+
+    expect([reading.reads(), processes.sent()]).toEqual([1, []]);
+  });
+
+  it('is read every look for no longer than the bound of its reader while one is still to come', async () => {
+    const processes = fakeProcesses();
+    const reading = counted({ stillToCome: true });
+    const { finish, finished } = collected(processes.signaller, fakeTimer);
+    endWithTheTest(reading.reader, finish);
+
+    const ended = followed(finished());
+    await vi.advanceTimersByTimeAsync(boundMs - 1);
+    const before = ended();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect([before, ended(), reading.reads(), processes.sent()]).toEqual([false, true, boundMs / lookEveryMs + 1, []]);
+  });
+});
+
+describe('a running process a teardown found, at the end of the run', () => {
+  it.each([
+    ['goes on SIGTERM', 'SIGTERM', ['SIGTERM']],
+    ['is killed at the bound', 'SIGKILL', ['SIGTERM', 'SIGKILL']],
+  ] as const)('%s, signalled only while it still runs', async (_how, obeys, sent) => {
+    const processes = fakeProcesses();
+    const pid = processes.started({ obeys, goesAfterMs: 0 });
+    const running = { name: 'a probe', pid, isStillRunning: () => processes.signaller(pid, 0) };
+
+    const ended = followed(
+      endedWhileItRuns(running, {
+        signaller: processes.signaller,
+        timer: fakeTimer,
+        lookEveryMs,
+        stoppedWithinMs: boundMs,
+      }),
+    );
+    await vi.advanceTimersByTimeAsync(boundMs + lookEveryMs);
+
+    expect([ended(), processes.sent()]).toEqual([true, sent]);
+  });
+});
+
+describe('a child a test started, at the finish of the test', () => {
+  it('is found gone on its own exit, without looking, once it goes on SIGTERM', async () => {
+    const { child, sent } = aFakeChild(77, 'SIGTERM');
+
+    const ended = followed(endedWithin(endingOfChild(child), boundMs, fakeTimer));
+    await vi.advanceTimersByTimeAsync(9);
+    const before = ended();
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect([before, ended(), sent()]).toEqual([false, true, ['SIGTERM']]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('is sent SIGKILL once the bound has passed if it is still there, no sooner', async () => {
+    const { child, sent } = aFakeChild(77, 'SIGKILL');
+
+    const ended = followed(endedWithin(endingOfChild(child), boundMs, fakeTimer));
+    await vi.advanceTimersByTimeAsync(boundMs - 1);
+    const beforeTheBound = [...sent()];
+    await vi.advanceTimersByTimeAsync(11);
+
+    expect([beforeTheBound, sent(), ended()]).toEqual([['SIGTERM'], ['SIGTERM', 'SIGKILL'], true]);
+  });
+
+  it.each([
+    ['never started', undefined, false],
+    ['ended of itself', 77, true],
+  ])('is sent no signal when it %s', async (_how, pid, exitedFirst) => {
+    const { child, sent, exited } = aFakeChild(pid, 'SIGTERM');
+    const ending = endingOfChild(child);
+    exited(exitedFirst);
+
+    await endedWithin(ending, boundMs, fakeTimer);
+    await ending.gone(new AbortController().signal);
+
+    expect(sent()).toEqual([]);
+  });
+});
+
+describe('a command a test could not start', () => {
+  it('is sent no signal at the finish of the test, its child having no pid', async () => {
+    const { finish, finished } = collected(fakeProcesses().signaller, fakeTimer);
+    const child = spawnForTheTest(join(tmpdir(), 'no-such-command'), [], undefined, finish);
+    const failed: readonly unknown[] = await once(child, 'error');
+
+    await finished();
+
+    expect([failed[0], child.pid, child.killed]).toMatchObject([{ code: 'ENOENT' }, undefined, false]);
+  });
+});
+
+describe('the signal a pid is sent', () => {
+  it('is sent where the pid is there, and is not where none is', () => {
+    expect([signalled(process.pid, 0), signalled(2 ** 31 - 1, 0)]).toEqual([true, false]);
+  });
+});
+
+describe('the timer a process is ended on', () => {
+  it('is the one of node:timers/promises, which the fake timers of a test leave alone, and stops when told', async () => {
+    await expect(realTimer.after(0, new AbortController().signal)).resolves.toBeUndefined();
+    await expect(realTimer.after(stoppedWithinMs, AbortSignal.abort())).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
 
 const stopsWhenTold = [
   "process.on('SIGTERM', () => { process.stdout.write('stopped'); process.exit(0); });",
@@ -14,238 +218,31 @@ const stopsWhenTold = [
   "process.stdout.write('ready ');",
 ].join('\n');
 
-const holdsOnWhenTold = [
-  "process.on('SIGTERM', () => { process.stdout.write('held on'); });",
-  'setInterval(() => {}, 1000);',
-  "process.stdout.write('ready ');",
-].join('\n');
-
-interface Finished {
-  readonly finish: TestFinish;
-  readonly finished: () => Promise<void>;
-}
-
-interface Started {
-  readonly pid: number;
-  readonly ready: Promise<void>;
-  readonly output: () => string;
-  readonly closed: Promise<readonly unknown[]>;
-  readonly signalled: () => boolean;
-}
-
-function collectedWithin(withinMs: number): Finished {
-  const ends: (() => Promise<void>)[] = [];
-  return {
-    finish: {
-      registered: (end) => {
-        ends.push(end);
-      },
-      stoppedWithinMs: withinMs,
-    },
-    finished: async () => {
-      await Promise.all(ends.map((end) => end()));
-    },
-  };
-}
-
-function finishedWithin(withinMs: number): Finished {
-  const collected = collectedWithin(withinMs);
-  return {
-    finish: {
-      ...collected.finish,
-      registered: (end) => {
-        collected.finish.registered(end);
-        onTestFinished(end);
-      },
-    },
-    finished: collected.finished,
-  };
-}
-
-interface Reading {
-  readonly answer?: { readonly pid: number; readonly fromRead: number };
-  readonly stillToCome: boolean;
-  readonly readWithinMs: number;
-}
-
-interface Counted {
-  readonly reader: PidReader;
-  readonly reads: () => number;
-}
-
-function counted({ answer, stillToCome, readWithinMs }: Reading): Counted {
-  const reads = { count: 0 };
-  const answerAt = (read: number): number | undefined =>
-    answer !== undefined && read >= answer.fromRead ? answer.pid : undefined;
-  return {
-    reader: {
-      read: () => {
-        reads.count += 1;
-        return Promise.resolve(answerAt(reads.count));
-      },
-      stillToCome: () => stillToCome,
-      readWithinMs,
-    },
-    reads: () => reads.count,
-  };
-}
-
-function started(script: string, finish?: TestFinish): Started {
-  const child = spawnForTheTest(
-    process.execPath,
-    ['--eval', script],
-    { env: {}, stdio: ['ignore', 'pipe', 'inherit'] },
-    finish,
-  );
-  const printed = { text: '' };
-  const { promise: ready, resolve } = Promise.withResolvers<void>();
-  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
-    printed.text += chunk;
-    if (printed.text.startsWith('ready')) {
-      resolve();
-    }
-  });
-  return {
-    pid: Number(child.pid),
-    ready,
-    output: () => printed.text,
-    closed: once(child, 'close'),
-    signalled: () => child.killed,
-  };
-}
-
-describe('a process started for a test that still runs when the test finishes', () => {
-  it('is stopped with SIGTERM, the signal a server stops on', async () => {
-    const { finish, finished } = finishedWithin(stoppedWithinMs);
-    const running = started(stopsWhenTold, finish);
-    await running.ready;
-
-    await finished();
-
-    expect(await running.closed).toEqual([0, null]);
-    expect(running.output()).toBe('ready stopped');
-  });
-
-  it('is killed once the bound has passed if it is still there, no sooner', async () => {
-    const { finish, finished } = finishedWithin(300);
-    const running = started(holdsOnWhenTold, finish);
-    await running.ready;
-    const signalled = performance.now();
-
-    await finished();
-
-    expect(await running.closed).toEqual([null, 'SIGKILL']);
-    expect(performance.now() - signalled).toBeGreaterThanOrEqual(300);
-    expect(running.output()).toBe('ready held on');
-  });
-});
-
-describe('a process started for a test that is gone when the test finishes', () => {
-  it('is sent no signal when it ended of itself', async () => {
-    const { finish, finished } = finishedWithin(stoppedWithinMs);
-    const running = started('', finish);
-    const closed = await running.closed;
-
-    await finished();
-
-    expect([closed, running.signalled()]).toEqual([[0, null], false]);
-  });
-
-  it('is sent no signal when it never started', async () => {
-    const left: { killed?: () => boolean } = {};
-    onTestFinished(() => {
-      expect(left.killed?.()).toBe(false);
-    });
-
-    const child = spawnForTheTest(join(tmpdir(), 'no-such-command'), []);
-    left.killed = () => child.killed;
-    const failed: readonly unknown[] = await once(child, 'error');
-
-    expect([failed[0], child.pid]).toMatchObject([{ code: 'ENOENT' }, undefined]);
-  });
-});
-
-describe('a process a test did not start itself', () => {
-  it('is ended by its pid when the test finishes, as a server started in the background is', async () => {
-    const own = finishedWithin(stoppedWithinMs);
-    const byItsPid = finishedWithin(stoppedWithinMs);
-    const running = started(stopsWhenTold, own.finish);
-    await running.ready;
-    endWithTheTest(running.pid, byItsPid.finish);
-
-    await byItsPid.finished();
-
-    expect(await running.closed).toEqual([0, null]);
-    expect(running.output()).toBe('ready stopped');
-  });
-
-  it.each([
-    ['at once', 1],
-    ['again while its pid is still to come, and ended once it is read', 3],
-  ])('is read %s', async (_how, fromRead) => {
-    const own = finishedWithin(stoppedWithinMs);
-    const byItsReader = finishedWithin(stoppedWithinMs);
-    const running = started(stopsWhenTold, own.finish);
-    await running.ready;
-    const reading = counted({ answer: { pid: running.pid, fromRead }, stillToCome: true, readWithinMs: 10_000 });
-    endWithTheTest(reading.reader, byItsReader.finish);
-
-    await byItsReader.finished();
-
-    expect(await running.closed).toEqual([0, null]);
-    expect([reading.reads(), running.output()]).toEqual([fromRead, 'ready stopped']);
-  });
-});
-
-describe('a process whose pid its reader never reads', () => {
-  it('is read once when none is still to come', async () => {
-    const { finish, finished } = collectedWithin(stoppedWithinMs);
-    const reading = counted({ stillToCome: false, readWithinMs: 10_000 });
-    endWithTheTest(reading.reader, finish);
-
-    await finished();
-
-    expect(reading.reads()).toBe(1);
-  });
-
-  it('is read for no longer than the bound of its reader while one is still to come', async () => {
-    const { finish, finished } = collectedWithin(stoppedWithinMs);
-    const reading = counted({ stillToCome: true, readWithinMs: 300 });
-    endWithTheTest(reading.reader, finish);
-    const finishing = performance.now();
-
-    await finished();
-
-    expect(performance.now() - finishing).toBeGreaterThanOrEqual(300);
-    expect(reading.reads()).toBeGreaterThan(1);
-  });
-});
-
-describe('the end of a process at the finish of its test', () => {
-  it('is registered with the test runner unless it is given a finish of its own', async () => {
-    const ending: Started[] = [];
-    const collected = collectedWithin(stoppedWithinMs);
+describe('the end of a process at the finish of its test, on a real process', () => {
+  it('is registered with the test runner, which ends a child with SIGTERM and reads a pid to come', async () => {
+    vi.useRealTimers();
+    const reading = counted({ stillToCome: false });
+    const printed = { text: '' };
+    const left: { closed?: Promise<unknown[]> } = {};
+    // Registered first, so the runner calls it last, once the ends registered below have run.
     onTestFinished(async () => {
-      try {
-        const settled = await Promise.all(
-          ending.map(({ closed }) => Promise.race([closed, setTimeout(stoppedWithinMs, 'still running')])),
-        );
-        expect(settled).toEqual([
-          [0, null],
-          [0, null],
-        ]);
-        expect(ending.map(({ output }) => output())).toEqual(['ready stopped', 'ready stopped']);
-      } finally {
-        await collected.finished();
-      }
+      expect(await left.closed).toEqual([0, null]);
+      expect([printed.text, reading.reads()]).toEqual(['ready stopped', 1]);
     });
+    const child = spawnForTheTest(process.execPath, ['--eval', stopsWhenTold], {
+      env: {},
+      stdio: ['ignore', 'pipe', 'inherit'],
+    });
+    left.closed = once(child, 'close');
+    const { promise: ready, resolve } = Promise.withResolvers<void>();
+    child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
+      printed.text += chunk;
+      resolve();
+    });
+    endWithTheTest(reading.reader);
 
-    const byTheChild = started(stopsWhenTold);
-    const byItsPid = started(stopsWhenTold, collected.finish);
-    ending.push(byTheChild, byItsPid);
-    await Promise.all([byTheChild.ready, byItsPid.ready]);
-    endWithTheTest(byItsPid.pid);
+    await ready;
 
-    expect(ending.map(({ output }) => output())).toEqual(['ready ', 'ready ']);
+    expect([printed.text, reading.reads()]).toEqual(['ready ', 0]);
   });
 });

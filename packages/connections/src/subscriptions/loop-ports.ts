@@ -1,4 +1,4 @@
-import type { PlaybookAddress, StreamReader } from '@on.auto/operations';
+import type { PlaybookAddress, StreamReader, StreamWriter } from '@on.auto/operations';
 import {
   requestsAskerOf,
   triggersAskerOf,
@@ -9,9 +9,10 @@ import {
   type ThroughTheConnection,
   type WaitingRequest,
 } from '@on.auto/providers';
-import type { Effect } from 'effect';
+import { DateTime, Effect } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
+import { byTheRuntime, connectionsStreamOfOrg, registryDeciderOf } from '../registry/registry-decider.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionRecordsOf, type SubscriptionLedger } from './subscription-records.ts';
 import { subscriptionSecretsOf } from './subscription-secrets.ts';
@@ -20,7 +21,7 @@ const mostSubscriptionsThroughAConnection = 8;
 
 export interface SubscriptionLoopParts {
   readonly ledger: SubscriptionLedger;
-  readonly registry: Pick<StreamReader, 'load'>;
+  readonly registry: Pick<StreamReader, 'load'> & Pick<StreamWriter, 'execute'>;
   readonly waitingIn: (playbook: PlaybookAddress) => Effect.Effect<readonly WaitingRequest[]>;
   readonly triggersIn: (playbook: PlaybookAddress) => Effect.Effect<readonly ConnectionTrigger[]>;
   readonly tools: ThroughTheConnection;
@@ -42,16 +43,35 @@ function receivesOf({
   return (type) => (type === 'webhook' && receivesOverHttp) || (type === 'websocket' && opensSockets);
 }
 
+function identifiedOf({ registry, providers }: SubscriptionLoopParts): SubscriptionLoopPorts['identified'] {
+  const decider = registryDeciderOf(providers);
+  return ({ org }, { id, connected }, user) =>
+    Effect.gen(function* () {
+      const identifying = {
+        type: 'identify',
+        connection: id,
+        connected_at: connected,
+        user,
+        by: byTheRuntime,
+        at: DateTime.formatIso(yield* DateTime.now),
+      } as const;
+      yield* Effect.orDie(registry.execute(connectionsStreamOfOrg(org), decider, identifying));
+    });
+}
+
 export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): SubscriptionLoopPorts {
   const { ledger, registry, waitingIn, triggersIn, tools, secrets, providers } = parts;
+  const triggersAsker = triggersAskerOf(triggersIn);
   return {
     ...tools,
     callbackOf: callbackOf(parts),
     connectionsOf: loopConnectionsOf({ registry, providers }),
     receives: receivesOf(parts),
-    askers: [requestsAskerOf(waitingIn), triggersAskerOf(triggersIn)],
+    askers: [requestsAskerOf(waitingIn), triggersAsker],
+    triggersAsker,
     records: subscriptionRecordsOf(ledger),
     secrets: subscriptionSecretsOf(secrets),
+    identified: identifiedOf(parts),
     mostPerConnection: mostSubscriptionsThroughAConnection,
   };
 }

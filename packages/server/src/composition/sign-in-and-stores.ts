@@ -9,15 +9,16 @@ type Opening = Parameters<typeof signInOpened>[0] & Parameters<typeof storesAndC
 interface OpenedWith {
   readonly settings: Settings;
   readonly database: LedgerDatabase;
+  readonly loadAws?: Parameters<typeof storesAndConnectionsOf>[2]['loadAws'];
 }
 
 export async function signInAndStoresOpened(
   runtime: Opening,
-  { settings, database }: OpenedWith,
+  { settings, database, loadAws }: OpenedWith,
   ownOrigin: () => string,
 ) {
   const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
-  const opened = await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
+  const opened = await storesAndConnectionsOf(runtime, settings, { database, loadAws }, ownOrigin);
   const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
   return {
     opened,

@@ -43,7 +43,7 @@ function problemsOfTheWay(way: Readonly<Record<string, unknown>>) {
 }
 
 const takenThroughAGateway =
-  'an authorization way through a gateway takes issuer, gateway, in, name, scope, says, and permissions';
+  'an authorization way through a gateway takes issuer, gateway, in, name, scope, says, permissions, and account_types';
 
 describe('a way of consent through a gateway', () => {
   it('takes the gateway, its two audiences, the names and the mark of a request its note may carry, the permissions and the security scheme of the key', () => {
@@ -141,8 +141,8 @@ describe('a gateway of a way of consent', () => {
   });
 });
 
-describe('the gateway and the permissions of a way of another kind', () => {
-  it('are refused, as a way of another kind is made with no gateway and acts as no app', () => {
+describe('the gateway of a way of another kind', () => {
+  it('is refused, as a way of another kind is made with no gateway', () => {
     const aKey = {
       kind: 'secret',
       in: 'security',
@@ -151,11 +151,10 @@ describe('the gateway and the permissions of a way of another kind', () => {
       key_page: 'https://messages.example.com/settings',
     };
     const secretTakes =
-      'a secret way takes in, name, instructions, key_page, key_page_title, steps, scheme, example, pattern, app_credentials, and test';
+      'a secret way takes in, name, instructions, key_page, key_page_title, steps, scheme, example, pattern, app_credentials, test, permissions, and account_types';
 
     expect(problemsOfTheWay({ ...aKey, gateway, permissions: 'application' })).toEqual([
       ['/credentials/0/gateway', `Expected no gateway: ${secretTakes}`],
-      ['/credentials/0/permissions', `Expected no permissions: ${secretTakes}`],
     ]);
   });
 

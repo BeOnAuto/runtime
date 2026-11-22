@@ -1,5 +1,5 @@
 import { Cause, Deferred, Effect, Exit } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
@@ -12,6 +12,7 @@ import {
   committed,
   exitOf,
   heldUntilLetGo,
+  noWaitForTheLock,
   onAFile,
   places,
   rolledBack,
@@ -19,31 +20,26 @@ import {
 import { LedgerNotOpen } from './sqlite-ledger-file.ts';
 import { sqliteSecretRowsOn } from './sqlite-secret-rows.ts';
 
-const longerThanSQLiteWaitsForItsLock = briefWaits.forTheLock * 4;
-
-const longEnoughForAStatementToRun = 100;
-
 const theLimitAWriteWaitsForItsTurn = 300;
-
-const timerSlackMs = 2;
 
 const holding = { keptBy: 'ledger', held: 'sealed' };
 
 const id = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-function aMoment(): Promise<void> {
-  return Effect.runPromise(Effect.sleep(longEnoughForAStatementToRun));
-}
-
 describe('the secret rows of a ledger file on SQLite, as they are written', () => {
   it('keep a secret written while the writer of the ledger holds the file past the time a statement waits for its lock, once it lets go', async () => {
-    const { rows, appended } = await anOpenLedger(onAFile);
+    const { rows, appended } = await anOpenLedger(onAFile, noWaitForTheLock);
     const letGo = await heldUntilLetGo(appended, committed);
 
-    const kept = Effect.runPromiseExit(rows.keep(id, holding));
-    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    const settling = { settled: false };
+    const kept = Effect.runPromiseExit(rows.keep(id, holding)).finally(() => {
+      settling.settled = true;
+    });
+    const readWhileHeld = await Effect.runPromise(rows.read(id));
+    const settledWhileHeld = settling.settled;
     await letGo();
 
+    expect([readWhileHeld, settledWhileHeld]).toEqual([undefined, false]);
     expect(await kept).toEqual(Exit.void);
     expect(await Effect.runPromise(rows.read(id))).toMatchObject({ holding: { ...holding }, version: 1 });
   });
@@ -67,16 +63,14 @@ describe('secret rows on a pool of their own, beside the ledger of a file on SQL
       sqliteSecretRowsOn(() => ({
         driver: nodeSqliteEventStoreDriver,
         fileName: named,
-        connectionOptions: connectionOptionsWaiting(briefWaits),
+        connectionOptions: connectionOptionsWaiting(noWaitForTheLock),
       })),
     );
     onTestFinished(rowsOfTheirOwn.close);
     const letGo = await heldUntilLetGo(appended, committed);
 
-    const refused = causeOf(rowsOfTheirOwn.keep(id, holding));
-    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    const cause = await causeOf(rowsOfTheirOwn.keep(id, holding));
     await letGo();
-    const cause = await refused;
 
     expect(Cause.hasDies(cause)).toBe(true);
     expect(Cause.pretty(cause)).toContain('SQLITE_BUSY: database is locked');
@@ -84,19 +78,51 @@ describe('secret rows on a pool of their own, beside the ledger of a file on SQL
   });
 });
 
+async function refusedAtTheLimitOfATurn(place: (typeof places)[number]) {
+  const { rows, appended, theNextWriteWaiting } = await anOpenLedger(place, {
+    ...briefWaits,
+    forATurn: theLimitAWriteWaitsForItsTurn,
+  });
+  const refused = Promise.withResolvers<Cause.Cause<never>>();
+  const writeWaits = theNextWriteWaiting();
+  const settled = { yet: false };
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+
+  const transaction = exitOf(
+    appended(async () => {
+      const refusal = causeOf(rows.keep(id, holding)).finally(() => {
+        settled.yet = true;
+      });
+      refused.resolve(refusal);
+      await refusal;
+    }),
+  );
+  await writeWaits;
+  await vi.advanceTimersByTimeAsync(theLimitAWriteWaitsForItsTurn - 1);
+  const beforeTheLimit = settled.yet;
+  await vi.advanceTimersByTimeAsync(1);
+  const cause = await refused.promise;
+
+  return { cause, transaction: await transaction, beforeTheLimit, rows };
+}
+
 describe.each(places)(
   'the secret rows of a ledger on SQLite, on $place, written inside a transaction of the ledger',
   (place) => {
     it('keep a secret whose write is started inside a transaction of the ledger, once it ends, though it is rolled back', async () => {
-      const { rows, appended } = await anOpenLedger(place);
+      const { rows, appended, theNextWriteWaiting } = await anOpenLedger(place);
       const order: string[] = [];
       const write = Promise.withResolvers<Exit.Exit<void>>();
       const settles = Effect.sync(() => order.push('the write settles'));
 
       const transaction = await exitOf(
         appended(async () => {
+          const writeWaits = theNextWriteWaiting();
           write.resolve(Effect.runPromiseExit(Effect.ensuring(rows.keep(id, holding), settles)));
-          await aMoment();
+          await writeWaits;
           await rolledBack();
         }).finally(() => {
           order.push('the transaction ends');
@@ -109,23 +135,10 @@ describe.each(places)(
     });
 
     it('refuse a secret whose write a transaction of the ledger waits for, at the limit a write waits for its turn, and keep nothing of it', async () => {
-      const { rows, appended } = await anOpenLedger(place, { ...briefWaits, forATurn: theLimitAWriteWaitsForItsTurn });
-      const refused = Promise.withResolvers<Cause.Cause<never>>();
-      const began = performance.now();
+      const { cause, transaction, beforeTheLimit, rows } = await refusedAtTheLimitOfATurn(place);
 
-      const transaction = await exitOf(
-        appended(async () => {
-          const refusal = causeOf(rows.keep(id, holding));
-          refused.resolve(refusal);
-          await refusal;
-        }),
-      );
-      const waited = performance.now() - began;
-      const cause = await refused.promise;
-
-      expect([transaction, Cause.hasDies(cause)]).toEqual([Exit.void, true]);
+      expect([transaction, Cause.hasDies(cause), beforeTheLimit]).toEqual([Exit.void, true, false]);
       expect(Cause.pretty(cause)).toContain('Task was not started within the maximum waiting time');
-      expect(waited).toBeGreaterThanOrEqual(theLimitAWriteWaitsForItsTurn - timerSlackMs);
       expect(await Effect.runPromise(rows.read(id))).toBeUndefined();
     });
   },
@@ -135,14 +148,15 @@ describe.each(places)(
   'the secret rows of a ledger on SQLite, on $place, written by a fiber woken inside a transaction of the ledger',
   (place) => {
     it('keep a secret written by a fiber woken inside a transaction of the ledger, though it is rolled back', async () => {
-      const { rows, appended } = await anOpenLedger(place);
+      const { rows, appended, theNextWriteWaiting } = await anOpenLedger(place);
       const woken = Effect.runSync(Deferred.make<void>());
       const fiber = Effect.runPromiseExit(Effect.andThen(Deferred.await(woken), rows.keep(id, holding)));
 
       const transaction = await exitOf(
         appended(async () => {
+          const writeWaits = theNextWriteWaiting();
           Effect.runSync(Deferred.done(woken, Exit.void));
-          await aMoment();
+          await writeWaits;
           await rolledBack();
         }),
       );
@@ -152,7 +166,7 @@ describe.each(places)(
     });
 
     it('keep a secret written later by a fiber woken inside a transaction of the ledger, though a later transaction is open and is rolled back', async () => {
-      const { rows, appended } = await anOpenLedger(place);
+      const { rows, appended, theNextWriteWaiting } = await anOpenLedger(place);
       const woken = Effect.runSync(Deferred.make<void>());
       const later = Promise.withResolvers<void>();
       const writesLater = Effect.andThen(
@@ -169,8 +183,9 @@ describe.each(places)(
       );
       const second = await exitOf(
         appended(async () => {
+          const writeWaits = theNextWriteWaiting();
           later.resolve();
-          await aMoment();
+          await writeWaits;
           await rolledBack();
         }),
       );

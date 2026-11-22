@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 import { EventsSchema } from '../events/event-destinations.ts';
 import { eventIssuesOf } from '../events/event-entries.ts';
 import { conversationIssuesOf, ConversationsSchema } from './conversation-parts.ts';
-import { CredentialWaySchema } from './credential-ways.ts';
+import { CredentialWaySchema, repeatedWayIssuesOf } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
 import { isADocumentBesideTheEntries, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
@@ -78,7 +78,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   ),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways a credential reaches the server, in the order a person is offered them, the first the default, each of its own kind: secret, client_credentials, none or authorization; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
+      'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none or authorization, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
   }),
   replaces: Schema.optionalKey(ReplacesSchema),
 });
@@ -124,9 +124,6 @@ function typeIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   ];
 }
 
-const oneWayOfEachKind =
-  'Expected a kind no earlier way has, since a provider takes one way of each kind, and an authorization way names in more what a later consent may add';
-
 function markedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   return markIssuesOf(entry.marks).map(({ path, detail }) => ({ path: ['marks', ...path], issue: detail }));
 }
@@ -136,13 +133,6 @@ function codedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
     path: ['failure_codes', ...path],
     issue: detail,
   }));
-}
-
-function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
-  const kinds = credentials.map(({ kind }) => kind);
-  return kinds.flatMap((kind, index): readonly EntryIssue[] =>
-    kinds.indexOf(kind) === index ? [] : [{ path: ['credentials', index, 'kind'], issue: oneWayOfEachKind }],
-  );
 }
 
 function testIssuesOf({ credentials, marks: marked }: ProviderEntry): readonly EntryIssue[] {
@@ -165,7 +155,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...aliasIssuesOf(entry),
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
-    ...wayIssuesOf(entry),
+    ...repeatedWayIssuesOf(entry.credentials),
     ...testIssuesOf(entry),
     ...markedIssuesOf(entry),
     ...codedIssuesOf(entry),

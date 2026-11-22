@@ -2,6 +2,7 @@ import { OrgContext } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { connectOf, studioBaseFor } from '../links/connect-page.ts';
+import { connectionShown } from '../registry/connection.ts';
 import type { KeptConnection, OpenLink } from '../registry/registry.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
 import { rendersFieldOf, type AdditionGiven } from './connection-fields.ts';
@@ -26,8 +27,7 @@ export const answeredWithItsLink = Effect.fnUntraced(function* (
 ) {
   const { org } = yield* OrgContext;
   return {
-    ...connection,
-    credential_ends_with: null,
+    ...connectionShown(connection, null),
     ...rendersFieldOf(providers, connection.provider),
     connect: connectOf(pages, { org, connection: connection.id, token }, link.expires_at),
   };

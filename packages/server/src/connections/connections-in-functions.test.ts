@@ -8,7 +8,7 @@ import { servingInteractions } from '../testing/interaction-servers/interaction-
 import { addedConnection, aSecretHeader, connectedWith } from '../testing/servers/connected-servers.ts';
 import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenSwept } from '../testing/servers/workflow-server.ts';
 
 const decodeStructured = Schema.decodeUnknownSync(Schema.Struct({ structuredContent: Schema.Unknown }));
 
@@ -22,7 +22,8 @@ describe('an interaction function that delivers through a connection', () => {
     const id = await connectedWith(server, aSecretHeader('chat', chat.url), `Bearer ${chatKey}`);
 
     const runId = await server.ask('approve-brief');
-    const facts = await until(
+    const facts = await whenSwept(
+      server,
       () => deliveryHistoryOf(server, runId),
       (delivered) => delivered.some(({ type }) => type === 'delivery_succeeded'),
     );

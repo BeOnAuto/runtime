@@ -2,8 +2,8 @@ import { InvalidInput, PlaybookContext, PlaybookWriter } from '@on.auto/operatio
 import { Effect } from 'effect';
 
 import { commandMetadata } from '../operations/command-metadata.ts';
-import { goalDecider, goalStream, isRetired, retiredWords, type GoalState } from './goal-decider.ts';
-import { agentIssue, type GoalIssue } from './goal-issues.ts';
+import { goalDecider, goalStream, isRetired, type GoalState } from './goal-decider.ts';
+import { agentIssue, retiredWords, type GoalIssue } from './goal-issues.ts';
 import { goalStatesIn, playbookGoalsIn } from './playbook-goals.ts';
 
 export interface GoalSeen {

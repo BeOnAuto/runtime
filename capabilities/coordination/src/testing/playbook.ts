@@ -1,5 +1,6 @@
 import {
   defineCreateDefinition,
+  defineGetDefinition,
   definePauseDefinition,
   defineRunDefinition,
   runSettler,
@@ -22,6 +23,7 @@ import {
   recordingReporter,
   type MemoryLedger,
 } from '@on.auto/operations/testing';
+import type { QueuedStartReads } from '@on.auto/workflow-host';
 import { Effect, Layer } from 'effect';
 
 import { definitionRunResultOf } from '../calls/function-results.ts';
@@ -34,6 +36,7 @@ interface PlaybookOperation {
 
 export interface Playbook {
   readonly createDefinition: PlaybookOperation;
+  readonly getDefinition: PlaybookOperation;
   readonly pauseDefinition: PlaybookOperation;
   readonly runDefinition: PlaybookOperation;
   readonly getRun: PlaybookOperation;
@@ -46,6 +49,10 @@ export interface Playbook {
   readonly executeNested: RunDefinition;
   readonly settle: SettleRun;
 }
+
+export const noneQueued: Pick<QueuedStartReads, 'queuedStartsOf'> = {
+  queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }),
+};
 
 export function namingLedger(types: readonly string[] = []): MemoryLedger {
   return memoryLedgerWith({ definitionNames: definitionNamesWith(['echo', ...types]) });
@@ -69,6 +76,7 @@ export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capabili
     Effect.runPromise(dispatch(operation, input, caller));
   return {
     createDefinition,
+    getDefinition: defineGetDefinition(capabilities, uncheckedPages),
     pauseDefinition: definePauseDefinition(capabilities),
     runDefinition,
     getRun: defineGetRun(capabilities, uncheckedPages),

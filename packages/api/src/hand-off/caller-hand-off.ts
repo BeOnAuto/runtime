@@ -1,13 +1,16 @@
 import type { AuthInfo } from '@modelcontextprotocol/server';
+import type { Principal } from '@on.auto/identity';
 import { PlaybookIdSchema, CallerIdentitySchema, type CallerIdentity } from '@on.auto/operations';
 import { Context, Schema } from 'effect';
 
+import type { ActingAs } from '../mcp/instructions.ts';
 import { TraceParentSchema, type TraceParent } from '../tracing/trace-parent.ts';
 import { DroppedArgumentSchema, type DroppedArgument } from './dropped-arguments.ts';
 
 export interface OrgCall {
   readonly caller: CallerIdentity;
   readonly org: string;
+  readonly orgName?: string;
   readonly requestId: string;
   readonly trace?: TraceParent;
   readonly dropped: readonly DroppedArgument[];
@@ -27,6 +30,7 @@ const placeholderToken = 'verified-by-auto-runtime';
 const OrgCallSchema = Schema.Struct({
   caller: CallerIdentitySchema,
   org: Schema.String,
+  orgName: Schema.optionalKey(Schema.String),
   requestId: Schema.String,
   trace: Schema.optionalKey(TraceParentSchema),
   dropped: Schema.Array(DroppedArgumentSchema),
@@ -43,6 +47,11 @@ const decodeContextOfTheCall = Schema.decodeUnknownSync(ContextOfTheCall);
 const decodeOrgCall = Schema.decodeUnknownSync(OrgCallSchema);
 
 const decodePlaybookCall = Schema.decodeUnknownSync(PlaybookCallSchema);
+
+export function actingAsIn(principal: Principal, caller: CallerIdentity, org: string): ActingAs {
+  const { orgName } = principal;
+  return org === principal.own.org && orgName !== undefined ? { caller, org, orgName } : { caller, org };
+}
 
 export function tracedBy(trace: TraceParent | undefined): { readonly trace?: TraceParent } {
   return trace === undefined ? {} : { trace };

@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { tallyFolderOf } from '../folder-testing/tally-folder.ts';
 import { someFolder } from '../projector/folder.ts';
 import { aSQLiteFile } from '../testing/host-files.ts';
-import { recordedOptionsOf } from '../testing/host-runs.ts';
+import { hostedStartsAt, recordedOptionsOf } from '../testing/host-runs.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { hostDatabaseOpenedOn, workflowHostOnALedger } from './ledger-connections.ts';
 
 const unmadeTable = statement`CREATE TABLE`;
@@ -37,7 +38,11 @@ describe('a host database opened on a ledger of its own', () => {
 describe('a host opened on a ledger of its own', () => {
   it('closes the ledger it opened once the host stops', async () => {
     const file = aSQLiteFile();
-    const host = await workflowHostOnALedger({ store: 'sqlite', file }, recordedOptionsOf().options);
+    const clock = steppedClock(hostedStartsAt);
+    const host = await workflowHostOnALedger(
+      { store: 'sqlite', file },
+      { ...recordedOptionsOf({ clock }).options, context: clock.watching() },
+    );
     const whileServing = descriptorsOpenOn(file);
 
     await host.stop();
@@ -52,7 +57,7 @@ describe('a host opened on a ledger of its own', () => {
     const file = aSQLiteFile();
     const unmade = someFolder({ ...tallyFolderOf(1), tables: [unmadeTable] });
     const options = {
-      ...recordedOptionsOf().options,
+      ...recordedOptionsOf({ clock: steppedClock(hostedStartsAt) }).options,
       projector: { folders: [unmade], playbooksAtOnce: 1, pagesPerWake: 1 },
     };
 

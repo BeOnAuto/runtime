@@ -1,4 +1,3 @@
-import { execFileSync, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import {
   cpSync,
@@ -19,6 +18,9 @@ import { fileURLToPath } from 'node:url';
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
+
+import { heardUntilItExits, somethingHappened } from '../waiting/happenings.ts';
+import { ranToItsEnd, type EndedChild } from './awaited-children.ts';
 
 const repository = fileURLToPath(new URL('../../../../../', import.meta.url));
 
@@ -105,26 +107,27 @@ function npmOf(home: string): NodeJS.ProcessEnv {
   return { ...process.env, npm_config_cache: join(home, 'npm-cache'), NODE_DISABLE_COMPILE_CACHE: '1' };
 }
 
-function packed(home: string, { name, files }: InstalledPackage): string {
+/** A failing npm shows as the launch that follows it failing. */
+function npm(args: readonly string[], cwd: string, home: string): Promise<EndedChild> {
+  return ranToItsEnd('npm', args, { cwd, env: npmOf(home) });
+}
+
+async function packed(home: string, { name, files }: InstalledPackage): Promise<string> {
   const source = join(home, 'sources', name);
   for (const [file, text] of Object.entries(files)) {
     written(join(source, file), text);
   }
-  const tarball = execFileSync('npm', ['pack', '--silent', '--pack-destination', join(home, 'sources')], {
-    cwd: source,
-    env: npmOf(home),
-    encoding: 'utf8',
-  });
-  return join(home, 'sources', tarball.trim());
+  const { stdout } = await npm(['pack', '--silent', '--pack-destination', join(home, 'sources')], source, home);
+  return join(home, 'sources', stdout.trim());
 }
 
-export function npmInstalledIn(home: string, packages: readonly InstalledPackage[]): void {
+export async function npmInstalledIn(home: string, packages: readonly InstalledPackage[]): Promise<void> {
   written(join(home, 'package.json'), JSON.stringify({ name: 'program', private: true }));
-  const tarballs = packages.map((each) => packed(home, each));
-  execFileSync(
-    'npm',
+  const tarballs = await Promise.all(packages.map((each) => packed(home, each)));
+  await npm(
     ['install', '--offline', '--no-audit', '--no-fund', '--legacy-peer-deps', '--ignore-scripts', ...tarballs],
-    { cwd: home, env: npmOf(home), stdio: 'ignore' },
+    home,
+    home,
   );
 }
 
@@ -151,6 +154,8 @@ interface SpawnOptions {
   readonly env: Readonly<NodeJS.ProcessEnv>;
 }
 
+type ChildProcess = ReturnType<typeof spawnForTheTest>;
+
 async function answeringOnceSpawned(spawned: Promise<ChildProcess>): Promise<LaunchedRuntime> {
   const child = await spawned;
   const output = { written: '' };
@@ -158,6 +163,7 @@ async function answeringOnceSpawned(spawned: Promise<ChildProcess>): Promise<Lau
   for (const stream of [child.stdout, child.stderr]) {
     stream?.setEncoding('utf8').on('data', (chunk: string) => {
       output.written += chunk;
+      somethingHappened();
       const url = /Server {3}(?<url>http:\/\/localhost:\d+)/u.exec(output.written)?.groups?.['url'];
       if (url !== undefined) {
         resolve(url);
@@ -165,6 +171,7 @@ async function answeringOnceSpawned(spawned: Promise<ChildProcess>): Promise<Lau
     });
   }
   const exited = once(child, 'exit');
+  heardUntilItExits(exited);
   const stoppedFirst = exited.then(() => {
     throw new Error(`The runtime stopped before it answered: ${output.written}`);
   });

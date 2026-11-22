@@ -1,4 +1,4 @@
-import { Conflict } from '@on.auto/operations';
+import { Conflict, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -14,6 +14,7 @@ import {
   runOf,
   sales,
   startsAnswering,
+  type NoticeBook,
 } from './notice-samples.ts';
 import { mostSeenWaitMs, noticesOwedOf, seenWaitMs } from './notice-starts.ts';
 import { noticedPlaybookIn } from './noticed-playbooks.ts';
@@ -69,7 +70,7 @@ describe('the consumer that sees a notice start', () => {
   });
 
   it('fails the delivery for a retry when the start cannot be recorded now', async () => {
-    const book = noticeBookOf();
+    const book = await savedBook();
     const record = await book.runStarted(runOf('passed'));
     const failing = noticesSeenOf(
       { ...book.ledger, execute: () => Effect.fail(new Conflict({ detail: 'Another append came first' })) },
@@ -80,6 +81,43 @@ describe('the consumer that sees a notice start', () => {
 
     expect(exits).toMatchObject([
       Exit.fail({ detail: `The start of the notice ${runOf('passed')} could not be recorded now` }),
+    ]);
+  });
+});
+
+async function savedBook(): Promise<NoticeBook> {
+  const book = noticeBookOf();
+  await book.goalsSaved([experiments]);
+  return book;
+}
+
+async function assessed(): Promise<NoticeBook> {
+  const book = await savedBook();
+  await book.opened();
+  await book.assessed('passed', 'now');
+  return book;
+}
+
+async function deliveredIn(book: NoticeBook, playbook: PlaybookAddress): Promise<readonly string[]> {
+  const record = await book.runStarted(runOf('passed'));
+  const batch = await Effect.runPromise(noticesSeenOf(book.ledger, () => monday).batchOf({ playbook, record }));
+  await Effect.runPromise(Effect.forEach(batch.deliveries, ({ deliver }) => deliver));
+  return book.factsOf(`assessments/${assessment}`);
+}
+
+describe('the consumer that sees a notice start, across a move', () => {
+  it('records nothing of a run in a playbook the goal was never in, and the start of a run in the playbook it moved from', async () => {
+    const [elsewhere, moved] = [await assessed(), await assessed()];
+    const fromSales = { from: 'sales', to: 'marketing', moved_by: { id: 'person:ada', name: 'Ada' }, position: 0 };
+    await moved.ofTheGoal('goals/goal', 'goal_reordered', { position: 1 });
+    await moved.ofTheGoal('goals/goal', 'goal_moved', fromSales);
+
+    expect([
+      await deliveredIn(elsewhere, { org: 'acme', playbook: 'marketing' }),
+      await deliveredIn(moved, sales),
+    ]).toEqual([
+      ['goal_assessment_opened', 'goal_assessed'],
+      ['goal_assessment_opened', 'goal_assessed', 'goal_notice_started'],
     ]);
   });
 });

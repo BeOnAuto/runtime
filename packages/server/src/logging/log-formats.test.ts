@@ -1,10 +1,7 @@
-import { fileURLToPath } from 'node:url';
-
 import { Cause, Effect, Layer, Logger, References } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { spawnServer } from '../testing/processes/spawned-server.ts';
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { startedInProcess } from '../testing/processes/in-process-starts.ts';
 import { formatConsole, formatPretty, logsFrom, logsToStderr } from './log-formats.ts';
 import { logAccessMode, logIncident, logUnsettled, logWorkflows } from './logging.ts';
 import type { ColorDepth } from './terminal.ts';
@@ -29,9 +26,18 @@ async function consoleLinesLoggedBy(effect: Effect.Effect<void>, depth: ColorDep
   return lines;
 }
 
-const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
-
 const loopback = { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ':memory:' };
+
+/** What the server main starts logs from its start to its stop, in this process, one line to an entry. */
+async function loggedFromStartToStop(settings: Readonly<Record<string, string>>): Promise<readonly string[]> {
+  const logged = vi.spyOn(console, 'error');
+  onTestFinished(() => {
+    logged.mockRestore();
+  });
+  const server = await startedInProcess({ ...loopback, ...settings });
+  await server.stop();
+  return [...logged.mock.calls.flat().map(String), ''];
+}
 
 describe('the pretty log format', () => {
   it('writes the local time, the level, the message and then the annotations on one line', async () => {
@@ -75,24 +81,10 @@ describe('the pretty log format', () => {
 });
 
 describe('the server with LOG_FORMAT=pretty', () => {
-  it('writes its logs as readable lines to stderr, and still exactly the listening line to stdout', async () => {
-    const { remove } = temporaryLedger();
-    onTestFinished(remove);
-    const child = spawnServer(mainModule, {
-      ...loopback,
-      LOG_FORMAT: 'pretty',
-    });
-    const port = await child.port;
-    child.signal('SIGTERM');
-    await child.exited;
+  it('writes its logs as readable lines', async () => {
+    const lines = await loggedFromStartToStop({ LOG_FORMAT: 'pretty' });
 
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(
-      child
-        .output()
-        .stderr.split('\n')
-        .map((line) => line.replace(/^\d{2}:\d{2}:\d{2}\.\d{3} /u, '')),
-    ).toEqual([
+    expect(lines.map((line) => line.replace(/^\d{2}:\d{2}:\d{2}\.\d{3} /u, ''))).toEqual([
       expect.stringMatching(/^WARN {2}Local mode is on: /u),
       'INFO  The ledger is kept in the file :memory: ledger_file=:memory:',
       "INFO  Content is kept in the ledger's database content_store=ledger",
@@ -184,17 +176,10 @@ describe('the least level logged', () => {
 });
 
 describe('the server with LOG_FORMAT=console and LOG_LEVEL=warn', () => {
-  it('writes only its warnings, as console lines, to stderr', async () => {
-    const child = spawnServer(mainModule, {
-      ...loopback,
-      LOG_FORMAT: 'console',
-      LOG_LEVEL: 'warn',
-    });
-    await child.port;
-    child.signal('SIGTERM');
-    await child.exited;
+  it('writes only its warnings, as console lines', async () => {
+    const lines = await loggedFromStartToStop({ LOG_FORMAT: 'console', LOG_LEVEL: 'warn' });
 
-    expect(child.output().stderr.split('\n')).toEqual([
+    expect(lines).toEqual([
       expect.stringMatching(/^ {2}\d{2}:\d{2}:\d{2} ▲ Local mode is on: /u),
       expect.stringMatching(/^ {2}\d{2}:\d{2}:\d{2} ▲ No model provider is configured, [^=]*$/u),
       '',

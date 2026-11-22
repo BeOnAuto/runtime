@@ -9,7 +9,12 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { connectedWith } from '../testing/servers/connected-servers.ts';
 import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  servingReasoning,
+  type ReasoningServer,
+  documentsReadInProcess,
+} from '../testing/servers/reasoning-server.ts';
 
 const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -57,11 +62,12 @@ const stores: readonly Store[] = [
 ];
 
 async function servedOn(place: Readonly<Record<string, string>>): Promise<ReasoningServer> {
-  const server = await servingReasoning([], {
-    ...place,
-    SECRETS_KEY: Buffer.alloc(32, 5).toString('base64'),
-    ...connectionsOnLoopback,
-  });
+  const server = await servingReasoning(
+    [],
+    { ...place, SECRETS_KEY: Buffer.alloc(32, 5).toString('base64'), ...connectionsOnLoopback },
+    undefined,
+    { documents: documentsReadInProcess },
+  );
   const stopping: { done?: Promise<void> } = {};
   const stop = (): Promise<void> => {
     stopping.done ??= server.stop();

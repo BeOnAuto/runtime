@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { release } from '../composition/release.ts';
 import type { ColorDepth } from '../logging/terminal.ts';
 import type { Install } from '../server-options/server-options.ts';
+import { somethingHappened, whenHeld } from '../testing/waiting/until.ts';
 import { servedLocally, type LocalServerHost } from './local-server.ts';
 
 interface Served {
@@ -63,6 +64,7 @@ function served({ depth = 1, run, signIn, install }: Options = {}): Served {
       depth,
       write: (text) => {
         written.push(text);
+        somethingHappened();
       },
       clock: () => clock.shift() ?? 0,
       tickEvery: (milliseconds, tick) => {
@@ -93,7 +95,10 @@ describe('serving the runtime on this computer', () => {
     const local = served();
 
     const serving = servedLocally(local.host);
-    await expect.poll(() => local.written).toHaveLength(2);
+    await whenHeld(
+      () => local.written,
+      (written: readonly string[]) => written.length === 2,
+    );
     local.stop();
     await serving;
 
@@ -112,7 +117,10 @@ describe('serving the runtime on this computer', () => {
     const local = served({ signIn: { issuer: 'https://clerk.on.auto', publicUrl: 'https://auto.example.com' } });
 
     const serving = servedLocally(local.host);
-    await expect.poll(() => local.written).toHaveLength(2);
+    await whenHeld(
+      () => local.written,
+      (written: readonly string[]) => written.length === 2,
+    );
     local.stop();
     await serving;
 
@@ -135,7 +143,10 @@ describe('serving the runtime on this computer for the first time', () => {
     const local = served({ install: { id: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b', isNew: true } });
 
     const serving = servedLocally(local.host);
-    await expect.poll(() => local.written).toHaveLength(2);
+    await whenHeld(
+      () => local.written,
+      (written: readonly string[]) => written.length === 2,
+    );
     local.stop();
     await serving;
 
@@ -160,7 +171,10 @@ describe('the spinner while the runtime starts at a terminal', () => {
     local.tick();
     local.tick();
     listen();
-    await expect.poll(() => local.written).toHaveLength(6);
+    await whenHeld(
+      () => local.written,
+      (written: readonly string[]) => written.length === 6,
+    );
     local.stop();
     await serving;
 

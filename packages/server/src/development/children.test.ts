@@ -41,30 +41,31 @@ function fakeChild(): FakeChild {
   return { spawn: () => child, signalled: () => [...signalled] };
 }
 
+/*
+ * Three spawns, each showing what only node's spawn does: an exit code and what the child wrote, a signal, and a
+ * program that is not there. The rest is the runner's handle of a child, on a fake.
+ */
 describe('a child of the dev runner', () => {
-  it('says how it ended when it exits', async () => {
-    await expect(started(shell('exit 3')).ended).resolves.toBe('exit code 3');
+  it('passes on what it writes to stdout, and says how it ended when it exits', async () => {
+    const { promise: written, resolve: write } = Promise.withResolvers<string>();
+    const child = started({ ...shell('echo started; exit 3'), stdout: write });
+
+    await expect(written).resolves.toBe('started\n');
+    await expect(child.ended).resolves.toBe('exit code 3');
   });
 
-  it('says which signal ended it', async () => {
-    const child = started(shell('sleep 30'));
+  it('says which signal ended it, once the stop that signalled it has ended it', async () => {
+    const child = started(shell('exec sleep 30'));
 
-    child.signal('SIGTERM');
-
+    await expect(child.stop('SIGTERM')).resolves.toBe('signal SIGTERM');
     await expect(child.ended).resolves.toBe('signal SIGTERM');
   });
 
-  it('says why it could not start', async () => {
+  it('says why it could not start, and a stop of it ends at once', async () => {
     const child = started({ ...shell(''), command: '/nonexistent/program' });
 
     await expect(child.ended).resolves.toBe('Error: spawn /nonexistent/program ENOENT');
-  });
-
-  it('passes on what it writes to stdout', async () => {
-    const { promise: written, resolve: write } = Promise.withResolvers<string>();
-    started({ ...shell('echo started; exec sleep 30'), stdout: write });
-
-    await expect(written).resolves.toBe('started\n');
+    await expect(child.stop('SIGTERM')).resolves.toBe('Error: spawn /nonexistent/program ENOENT');
   });
 });
 
@@ -76,17 +77,5 @@ describe('stopping a child of the dev runner', () => {
     const ended = await child.stop('SIGTERM');
 
     expect({ ended, signalled: fake.signalled() }).toEqual({ ended: 'signal SIGTERM', signalled: ['SIGTERM'] });
-  });
-
-  it('ends once the child it signalled has ended', async () => {
-    const child = started(shell('sleep 30'));
-
-    await expect(child.stop('SIGTERM')).resolves.toBe('signal SIGTERM');
-  });
-
-  it('ends at once when the child could not start', async () => {
-    const child = started({ ...shell(''), command: '/nonexistent/program' });
-
-    await expect(child.stop('SIGTERM')).resolves.toBe('Error: spawn /nonexistent/program ENOENT');
   });
 });

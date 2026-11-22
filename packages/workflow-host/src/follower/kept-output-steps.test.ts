@@ -13,6 +13,7 @@ import {
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { callConsumerOf, type Consumer, deliverySweeps, type FollowedRecord } from './consumers.ts';
 import type { Mode } from './delivery-loop.ts';
 import type { EventRead } from './followed-events.ts';
@@ -170,9 +171,10 @@ async function succeededKeeping(keeps: boolean) {
     ofTheReport,
   );
   await published(store, { id: 's1', type: 'com.acme.sentinel' });
-  await reacting.whenRead(
+  await reacting.sweeps.until(
     () => Promise.resolve(reacting.reactions.starts()),
     (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+    fewSweeps,
   );
   return reacting;
 }

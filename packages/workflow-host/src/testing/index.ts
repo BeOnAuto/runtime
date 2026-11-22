@@ -1,4 +1,4 @@
-export { movedClock, type MovedClock } from '../reaction-testing/moved-clock.ts';
+export { steppedMovedClock, type SteppedMovedClock } from '../reaction-testing/moved-clock.ts';
 export { recordedReactions, type RecordedReactions } from '../reaction-testing/recorded-reactions.ts';
 export { recordedWaiting, type RecordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 export {
@@ -7,5 +7,5 @@ export {
   type ProjectingOptions,
 } from '../folder-testing/projected-folders.ts';
 export { workflowHostOnALedger, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
-export { signals, type Signals } from './signals.ts';
-export { steppedClock, type SteppedClock } from './stepped-clock.ts';
+export { restingOn, signals, type Signals } from './signals.ts';
+export { fewSweeps, steppedBy, steppedClock, type SteppedClock, type SteppedSweeps } from './stepped-clock.ts';

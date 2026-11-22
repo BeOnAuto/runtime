@@ -1,7 +1,12 @@
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { freshInstances, machineSandboxOf, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import type { WorkflowHost } from '@on.auto/workflow-host';
-import { recordedReactions, recordedWaiting, workflowHostOnALedger } from '@on.auto/workflow-host/testing';
+import {
+  recordedReactions,
+  recordedWaiting,
+  workflowHostOnALedger,
+  type SteppedClock,
+} from '@on.auto/workflow-host/testing';
 import { Effect } from 'effect';
 
 import { callResultOfEnding, definitionCalls } from '../calls/function-calls.ts';
@@ -13,7 +18,10 @@ const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
 const sandboxModule = await sandboxModuleIn(sandboxFiles);
 
-export function testHost(nested: Playbook): Promise<WorkflowHost> {
+export const hostSweepsEveryMs = 20;
+
+/** A workflow host over a ledger in memory, which sleeps on the stepped clock it is handed and is watched by it for rest. */
+export function testHost(nested: Playbook, clock: SteppedClock): Promise<WorkflowHost> {
   return workflowHostOnALedger(
     { store: 'sqlite', file: ':memory:' },
     {
@@ -25,7 +33,9 @@ export function testHost(nested: Playbook): Promise<WorkflowHost> {
         trouble: Effect.logWarning,
         note: Effect.logWarning,
       },
-      sweepEveryMs: 20,
+      sweepEveryMs: hostSweepsEveryMs,
+      clock,
+      context: clock.watching(),
       mostCallsAtOnce: 4,
       reactions: recordedReactions().options,
       waiting: { ...recordedWaiting().options, resultOf: callResultOfEnding },

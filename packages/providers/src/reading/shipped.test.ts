@@ -6,6 +6,7 @@ import { ProviderEntrySchema } from '../entry/provider-entry.ts';
 import {
   eventDestinationOf,
   joinedProviders,
+  permissionsOf,
   type ProviderEntry,
   providerNamed,
   providersShippedRoots,
@@ -34,8 +35,9 @@ describe('the ways of the shipped providers', () => {
     expect(ways.filter(({ gateway }) => gateway !== undefined)).toEqual([]);
   });
 
-  it('say of none that it acts as the app, so each acts as the person who connects', () => {
-    expect(ways.filter(({ permissions }) => permissions !== undefined)).toEqual([]);
+  it('state, on each way that acts as an account at the service, the kinds of account it may act as', () => {
+    const unstated = ways.filter((way) => way.account_types === undefined).map((way) => permissionsOf(way));
+    expect(unstated).not.toContain('delegated');
   });
 });
 

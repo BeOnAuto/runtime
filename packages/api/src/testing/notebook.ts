@@ -263,6 +263,7 @@ const becauseOfKind = {
   generation_timed_out: {},
   meter_unavailable: {},
   content_unavailable: {},
+  busy: { retry_after: 4 },
 } as const;
 
 const sendNotes = defineCommand('playbook', {

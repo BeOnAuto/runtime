@@ -6,6 +6,7 @@ type: mcp
 url: https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta
 credentials:
   - kind: authorization
+    account_types: [service, personal]
     issuer: https://login.microsoftonline.com/common/v2.0
     authorization_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/common/oauth2/v2.0/token

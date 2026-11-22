@@ -1,4 +1,5 @@
 import { agentTextsOf, escaped, idsIn, type AgentText } from '@on.auto/api/testing';
+import { localDeveloper } from '@on.auto/identity/testing';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { servedByAThrowawayServer, type ServedToAnAgent } from './served-to-an-agent.ts';
@@ -64,7 +65,7 @@ describe('what a throwaway server of this release serves an agent', () => {
 
   it('gives no connection’s instructions the sentence that names the caller', () => {
     expect(
-      served.surface.connections.filter(({ instructions }) => instructions.includes('This connection acts as')),
+      served.surface.connections.filter(({ instructions }) => instructions.includes(`(${localDeveloper.id})`)),
     ).toEqual([]);
   });
 });

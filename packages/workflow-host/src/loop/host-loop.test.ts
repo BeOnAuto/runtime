@@ -4,9 +4,10 @@ import { Deferred, Effect, Exit, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { signals, type Signals } from '../testing/signals.ts';
-import { type WatchedClock, watchedSystemClock } from '../testing/watched-clock.ts';
+import { fewSweeps, steppedBy, steppedClock, type SteppedClock, type SteppedSweeps } from '../testing/stepped-clock.ts';
+import { type WatchedClock, watchedClock } from '../testing/watched-clock.ts';
 import { type DueTimer, sqlTimers, type TimerTable } from '../timers/sql-timers.ts';
 import { type FailedRounds, failedRoundsInMemory, failedRoundsOn } from './failed-rounds.ts';
 import { type HostLoop, startLoop } from './host-loop.ts';
@@ -19,6 +20,9 @@ const run = { runId: runKey, attributes: {} };
 interface Looping {
   readonly loop: HostLoop;
   readonly clock: WatchedClock;
+  /** The time the loop sleeps on, which moves only when the test steps it. */
+  readonly time: SteppedClock;
+  readonly sweptBy: SteppedSweeps;
   readonly arm: (timerId: string, inMs: number) => Promise<number>;
   readonly fired: () => readonly string[];
   readonly troubles: () => readonly string[];
@@ -69,12 +73,13 @@ const noEngine: WorkflowEngine = {
 
 async function looping(options: LoopingOptions): Promise<Looping> {
   const { sweepEveryMs, fire = firedAtOnce, sweep = sweptAtOnce, readsFailing = { due: 0, next: 0 } } = options;
-  const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+  const database = await openedOn(await aLedgerInMemory());
   const fired: string[] = [];
   const troubles: string[] = [];
   const counts = { sweeps: 0 };
   const seen = signals();
-  const clock = watchedSystemClock();
+  const time = steppedClock(Date.parse('2026-10-05T09:00:00.000Z'));
+  const clock = watchedClock(time);
   const alarm: { armed: (dueAt: number) => void } = { armed: Function.constVoid };
   const timers = sqlTimers(database, (dueAt) => {
     alarm.armed(dueAt);
@@ -107,6 +112,7 @@ async function looping(options: LoopingOptions): Promise<Looping> {
         seen.changed();
       }),
     sweepEveryMs,
+    context: time.watching(),
   };
   const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;
@@ -114,8 +120,10 @@ async function looping(options: LoopingOptions): Promise<Looping> {
   return {
     loop,
     clock,
+    time,
+    sweptBy: steppedBy(time, sweepEveryMs),
     arm: async (timerId, inMs) => {
-      const dueAt = Date.now() + inMs;
+      const dueAt = time.now() + inMs;
       const timer: ArmTimer = { kind: 'arm_timer', runId: runKey, timerId, dueAt, purpose: 'wait' };
       await Effect.runPromise(timers.timers.arm(timer, run, { version: 1 }));
       return dueAt;
@@ -194,7 +202,7 @@ async function answering(
   reads: FailingReads,
   { fireTakesMs = 0, firesFailing = 0, postponesFailing = 0, rowsDueAt }: AnsweringOptions = {},
 ): Promise<Answering> {
-  const timers = sqlTimers(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), Function.constVoid);
+  const timers = sqlTimers(await openedOn(await aLedgerInMemory()), Function.constVoid);
   const fireFailing = failingFirst(firesFailing);
   const postponeFailing = failingFirst(postponesFailing);
   const time = { now: at };
@@ -279,16 +287,16 @@ describe('the loop of the host, firing timers', () => {
     await loop.clock.when(loop.clock.asked, (asked) => asked.some((milliseconds) => milliseconds > 60_000));
 
     const dueAt = await loop.arm('1', 30);
-    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
+    const fired = await steppedBy(loop.time, 30).until(loop.fired, (timers) => timers.length > 0, { atMost: 1 });
 
-    expect([fired, Date.now() >= dueAt, loop.sweeps()]).toEqual([['1'], true, 1]);
+    expect([fired, loop.time.now() >= dueAt, loop.sweeps()]).toEqual([['1'], true, 1]);
   });
 
   it('puts off a timer that could not fire until the next sweep, and reports it', async () => {
     const loop = await looping({ sweepEveryMs: 40, fire: failingOnce() });
 
     await loop.arm('1', 0);
-    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
+    const fired = await loop.sweptBy.until(loop.fired, (timers) => timers.length > 0, fewSweeps);
 
     expect([fired, loop.troubles()]).toEqual([
       ['1'],
@@ -301,7 +309,7 @@ describe('the loop of the host, sweeping and stopping', () => {
   it('reports a sweep that failed, and sweeps again at the next interval', async () => {
     const loop = await looping({ sweepEveryMs: 20, sweep: () => Effect.die(new Error('The ledger is down')) });
 
-    await loop.when(loop.sweeps, (sweeps) => sweeps >= 2);
+    await loop.sweptBy.until(loop.sweeps, (sweeps) => sweeps >= 2, fewSweeps);
 
     expect(new Set(loop.troubles())).toEqual(new Set(['A sweep of the runs failed; the next sweep tries again']));
   });
@@ -310,7 +318,7 @@ describe('the loop of the host, sweeping and stopping', () => {
     const loop = await looping({ sweepEveryMs: 20, readsFailing: { due: 1, next: 1 } });
 
     await loop.arm('1', 0);
-    const fired = await loop.when(loop.fired, (timers) => timers.length > 0);
+    const fired = await loop.sweptBy.until(loop.fired, (timers) => timers.length > 0, fewSweeps);
 
     expect([fired, new Set(loop.troubles())]).toEqual([
       ['1'],
@@ -342,7 +350,7 @@ describe('the loop of the host, sweeping and stopping', () => {
 
 describe('the rounds of a wake-up that failed in a row', () => {
   it('put the next round off a minute after the first, twice as long after each in a row, at most an hour', async () => {
-    const rounds = failedRoundsOn(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), 'follower');
+    const rounds = failedRoundsOn(await openedOn(await aLedgerInMemory()), 'follower');
 
     expect(await waitsOf(rounds, 9)).toEqual([
       60_000, 120_000, 240_000, 480_000, 960_000, 1_920_000, 3_600_000, 3_600_000, 3_600_000,
@@ -350,7 +358,7 @@ describe('the rounds of a wake-up that failed in a row', () => {
   });
 
   it('are counted in the database, so a wake-up composed again over it goes on counting, and a round that succeeds starts the count again', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const first = failedRoundsOn(database, 'follower');
     const second = failedRoundsOn(database, 'follower');
     const third = failedRoundsOn(database, 'follower');
@@ -367,7 +375,7 @@ describe('the rounds of a wake-up that failed in a row', () => {
   });
 
   it('are counted in memory while the database cannot be written, and a round that succeeds then fails as the write does', async () => {
-    const rounds = failedRoundsOn(writesFailing(await openedOn({ store: 'sqlite', file: aSQLiteFile() })), 'follower');
+    const rounds = failedRoundsOn(writesFailing(await openedOn(await aLedgerInMemory())), 'follower');
 
     const waits = await waitsOf(rounds, 2);
     const succeeded = await Effect.runPromiseExit(rounds.succeeded());

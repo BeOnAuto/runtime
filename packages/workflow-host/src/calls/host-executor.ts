@@ -13,7 +13,7 @@ import type { DatabaseFailed } from '../database/host-database.ts';
 import { runSerialiser } from '../dispatch/run-serialiser.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { callSpanOf } from '../runs/run-spans.ts';
-import { background, type Background } from './background.ts';
+import { background, takingTurns, type Background, type InTurn } from './background.ts';
 import { cancelledCall, type CancelChild } from './call-cancels.ts';
 import {
   allWaitingCalls,
@@ -56,6 +56,7 @@ export interface ExecutorParts extends StartParts {
   readonly cancelChild: CancelChild;
   readonly now: () => number;
   readonly sleep?: HostClock['sleep'];
+  readonly queued?: HostClock['queued'];
   readonly context?: Context.Context<never> | undefined;
 }
 
@@ -114,11 +115,11 @@ type Settled = (key: string, call: StartCall, result: CallAnsweredResult) => Eff
 
 function dispatchedAgainBy(
   { database, perform }: ExecutorParts,
-  atOnce: Semaphore.Semaphore,
+  inTurn: InTurn,
   settled: Settled,
 ): HostExecutor['dispatchedAgain'] {
   return ({ key, call, run, origin, resumesAfterMs }, at) =>
-    atOnce.withPermit(perform(call, run, origin, afterAnAttemptDied)).pipe(
+    inTurn(perform(call, run, origin, afterAnAttemptDied)).pipe(
       Effect.flatMap((answer) =>
         answer.status === 'waiting' ? dueAgainRow(database, key, at + resumesAfterMs) : settled(key, call, answer),
       ),
@@ -128,7 +129,7 @@ function dispatchedAgainBy(
 
 function callsOf(parts: ExecutorParts, running: Background): Calls {
   const { database, perform, deliver, trouble, mostAtOnce, now, sleep = systemClock.sleep } = parts;
-  const atOnce = Semaphore.makeUnsafe(mostAtOnce);
+  const inTurn = takingTurns(Semaphore.makeUnsafe(mostAtOnce), parts.queued);
   const delivered = (key: string, callKey: CallKey, result: CallAnsweredResult): Effect.Effect<void> =>
     deliver(callKey, result).pipe(
       Effect.andThen(deliveredRow(database, key)),
@@ -155,20 +156,21 @@ function callsOf(parts: ExecutorParts, running: Background): Calls {
     begin: (key, { call, run, origin }, attempt, parent) => {
       running.run(
         key,
-        atOnce.withPermit(perform(call, run, origin, attempt)).pipe(
+        inTurn(perform(call, run, origin, attempt)).pipe(
           Effect.flatMap((answer) => answered(key, call, answer)),
           Effect.catchCause((cause: Cause.Cause<unknown>) => trouble('A call could not record its answer', cause)),
           Effect.withSpan(`call ${call.function}`, callSpanOf(call, parent)),
         ),
+        `call ${call.function} ${key}`,
       );
     },
     answerAgain: (key, callKey, result) => {
-      running.run(key, delivered(key, callKey, result));
+      running.run(key, delivered(key, callKey, result), `answer ${key}`);
     },
     isRunning: running.has,
     interrupt: running.interrupt,
     answeredIfEnded,
-    dispatchedAgain: dispatchedAgainBy(parts, atOnce, settled),
+    dispatchedAgain: dispatchedAgainBy(parts, inTurn, settled),
     underItsRoot: roots.serialise,
   };
 }

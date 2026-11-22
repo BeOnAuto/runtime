@@ -160,7 +160,7 @@ export function hostWakeUp(parts: WakeUpParts, signal: WakeSignal): HostWakeUp {
   const due = duePerformer(parts.dueWork, {
     trouble,
     now: clock.now,
-    sleep: clock.sleep,
+    clock,
     wake: signal.raised,
     context,
   });

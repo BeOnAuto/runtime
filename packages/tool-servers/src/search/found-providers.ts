@@ -1,4 +1,4 @@
-import type { CallerIdentity } from '@on.auto/operations';
+import type { CallerIdentity, Unavailable } from '@on.auto/operations';
 import { Effect, Order } from 'effect';
 
 import { offeredInTheListing } from '../access/directory-listing.ts';
@@ -20,7 +20,9 @@ export interface OfferedProvider {
   readonly more?: readonly OfferedGroup[];
 }
 
-export type ProviderOffering = (caller: CallerIdentity) => Effect.Effect<readonly OfferedProvider[] | undefined>;
+export type ProviderOffering = (
+  caller: CallerIdentity,
+) => Effect.Effect<readonly OfferedProvider[] | undefined, Unavailable>;
 
 export const offersNoProvider: ProviderOffering = () => Effect.undefined;
 

@@ -8,6 +8,7 @@ headers:
   X-MCP-Toolsets: context,repos,issues,pull_requests,users
 credentials:
   - kind: authorization
+    account_types: [service, personal]
     issuer: https://github.com/login/oauth
     scope: read:org repo
     says:
@@ -16,6 +17,7 @@ credentials:
     clients: [registered]
     description: Sign in to GitHub and allow access to your repositories.
   - kind: secret
+    account_types: [service, personal]
     in: header
     name: Authorization
     scheme: Bearer
@@ -124,6 +126,12 @@ events:
           merged:
             type: boolean
             description: Whether the pull request was merged. It is false when it was closed without merging.
+  identity:
+    method: GET
+    url: https://api.github.com/user
+    identified:
+      id: /id
+      name: /login
   destinations:
     - type: webhook
       per: subscription
@@ -167,6 +175,7 @@ events:
           topic: '{{ subject }}'
           automatic:
             $request.body#/sender/type: [Bot]
+          actor: $request.body#/sender/id
           data:
             number: $request.body#/issue/number
             title: $request.body#/issue/title
@@ -182,6 +191,7 @@ events:
           topic: '{{ subject }}'
           automatic:
             $request.body#/sender/type: [Bot]
+          actor: $request.body#/sender/id
           data:
             number: $request.body#/issue/number
             title: $request.body#/issue/title
@@ -197,6 +207,7 @@ events:
           topic: '{{ subject }}'
           automatic:
             $request.body#/sender/type: [Bot]
+          actor: $request.body#/sender/id
           data:
             number: $request.body#/pull_request/number
             title: $request.body#/pull_request/title
@@ -212,6 +223,7 @@ events:
           topic: '{{ subject }}'
           automatic:
             $request.body#/sender/type: [Bot]
+          actor: $request.body#/sender/id
           data:
             number: $request.body#/pull_request/number
             title: $request.body#/pull_request/title

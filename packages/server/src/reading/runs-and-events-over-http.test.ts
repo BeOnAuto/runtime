@@ -12,7 +12,7 @@ import { calling, lookingUp, systemRunId, type SystemServer } from '../testing/i
 import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -69,8 +69,8 @@ const runsOf = Schema.decodeUnknownSync(RunsSchema);
 
 let server: ReasoningServer;
 
-function eventually(path: string, holds: (response: TestResponse) => boolean): Promise<TestResponse> {
-  return until(() => server.call('GET', path), holds);
+function readWhenHeld(path: string, holds: (response: TestResponse) => boolean): Promise<TestResponse> {
+  return whenHeld(() => server.call('GET', path), holds);
 }
 
 function holding(count: number): (response: TestResponse) => boolean {
@@ -319,7 +319,7 @@ describe('runs and events over http', () => {
     it('are listed newest first, filtered, and paged through', async () => {
       await playbookWithTwoRuns({});
 
-      const listed = await eventually(`${alpha}/runs`, holding(2));
+      const listed = await readWhenHeld(`${alpha}/runs`, holding(2));
       const filtered = await server.call('GET', `${alpha}/runs?status=succeeded&type=reasoning&name=summary`);
       const first = await server.call('GET', `${alpha}/runs?limit=1`);
       const next = await server.call('GET', nextPageOf(first));
@@ -347,7 +347,7 @@ describe('runs and events over http', () => {
     it('reads a run whose input and output hold U+0000', async () => {
       await playbookWithTwoRuns({});
 
-      expect(await eventually(`${alpha}/runs/${succeeded}/history`, holding(4))).toMatchObject({
+      expect(await readWhenHeld(`${alpha}/runs/${succeeded}/history`, holding(4))).toMatchObject({
         status: 200,
         body: {
           events: [
@@ -371,7 +371,7 @@ describe('runs and events over http', () => {
     it('follow what happened in the playbook, in plain words, by type', async () => {
       await playbookWithTwoRuns({});
 
-      const feed = eventsOf((await eventually(`${alpha}/events`, holding(7))).body);
+      const feed = eventsOf((await readWhenHeld(`${alpha}/events`, holding(7))).body);
       const created = eventsOf((await server.call('GET', `${alpha}/events?type=definition_created`)).body);
 
       expect(feed.events.map(({ type }) => type)).toEqual([
@@ -399,7 +399,7 @@ describe('runs and events over http', () => {
       const again = await publishing(monthClosed);
       const clash = await publishing({ ...monthClosed, data: 'us' });
       const reserved = await publishing({ source: '/definitions/reasoning/summary', type: 'definition_created' });
-      const feed = await eventually(`${alpha}/events?type=event_published`, holding(1));
+      const feed = await readWhenHeld(`${alpha}/events?type=event_published`, holding(1));
 
       expect([published.status, again.body, clash.status, reserved.body]).toMatchObject([
         200,
@@ -471,7 +471,7 @@ describe('runs and events over http', () => {
         const behind = await server.call('GET', `${alpha}/runs/${succeeded}/history`);
         const newestFirst = await server.call('GET', `${alpha}/runs/${succeeded}/history?order=desc`);
         await open.query('COMMIT');
-        const after = await eventually(`${alpha}/runs/${succeeded}/history`, holding(4));
+        const after = await readWhenHeld(`${alpha}/runs/${succeeded}/history`, holding(4));
 
         expect(run).toMatchObject({ status: 200, body: { status: 'succeeded' } });
         expect(behind).toMatchObject({ status: 200, body: { events: [], has_more: false, next_cursor: null } });

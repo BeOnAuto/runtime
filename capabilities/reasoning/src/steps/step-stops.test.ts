@@ -49,9 +49,21 @@ describe('a run that reaches its bound', () => {
   });
 
   it('gives up the model call in flight as cancelled, and ends at its bound', async () => {
-    const steps = stepsOf({ tools: [search], replies: [() => Effect.never], bounds: shortBound });
+    const called = Deferred.makeUnsafe<true>();
+    const steps = stepsOf({
+      tools: [search],
+      replies: [() => Effect.andThen(Deferred.succeed(called, true), Effect.never)],
+      bounds: shortBound,
+      before: { startedAt: new Date(0).toISOString(), modelCallsBefore: 0, calls: [] },
+    });
+    const boundPassed = Effect.gen(function* () {
+      const stepping = yield* Effect.forkChild(steps.stepping);
+      yield* Deferred.await(called);
+      yield* TestClock.adjust(`${shortBound.runBoundMs} millis`);
+      return yield* Fiber.join(stepping);
+    });
 
-    expect(await Effect.runPromise(steps.stepping)).toMatchObject({
+    expect(await Effect.runPromise(Effect.provide(boundPassed, TestClock.layer()))).toMatchObject({
       ending: { type: 'stopped', because: 'run_bound', detail: boundWords },
     });
     expect(steps.journal.recorded().at(-1)).toMatchObject({

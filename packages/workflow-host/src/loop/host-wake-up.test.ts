@@ -173,7 +173,7 @@ describe('a wake-up of the host, firing timers', () => {
 describe('a wake-up of the host, performing due rows', () => {
   it('performs the due rows that call out nowhere before it fires the timers of the same moment', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(steppedClock(now));
     rows.add('expiry', now - 1000);
     rows.local('expiry');
     const host = waking(now, { rows });
@@ -189,7 +189,7 @@ describe('a wake-up of the host, performing due rows', () => {
 
   it('raises the signal of its clock when a row it handed out ends after it answered', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(steppedClock(now));
     rows.add('delivery', now - 1000);
     rows.hold();
     const host = waking(now, { rows });
@@ -204,7 +204,7 @@ describe('a wake-up of the host, performing due rows', () => {
 
   it('ends the rows it handed out when it is stopped', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(steppedClock(now));
     rows.add('delivery', now - 1000);
     rows.hanging('delivery');
     const host = waking(now, { rows });
@@ -248,7 +248,7 @@ describe('a wake-up of the host, sweeping', () => {
 describe('a wake-up of the host, answering when it is next due', () => {
   it('answers no time when no timer is armed and no row is due', async () => {
     const now = Date.now();
-    const host = waking(now, { rows: fakeDueWork() });
+    const host = waking(now, { rows: fakeDueWork(steppedClock(now)) });
 
     await expect(host.wakeUp({ now, sweep: false })).resolves.toEqual({ nextDueAt: null });
   });
@@ -258,7 +258,7 @@ describe('a wake-up of the host, answering when it is next due', () => {
     ['the next due row', 3000, 2000, 2000],
   ])('answers the earliest of the next timer and the next due row, here %s', async (_, timerInMs, rowInMs, inMs) => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(steppedClock(now));
     rows.add('later', now + rowInMs);
     const host = waking(now, { rows });
     host.timers.armed('later', now + timerInMs);
@@ -268,7 +268,7 @@ describe('a wake-up of the host, answering when it is next due', () => {
 
   it('answers the next due row when the next timer could not be read, and reports it', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(steppedClock(now));
     rows.add('later', now + 3000);
     const host = waking(now, { rows, nextReadsFailing: 1 });
     host.timers.armed('later', now + 2000);

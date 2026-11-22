@@ -1,5 +1,3 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { isBusy } from './result-codes.ts';
 
 const delaysOfSQLitesBusyHandler: readonly number[] = [1, 2, 5, 10, 15, 20, 25, 25, 25, 50, 50, 100];
@@ -18,6 +16,12 @@ export function busyDelay(attempt: number, busyTimeout: number): number {
   return Math.min(delayAt(attempt), busyTimeout - waitedBefore(attempt));
 }
 
+function slept(delay: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, delay);
+  });
+}
+
 export interface LockWait {
   readonly busyTimeout: number;
   readonly inATransaction: () => boolean;
@@ -31,7 +35,7 @@ export async function waitedForTheLock<A>(attempt: () => Promise<A>, wait: LockW
     if (!isBusy(error) || wait.inATransaction() || delay <= 0) {
       throw error;
     }
-    await sleep(delay);
+    await slept(delay);
     return waitedForTheLock(attempt, wait, attempted + 1);
   }
 }

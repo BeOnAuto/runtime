@@ -3,10 +3,10 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { assessing, savedWorkflow, type Assessing } from '../../testing/goals/assessed-runs.ts';
-import { wallClockGivenBack, wallClockTaken } from '../../testing/goals/woken-clock.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
-import { until } from '../../testing/waiting/until.ts';
+import { testServersStartAt } from '../../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../../testing/waiting/until.ts';
 
 const day = 86_400_000;
 const hour = 3_600_000;
@@ -61,7 +61,7 @@ async function rowHolding(
   opens: number,
   holds: (row: Readonly<Record<string, unknown>>) => boolean,
 ): Promise<void> {
-  await until(
+  await whenHeld(
     () => assessed.rowsOf('goal_assessments'),
     (rows) => Object.values(rows).some((row) => row['window_opens'] === opens && holds(row)),
   );
@@ -142,8 +142,7 @@ const allDaysBut = (dayOff: number) =>
 describe('the goals read of a Node server whose daily goal names its days', () => {
   it('opens no window on a day it does not judge and opens the next day, and the read names the days', async () => {
     const ledger = temporaryLedger();
-    onTestFinished(wallClockGivenBack);
-    const dayOff = (Math.floor(wallClockTaken() / day) + 1) * day;
+    const dayOff = (Math.floor(testServersStartAt / day) + 1) * day;
     const assessed = await assessing({ ledger, goals: allDaysBut(dayOff) });
     onTestFinished(async () => {
       await assessed.server.stop();
@@ -152,7 +151,7 @@ describe('the goals read of a Node server whose daily goal names its days', () =
     expect(await savedWorkflow(assessed.server, 'silent', silent)).toBe(201);
     const tomorrow = (Math.floor(assessed.clock.now() / day) + 1) * day;
 
-    const clocks = await until(
+    const clocks = await whenHeld(
       () => assessed.rowsOf('goal_clocks'),
       (held) => Object.values(held).some((row) => row['opens_at'] !== null),
     );

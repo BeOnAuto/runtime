@@ -7,14 +7,14 @@ import {
   sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
 import { someFolder } from '@on.auto/workflow-host';
-import { projectedFolders, type DatabaseSettings, type ProjectedFolders } from '@on.auto/workflow-host/testing';
+import type { DatabaseSettings, ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
-import { expect, onTestFinished, vi } from 'vitest';
 
 import { datasetDetailsOf } from '../capability/prediction-definitions.ts';
 import { datasetFolder, datasetsOf, type DatasetFolding } from '../dataset/dataset-folder.ts';
 import type { DatasetRow } from '../dataset/dataset-rows.ts';
 import { parsePredictionDocument } from '../document/document-parsing.ts';
+import { steppedProjectionOf, type SteppedUntil } from './stepped-projection.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
 
@@ -23,8 +23,6 @@ const sandboxModule = await sandboxModuleIn(sandboxFiles);
 export const alphaKey = 'playbook/acme/alpha/';
 
 const savedAt = '2026-10-06T09:00:00.000Z';
-
-const waiting = { timeout: 25_000, interval: 20 };
 
 const eventsInAnAppend = 1000;
 
@@ -39,6 +37,7 @@ export interface ProjectedDatasets extends ProjectedFolders {
   readonly until: (dataSha256: string, holds: (row: DatasetRow) => boolean) => Promise<DatasetRow>;
   readonly gone: (dataSha256: string) => Promise<void>;
   readonly noted: (count: number) => Promise<ReturnType<ProjectedFolders['notes']>>;
+  readonly steppedUntil: SteppedUntil;
 }
 
 function documentOf(source: string) {
@@ -85,21 +84,28 @@ function definitionsOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'save
   };
 }
 
-function readingOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'datasets' | 'until' | 'gone'> {
+function readingOf(
+  folders: ProjectedFolders,
+  steppedUntil: SteppedUntil,
+): Pick<ProjectedDatasets, 'datasets' | 'until' | 'gone'> {
   const datasets = () => Effect.runPromise(datasetsOf(folders.database, alphaKey));
-  const named = async (dataSha256: string) => (await datasets()).filter((row) => row.dataSha256 === dataSha256);
+  const named = async (dataSha256: string): Promise<readonly DatasetRow[]> =>
+    (await datasets()).filter((row) => row.dataSha256 === dataSha256);
   return {
     datasets,
-    until: (dataSha256, holds) =>
-      vi.waitFor(async () => {
-        const held = (await named(dataSha256)).filter((row) => holds(row));
-        expect(held).toHaveLength(1);
-        return Option.getOrThrow(Option.fromNullishOr(held[0]));
-      }, waiting),
-    gone: (dataSha256) =>
-      vi.waitFor(async () => {
-        expect(await named(dataSha256)).toEqual([]);
-      }, waiting),
+    until: async (dataSha256, holds) => {
+      const held = await steppedUntil(
+        async (): Promise<readonly DatasetRow[]> => (await named(dataSha256)).filter((row) => holds(row)),
+        (rows: readonly DatasetRow[]) => rows.length === 1,
+      );
+      return Option.getOrThrow(Option.fromNullishOr(held[0]));
+    },
+    gone: async (dataSha256) => {
+      await steppedUntil(
+        () => named(dataSha256),
+        (rows: readonly DatasetRow[]) => rows.length === 0,
+      );
+    },
   };
 }
 
@@ -115,17 +121,18 @@ export function testDatasetFolder(folding: Folding = {}): ReturnType<typeof data
 
 export async function projectedDatasets(settings: DatabaseSettings, folding: Folding = {}): Promise<ProjectedDatasets> {
   const folder = testDatasetFolder(folding);
-  const folders = await projectedFolders(settings, [someFolder(folder)]);
-  onTestFinished(folders.close);
+  const { folders, start, steppedUntil } = await steppedProjectionOf(settings, [someFolder(folder)]);
   return {
     ...folders,
     ...definitionsOf(folders),
-    ...readingOf(folders),
+    ...readingOf(folders, steppedUntil),
+    start,
+    steppedUntil,
     noted: (count) =>
-      vi.waitFor(() => {
-        expect(folders.notes().length).toBeGreaterThanOrEqual(count);
-        return folders.notes();
-      }, waiting),
+      steppedUntil(
+        () => Promise.resolve(folders.notes()),
+        (notes) => notes.length >= count,
+      ),
     published: async (events) => {
       const published = events.map((event) => ({ type: 'event_published', data: { event, filled: [] } }));
       const firsts = Array.from(

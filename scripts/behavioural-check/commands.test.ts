@@ -200,7 +200,7 @@ await test('a client that shows tools by name may load some, and is asked again 
     const run: unknown = JSON.parse(readFileSync(join(folder, 'run.json'), 'utf8'));
 
     assert.equal(asked.length, 2);
-    assert.ok(String(asked[0]).includes('This connection acts as Alex Doe (person:user_1) in the org org_1.'));
+    assert.ok(['Alex Doe', 'person:user_1', 'org_1'].every((named) => String(asked[0]).includes(named)));
     assert.ok(String(asked[1]).includes('"description":"The tool get_guide."'));
     assert.partialDeepStrictEqual(rowsIn(parts.record)[0], {
       results: { claude: { J1: { loaded: ['get_guide'], outcome: 'right' } } },

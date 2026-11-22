@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import {
   aLedgerFile,
   anOpenLedger,
-  briefWaits,
   committed,
   exitOf,
   heldUntilLetGo,
+  noWaitForTheLock,
   onAFile,
   places,
   rolledBack,
@@ -16,11 +16,7 @@ import { LedgerNotOpen } from '../secrets/sqlite-ledger-file.ts';
 import { openConnectionWith } from '../testing/open-ledger.ts';
 import type { WebhookReceipt } from './received-webhooks.ts';
 
-const longerThanSQLiteWaitsForItsLock = briefWaits.forTheLock * 4;
-
 const tenMinutes = 600_000;
-
-const longEnoughForAStatementToRun = 100;
 
 function receiptFor(takenFor: string): WebhookReceipt {
   return {
@@ -34,11 +30,15 @@ function receiptFor(takenFor: string): WebhookReceipt {
 
 describe('the webhooks received of a ledger file on SQLite, as they are taken', () => {
   it('take an id while the writer of the ledger holds the file past the time a statement waits for its lock, once it lets go', async () => {
-    const { received, appended } = await anOpenLedger(onAFile);
+    const { received, rows, appended } = await anOpenLedger(onAFile, noWaitForTheLock);
     const letGo = await heldUntilLetGo(appended, committed);
 
-    const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1')));
-    await Effect.runPromise(Effect.sleep(longerThanSQLiteWaitsForItsLock));
+    const settling = { settled: false };
+    const taken = Effect.runPromiseExit(received.taken(receiptFor('onboarding/run-1'))).finally(() => {
+      settling.settled = true;
+    });
+    await Effect.runPromise(rows.read('a secret read behind the take'));
+    expect(settling.settled).toBe(false);
     await letGo();
 
     expect(await taken).toEqual(Exit.succeed('onboarding/run-1'));
@@ -79,15 +79,16 @@ describe.each(places)(
   'the webhooks received of a ledger on SQLite, on $place, taken inside a transaction of the ledger',
   (place) => {
     it('keep an id whose take is started inside a transaction of the ledger, once it ends, though it is rolled back', async () => {
-      const { received, appended } = await anOpenLedger(place);
+      const { received, appended, theNextWriteWaiting } = await anOpenLedger(place);
       const order: string[] = [];
       const take = Promise.withResolvers<Exit.Exit<string>>();
       const settles = Effect.sync(() => order.push('the take settles'));
 
       const transaction = await exitOf(
         appended(async () => {
+          const takeWaits = theNextWriteWaiting();
           take.resolve(Effect.runPromiseExit(Effect.ensuring(received.taken(receiptFor('onboarding/run-1')), settles)));
-          await Effect.runPromise(Effect.sleep(longEnoughForAStatementToRun));
+          await takeWaits;
           await rolledBack();
         }).finally(() => {
           order.push('the transaction ends');

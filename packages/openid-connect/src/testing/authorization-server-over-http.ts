@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { createServer } from 'node:http';
+import { createServer, type Server } from 'node:http';
 
 import type { ConnectionPorts } from '@on.auto/ledger';
 
@@ -15,9 +15,10 @@ import {
   type ProviderRows,
   type SignInPages,
 } from '../authorization-server/authorization-server.ts';
-import { browserAt as browserOf, type Browser } from './browser.ts';
+import { browserAt as browserOf, type Browser, type Fetching } from './browser.ts';
+import { fetchInProcess } from './in-process.ts';
 import { keptSecretsInMemory } from './kept-secrets-in-memory.ts';
-import { authStoreOnAFile } from './store-on-a-file.ts';
+import { authStoreInMemory } from './store-in-memory.ts';
 
 export const issuer = 'https://auto.example.test';
 
@@ -73,6 +74,7 @@ function pagesInto(shown: (page: PageShown) => void): SignInPages {
 
 export interface ServedOverHttp {
   readonly at: string;
+  readonly fetch: Fetching | undefined;
   readonly server: AuthorizationServer;
   readonly connection: ConnectionPorts;
   readonly rows: ProviderRows;
@@ -111,6 +113,7 @@ export interface ServedWith {
   readonly signIn?: InteractionSignIn;
   readonly claimsOf?: AuthorizationServerParts['claimsOf'];
   readonly rowsOver?: (rows: ProviderRows) => ProviderRows;
+  readonly onLoopback?: boolean;
 }
 
 const servedSettings = {
@@ -127,8 +130,9 @@ export async function servedOverHttp({
   signIn = signingIn,
   claimsOf = () => Promise.resolve({ name: 'Ada Lovelace', email: 'ada@example.test' }),
   rowsOver = (rows) => rows,
+  onLoopback = false,
 }: ServedWith = {}): Promise<ServedOverHttp> {
-  const { store, connection, close } = await authStoreOnAFile();
+  const { store, connection, close } = await authStoreInMemory();
   const { providerRows, signingKeyRows } = store;
   const pagesShown: PageShown[] = [];
   const server = authorizationServerOf(servedSettings, {
@@ -149,10 +153,9 @@ export async function servedOverHttp({
     }
     response.end('beside');
   });
-  http.listen(0, '127.0.0.1');
-  await once(http, 'listening');
+  const reached = onLoopback ? await onALoopbackPort(http) : inProcess(http);
   return {
-    at: `http://127.0.0.1:${String(portOf(http.address()))}`,
+    ...reached,
     server,
     connection,
     rows: providerRows,
@@ -164,8 +167,23 @@ export async function servedOverHttp({
   };
 }
 
+interface Reached {
+  readonly at: string;
+  readonly fetch: Fetching | undefined;
+}
+
+function inProcess(http: Server): Reached {
+  return { at: 'http://auth.in-process.test', fetch: fetchInProcess(http) };
+}
+
+async function onALoopbackPort(http: Server): Promise<Reached> {
+  http.listen(0, '127.0.0.1');
+  await once(http, 'listening');
+  return { at: `http://127.0.0.1:${String(portOf(http.address()))}`, fetch: undefined };
+}
+
 export type { Asking, Browser } from './browser.ts';
 
-export function browserAt(at: string): Browser {
-  return browserOf(at, issuer);
+export function browserAt({ at, fetch }: Reached): Browser {
+  return browserOf(at, issuer, fetch);
 }

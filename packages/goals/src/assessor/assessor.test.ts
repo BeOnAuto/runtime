@@ -201,6 +201,25 @@ describe('a run delivered twice, or in pages', () => {
     expect(delivered).toMatchObject({ batches: 4, failed: [] });
     expect(assessor.spent()).toMatchObject({ plans: 1, conditions: { sessions: 1, evaluations: 4 } });
   });
+
+  it.each([
+    [3, 4],
+    [7, 2],
+  ])(
+    'delivers 10 assessments in batches of %i, %i batches, reading its plan once and each condition once an assessment',
+    async (most, batches) => {
+      const { book, ports } = await built();
+      await book.workflowSaved('measure', 2, [{ ...measuring[0], when: '${ $data.customers >= 0 }' }]);
+      const assessor = assessorOf(ports);
+      const tenOf = Array.from({ length: 10 }, () => 0);
+
+      const delivered = await deliveredAll(assessor, finished({ id: 'r1', version: 2, data: results(...tenOf) }), most);
+
+      expect(delivered).toMatchObject({ batches, failed: [] });
+      expect(new Set(delivered.keys).size).toBe(10);
+      expect(assessor.spent()).toMatchObject({ plans: 1, conditions: { sessions: 1, evaluations: 10 } });
+    },
+  );
 });
 
 describe('a run that does not count', () => {

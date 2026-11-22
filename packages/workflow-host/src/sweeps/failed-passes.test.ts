@@ -6,11 +6,14 @@ import type { FollowedOrgs } from '../follower/followed-orgs.ts';
 import { startFollower } from '../follower/follower-loop.ts';
 import type { Upkeep } from '../follower/follower-wake-up.ts';
 import type { PassEnd } from '../follower/record-steps.ts';
-import { systemClock, type HostClock } from '../loop/host-clock.ts';
-import { signals } from '../testing/signals.ts';
+import type { HostClock } from '../loop/host-clock.ts';
+import { fewSweeps, steppedBy, steppedClock, type SteppedClock, type SteppedSweeps } from '../testing/stepped-clock.ts';
 import { orgSweepsOn } from './org-sweeps.ts';
 
 const alpha = 'playbook/acme/alpha/';
+
+/** The wait the follower takes after a round that failed, as the rounds of these tests answer. */
+const aRoundAfterAFailure = 60_000;
 
 const beta = 'playbook/globex/beta/';
 
@@ -53,21 +56,24 @@ interface Followed {
   readonly upkeeps: () => number;
   readonly troubles: () => readonly string[];
   readonly stop: () => Promise<void>;
+  /** Steps the follower's clock a sweep at a time, from its rest. */
+  readonly swept: SteppedSweeps;
+  readonly time: SteppedClock;
 }
 
-/** Each wait the follower of a test asks for: it has rested from its round, so what a test waits on is read again. */
-const rested = signals();
-
-function recordingWaits(sweeps: () => number): { readonly pace: HostClock; readonly waits: () => readonly Wait[] } {
+function recordingWaits(
+  time: SteppedClock,
+  sweeps: () => number,
+): { readonly pace: HostClock; readonly waits: () => readonly Wait[] } {
   const waits: Wait[] = [];
   return {
     pace: {
-      now: systemClock.now,
-      sleep: (milliseconds) => {
-        waits.push({ milliseconds, sweptBefore: sweeps() });
-        rested.changed();
-        return systemClock.sleep(milliseconds);
-      },
+      now: time.now,
+      sleep: (milliseconds) =>
+        Effect.suspend(() => {
+          waits.push({ milliseconds, sweptBefore: sweeps() });
+          return time.sleep(milliseconds);
+        }),
     },
     waits: () => [...waits],
   };
@@ -77,7 +83,8 @@ function followed(following: Following): Followed {
   const { streams, sweepEveryMs, pass, upkeepFailing = () => false, orgSeen = () => Effect.void } = following;
   const counts = { reads: 0, upkeeps: 0 };
   const troubles: string[] = [];
-  const recording = recordingWaits(() => counts.reads - 1);
+  const time = steppedClock(Date.parse('2026-10-05T09:00:00.000Z'));
+  const recording = recordingWaits(time, () => counts.reads - 1);
   const store = {
     readAppended: (): Promise<AppendedStreams> => {
       counts.reads += 1;
@@ -97,11 +104,12 @@ function followed(following: Following): Followed {
     upkeep: { sweep: upkeep, ...nothingDue },
     appended: streamSignalOf(),
     holds: { heldAt: noOrgs.heldAt, parkedForDelivery: noOrgs.parkedForDelivery, failed: () => Effect.void },
-    rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
-    clock: systemClock,
+    rounds: { failed: () => Effect.succeed(aRoundAfterAFailure), succeeded: () => Effect.void },
+    clock: time,
     pace: recording.pace,
     sweepEveryMs,
     trouble: (what) => Effect.sync(() => troubles.push(what)),
+    context: time.watching(),
   });
   onTestFinished(() => follower.stop());
   return {
@@ -110,6 +118,8 @@ function followed(following: Following): Followed {
     upkeeps: () => counts.upkeeps,
     troubles: () => troubles,
     stop: follower.stop,
+    swept: steppedBy(time, sweepEveryMs),
+    time,
   };
 }
 
@@ -137,10 +147,11 @@ function passesFailingFirstFor(failing: string, passed: (playbookKey: string) =>
   return failingOnceFor(failing, passesRecorded(passed));
 }
 
-function passedReaching(passes: readonly string[], count: number) {
-  return rested.when(
+function passedReaching(watched: Followed, passes: readonly string[], count: number) {
+  return watched.swept.until(
     (): readonly string[] => [...passes],
     (playbooks) => playbooks.length >= count,
+    fewSweeps,
   );
 }
 
@@ -155,7 +166,7 @@ describe('a sweep in which the pass over an org fails', () => {
       }),
     });
 
-    const passed = await passedReaching(passes, 2);
+    const passed = await passedReaching(watched, passes, 2);
 
     expect(passed).toEqual(['globex', 'acme']);
     expect(watched.troubles()).toEqual(["A pass over an org's records failed; the next sweep passes the org again"]);
@@ -172,7 +183,12 @@ describe('a sweep in which the pass over an org fails', () => {
       upkeepFailing: (sweep) => sweep === 2,
     });
 
-    const passed = await passedReaching(passes, 1);
+    await watched.swept.until(watched.troubles, (said) => said.length === 2, fewSweeps);
+    const passed = await steppedBy(watched.time, aRoundAfterAFailure).until(
+      (): readonly string[] => [...passes],
+      (playbooks) => playbooks.length > 0,
+      { atMost: 1 },
+    );
 
     expect(passed).toEqual(['acme']);
     expect(watched.troubles()).toEqual([
@@ -194,7 +210,7 @@ describe('a sweep in which following an org it finds fails', () => {
       orgSeen: failingOnceFor('acme', () => Effect.void),
     });
 
-    const passed = await passedReaching(passes, 2);
+    const passed = await passedReaching(watched, passes, 2);
 
     expect(passed).toEqual(['globex', 'acme']);
     expect(watched.troubles()).toEqual(["A pass over an org's records failed; the next sweep passes the org again"]);
@@ -210,7 +226,11 @@ describe('a sweep in which more orgs fail than it has room for', () => {
       pass: () => Effect.die(new Error('The ledger could not be read')),
     });
 
-    const waits = await rested.when(watched.waits, (asked) => asked.some(({ milliseconds }) => milliseconds > 0));
+    const waits = await watched.swept.until(
+      watched.waits,
+      (asked) => asked.some(({ milliseconds }) => milliseconds > 0),
+      fewSweeps,
+    );
     const firstWait = waits.find(({ milliseconds }) => milliseconds > 0);
 
     expect(firstWait?.sweptBefore).toBeLessThanOrEqual(2);

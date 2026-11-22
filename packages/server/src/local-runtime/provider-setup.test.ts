@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { request } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { providerSetupFor, restartWordsFor } from './local-control.ts';
 
@@ -26,7 +26,7 @@ beforeEach(async () => {
       LEDGER_FILE: ledger.fileName,
       ...noConsentThroughAuto,
     },
-    { ...compositionRootWithoutGoals, localServingIn: () => ({ providerSetup: setup }) },
+    { ...testComposition({ goals: false }), localServingIn: () => ({ providerSetup: setup }) },
   );
 });
 

@@ -3,6 +3,7 @@ export { admissionWaitsOf, type AdmissionWait, type StepRefusal } from './presen
 export type { RunDefinition, DefinitionRunRequest, DefinitionRunResult } from './calls/function-run.ts';
 export { definitionRunResultOf } from './calls/function-results.ts';
 export { defineSendRunEvent } from './events/send-run-event.ts';
+export { defineListQueuedStarts } from './runs/queued-starts.ts';
 export { guideVariablesOf } from './capability/guide-variables.ts';
 export { makeWorkflowAdapter, workflowFacts, type WorkflowAdapterDependencies } from './capability/workflow.ts';
 export type { WorkflowDefinitionDocument } from './document/workflow-document.ts';

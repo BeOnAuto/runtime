@@ -8,6 +8,7 @@ import {
   connectedByConsent,
   consentClientAt,
   consentClientWith,
+  everyHost,
   forConsentInProcess,
   inProcessFetch,
   memoryRegistrations,
@@ -149,5 +150,20 @@ describe('a challenge whose address answers with an error', () => {
       fake.url,
       fake.url,
     ]);
+  });
+});
+
+describe('the client credentials the authorization server of a server given by hand takes', () => {
+  it.each([
+    ['lists the client_credentials grant', ['client_credentials', 'authorization_code'], true],
+    ['lists other grants alone', ['authorization_code', 'refresh_token'], false],
+    ['lists none, which RFC 8414 reads as the code and implicit grants alone', null, false],
+  ] as const)('are taken only where its metadata %s', async (_case, grantTypes, takesClientCredentials) => {
+    const fake = served({ dynamicRegistration: true, grantTypes });
+
+    expect(await Effect.runPromise(consentClientWith().namedWay({ url: fake.url, reaches: everyHost }))).toMatchObject({
+      issuer: fake.origin,
+      takesClientCredentials,
+    });
   });
 });

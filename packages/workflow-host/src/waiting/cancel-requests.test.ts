@@ -14,8 +14,9 @@ import {
   recordedWith,
 } from '../reaction-testing/playbook-writes.ts';
 import { definitionKeyOfTheTests, runAt, startOf, testMachine, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, onSQLite, openedOn } from '../testing/host-files.ts';
-import { hostedOn } from '../testing/host-runs.ts';
+import { aLedgerInMemory, onSQLite, openedOn } from '../testing/host-files.ts';
+import { hostedOn, hostedStartsAt } from '../testing/host-runs.ts';
+import { fewSweeps, steppedClock } from '../testing/stepped-clock.ts';
 import { followedHost, followedThroughTheLatest, settledIn } from '../waiting-testing/followed-host.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { resumedWith } from '../waiting-testing/resumed-cancels.ts';
@@ -170,7 +171,7 @@ describe('a cancel request on a run of another capability', () => {
       context: runOf('interaction'),
       lineage: { causationId: null, correlationId: 'root-1' },
     });
-    const handed = await hosted.whenRead(waiting.deferredCancels, (cancels) => cancels.length > 0);
+    const handed = await hosted.sweeps.until(waiting.deferredCancels, (cancels) => cancels.length > 0, fewSweeps);
 
     expect(handed).toEqual([
       {
@@ -293,18 +294,26 @@ describe('the read of the cancels the follower passed over', () => {
 
 describe('a host that died after it marked a call waiting and before it read the ending of the call’s run', () => {
   it('leaves the answer to the first resume of the next host, which reads the ending the follower passed over', async () => {
-    const settings = { store: 'sqlite', file: aSQLiteFile() } as const;
+    const settings = await aLedgerInMemory();
     const database = await openedOn(settings);
     await playbookCreated(database.store, 'alpha');
-    const first = await hostedOn(settings, { answer: () => Effect.never });
+    const firstClock = steppedClock(hostedStartsAt);
+    const first = await hostedOn(settings, {
+      clock: firstClock,
+      answer: () => Effect.andThen(firstClock.hold().wait, Effect.never),
+    });
     first.know(parentId);
     await Effect.runPromise(first.host.start(runAt(parentId), startOf(asking)));
     await recorded(database.store, await childStarted(database.store, child), ending, ofTheChild);
     await followedThroughTheLatest(database, first);
     await first.host.stop();
-    await Effect.runPromise(waitingRow(database, key, { child, at: Date.now() }));
+    await Effect.runPromise(waitingRow(database, key, { child, at: firstClock.now() }));
 
-    const second = await hostedOn(settings, { answer: () => Effect.never });
+    const secondClock = steppedClock(hostedStartsAt);
+    const second = await hostedOn(settings, {
+      clock: secondClock,
+      answer: () => Effect.andThen(secondClock.hold().wait, Effect.never),
+    });
     second.know(parentId);
     const settlement = await settledIn(second)(parentId);
 
@@ -316,7 +325,7 @@ describe('a host that died after it marked a call waiting and before it read the
 describe('the run a call waits for', () => {
   it('is the one its functions derive from the call, and none when they derive none', async () => {
     const { options } = recordedWaiting();
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const derived = executorWaitingOf(database, testMachine, options);
     const underived = executorWaitingOf(database, withoutChildren, options, 5);
 
@@ -330,7 +339,7 @@ describe('the run a call waits for', () => {
 
   it('is cancelled under the definition its functions say the call called, and not where they say none', async () => {
     const { options, cancels } = recordedWaiting();
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const waitedFor = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-0000000000c1' };
     const cancelledOn = (machine: typeof testMachine) =>
       executorWaitingOf(database, machine, options).cancelChild({
@@ -352,7 +361,7 @@ describe('the run a call waits for', () => {
 describe('the answer of a run a call waits for', () => {
   it('is the ending of that run when it names the call, and none while it runs or names no call', async () => {
     const { options } = recordedWaiting();
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const { childAnswerOf } = executorWaitingOf(database, testMachine, options);
     const ofTheChildWaitingParts = {
       by: 'playbook:alpha',

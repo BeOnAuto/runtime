@@ -4,6 +4,17 @@ export interface Asking {
   readonly body?: string;
 }
 
+interface Sending {
+  readonly redirect: 'manual';
+  readonly method: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body?: string;
+}
+
+export type Fetching = (address: string, sending: Sending) => Promise<Response>;
+
+const overTheNetwork: Fetching = (address, sending) => fetch(address, sending);
+
 export interface Browser {
   readonly cookies: ReadonlyMap<string, string>;
   readonly setCookies: readonly string[];
@@ -23,7 +34,7 @@ function cookiesSetBy(answer: Readonly<Response>): readonly (readonly [string, s
   });
 }
 
-export function browserAt(at: string, publicUrl: string): Browser {
+export function browserAt(at: string, publicUrl: string, fetching: Fetching = overTheNetwork): Browser {
   const cookies = new Map<string, string>();
   const setCookies: string[] = [];
   return {
@@ -35,7 +46,7 @@ export function browserAt(at: string, publicUrl: string): Browser {
     at: async (address, { method = 'GET', headers = {}, body } = {}) => {
       const local = `${at}${address.startsWith(publicUrl) ? address.slice(publicUrl.length) : address}`;
       const sent = { ...headers, cookie: cookieHeaderOf(cookies) };
-      const answer = await fetch(local, {
+      const answer = await fetching(local, {
         redirect: 'manual',
         method,
         headers: sent,

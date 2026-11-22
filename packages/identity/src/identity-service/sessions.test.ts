@@ -216,7 +216,7 @@ describe('a session the runtime refuses, saying why', () => {
 
   it('is refused when another key signed it', async () => {
     const { identityService } = await signedTokens(fakeIssuer('https://login.example'), atStart);
-    const other = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const other = await signedTokens(fakeIssuer('https://login.example', { keys: 'its own' }), atStart);
 
     expect(await identityService.personOf(await other.session(defaultStudioOrigin), '', defaultStudioOrigin)).toEqual({
       because: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',

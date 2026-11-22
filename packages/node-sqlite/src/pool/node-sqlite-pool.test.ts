@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { DumboError, JSONSerializer, SQL, type SQLExecutor } from '@event-driven-io/dumbo';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { settled } from '../testing/clients.ts';
 import { aDatabaseFile, aTemporaryFolder } from '../testing/temporary-files.ts';
@@ -154,13 +154,50 @@ describe('a pool of node:sqlite on a file, as it writes', () => {
   });
 });
 
+describe('the writes of a pool of node:sqlite that wait for its one writer', () => {
+  it.each([
+    ['on a file', () => aDatabaseFile()],
+    ['in memory', () => ':memory:'],
+  ])('are told of as each begins to wait, and not before, %s', async (_, fileName: () => string) => {
+    const waits = Promise.withResolvers<void>();
+    const told = { times: 0 };
+    const pool = await aPool({
+      fileName: fileName(),
+      onWaitingForTheWriter: () => {
+        told.times += 1;
+        waits.resolve();
+      },
+    });
+    const toldBeforeAnyWait = told.times;
+    const held = aTransactionHeldOpen(pool);
+    await held.inside;
+    const settling = { settled: false };
+
+    const late = pool.execute.command(SQL`INSERT INTO notes VALUES ('late')`).finally(() => {
+      settling.settled = true;
+    });
+    await waits.promise;
+    const settledAsItWaited = settling.settled;
+    await held.letGo();
+    await late;
+
+    expect([toldBeforeAnyWait, told.times, settledAsItWaited]).toEqual([0, 1, false]);
+  });
+});
+
 describe('the bounds of the one writer of a pool of node:sqlite', () => {
   it('refuse a write that did not start within the longest wait, in today’s words', async () => {
     const pool = await aPool({ fileName: aDatabaseFile(), maxTaskIdleTime: 20 });
     const held = aTransactionHeldOpen(pool);
     await held.inside;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
 
-    const refusal = await settled(pool.execute.command(SQL`INSERT INTO notes VALUES ('late')`));
+    const late = settled(pool.execute.command(SQL`INSERT INTO notes VALUES ('late')`));
+    await vi.advanceTimersByTimeAsync(20);
+    const refusal = await late;
     await held.letGo();
 
     expect(refusal).toEqual({ status: 'rejected', reason: new DumboError(notStartedInTime) });

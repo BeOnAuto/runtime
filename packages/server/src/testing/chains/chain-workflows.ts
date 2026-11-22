@@ -1,11 +1,10 @@
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import { workflowSource } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { steppedServerClock, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import type { Opened } from './chain-ledger.ts';
 
 const opsKey = createApiKey({ id: 'ops-key', org: 'acme', permissions: allPermissions, playbooks: '*' });
@@ -113,7 +112,7 @@ export function countOf(labels: Labels, label: string): number {
   return [...labels.values()].filter((one) => one === label).length;
 }
 
-function serving(opened: Opened, clock: MovedClock, environment: Readonly<Record<string, string>> = {}) {
+function serving(opened: Opened, clock: SteppedServerClock, environment: Readonly<Record<string, string>> = {}) {
   return servingReasoning([], { ...opened.environment, ...environment }, undefined, { clock, ledger: opened.ledger });
 }
 
@@ -139,7 +138,8 @@ async function labelsOf(server: ReasoningServer, runs: readonly ListedRun[], key
 
 interface Settling {
   readonly key?: string;
-  readonly whenRead?: (runs: readonly ListedRun[]) => void;
+  /** Moves the time on by its sweeps, or a minute at a time for what falls due on a schedule. */
+  readonly everyMs?: number;
 }
 
 interface Seen {
@@ -147,23 +147,23 @@ interface Seen {
   readonly labels: Labels;
 }
 
-function startedIn(runs: readonly ListedRun[]): number {
-  return runs.filter(({ status }) => status === 'started').length;
-}
+const mostSweepsOfAChain = { atMost: 40 };
 
 async function settledLabels(
   server: ReasoningServer,
+  clock: SteppedServerClock,
   holds: (seen: Seen) => boolean,
   settling: Settling = {},
 ): Promise<Labels> {
-  const seen = await until(
+  const stepped = settling.everyMs === undefined ? clock.swept : clock.steppedEvery(settling.everyMs);
+  const seen = await stepped.until(
     async (): Promise<Seen> => {
       const runs = await listedRuns(server, settling.key);
-      settling.whenRead?.(runs);
       const ended = runs.filter(({ status }) => status !== 'started');
       return { runs, labels: await labelsOf(server, ended, settling.key) };
     },
     (read) => read.labels.size === read.runs.length && holds(read),
+    mostSweepsOfAChain,
   );
   return seen.labels;
 }
@@ -189,30 +189,20 @@ function startedBy(server: ReasoningServer, label: string, key?: string) {
   ]);
 }
 
-function movedUntilAnInterval(clock: MovedClock): (runs: readonly ListedRun[]) => void {
-  return (runs) => {
-    const intervals = runs.filter(({ name }) => name === 'pulse').length;
-    if (startedIn(runs) + intervals === 0) {
-      clock.moveTo(clock.now() + aMinuteAndASecond);
-    }
-  };
-}
-
 export async function byAPersonAndASchedule(opened: Opened): Promise<Labelled> {
-  const clock = movedClock(Date.now());
+  const clock = steppedServerClock();
   const server = await serving(opened, clock);
   try {
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await definedIn(server);
     await startedBy(server, 'person');
-    await settledLabels(server, ({ labels }) => countOf(labels, 'person') >= expectedRuns.person);
+    await settledLabels(server, clock, ({ labels }) => countOf(labels, 'person') >= expectedRuns.person);
     const labels = await settledLabels(
       server,
+      clock,
       ({ runs, labels: found }) =>
         runs.some(({ name }) => name === 'pulse') && countOf(found, 'schedule') >= expectedRuns.schedule,
-      {
-        whenRead: movedUntilAnInterval(clock),
-      },
+      { everyMs: aMinuteAndASecond },
     );
     return { labels, at: clock.now() };
   } finally {
@@ -221,11 +211,14 @@ export async function byAPersonAndASchedule(opened: Opened): Promise<Labelled> {
 }
 
 export async function byAKey(opened: Opened, at: number): Promise<Labels> {
-  const server = await serving(opened, movedClock(at), { API_KEYS: JSON.stringify([opsKey.entry]) });
+  const clock = steppedServerClock(at);
+  const server = await serving(opened, clock, { API_KEYS: JSON.stringify([opsKey.entry]) });
   const { key } = opsKey;
   try {
     await startedBy(server, 'machine', key);
-    return await settledLabels(server, ({ labels }) => countOf(labels, 'machine') >= expectedRuns.machine, { key });
+    return await settledLabels(server, clock, ({ labels }) => countOf(labels, 'machine') >= expectedRuns.machine, {
+      key,
+    });
   } finally {
     await server.stop();
   }

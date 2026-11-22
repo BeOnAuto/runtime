@@ -122,14 +122,14 @@ describe('whether the goals read says the engine judges the goals', () => {
 describe('the goal change', () => {
   const fact = { id: 'fact-1', type: 'goal_created', context: { at: '2026-10-05T09:00:00.000Z', by: 'x' } };
 
-  it('is named, with no fields, for a goal saved, agreed or removed or evidence refused, where goals are kept', () => {
+  it('is named, with no fields, for a goal saved, agreed, removed or moved or evidence refused, where goals are kept', () => {
     const catalog = changeCatalogOf(goalChangeNamings(true));
 
     expect(
-      ['goal_created', 'goal_updated', 'goal_reordered', 'goal_agreed', 'goal_removed'].flatMap((type) =>
+      ['goal_created', 'goal_updated', 'goal_reordered', 'goal_agreed', 'goal_removed', 'goal_moved'].flatMap((type) =>
         catalog.changesOf({ ...fact, type, stream: 'goals/goal' }),
       ),
-    ).toEqual(Array.from({ length: 5 }, () => ({ kind: 'goal' })));
+    ).toEqual(Array.from({ length: 6 }, () => ({ kind: 'goal' })));
     expect(catalog.changesOf({ ...fact, type: 'playbook_goals_saved', stream: 'goals/playbook' })).toEqual([]);
     expect(catalog.changesOf({ ...fact, type: 'goal_observation_refused', stream: 'goal-refusals' })).toEqual([
       { kind: 'goal' },

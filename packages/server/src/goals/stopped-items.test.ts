@@ -107,5 +107,5 @@ describe('runs started by hand on a Node server', () => {
       stopped: { reason: noShot },
       measurement: { value: 0, final: true },
     });
-  }, 60_000);
+  });
 });

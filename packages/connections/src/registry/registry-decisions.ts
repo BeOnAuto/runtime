@@ -2,7 +2,7 @@ import { Conflict, type Context, type Rejection } from '@on.auto/operations';
 import { Option, Result } from 'effect';
 
 import type {
-  AppCredentialRefusal,
+  CommandDecidedApart,
   CommandMetadata,
   ConnectionAddition,
   ConnectionApproval,
@@ -77,6 +77,8 @@ function addedData({
   entry,
   document,
   credential,
+  ways,
+  account_type: accountType,
   says,
   events,
   added_by: addedBy,
@@ -90,6 +92,8 @@ function addedData({
     entry,
     ...(document === undefined ? {} : { document }),
     credential,
+    ...(ways === undefined ? {} : { ways }),
+    ...(accountType === undefined ? {} : { account_type: accountType }),
     says,
     ...(events === undefined ? {} : { events }),
     added_by: addedBy,
@@ -268,10 +272,9 @@ function decidedThroughTheLink(command: ThroughTheLink, registry: Registry): Dec
   return command.type === 'start' ? decideStart(command, registry) : decideFinish(command, registry);
 }
 
-function decidedWithoutSigning(
-  command: Exclude<CommandWithoutSigning, AppCredentialRefusal & CommandMetadata>,
-  registry: Registry,
-): Decision {
+type DecidedApart = CommandDecidedApart & CommandMetadata;
+
+function decidedWithoutSigning(command: Exclude<CommandWithoutSigning, DecidedApart>, registry: Registry): Decision {
   if (isThroughTheLink(command)) {
     return decidedThroughTheLink(command, registry);
   }
@@ -290,7 +293,7 @@ function decidedWithoutSigning(
   return command.type === 'break' ? decideBreaking(command, registry) : decideRemoval(command, registry);
 }
 
-type CommandOfTheRegistry = Exclude<ConnectionCommand, AppCredentialRefusal & CommandMetadata>;
+type CommandOfTheRegistry = Exclude<ConnectionCommand, DecidedApart>;
 
 export function decideOnRegistry(command: CommandOfTheRegistry, registry: Registry): Decision {
   return isSigning(command) ? decideOnSigning(command, registry) : decidedWithoutSigning(command, registry);

@@ -108,6 +108,7 @@ jobs:
             services: false
           - packages:
               - access-control
+              - chat
               - computation
               - config
               - connections

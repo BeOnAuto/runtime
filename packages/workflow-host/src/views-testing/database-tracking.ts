@@ -8,7 +8,6 @@ export interface DatabaseTracking {
   readonly busy: () => number;
   readonly changed: Signals['changed'];
   readonly when: Signals['when'];
-  readonly whenRead: Signals['whenRead'];
 }
 
 export function databaseTracking(): DatabaseTracking {

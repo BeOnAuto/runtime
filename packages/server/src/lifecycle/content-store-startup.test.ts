@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { unreachableDatabase } from '@on.auto/ledger/testing';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { startServer } from './lifecycle.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
@@ -38,7 +38,7 @@ function withCredentials(entries: Readonly<Record<string, string | undefined>>):
 }
 
 function failureToStart(environment: Readonly<Record<string, string>>): Promise<unknown> {
-  return startServer(environment, compositionRoot).catch((error: unknown) => error);
+  return startServer(environment, testComposition()).catch((error: unknown) => error);
 }
 
 describe('a content store whose bucket cannot be reached', () => {

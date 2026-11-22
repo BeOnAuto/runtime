@@ -1,0 +1,50 @@
+import { entryServing } from './connection-entry.ts';
+import type { AccountTypeSet, PlaybooksSet, RecordedConnectionEvent, WayChosen } from './connection-events.ts';
+import { scopesSaid, type RecordedConnection } from './connection.ts';
+
+export type Setting = PlaybooksSet | AccountTypeSet | WayChosen;
+
+const typesOfSettings: ReadonlySet<string> = new Set([
+  'connection_playbooks_set',
+  'connection_account_type_set',
+  'connection_way_chosen',
+]);
+
+interface Settable {
+  readonly connection: RecordedConnection;
+  readonly consent: unknown;
+  readonly clientSecretId: string | undefined;
+  readonly nextClient: unknown;
+}
+
+export function isASetting(event: RecordedConnectionEvent): event is Setting {
+  return typesOfSettings.has(event.type);
+}
+
+function wayChosenAfter<Kept extends Settable>(kept: Kept, { data }: WayChosen): Kept {
+  const { credential, account_type: accountType, says } = data;
+  return {
+    ...kept,
+    connection: {
+      ...kept.connection,
+      credential,
+      account_type: accountType ?? null,
+      asked_scopes: scopesSaid(credential.scope, says),
+    },
+    consent: undefined,
+    clientSecretId: undefined,
+    nextClient: undefined,
+  };
+}
+
+function connectionSet(connection: RecordedConnection, setting: PlaybooksSet | AccountTypeSet): RecordedConnection {
+  return setting.type === 'connection_playbooks_set'
+    ? { ...connection, entry: entryServing(connection.entry, setting.data.playbooks) }
+    : { ...connection, account_type: setting.data.account_type };
+}
+
+export function settingAfter<Kept extends Settable>(kept: Kept, setting: Setting): Kept {
+  return setting.type === 'connection_way_chosen'
+    ? wayChosenAfter(kept, setting)
+    : { ...kept, connection: connectionSet(kept.connection, setting) };
+}

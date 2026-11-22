@@ -3,25 +3,38 @@ import { authenticatorFor } from '@on.auto/identity';
 import {
   type AccessDecision,
   type AccessRequest,
+  busyRefusal,
+  type CallAsked,
   CallPermission,
   callPermissionDecidedBy,
   defineCommand,
   defineQuery,
+  deniedFor,
   DirectoryListing,
   makeCatalog,
   makeDispatcher,
   OperationsServed,
   type PolicyDecisionPoint,
+  undecidedMessage,
 } from '@on.auto/operations';
-import { Context, Effect, Schema } from 'effect';
+import { capturedLogs } from '@on.auto/operations/testing';
+import { Context, Effect, Logger, Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { guideShelfOf, mcpRoutes } from '../index.ts';
 import { requestBodyLimit } from '../operations/request-body.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
-import { listenInProcess, type Listening } from '../testing/listening.ts';
-import { type McpConnection, plainTextIn, problemIn, type ToolResult, withMcpSession } from '../testing/mcp-clients.ts';
-import { jsonOf, postMcp } from '../testing/mcp-requests.ts';
+import { fetchInProcess, listenInProcess, type Listening } from '../testing/listening.ts';
+import {
+  connectMcp,
+  type McpConnection,
+  plainTextIn,
+  problemIn,
+  type ToolResult,
+  toolResultOf,
+  withMcpSession,
+} from '../testing/mcp-clients.ts';
+import { initializeAt, jsonOf, messagesIn, postMcp, requestOf, type RawAnswer } from '../testing/mcp-requests.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import {
   acmeAdmin,
@@ -172,7 +185,10 @@ function listedOn(path: string): Promise<readonly string[]> {
 }
 
 const clients = {
-  'ada-agent': { secret: 'a-secret-only-ada-holds', claims: { sub: 'ada', name: 'Ada Lovelace', org_id: 'acme' } },
+  'ada-agent': {
+    secret: 'a-secret-only-ada-holds',
+    claims: { sub: 'ada', name: 'Ada Lovelace', org_id: 'acme', org_name: 'Initech' },
+  },
 };
 
 const opened: OnLoopback<unknown>[] = [];
@@ -487,6 +503,27 @@ describe('mcp boundary', () => {
     });
   });
 
+  describe('the instructions of the org endpoint', () => {
+    it('give the address of a playbook endpoint with the id of the org the key belongs to, which serves that playbook', async () => {
+      const instructions = await withMcpSession(
+        'current revision',
+        endpoint('/orgs/acme/mcp', acmeReader.key),
+        (session) => Promise.resolve(String(session.instructions)),
+      );
+      const address = '/orgs/acme/playbooks/{playbook}/mcp';
+
+      const served = await withMcpSession(
+        'current revision',
+        endpoint(address.replace('{playbook}', 'alpha'), acmeReader.key),
+        async (session) => toolNamesIn(await session.listTools()),
+      );
+
+      expect(instructions).toContain(address);
+      expect(instructions).not.toContain('{org}');
+      expect(served).toContain('list_notes');
+    });
+  });
+
   describe('a command a read-only key is not offered', () => {
     it('is answered as a tool the endpoint does not list', async () => {
       await expect(
@@ -596,13 +633,306 @@ describe('mcp call permission', () => {
   });
 });
 
+const decodeAnswer = Schema.decodeUnknownSync(Schema.Struct({ result: Schema.Unknown }));
+
+function resultIn(message: unknown): unknown {
+  return decodeAnswer(message).result;
+}
+
+const undecidedScopes = new Set<string>();
+
+function undecidedFor(scopes: readonly string[]): void {
+  for (const scope of scopes) {
+    undecidedScopes.add(scope);
+  }
+}
+
+function decidedUnlessUndecided(each: readonly CallAsked[]) {
+  return each.some(({ operation }) => undecidedScopes.has(operation.scope))
+    ? Effect.fail(busyRefusal('nothing was done', 2))
+    : Effect.succeed(each.map(() => true));
+}
+
+const busyProblem = {
+  type: 'https://on.auto/problems/busy',
+  status: 503,
+  reason: 'unavailable',
+  kind: 'busy',
+  retry_after: 2,
+};
+
+const askedWhileUndecided: ReadonlyArray<readonly [string, string]> = [
+  ['initialize', initializeAt('2025-11-25')],
+  ['tools/list', requestOf(2, 'tools/list')],
+  ['prompts/list', requestOf(2, 'prompts/list')],
+  ['prompts/get', requestOf(2, 'prompts/get', { name: 'start' })],
+  ['resources/list', requestOf(2, 'resources/list')],
+  ['a tool it does not have', requestOf(2, 'tools/call', { name: 'no_such_tool', arguments: {} })],
+];
+
+const undecidedEndpoints: ReadonlyArray<readonly [string, readonly string[], string, object]> = [
+  ['/mcp', ['org', 'playbook'], 'list_labels', {}],
+  ['/mcp', ['playbook'], 'list_notes', { arguments: { playbook: 'alpha' } }],
+  ['/orgs/acme/mcp', ['org'], 'list_labels', { arguments: {} }],
+  ['/orgs/acme/playbooks/alpha/mcp', ['playbook'], 'list_notes', {}],
+];
+
+const underTheRevision = { ...asAdmin, 'mcp-protocol-version': '2025-11-25' };
+
+describe('an MCP endpoint whose listing is not decided in time', () => {
+  beforeAll(async () => {
+    server = await operationServer({ callContext: () => Context.make(CallPermission, decidedUnlessUndecided) });
+  });
+
+  afterEach(() => {
+    undecidedScopes.clear();
+  });
+
+  afterAll(async () => {
+    await server.runtime.dispose();
+  });
+
+  describe.each(undecidedEndpoints)('at %s, undecided for %j', (path, scopes, tool, input) => {
+    it.each(askedWhileUndecided)('answers %s as busy, with the wait, never as missing', async (_asked, body) => {
+      undecidedFor(scopes);
+
+      const answer = await postMcp(server.handler, path, underTheRevision, body);
+
+      expect(messagesIn(answer)).toMatchObject([{ error: { code: -32_000, message: anyWords, data: busyProblem } }]);
+    });
+
+    it('answers a call of a tool it may list with an isError result whose problem is busy', async () => {
+      undecidedFor(scopes);
+
+      const answer = await postMcp(
+        server.handler,
+        path,
+        underTheRevision,
+        requestOf(2, 'tools/call', { name: tool, ...input }),
+      );
+      const results = messagesIn(answer).map((message) => toolResultOf(resultIn(message)));
+
+      expect(results.map(({ isError }) => isError)).toEqual([true]);
+      expect(results.map((result) => problemIn(result))).toMatchObject([busyProblem]);
+    });
+
+    it('lists every tool again once the listing is decided in time', async () => {
+      const answer = await postMcp(server.handler, path, underTheRevision, requestOf(2, 'tools/list'));
+
+      expect(messagesIn(answer).flatMap((message) => toolNamesIn(resultIn(message)))).toContain(tool);
+    });
+  });
+});
+
+interface Heard {
+  readonly status: number;
+  readonly message: unknown;
+}
+
+function heardIn(answer: RawAnswer): Heard {
+  const [message] = messagesIn(answer);
+  return { status: answer.status, message };
+}
+
+/** What a client of 2026-07-28 hears as it connects: its `server/discover`, since it has no `initialize`. */
+async function discoveryHeardOn(path: string): Promise<readonly Heard[]> {
+  const heard: Heard[] = [];
+  const recorded = async (...posted: readonly [unknown, unknown?]): Promise<Response> => {
+    const answer = await fetchInProcess(...posted);
+    heard.push(heardIn({ status: answer.status, headers: answer.headers, text: await answer.clone().text() }));
+    return answer;
+  };
+  await expect(connectMcp('current revision', { ...endpoint(path, acmeAdmin.key), fetch: recorded })).rejects.toThrow(
+    Error,
+  );
+  return heard;
+}
+
+describe('an MCP endpoint whose listing is busy, to a client of 2026-07-28', () => {
+  beforeAll(async () => {
+    server = await operationServer({ callContext: () => Context.make(CallPermission, decidedUnlessUndecided) });
+    listening = listenInProcess(server.handler);
+  });
+
+  afterEach(() => {
+    undecidedScopes.clear();
+  });
+
+  afterAll(async () => {
+    await listening.close();
+    await server.runtime.dispose();
+  });
+
+  it('refuses its connection as busy, as every other request, so it never connects without instructions', async () => {
+    undecidedFor(['org', 'playbook']);
+
+    expect(await discoveryHeardOn('/mcp')).toMatchObject([
+      { status: 200, message: { error: { code: -32_000, data: busyProblem } } },
+    ]);
+  });
+});
+
+const callsRun = { count: 0 };
+
+const counting = {
+  title: 'Count',
+  description: 'Counts one call. Use it to count the calls that ran. It answers the count.',
+  inputSchema: takesNothing,
+  outputSchema: Schema.Struct({ counted: Schema.Number }),
+  reasons: [],
+  handle: () =>
+    Effect.sync(() => {
+      callsRun.count += 1;
+      return { counted: callsRun.count };
+    }),
+  plainLanguage: { task: 'count a call', attempt: () => 'count the call', outcome: () => 'Counted.' },
+};
+
+const countInTheOrg = defineCommand('org', {
+  ...counting,
+  name: 'count_in_the_org',
+  route: { method: 'POST', path: '/counted' },
+});
+
+const countInAPlaybook = defineCommand('playbook', {
+  ...counting,
+  name: 'count_in_a_playbook',
+  route: { method: 'POST', path: '/counted' },
+});
+
+const undecidedByTheTest = deniedFor(['the roles could not be read']);
+
+const failingOutright: PolicyDecisionPoint = {
+  decide: () => Effect.succeed(undecidedByTheTest),
+  decideBatch: (requests) => Effect.succeed(requests.map(() => undecidedByTheTest)),
+};
+
+const failedLogs = capturedLogs();
+
+const endpointsWhoseCheckFails: ReadonlyArray<readonly [string, string]> = [
+  ['/mcp', 'count_in_the_org'],
+  ['/directory', 'count_in_the_org'],
+  ['/orgs/acme/mcp', 'count_in_the_org'],
+  ['/orgs/acme/playbooks/alpha/mcp', 'count_in_a_playbook'],
+];
+
+function askedWhileTheCheckFails(tool: string): readonly string[] {
+  return [
+    initializeAt('2025-11-25'),
+    requestOf(2, 'tools/list'),
+    requestOf(3, 'prompts/list'),
+    requestOf(4, 'prompts/get', { name: 'take-a-note', arguments: { text: 'a note' } }),
+    requestOf(5, 'resources/read', { uri: 'guide://notebook' }),
+    requestOf(6, 'tools/call', { name: tool, arguments: {} }),
+    requestOf(7, 'ping'),
+    JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+  ];
+}
+
+const unavailableProblem = { type: 'https://on.auto/problems/unavailable', status: 503, reason: 'unavailable' };
+
+const refusedAsUnavailable = { error: { code: -32_000, data: unavailableProblem } };
+
+const answeredWhileTheCheckFails = [
+  { status: 200, message: { id: 1, ...refusedAsUnavailable } },
+  { status: 200, message: { id: 2, ...refusedAsUnavailable } },
+  { status: 200, message: { id: 3, ...refusedAsUnavailable } },
+  { status: 200, message: { id: 4, ...refusedAsUnavailable } },
+  { status: 200, message: { id: 5, ...refusedAsUnavailable } },
+  { status: 200, message: { id: 6, result: { isError: true } } },
+  { status: 200, message: { id: 7, result: {} } },
+  { status: 202, message: undefined },
+];
+
+const RefusalSchema = Schema.Struct({
+  reason: Schema.String,
+  detail: Schema.String,
+  kind: Schema.optionalKey(Schema.String),
+  retry_after: Schema.optionalKey(Schema.Number),
+});
+
+const refusalOf = Schema.decodeUnknownSync(RefusalSchema);
+
+const errorAnswerOf = Schema.decodeUnknownSync(
+  Schema.Struct({ error: Schema.Struct({ message: Schema.String, data: RefusalSchema }) }),
+);
+
+function refusedAsAnError({ message }: Heard): unknown {
+  const { error } = errorAnswerOf(message);
+  const { reason, kind, retry_after: wait } = error.data;
+  return { reason, kind, wait, wordsAlone: error.message === error.data.detail };
+}
+
+function refusedAsACall({ message }: Heard): unknown {
+  const result = toolResultOf(resultIn(message));
+  const { reason, kind, retry_after: wait, detail } = refusalOf(problemIn(result));
+  return { isError: result.isError, reason, kind, wait, wordsAlone: plainTextIn(result) === detail };
+}
+
+describe('an MCP endpoint whose listing’s check fails outright', () => {
+  beforeAll(async () => {
+    server = await operationServer({
+      operations: [countInTheOrg, countInAPlaybook],
+      callContext: () =>
+        Context.add(
+          Context.make(CallPermission, callPermissionDecidedBy(failingOutright)),
+          Logger.CurrentLoggers,
+          failedLogs.loggers,
+        ),
+    });
+    listening = listenInProcess(server.handler);
+  });
+
+  afterAll(async () => {
+    await listening.close();
+    await server.runtime.dispose();
+  });
+
+  it('refuses in band as plainly unavailable what is answered from the listing, the connection included, runs nothing, answers ping and notifications, and logs once a request', async () => {
+    const heard: readonly (readonly Heard[])[] = await Promise.all(
+      endpointsWhoseCheckFails.map(async ([path, tool]) =>
+        (
+          await Promise.all(
+            askedWhileTheCheckFails(tool).map((body) => postMcp(server.handler, path, underTheRevision, body)),
+          )
+        ).map((answer) => heardIn(answer)),
+      ),
+    );
+    const discovered: readonly (readonly Heard[])[] = await Promise.all(
+      endpointsWhoseCheckFails.map(([path]) => discoveryHeardOn(path)),
+    );
+
+    expect(heard).toMatchObject(endpointsWhoseCheckFails.map(() => answeredWhileTheCheckFails));
+    expect(discovered).toMatchObject(
+      endpointsWhoseCheckFails.map(() => [{ status: 200, message: refusedAsUnavailable }]),
+    );
+    const refusedWithAnError = [...heard.flatMap((answers) => answers.slice(0, 5)), ...discovered.flat()];
+    expect(refusedWithAnError.map((answer) => refusedAsAnError(answer))).toEqual(
+      refusedWithAnError.map(() => ({ reason: 'unavailable', kind: undefined, wait: undefined, wordsAlone: true })),
+    );
+    expect(heard.flatMap((answers) => answers.slice(5, 6)).map((answer) => refusedAsACall(answer))).toEqual(
+      endpointsWhoseCheckFails.map(() => ({
+        isError: true,
+        reason: 'unavailable',
+        kind: undefined,
+        wait: undefined,
+        wordsAlone: true,
+      })),
+    );
+    expect(callsRun.count).toBe(0);
+    expect(failedLogs.logged().filter(({ message }) => message === undecidedMessage)).toHaveLength(
+      heard.flat().length + discovered.flat().length,
+    );
+  });
+});
+
 describe('mcp sign in', () => {
   afterEach(async () => {
     await Promise.all(opened.splice(0).map(({ close }) => close()));
   });
 
   describe('an agent signing in through the authorization server the metadata names', () => {
-    it('connects with the SDK’s client, is challenged, gets a token of every scope asked for the resource, is told it acts as the person and calls the tools', async () => {
+    it('connects with the SDK’s client, is challenged, gets a token of every scope asked for the resource, is told it acts for the person in the organization its token names, and calls the tools', async () => {
       const issuer = await issuerOnLoopback(clients);
       const runtime = await signedInOnLoopback(issuer.served);
       opened.push(issuer, runtime);
@@ -625,7 +955,10 @@ describe('mcp sign in', () => {
 
       const [, claims] = String(authProvider.tokens()?.access_token).split('.');
 
-      expect(instructions).toContain(' This connection acts as Ada Lovelace (person:ada) in the org acme. ');
+      expect(
+        ['Ada Lovelace', 'person:ada', 'Initech'].filter((named) => !String(instructions).includes(named)),
+      ).toEqual([]);
+      expect(instructions).not.toContain('acme');
       expect(toolNamesIn(tools)).toContain('add_note');
       expect(notes.structuredContent).toEqual({
         in_words: 'Done: list the notes.',

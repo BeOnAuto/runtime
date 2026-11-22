@@ -6,7 +6,7 @@ import { runPlacedIn } from '../runs/ledger-run-store.ts';
 import { runKeyOf, runLogStreamOf } from '../runs/run-address.ts';
 import { faultyDatabase, type FaultyDatabase } from './faulty-database.ts';
 import { runAt } from './host-documents.ts';
-import { aSQLiteFile, openedOn } from './host-files.ts';
+import { aLedgerInMemory, openedOn } from './host-files.ts';
 
 export function runKeyAt(runId: string): string {
   return runKeyOf(runAt(runId));
@@ -22,7 +22,7 @@ export async function startedIn<Database extends HostDatabase>(database: Databas
 }
 
 export async function faultyWithARun(runId: string): Promise<FaultyDatabase> {
-  return startedIn(faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() })), runId);
+  return startedIn(faultyDatabase(await openedOn(await aLedgerInMemory())), runId);
 }
 
 export function runLogAt(runId: string): string {
@@ -30,7 +30,7 @@ export function runLogAt(runId: string): string {
 }
 
 export async function openedWithRuns(runIds: readonly string[]): Promise<HostDatabase> {
-  const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+  const database = await openedOn(await aLedgerInMemory());
   await Effect.runPromise(Effect.forEach(runIds, (runId) => runPlacedIn(database, runAt(runId)), { discard: true }));
   return database;
 }

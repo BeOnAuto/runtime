@@ -54,6 +54,10 @@ events:
           thread_ts:
             type: string
             description: The timestamp of the first message of its thread, when the message is a reply in a thread.
+  identity:
+    tool: auth_test
+    identified:
+      id: /bot_id
   destinations:
     - type: websocket
       open:
@@ -88,10 +92,12 @@ events:
             thread_ts: $message.payload#/payload/event/thread_ts
           automatic: $message.payload#/payload/event/bot_id
           changed: $message.payload#/payload/event/hidden
+          actor: $message.payload#/payload/event/bot_id
       connection:
         account: $message.payload#/payload/team_id
 credentials:
   - kind: secret
+    permissions: application
     in: security
     name: bot_token
     description: Slack bot token

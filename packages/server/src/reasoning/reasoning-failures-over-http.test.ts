@@ -13,13 +13,12 @@ import { gatewayError, gatewayErrorText, gatewayInternals, recordingReporter } f
 import { Effect } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { compositionRootWith } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import type { RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 
 const verdict = [
@@ -178,7 +177,7 @@ async function executedVerdict(models: Readonly<Record<string, string>>): Promis
       ...noConsentThroughAuto,
       ...models,
     },
-    compositionRootWithoutGoals,
+    testComposition({ goals: false }),
   );
   await calling('POST', '/v1/orgs/acme/playbooks', { playbook: 'alpha', name: 'Alpha' });
   await calling('POST', `${alpha}/definitions/reasoning`, {
@@ -270,9 +269,11 @@ describe('provider messages over http', () => {
         ...noConsentThroughAuto,
         MODEL_GATEWAYS: gateways,
       },
-      compositionRootWith((settings) =>
-        makeModelAccess(settings, { fetch: gatewayAnswer, reportProviderMessage: reporter.report }),
-      ),
+      testComposition({
+        goals: false,
+        modelAccessOf: (settings) =>
+          makeModelAccess(settings, { fetch: gatewayAnswer, reportProviderMessage: reporter.report }),
+      }),
     );
   });
 

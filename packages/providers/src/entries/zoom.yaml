@@ -7,6 +7,7 @@ document: documents/zoom.openapi.json
 request_id: x-zm-trackingid
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://zoom.us
     authorization_endpoint: https://zoom.us/oauth/authorize
     token_endpoint: https://zoom.us/oauth/token

@@ -1,7 +1,16 @@
 import { once } from 'node:events';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  watch,
+  writeFileSync,
+  type FSWatcher,
+} from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { spawnForTheTest } from '@on.auto/operations/testing';
@@ -9,7 +18,7 @@ import { Option, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
-import { until } from '../waiting/until.ts';
+import { heardUntilItExits, somethingHappened, whenHeld } from '../waiting/until.ts';
 
 export interface DevelopmentFiles {
   readonly directory: string;
@@ -64,23 +73,35 @@ export function developmentFiles(envFileText = 'HOST=127.0.0.1\n'): DevelopmentF
   return files;
 }
 
-export function writeServerEntry({ serverEntry }: DevelopmentFiles, source = `import '${mainModule}';\n`): void {
+function writeServerEntry({ serverEntry }: DevelopmentFiles, source = `import '${mainModule}';\n`): void {
   writeFileSync(serverEntry, source);
 }
 
-export function writeServerEntryStartingAfter(files: DevelopmentFiles, milliseconds: number): void {
-  writeServerEntry(
-    files,
-    `await new Promise((resolve) => {\n  setTimeout(resolve, ${milliseconds});\n});\nawait import('${mainModule}');\n`,
-  );
-}
-
-export function restartMarkLeftBy({ files }: Development): unknown {
-  try {
-    return JSON.parse(readFileSync(join(files.directory, '.auto-runtime', 'restart-mark.json'), 'utf8'));
-  } catch {
-    return undefined;
-  }
+/**
+ * Tells the waiting tests of what the processes of pnpm dev write in its folder: a file made or removed (the restart
+ * mark, the pids) by a watch of the folder, and each write to the ledger by a watch of its log, made again each time
+ * the server opens the ledger anew. A watch of a folder does not see a file written in place.
+ */
+function watchedWhileItRuns(files: DevelopmentFiles): { readonly close: () => void } {
+  const log = `${files.ledgerFile}-wal`;
+  const watching: { log: FSWatcher | undefined } = { log: undefined };
+  const logWatched = (): void => {
+    watching.log?.close();
+    watching.log = existsSync(log) ? watch(log, somethingHappened) : undefined;
+  };
+  const folder = watch(files.directory, { recursive: true }, (_, name) => {
+    if (name === basename(log)) {
+      logWatched();
+    }
+    somethingHappened();
+  });
+  logWatched();
+  return {
+    close: () => {
+      folder.close();
+      watching.log?.close();
+    },
+  };
 }
 
 export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOptions = {}): Development {
@@ -108,12 +129,17 @@ export function startDevelopment(files: DevelopmentFiles, options: DevelopmentOp
   const output = { stdout: '', stderr: '' };
   child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stdout += chunk;
+    somethingHappened();
   });
   child.stderr?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stderr += chunk;
+    somethingHappened();
   });
   const exited = once(child, 'exit').then(([code]: readonly unknown[]) => code);
+  heardUntilItExits(exited);
   const outputClosed = once(child, 'close');
+  const written = watchedWhileItRuns(files);
+  void outputClosed.finally(written.close);
   return {
     files,
     exited,
@@ -135,7 +161,7 @@ export function pidsOf({ files }: Development): readonly number[] {
 }
 
 export async function untilWritten(read: () => string, wanted: Readonly<RegExp>): Promise<void> {
-  await until(read, (text) => text.search(wanted) !== -1);
+  await whenHeld(read, (text) => text.search(wanted) !== -1);
 }
 
 const logLineOf = Schema.decodeUnknownOption(
@@ -164,12 +190,6 @@ export function runnerLines(development: Development): readonly string[] {
     .map((line) => line.replace(/^\S+ /u, ''));
 }
 
-export function readyNoticesOf(development: Development): readonly string[] {
-  return linesFrom(development, 'dev')
-    .filter((line) => readyNotice.test(line))
-    .map((line) => line.replace(readyNotice, ''));
-}
-
 function listeningPorts({ stdout }: Development): readonly number[] {
   return [...stdout().matchAll(/Auto Runtime listening on port (\d+)\n/gu)].map(([, port]: readonly string[]) =>
     Number(port),
@@ -177,7 +197,7 @@ function listeningPorts({ stdout }: Development): readonly number[] {
 }
 
 export async function untilListening(development: Development, times = 1): Promise<number> {
-  const ports = await until(
+  const ports = await whenHeld(
     () => listeningPorts(development),
     (listening) => listening.length >= times,
   );

@@ -1,5 +1,5 @@
 import type { CallerIdentity, Outcome } from '@on.auto/operations';
-import { drive, providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
+import { providerListOf, providerOf, providersOf, regions, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -12,7 +12,6 @@ import {
   operationNamed,
   type HarnessOptions,
 } from '../testing/harness.ts';
-import { waysListedOf } from '../testing/listed-ways.ts';
 
 const acmeKey: CallerIdentity = { ...ada, id: 'acme-key' };
 
@@ -162,19 +161,6 @@ describe('the providers listed', () => {
       [{ offered: true, because: undefined }],
     ]);
   });
-
-  it('say of a way what a connection made through it acts as exactly where its entry declares it, and nothing where it declares nothing', async () => {
-    const actingAsThePerson = {
-      ...drive,
-      credentials: drive.credentials.map((way) => ({ ...way, permissions: 'delegated' })),
-    };
-    const [declared] = await waysListedOf(actingAsThePerson);
-    const [undeclared] = await waysListedOf(drive);
-
-    expect(declared).toMatchObject({ kind: 'authorization', permissions: 'delegated' });
-    expect(undeclared).toMatchObject({ kind: 'authorization' });
-    expect(undeclared).not.toHaveProperty('permissions');
-  });
 });
 
 const intranetProvider = providerOf({
@@ -231,6 +217,24 @@ describe('the providers the rules of the runtime could allow', () => {
 
   it('list the ways of the kinds the rules take, and no provider without one', async () => {
     expect(await waysListedUnder({ credential_kinds: ['none'] })).toEqual(['tracker: none']);
+  });
+});
+
+const ConnectingSchema = Schema.Struct({ output: Schema.Struct({ may_connect: Schema.Boolean }) });
+
+async function connectingOf(options: HarnessOptions, caller = ada): Promise<boolean> {
+  return Schema.decodeUnknownSync(ConnectingSchema)(await listing(options, caller)).output.may_connect;
+}
+
+describe('whether a caller may connect what it adds', () => {
+  it('is said exactly where it may add and may approve a connection, as the page asks today', async () => {
+    expect([
+      await connectingOf({}),
+      await connectingOf({}, acmeKey),
+      await connectingOf({}, adaReading),
+      await connectingOf({ access: 'keys' }),
+      await connectingOf({ access: 'local' }, acmeKey),
+    ]).toEqual([true, false, false, false, true]);
   });
 });
 

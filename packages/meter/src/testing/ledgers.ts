@@ -18,14 +18,12 @@ function parsed(text: string): unknown {
   return value;
 }
 
-/** A ledger the meter keeps its record on, opened afresh by each runtime over it, as replicas of one ledger are. */
 export interface LedgerAt {
   readonly name: string;
   readonly layer: () => Layer.Layer<Ledger>;
   readonly remove: () => Promise<void>;
 }
 
-/** A ledger on a database, whose log can be read and whose rows a test can read and change under the meter. */
 export interface DatabaseAt extends LedgerAt {
   readonly layer: () => Layer.Layer<Ledger | LedgerLog>;
   readonly rows: (statement: string, values?: readonly (string | number)[]) => Promise<readonly Row[]>;

@@ -1,4 +1,4 @@
-import { WayKindSchema, wayFields } from '@on.auto/providers';
+import { AccountTypeSchema, WayKindSchema, wayFields } from '@on.auto/providers';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -20,13 +20,24 @@ const OAuthClientChoiceSchema = Schema.Literals(['optional', 'required']);
 
 export type OAuthClientChoice = typeof OAuthClientChoiceSchema.Type;
 
-const ListedWaySchema = Schema.Struct({
+export const ListedWaySchema = Schema.Struct({
   kind: WayKindSchema,
   in: Schema.optionalKey(wayFields.in),
   name: Schema.optionalKey(wayFields.name),
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
-  permissions: Schema.optionalKey(wayFields.permissions),
+  permissions: Schema.optionalKey(
+    wayFields.permissions.annotate({
+      description:
+        'application when a connection made this way acts as the app. delegated when it acts as an account at the service. Left out when the way sends no credential.',
+    }),
+  ),
+  account_types: Schema.optionalKey(
+    Schema.Array(AccountTypeSchema).annotate({
+      description:
+        'The kinds of account a connection made this way may act as. service is an account the company made for automations. personal is the account of the person who connects. Left out when the way acts as the app or sends no credential.',
+    }),
+  ),
   oauth_client: Schema.optionalKey(
     OAuthClientChoiceSchema.annotate({
       description:
@@ -60,10 +71,16 @@ const ListedWaySchema = Schema.Struct({
         "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds",
     }),
   ),
+  key_page: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The https page where a person makes the key or the client. Given for a secret or client_credentials way whose entry names one.',
+    }),
+  ),
   key_page_title: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'For secret, the label of the button that opens the key page, where the entry gives one; left out otherwise',
+        'For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
   ),
   steps: Schema.optionalKey(
@@ -73,7 +90,7 @@ const ListedWaySchema = Schema.Struct({
       connected: Schema.optionalKey(ListedStepSchema),
     }).annotate({
       description:
-        'For secret, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected',
+        'For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected',
     }),
   ),
   app_credentials: Schema.optionalKey(
@@ -157,6 +174,9 @@ export type ListedProvider = typeof ProviderSchema.Type;
 export const ProvidersSchema = Schema.Struct({
   providers: Schema.Array(ProviderSchema),
   may_add: Schema.Boolean.annotate({ description: 'Whether this caller may add a connection here' }),
+  may_connect: Schema.Boolean.annotate({
+    description: 'true when this caller may also approve a connection it adds here. false when it may not.',
+  }),
   refusal: Schema.NullOr(Schema.String).annotate({ description: 'Why this caller may not add a connection here' }),
   return_address: Schema.String.annotate({
     description:

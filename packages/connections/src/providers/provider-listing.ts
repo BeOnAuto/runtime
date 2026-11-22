@@ -1,7 +1,9 @@
 import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { reservedHostKindOf } from '@on.auto/outbound';
 import {
+  accountTypesOf,
   hostAlternativesOf,
+  permissionsOf,
   replacedNamesOf,
   scopesIn,
   type AppCredential,
@@ -180,7 +182,7 @@ export function waysInOrderOf(provider: Provider, listing: Listing): readonly Cr
 export function oauthClientForOf(
   provider: Provider,
   listing: Listing,
-  asked: WayOAuthClient | undefined,
+  asked?: WayOAuthClient,
 ): (way: CredentialWay) => WayOAuthClient | undefined {
   return (way) => asked ?? (isUnderTheOrgsOAuthClientAlone(provider, way, listing) ? 'own' : undefined);
 }
@@ -223,6 +225,15 @@ export function offeredAppCredentialsOf(
   });
 }
 
+function actingOf(way: CredentialWay) {
+  const permissions = permissionsOf(way);
+  const accountTypes = accountTypesOf(way);
+  return {
+    ...(permissions === undefined ? {} : { permissions }),
+    ...(accountTypes.length === 0 ? {} : { account_types: accountTypes }),
+  };
+}
+
 function appCredentialsListedOf(provider: Provider, way: CredentialWay, listing: ListingOfTheRuntime) {
   const offered = offeredAppCredentialsOf(provider, way, listing);
   return offered.length === 0 ? {} : { app_credentials: offered.map(({ credential }) => credential) };
@@ -236,7 +247,8 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
       listedWayOf({
-        ...Struct.omit(way, ['app_credentials', 'test']),
+        ...Struct.omit(way, ['app_credentials', 'test', 'permissions', 'account_types']),
+        ...actingOf(way),
         ...appCredentialsListedOf(provider, way, listing),
         scopes: scopesSaidBy(way),
         more: moreSaidBy(way),

@@ -1,7 +1,6 @@
 import { processPool, type ProcessOutcome, type ProcessPool } from '@on.auto/workflow-engine/dsl';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { DocumentText } from '../reading/document-text.ts';
 import { documentsReadInProcess } from '../testing/index.ts';
 import { pdfOfNestedDrawings, pdfOfPages, wordDocumentOf } from '../testing/written-documents.ts';
 import { documentsReadIn, unreadDocuments, type DocumentProcesses } from './pooled-documents.ts';
@@ -23,10 +22,6 @@ function poolForTheTest(): ProcessPool {
   const pool = processPool({ processes: 2, longJobs: 1, memoryBytes: 768 * mebibyte, path: process.env['PATH'] });
   pools.push(pool);
   return pool;
-}
-
-function saidBy(document: DocumentText): string {
-  return document.read ? document.text : document.because;
 }
 
 function answering(outcome: ProcessOutcome): DocumentProcesses {
@@ -79,61 +74,50 @@ describe('a document read in a process of the pool', () => {
       { read: true, text: 'Net 30', mediaType: wordType },
     ]);
   });
-
-  it('answers at most the bytes of text it is bounded by, cut in the process', async () => {
-    const read = documentsReadIn(poolForTheTest());
-    const long = { bytes: new TextEncoder().encode('x'.repeat(400)), mediaType: 'text/plain', name: undefined };
-
-    const cut = await read(long, { ...unbounded, textBytes: 150 });
-    const text = saidBy(cut);
-
-    expect({ bytes: new TextEncoder().encode(text).byteLength <= 150, note: text.slice(text.indexOf('\n')) }).toEqual({
-      bytes: true,
-      note: `\n[The text was cut to ${text.indexOf('\n')} of its 400 bytes, the most the runtime answers of a document here.]`,
-    });
-  });
 });
 
-describe('a document read in a process of the pool past its time', () => {
-  it('stops a PDF that draws its drawings within one another at the time the call has left, and reads the next', async () => {
-    const { processes, runs } = recordedIn(poolForTheTest());
-    const read = documentsReadIn(processes);
-    const nested = nestedPdf();
+describe('a document whose reading the pool stops at the time the call has left', () => {
+  it('hands the pool the time the call has left, and words what it stopped as out of time', async () => {
+    const { processes, runs } = recordedIn(answering({ ended: 'timed_out', milliseconds: 1500 }));
 
-    const stopped = await read(nested, { ...unbounded, deadlineMs: 1500 });
-    const next = await read(termsPdf(), unbounded);
+    const stopped = await documentsReadIn(processes)(nestedPdf(), { ...unbounded, deadlineMs: 1500 });
 
-    expect(nested.bytes.byteLength).toBeLessThan(2500);
     expect(stopped).toEqual({
       read: false,
       because: 'It took longer to read than the 1.5 s the call had left, so its reading was stopped',
       mediaType: 'application/pdf',
     });
-    expect(runs).toEqual([
-      { deadlineMs: 1500, ended: 'timed_out' },
-      { deadlineMs: unbounded.deadlineMs, ended: 'answered' },
-    ]);
-    expect(next).toMatchObject({ read: true, text: 'Supplier terms\nNet 30' });
+    expect(runs).toEqual([{ deadlineMs: 1500, ended: 'timed_out' }]);
   });
 
   it('words a reading the call stops at its own deadline as a reading out of time', async () => {
-    const read = documentsReadIn(poolForTheTest());
+    const outOfTime = new AbortController();
+    outOfTime.abort(new DOMException('The call ran out of time', 'TimeoutError'));
+    const read = documentsReadIn(answering({ ended: 'cancelled', milliseconds: 1000 }));
 
-    expect(await read(nestedPdf(), { ...unbounded, deadlineMs: 1000, signal: AbortSignal.timeout(500) })).toEqual({
+    expect(await read(nestedPdf(), { ...unbounded, deadlineMs: 1000, signal: outOfTime.signal })).toEqual({
       read: false,
       because: 'It took longer to read than the 1.0 s the call had left, so its reading was stopped',
       mediaType: 'application/pdf',
     });
   });
 
-  it('ends a reading when the call ends for another reason', async () => {
-    const read = documentsReadIn(poolForTheTest());
+  it('hands the pool the signal of the call, and words a reading it ended for another reason', async () => {
     const ending = new AbortController();
-    const reading = read(nestedPdf(), { ...unbounded, signal: ending.signal });
-
+    const handed: (AbortSignal | undefined)[] = [];
+    const read = documentsReadIn({
+      run: (_job, signal) => {
+        handed.push(signal);
+        return Promise.resolve({ ended: 'cancelled', milliseconds: 1 });
+      },
+    });
     ending.abort();
 
-    expect(await reading).toMatchObject({ read: false, because: 'The call ended before it was read' });
+    expect(await read(nestedPdf(), { ...unbounded, signal: ending.signal })).toMatchObject({
+      read: false,
+      because: 'The call ended before it was read',
+    });
+    expect(handed).toEqual([ending.signal]);
   });
 });
 

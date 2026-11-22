@@ -51,7 +51,7 @@ describe('a question a workflow asks about an order another workflow started by 
       'Accept wholesale order ORD-2?': [{ goal: 'orders', id: second, per: 'ORD-2' }],
     });
     expect(asked.map(({ causes }) => causes)).toEqual([[expect.any(String)], [expect.any(String)]]);
-  }, 120_000);
+  });
 });
 
 const Dismissal = Schema.Struct({
@@ -177,7 +177,7 @@ describe('an order a question is about, dismissed over HTTP', () => {
       [{ goal: 'orders', id, per: 'ORD-3', by: 'local' }],
       [{ goal: 'orders', id, per: 'ORD-3', by: 'local' }],
     ]);
-  }, 120_000);
+  });
 });
 
 describe('two orders dismissed one after the other over HTTP', () => {
@@ -194,7 +194,7 @@ describe('two orders dismissed one after the other over HTTP', () => {
       [{ kind: 'dismissed_for_everyone' }, { kind: 'question_still_waits' }],
       [{ kind: 'dismissed_for_everyone' }, { kind: 'dismissed_several' }, { kind: 'question_still_waits' }],
     ]);
-  }, 120_000);
+  });
 });
 
 describe('a dismissed order a new question is asked about', () => {
@@ -225,7 +225,7 @@ describe('a dismissed order a new question is asked about', () => {
       { goal: 'orders', id, per: 'ORD-4', by: 'playbook:alpha' },
     ]);
     expect((await dismissedOver(watched, id, {})).answer).toMatchObject({ dismissed: true, questions_set_aside: 1 });
-  }, 120_000);
+  });
 });
 
 function onMcp<T>({ server }: WatchedServer, use: (session: McpSession) => Promise<T>): Promise<T> {
@@ -273,5 +273,5 @@ describe('an order a question is about, dismissed over MCP', () => {
       backEvents: event('thing.restored'),
     });
     expect(JSON.stringify(seen.listedAgain)).not.toMatch(/dismissed/u);
-  }, 120_000);
+  });
 });

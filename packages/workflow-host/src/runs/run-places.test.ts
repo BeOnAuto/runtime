@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { recorded } from '../reaction-testing/playbook-writes.ts';
 import { definitionKeyOfTheTests, definitionOfTheTests, runAt } from '../testing/host-documents.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { runPlacedIn } from './ledger-run-store.ts';
 import { runKeyOf } from './run-address.ts';
 import { knownRunOf, playbookOfRun, runKeyOfAnId, runStreamOfAChild, runStreamOfTheKey } from './run-places.ts';
@@ -16,8 +16,8 @@ const runKey = runKeyOf(runAt(runId));
 
 const started = { type: 'run_started', data: { started_by: { id: 'acme-admin', name: 'acme-admin' }, input: {} } };
 
-function opened() {
-  return openedOn({ store: 'sqlite', file: aSQLiteFile() });
+async function opened() {
+  return openedOn(await aLedgerInMemory());
 }
 
 describe('the place of a run the host knows by its key', () => {

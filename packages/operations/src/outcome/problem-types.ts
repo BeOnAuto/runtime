@@ -2,6 +2,7 @@ const problemTypes = 'https://on.auto/problems/';
 
 const reasonsOfKinds = {
   tools_unfinished: 'unavailable',
+  busy: 'unavailable',
   tools_called: 'conflict',
   effect_unknown: 'conflict',
   credits_exhausted: 'conflict',

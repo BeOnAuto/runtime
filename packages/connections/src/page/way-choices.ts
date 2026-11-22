@@ -1,0 +1,54 @@
+import { defineHttpOperation } from '@on.auto/operations';
+import { Effect } from 'effect';
+
+import { tokenSha256Of } from '../links/link-token.ts';
+import type { ConnectionServices } from '../operations/connection-services.ts';
+import { actedNow, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
+import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
+import { linkedConnectionOf } from '../registry/registry-lookup.ts';
+import { credentialChosenFor, type WayChoosing } from './chosen-ways.ts';
+import { forgottenVerifierOf, releasedClientsForgottenOf } from './consent-asking.ts';
+import { ChoosingTheWaySchema } from './way-fields.ts';
+
+type Choosing = WayChoosing & Pick<ConnectionServices, 'secrets'> & { readonly bindsPerson: boolean };
+
+export function defineChooseWay(services: Choosing) {
+  const { bindsPerson } = services;
+  return defineHttpOperation('org', 'command', {
+    name: 'choose_way',
+    title: 'Choose way',
+    description: [
+      'Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, and the account type where that way acts as an account.',
+      'The connection keeps its id, its name, its playbooks and its link.',
+      "A sign-in started and the organization's own OAuth client given for the way it had before are dropped.",
+      'When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes.',
+      'Choosing the way the connection already has changes only its account type, where one is given, and otherwise records nothing.',
+      "A way the connection's provider or server does not offer is refused as invalid_input, and so is an account type the way does not take.",
+      'A connection that is connected or broken is refused as conflict.',
+      "A way the operator's rules do not allow is refused as forbidden.",
+      'On a runtime that signs people in, only the person who added the connection may choose.',
+    ].join(' '),
+    route: { method: 'PUT', path: '/connections/{id}/way' },
+    body: { kind: 'json' },
+    repeatable: true,
+    inputSchema: ChoosingTheWaySchema,
+    outputSchema: ConnectionSchema,
+    reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input'],
+    handle: Effect.fnUntraced(function* ({ id, token, credential, account_type: accountType }) {
+      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
+      const asked = { credential, ...(accountType === undefined ? {} : { account_type: accountType }) };
+      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
+      const chosen = yield* credentialChosenFor(kept, asked, services);
+      const { before, after } = yield* recordChangeInRegistry(services, {
+        type: 'choose_way',
+        ...use,
+        credential: chosen.credential,
+        says: chosen.says,
+        ...(accountType === undefined ? {} : { account_type: accountType }),
+      });
+      yield* releasedClientsForgottenOf(before, after, services);
+      yield* after.consent === undefined ? forgottenVerifierOf(before, services) : Effect.void;
+      return connectionShown(after.connection, null);
+    }),
+  });
+}

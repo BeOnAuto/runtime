@@ -102,7 +102,7 @@ The [Sign-in and token reference](../reference/authentication.md) sets out the t
 
 The server decides every call from policies the release ships, written for [Cedar](https://www.cedarpolicy.com), an open-source policy engine that runs inside the server, and from the roles it records. A signed-in person may do what their role allows, within what their token grants. An API key and the local developer may do what their key or local mode grants, but give or take away no role.
 
-The server loads the policies as it starts, and logs once which engine and how many policies and operations it loaded. If it cannot load them, it stops at start with an `UnusableAccessPoliciesError`, which says why. A call that cannot be decided, such as when the roles cannot be read, is refused with `503`, and nothing is done. [Plan memory](production.md#plan-memory) has what the policies add.
+The server loads the policies as it starts, and logs once which engine and how many policies and operations it loaded. If it cannot load them, it stops at start with an `UnusableAccessPoliciesError`, which says why. A call that cannot be decided, such as when the roles cannot be read, is refused with `503`, and nothing is done. A call whose decision does not come within a second, as when the server is busy, is refused with `503` and the kind `busy`, which tells the caller to try again after the seconds it gives. [Plan memory](production.md#plan-memory) has what the policies add.
 
 ### The roles
 

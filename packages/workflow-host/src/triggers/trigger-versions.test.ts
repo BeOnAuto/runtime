@@ -13,7 +13,6 @@ import {
   triggerRowsOf,
   untilTriggersAt,
 } from '../reaction-testing/kept-triggers.ts';
-import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
   alpha,
   at,
@@ -29,8 +28,9 @@ import {
   published,
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
-import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { keptDefinition, steppedReacting, type SteppedReacting } from '../reaction-testing/stepped-reactions.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import type { DefinitionRecord } from './definition-records.ts';
 import { triggerChangesOf } from './trigger-changes.ts';
 
@@ -45,18 +45,18 @@ function isoAt(minutes: number): string {
 }
 
 async function tickingEveryMinute() {
-  const clock = movedClock(activatedAt + 1000);
-  const reacting = await reactingHost({ clock });
-  await definitionRecorded(reacting.database.store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
+  const stepped = await steppedReacting();
+  const { reacting, clock, sweeps } = stepped;
+  await keptDefinition(stepped, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
   clock.moveTo(activatedAt + aMinute);
-  const [firstTriggerVersions] = await startsReaching(reacting.reactions.starts, 1);
+  const [firstTriggerVersions] = await startsReaching(sweeps, reacting.reactions.starts, 1);
   await runStillGoing(reacting.database, firstTriggerVersions?.runId ?? '');
-  return { reacting, clock, running: firstTriggerVersions?.runId ?? '' };
+  return { reacting, clock, sweeps, running: firstTriggerVersions?.runId ?? '' };
 }
 
-async function sentinelPassed(reacting: ReactingHost, count: number) {
+async function sentinelPassed({ reacting, sweeps }: SteppedReacting, count: number) {
   await published(reacting.database.store, { id: 'sentinel', type: 'com.acme.sentinel' });
-  return startsReaching(reacting.reactions.starts, count);
+  return startsReaching(sweeps, reacting.reactions.starts, count);
 }
 
 async function definitionsOfThePlaybook(store: LedgerStreams): Promise<void> {
@@ -103,7 +103,7 @@ function resumed(id: string, name: string, atRestoredRecords: number): Definitio
 
 describe('a version that leaves the triggers of the one before unchanged', () => {
   it('keeps their anchor, their next due time and their running run, and the next run is of the new version', async () => {
-    const { reacting, clock, running } = await tickingEveryMinute();
+    const { reacting, clock, sweeps, running } = await tickingEveryMinute();
     const { database } = reacting;
     await definitionRecorded(database.store, {
       name: 'tick',
@@ -111,13 +111,13 @@ describe('a version that leaves the triggers of the one before unchanged', () =>
       triggers: [everyTrigger(aMinute)],
       when: isoAt(1.5),
     });
-    await untilTriggersAt(database, 'tick', 2);
+    await untilTriggersAt(sweeps, database, 'tick', 2);
 
     clock.moveTo(activatedAt + 2 * aMinute);
-    const refusals = await refusalsSaid(database);
+    const refusals = await refusalsSaid(sweeps, database);
     await runEnded(database, running);
     clock.moveTo(activatedAt + 3 * aMinute);
-    const [, next] = await startsReaching(reacting.reactions.starts, 2);
+    const [, next] = await startsReaching(sweeps, reacting.reactions.starts, 2);
 
     expect(refusals.map(({ reason }) => reason)).toEqual([
       `The run scheduled for ${isoAt(2)} by its every schedule was skipped: the run it started before is still running`,
@@ -132,7 +132,7 @@ describe('a version that leaves the triggers of the one before unchanged', () =>
 
 describe('a version that changes an every schedule', () => {
   it('counts it from its own record, and skips while a run the version before started still runs', async () => {
-    const { reacting, clock, running } = await tickingEveryMinute();
+    const { reacting, clock, sweeps, running } = await tickingEveryMinute();
     const { database } = reacting;
     await definitionRecorded(database.store, {
       name: 'tick',
@@ -140,13 +140,13 @@ describe('a version that changes an every schedule', () => {
       triggers: [everyTrigger(2 * aMinute)],
       when: isoAt(1.5),
     });
-    await untilTriggersAt(database, 'tick', 2);
+    await untilTriggersAt(sweeps, database, 'tick', 2);
 
     clock.moveTo(activatedAt + 3.5 * aMinute);
-    const refusals = await refusalsSaid(database);
+    const refusals = await refusalsSaid(sweeps, database);
     await runEnded(database, running);
     clock.moveTo(activatedAt + 5.5 * aMinute);
-    const [, next] = await startsReaching(reacting.reactions.starts, 2);
+    const [, next] = await startsReaching(sweeps, reacting.reactions.starts, 2);
 
     expect(refusals.map(({ reason }) => reason)).toEqual([
       `The run scheduled for ${isoAt(3.5)} by its every schedule was skipped: the run it started before is still running`,
@@ -161,7 +161,8 @@ describe('a version that changes an every schedule', () => {
 
 describe('a version that changes the event trigger', () => {
   it('matches nothing recorded before it, while what matched before it starts the version before', async () => {
-    const reacting = await reactingHost();
+    const stepped = await steppedReacting();
+    const { reacting } = stepped;
     const { store } = reacting.database;
     await definitionRecorded(store, { name: 'watch', version: 1, triggers: [watching] });
     await definitionRecorded(store, {
@@ -179,7 +180,7 @@ describe('a version that changes the event trigger', () => {
     await published(store, { id: 'closed-after', type: 'com.acme.closed' });
     await published(store, { id: 'opened-after', type: 'com.acme.opened' });
 
-    const starts = await sentinelPassed(reacting, 3);
+    const starts = await sentinelPassed(stepped, 3);
 
     expect(starts.map(({ workflow, version, cause }) => [workflow, version, cause])).toEqual([
       ['close', 1, messageIdOf(`${alpha}events/closed-before`, 1)],
@@ -191,8 +192,8 @@ describe('a version that changes the event trigger', () => {
 
 describe('a version that removes a cron schedule', () => {
   it('fires it no more, while its every schedule goes on', async () => {
-    const clock = movedClock(activatedAt + 1000);
-    const reacting = await reactingHost({ clock });
+    const stepped = await steppedReacting();
+    const { reacting, clock, sweeps } = stepped;
     const { store } = reacting.database;
     await definitionRecorded(store, { name: 'watch', version: 1, triggers: [watching] });
     await definitionRecorded(store, {
@@ -206,11 +207,11 @@ describe('a version that removes a cron schedule', () => {
       triggers: [everyTrigger(10 * aMinute)],
       when: isoAt(1),
     });
-    await untilTriggersAt(reacting.database, 'tick', 2);
+    await untilTriggersAt(sweeps, reacting.database, 'tick', 2);
 
     clock.moveTo(activatedAt + 10 * aMinute);
-    await startsReaching(reacting.reactions.starts, 1);
-    const starts = await sentinelPassed(reacting, 2);
+    await startsReaching(sweeps, reacting.reactions.starts, 1);
+    const starts = await sentinelPassed(stepped, 2);
 
     expect(starts.map(({ workflow, version, trigger }) => [workflow, version, trigger.kind])).toEqual([
       ['tick', 2, 'every'],
@@ -221,8 +222,8 @@ describe('a version that removes a cron schedule', () => {
 
 describe('a version without a schedule, and a retirement', () => {
   it('stop every trigger of the workflow', async () => {
-    const clock = movedClock(activatedAt + 1000);
-    const reacting = await reactingHost({ clock });
+    const stepped = await steppedReacting();
+    const { reacting, clock, sweeps } = stepped;
     const { store } = reacting.database;
     const closed = eventTrigger({ type: 'com.acme.closed' });
     await definitionRecorded(store, { name: 'watch', version: 1, triggers: [watching] });
@@ -230,10 +231,15 @@ describe('a version without a schedule, and a retirement', () => {
     await definitionRecorded(store, { name: 'open', version: 1, triggers: [closed, cronTrigger('5 9 * * *')] });
     await definitionRecorded(store, { name: 'close', version: 2, triggers: [] });
     await definitionRetired(store, 'open', 1);
+    await sweeps.until(
+      () => triggerRowsOf(reacting.database),
+      (rows) => rows.map(({ workflow }) => workflow).join() === 'watch',
+      fewSweeps,
+    );
 
     clock.moveTo(activatedAt + 10 * aMinute);
     await published(store, { id: 'closed', type: 'com.acme.closed' });
-    const starts = await sentinelPassed(reacting, 1);
+    const starts = await sentinelPassed(stepped, 1);
 
     expect(starts.map(({ workflow }) => workflow)).toEqual(['watch']);
     expect((await triggerRowsOf(reacting.database)).map(({ workflow }) => workflow)).toEqual(['watch']);
@@ -273,17 +279,17 @@ describe('the changes a version makes to the triggers of the version before', ()
 
 describe('the triggers of a playbook made again from the records of its definitions', () => {
   it('are the rows the follower kept as it passed the same records one by one', async () => {
-    const live = await reactingHost({ clock: movedClock(activatedAt + 1000) });
-    await definitionsOfThePlaybook(live.database.store);
-    await untilTriggersAt(live.database, 'tick', 2);
-    const settings = await onSQLite();
+    const live = await steppedReacting();
+    await definitionsOfThePlaybook(live.reacting.database.store);
+    await untilTriggersAt(live.sweeps, live.reacting.database, 'tick', 2);
+    const settings = await aLedgerInMemory();
     await definitionsOfThePlaybook((await openedOn(settings)).store);
 
-    const rebuilt = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
-    await untilTriggersAt(rebuilt.database, 'tick', 2);
-    const rows = await triggerRowsOf(rebuilt.database);
+    const rebuilt = await steppedReacting({ settings });
+    await untilTriggersAt(rebuilt.sweeps, rebuilt.reacting.database, 'tick', 2);
+    const rows = await triggerRowsOf(rebuilt.reacting.database);
 
-    expect(rows).toEqual(await triggerRowsOf(live.database));
+    expect(rows).toEqual(await triggerRowsOf(live.reacting.database));
     expect(
       rows.map(({ workflow, reference, version, activated_by: by }) => [workflow, reference, version, by]),
     ).toEqual([
@@ -296,7 +302,7 @@ describe('the triggers of a playbook made again from the records of its definiti
 
 describe('the triggers of a playbook made again, past the records of its definitions that cannot be read', () => {
   it('pass over a record that cannot be read, which is said', async () => {
-    const settings = await onSQLite();
+    const settings = await aLedgerInMemory();
     const { store } = await openedOn(settings);
     await playbookCreated(store, 'alpha');
     const broken = { ...byAdmin, definitionType: 'workflow', definitionName: 'broken', definitionVersion: 1 };
@@ -315,11 +321,12 @@ describe('the triggers of a playbook made again, past the records of its definit
     );
     await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(aMinute)] });
 
-    const reacting = await reactingHost({ settings, clock: movedClock(activatedAt + 1000) });
-    await untilTriggersAt(reacting.database, 'tick', 1);
-    const notes = await reacting.whenRead(
-      () => Promise.resolve(reacting.notes()),
+    const { reacting, sweeps } = await steppedReacting({ settings });
+    await untilTriggersAt(sweeps, reacting.database, 'tick', 1);
+    const notes = await sweeps.until(
+      () => reacting.notes(),
       (found) => found.length >= 2,
+      fewSweeps,
     );
 
     expect(notes).toEqual([

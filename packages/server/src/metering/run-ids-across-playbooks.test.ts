@@ -26,5 +26,5 @@ describe('a run asked for under the id of a run of another playbook of the org',
     });
     expect(again.status).toBe(200);
     expect((await server.call('GET', '/v1/orgs/acme/license')).body).toMatchObject({ free_runs: { used: 1 } });
-  }, 60_000);
+  });
 });

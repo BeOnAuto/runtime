@@ -107,7 +107,17 @@ const listedDefinitionWithGoalsFields = {
   details: Schema.optionalKey(DetailsWithGoalsSchema),
 };
 
-const StandingField = Schema.JsonObject.annotate({
+const StandingField = Schema.StructWithRest(
+  Schema.Struct({
+    queued: Schema.optionalKey(Schema.Int.annotate({ description: 'How many of its runs are queued to start' })),
+    next_queued_start: Schema.optionalKey(
+      Schema.NullOr(Schema.String).annotate({
+        description: 'The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued',
+      }),
+    ),
+  }),
+  [Schema.Record(Schema.String, Schema.Json)],
+).annotate({
   description:
     'How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function',
 });

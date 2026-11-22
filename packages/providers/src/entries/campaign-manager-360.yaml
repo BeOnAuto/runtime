@@ -10,6 +10,7 @@ marks:
     - dfareporting.reports.compatibleFields.query
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/dfareporting https://www.googleapis.com/auth/dfatrafficking
     says:

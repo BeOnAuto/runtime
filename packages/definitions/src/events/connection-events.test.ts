@@ -25,26 +25,33 @@ const takenAt = '2026-11-20T09:00:00.000Z';
 
 const ofTickets = '/connections/tickets';
 
-function publicationOf(event: ReportedEvent): ConnectionPublication {
-  const publication = connectionPublicationOf('tickets', event, takenAt);
+function publicationOf(event: ReportedEvent, own?: boolean): ConnectionPublication {
+  const publication = connectionPublicationOf('tickets', event, takenAt, own);
   if (publication === undefined) throw new Error('The playbook records no such event');
   return publication;
 }
 
 describe('an event a connection reports, as the playbook records it', () => {
-  it('is a CloudEvent of the connection’s source, its time the one given or filled, its subject and mark only where given', () => {
+  it('is a CloudEvent of the connection’s source, its time the one given or filled, its subject and marks only where given', () => {
     const at = '2026-11-20T08:59:00Z';
 
     expect([
-      publicationOf({ ...reported, time: at, automatic: true }),
-      publicationOf({ type: reported.type, id: 'T-2', data: {}, automatic: false }),
+      publicationOf({ ...reported, time: at, automatic: true }, true),
+      publicationOf({ type: reported.type, id: 'T-2', data: {}, automatic: false }, false),
     ]).toEqual([
-      { event: { specversion: '1.0', ...reported, source: ofTickets, time: at, automatic: true }, filled: [] },
+      {
+        event: { specversion: '1.0', ...reported, source: ofTickets, time: at, automatic: true, own: true },
+        filled: [],
+      },
       {
         event: { specversion: '1.0', id: 'T-2', source: ofTickets, type: reported.type, time: takenAt, data: {} },
         filled: ['time'],
       },
     ]);
+  });
+
+  it('keeps nothing of who caused it, which the intake compares and writes nowhere', () => {
+    expect(publicationOf({ ...reported, actor: 'member-7' })).toEqual(publicationOf(reported));
   });
 
   it('is none where it breaks the rules of an event or takes more bytes than the playbook records', () => {

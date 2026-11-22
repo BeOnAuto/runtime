@@ -6,9 +6,9 @@ import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { BoundConsumer, CallConsumer } from '../follower/consumers.ts';
-import { movedClock } from '../reaction-testing/moved-clock.ts';
 import { alpha, at, childStarted, childStreamOf, recorded } from '../reaction-testing/playbook-writes.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
+import { fewSweeps, steppedClock } from '../testing/stepped-clock.ts';
 import { readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { recordedWaiting, resultOfEnding } from '../waiting-testing/recorded-waiting.ts';
 import { parentId, parentRun, waitingParent } from '../waiting-testing/waiting-parent.ts';
@@ -80,9 +80,10 @@ describe('the ending of a run that answers a call', () => {
       ofTheChild,
     );
     await settled(parentId);
-    await hosted.whenRead(
+    await hosted.sweeps.until(
       (): readonly string[] => mapped,
       (types) => types.includes('run_failed'),
+      fewSweeps,
     );
 
     expect(mapped).toContain('run_failed');
@@ -390,10 +391,15 @@ describe('a cancel of the run of a call that names no definition its functions k
 describe('the deadline of a call that waits for a run', () => {
   it('ends the call as a timeout and cancels the run it waited for, as past its deadline', async () => {
     const waiting = recordedWaiting();
-    const clock = movedClock(Date.now());
-    const { settled, callStates } = await waitingParent(childChildCancels.runId, { clock, waiting: waiting.options });
+    const clock = steppedClock(Date.parse(at));
+    const { settled, callStates } = await waitingParent(childChildCancels.runId, {
+      clock,
+      context: clock.watching(),
+      waiting: waiting.options,
+    });
 
-    clock.moveTo(Date.now() + defaultLimits.longestCallMs + 1);
+    await clock.atRest();
+    clock.step(defaultLimits.longestCallMs + 1);
     const settlement = await settled(parentId);
 
     expect(settlement).toEqual({

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runKey } from '../suite-testing/probe-subjects.ts';
 import { faultyDatabase, type FaultyDatabase } from '../testing/faulty-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import type { CallAttempt } from './call-starts.ts';
 import { answerWrittenAgainAfterMs, hostExecutor, type Deliver, type HostExecutor } from './host-executor.ts';
@@ -42,7 +42,7 @@ const answeredSent: Answer = () => Effect.succeed(sent);
 const neverAnswered: Answer = () => Effect.never;
 
 async function executing(answer: Answer = answeredSent): Promise<Executing> {
-  const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+  const database = faultyDatabase(await openedOn(await aLedgerInMemory()));
   const counts = { performed: 0 };
   const attempts: CallAttempt[] = [];
   const answered: string[] = [];

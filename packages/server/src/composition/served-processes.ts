@@ -11,7 +11,14 @@ export interface ServedProcesses {
   readonly withDocumentsClosed: ServedClosing;
 }
 
-export function processesServedBy({ documents }: { readonly documents: DocumentSettings }): ServedProcesses {
+/** The processes the server reads documents in, or the reading it was given, which starts and closes nothing. */
+export function processesServedBy(
+  { documents }: { readonly documents: DocumentSettings },
+  given?: DocumentReading,
+): ServedProcesses {
+  if (given !== undefined) {
+    return { documents: given, withDocumentsClosed: (served) => served };
+  }
   const { processes, processMemoryMebibytes, path } = documents;
   const documentPool = processPool({ processes, longJobs: 1, memoryBytes: processMemoryMebibytes * mebibyte, path });
   return {

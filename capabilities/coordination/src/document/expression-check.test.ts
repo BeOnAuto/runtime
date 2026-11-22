@@ -15,6 +15,7 @@ const header = "document: { dsl: '1.0.3', namespace: acme, name: flow, version: 
 function saving(check: ExpressionCheck) {
   const workflow = makeWorkflowAdapter({
     runs: { start: () => Effect.die('A workflow started') },
+    queued: { queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }) },
     check,
     connectionEvents: connectionsReporting({}),
     mostDurationMs: 2_592_000_000,

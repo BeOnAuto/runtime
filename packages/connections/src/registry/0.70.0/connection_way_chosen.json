@@ -1,0 +1,20 @@
+{
+  "type": "connection_way_chosen",
+  "data": {
+    "connection": "connection-1",
+    "credential": {
+      "kind": "authorization",
+      "permissions": "delegated",
+      "issuer": "https://accounts.drive.example.com",
+      "scope": "files.read"
+    },
+    "account_type": "service",
+    "says": {
+      "files.read": "Read the files of the account."
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

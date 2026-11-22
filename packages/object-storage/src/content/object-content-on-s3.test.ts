@@ -30,7 +30,7 @@ const notice = skipped
   ? ', skipped: set CONTENT_TEST_OBJECT_STORE_URL to the URL of an S3-compatible server with its credentials and a bucket, such as http://access:secret@127.0.0.1:9000/content-test, to run it'
   : '';
 
-describe.skipIf(skipped)(`The content kept on an S3-compatible object store${notice}`, { timeout: 120_000 }, () => {
+describe.skipIf(skipped)(`The content kept on an S3-compatible object store${notice}`, () => {
   const warned = vi.spyOn(console, 'warn');
   recordedContentBehaviour(contentEntryOf(onTheServer));
   objectContentBehaviour(onTheServer);

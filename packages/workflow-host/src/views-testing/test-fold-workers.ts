@@ -71,7 +71,7 @@ export function testFoldPoolOf(settings: Partial<PoolSettings>): ProgramPool {
   return programPool(foldPoolSettingsOf(settings));
 }
 
-/** The pool of `testFoldPoolOf`, serving its folds on the thread of the test, for a test that breaks no worker. */
+/** The pool of `testFoldPoolOf`, serving its folds on the thread of the test, for a rule that is not the worker itself. */
 export function testFoldThreadPoolOf(settings: Partial<PoolSettings>): ProgramPool {
   return threadPool(foldPoolSettingsOf(settings));
 }

@@ -5,7 +5,8 @@ import { ManagedRuntime, Schema, type Layer } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { alpha } from '../servers/reasoning-server.ts';
-import { until } from '../waiting/until.ts';
+import { whenSwept } from '../servers/workflow-server.ts';
+import { receiptsTold } from '../waiting/told-fakes.ts';
 import { chatEnvironment, chatKey } from './chat-deliveries.ts';
 import { interactionServerOn, servingInteractions, type InteractionServer } from './interaction-server.ts';
 
@@ -68,7 +69,7 @@ function answerShapesOf(listed: Listed): Readonly<Record<string, unknown>> {
 const refusedDelivery = ['deliver:', '  server: chat', '  tool: denied', '  with:', "    text: '{{ message }}'"];
 
 async function refusingChat(): Promise<Readonly<Record<string, string>>> {
-  const chat = await serveFakeMcp({ bearer: chatKey });
+  const chat = receiptsTold(await serveFakeMcp({ bearer: chatKey }));
   onTestFinished(chat.close);
   return chatEnvironment(chat.url);
 }
@@ -91,7 +92,7 @@ export function answerShapesOn(stores: readonly ProjectionStoreChoice[]): void {
         const first = await servingInteractions(refusedDelivery, environment);
         const question = await first.ask('approve-brief');
         const notification = await first.ask('brief-out');
-        const kept = answerShapesOf(await until(() => listedIn(first), eachTriedOnce));
+        const kept = answerShapesOf(await whenSwept(first, () => listedIn(first), eachTriedOnce));
         await first.stop();
         const leftByVersionOne = await versionOneLeftIn(store);
 

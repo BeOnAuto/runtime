@@ -3,9 +3,9 @@ import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
-import type { MovedClock } from './moved-clock.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { alpha } from './playbook-writes.ts';
-import type { ReactingHost } from './reacting-host.ts';
+import type { SteppedReacting } from './stepped-reactions.ts';
 
 const HoldRow = Schema.Struct({
   held_since: Schema.NullOr(WholeNumber),
@@ -18,10 +18,7 @@ const HoldRow = Schema.Struct({
 
 export type HoldState = typeof HoldRow.Type;
 
-export interface Holding {
-  readonly reacting: ReactingHost;
-  readonly clock: MovedClock;
-}
+export type Holding = SteppedReacting;
 
 function holdRead({ reacting }: Holding) {
   return reacting.database.read(
@@ -37,17 +34,18 @@ export function holdStateOf(holding: Holding): Promise<HoldState> {
   return Effect.runPromise(oneRowOf(HoldRow, holdRead(holding)));
 }
 
-/** The hold of the playbook, or null while the follower has not yet placed the org. */
-async function holdStateOnceFollowed(holding: Holding): Promise<HoldState | null> {
-  const [state] = await Effect.runPromise(rowsOf(HoldRow, holdRead(holding)));
-  return state ?? null;
+/** The hold of the playbook, in the one row of its org, or no row while the follower has not yet placed the org. */
+function holdStatesOnceFollowed(holding: Holding): Promise<readonly HoldState[]> {
+  return Effect.runPromise(rowsOf(HoldRow, holdRead(holding)));
 }
 
-export function holdReaching(holding: Holding, reached: (state: HoldState) => boolean): Promise<HoldState> {
-  return holding.reacting.whenRead(
-    () => holdStateOnceFollowed(holding),
-    (found): found is HoldState => found !== null && reached(found),
+export async function holdReaching(holding: Holding, reached: (state: HoldState) => boolean): Promise<HoldState> {
+  const [state] = await holding.sweeps.until(
+    () => holdStatesOnceFollowed(holding),
+    (found): found is readonly [HoldState] => found.some((row) => reached(row)),
+    fewSweeps,
   );
+  return state;
 }
 
 export function heldUntil(state: HoldState): number {
@@ -67,8 +65,9 @@ export function notesOf({ reacting }: Holding, kind: HostNote['kind']): readonly
 }
 
 export function notesReaching(holding: Holding, kind: HostNote['kind'], count: number): Promise<readonly HostNote[]> {
-  return holding.reacting.when(
+  return holding.sweeps.until(
     () => notesOf(holding, kind),
     (notes) => notes.length >= count,
+    fewSweeps,
   );
 }

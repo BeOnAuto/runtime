@@ -33,19 +33,38 @@ function argumentsOf({ command, prompt: given }: Model, prompt: string): readonl
   return given === 'argument' ? [...command.slice(1), prompt] : command.slice(1);
 }
 
-function endedAs(code: number | null, spentMs: number, longestMs: number): Answer['exit'] {
+/** The bound of an answer: `after(ms, expire)` calls `expire` once `ms` passed, and answers what cancels it. */
+export interface Bound {
+  readonly after: (ms: number, expire: () => void) => () => void;
+}
+
+const realBound: Bound = {
+  after: (ms, expire) => {
+    const timer = setTimeout(expire, ms);
+    return () => {
+      clearTimeout(timer);
+    };
+  },
+};
+
+function endedAs(code: number | null, timedOut: boolean): Answer['exit'] {
   if (code !== null) {
     return code;
   }
-  return spentMs >= longestMs ? 'timeout' : 'stopped';
+  return timedOut ? 'timeout' : 'stopped';
 }
 
-export function askingThroughItsCommand(longestMs = longestAnswerMs): Ask {
+export function askingThroughItsCommand(longestMs = longestAnswerMs, bound: Bound = realBound): Ask {
   return (model, prompt) =>
     new Promise((answered) => {
       const started = Date.now();
       const folder = mkdtempSync(join(tmpdir(), 'behavioural-check-'));
-      const child = spawn(model.command[0], argumentsOf(model, prompt), { cwd: folder, timeout: longestMs });
+      const child = spawn(model.command[0], argumentsOf(model, prompt), { cwd: folder });
+      const timing = { out: false };
+      const cancel = bound.after(longestMs, () => {
+        timing.out = true;
+        child.kill('SIGTERM');
+      });
       let stdout = '';
       let stderr = '';
       const seconds = () => Math.round((Date.now() - started) / 1000);
@@ -56,13 +75,15 @@ export function askingThroughItsCommand(longestMs = longestAnswerMs): Ask {
         stderr += chunk;
       });
       child.on('error', ({ message }: Readonly<Error>) => {
+        cancel();
         rmSync(folder, { recursive: true, force: true });
         answered({ exit: 'not started', stdout, stderr: message, seconds: seconds() });
       });
       child.on('close', (code) => {
+        cancel();
         rmSync(folder, { recursive: true, force: true });
         answered({
-          exit: endedAs(code, Date.now() - started, longestMs),
+          exit: endedAs(code, timing.out),
           stdout,
           stderr: stderr.slice(-keptOfTheErrors),
           seconds: seconds(),

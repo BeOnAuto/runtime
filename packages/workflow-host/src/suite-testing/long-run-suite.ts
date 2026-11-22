@@ -6,7 +6,7 @@ import { skippingClock } from '../loop/host-clock.ts';
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
-import { hostedOn } from '../testing/host-runs.ts';
+import { hostedOnItsClock } from '../testing/host-runs.ts';
 import { runKeyAt } from '../testing/started-runs.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-000000003000';
@@ -26,7 +26,7 @@ export function longRunSuite(settings: SettingsOf): void {
   it(`runs a loop of ${longRunInputs} inputs of ${paddingCharacters} characters each, and loads it again from its last snapshot and the events after it`, async () => {
     const database = await settings();
     const clock = skippingClock(1_790_845_200_000, () => Effect.never);
-    const hosted = await hostedOn(database, { clock, sweepEveryMs: 3_600_000 });
+    const hosted = await hostedOnItsClock(database, { clock, sweepEveryMs: 3_600_000 });
     hosted.know(runId);
 
     await Effect.runPromise(hosted.host.start(runAt(runId), startOf(ticking)));

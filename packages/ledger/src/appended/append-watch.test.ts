@@ -1,6 +1,6 @@
 import { cursorOfParts } from '@on.auto/operations';
 import { Clock, Effect, Exit, Function } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppendedFactsAsked, FactScope, LatestAppends, RecordedPoint } from '../event-store.ts';
 import type { Query } from '../postgresql-reads/recorded-parts.ts';
@@ -57,13 +57,33 @@ function failingTwiceThen(answer: LatestAppends): () => Promise<LatestAppends> {
   };
 }
 
-function settledWithin(promise: Promise<unknown>, ms: number): Promise<string> {
-  const waiting = new Promise<string>((resolve) => {
-    setTimeout(() => {
-      resolve('waiting');
-    }, ms);
-  });
-  return Promise.race([promise.then(String, String), waiting]);
+function failingFirstThenFrom(point: RecordedPoint, answer: LatestAppends): Reads {
+  const asked: (RecordedPoint | undefined)[] = [];
+  return {
+    asked,
+    read: (after) => {
+      asked.push(after);
+      if (asked.length === 1) {
+        return Promise.reject(new Error('The database is gone'));
+      }
+      return Promise.resolve(JSON.stringify(after) === JSON.stringify(point) ? answer : appendedAt());
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+async function settledWithin(promise: Promise<unknown>, ms: number): Promise<string> {
+  const outcome = { said: 'waiting' };
+  void promise.then(String, String).then((said) => Object.assign(outcome, { said }));
+  await vi.advanceTimersByTimeAsync(ms);
+  return outcome.said;
 }
 
 const alphaAppendedReader = { kind: 'playbook', playbook: { org: 'acme', playbook: 'alpha' } } as const;
@@ -271,6 +291,16 @@ describe('a watch of the appends to a store, when a read fails', () => {
     watch.endWaits();
 
     expect([waited, failures.map(String)]).toEqual(['appended', ['Error: The database is gone, read 1']]);
+  });
+
+  it('reads again from the point its waits asked after, so an append that lands before that read still wakes them', async () => {
+    const { read, asked } = failingFirstThenFrom(['5'], appendedAt(['playbook/acme/alpha/runs/r1', ['8']]));
+    const watch = appendWatchOf(read, { appended: streamSignalOf(), watchFailed: Function.constVoid }, 20);
+
+    const waited = await settledWithin(watch.waitForAppend(alpha, ['5'], neverAborted), 50);
+    watch.endWaits();
+
+    expect([waited, asked.slice(0, 2)]).toEqual(['appended', [['5'], ['5']]]);
   });
 
   it('logs a failed read in the logs of the process when it is told of no other place to tell it', async () => {

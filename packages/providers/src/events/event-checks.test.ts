@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { decodedEntry, problemsOf } from '../testing/entry-problems.ts';
 import {
   aPost,
   aRoomOpened,
   firstDestination as destination,
+  identifying,
   intoAQueue,
   mapping,
   ofEachSubscription,
@@ -14,8 +16,12 @@ import {
   roomType,
   sentBy,
   unplacedPostType,
+  whoItActsAs,
+  whoItActsAsThroughATool,
   without,
 } from '../testing/event-destinations.ts';
+import { regions, tracker } from '../testing/fixture-providers.ts';
+import { requestOriginsOf } from './event-destinations.ts';
 
 const firstEvent = `${destination}/events/0`;
 
@@ -137,6 +143,99 @@ describe('the topic of an event', () => {
       pathsOf(reporting([placedBy('{{ subject }}')], [unplacedPostType])),
       pathsOf(reporting([placedBy('every-room')])),
     ]).toEqual([['/events/types/0/subject'], ['/events/types/0/subject'], []]);
+  });
+});
+
+const byAMember = { ...aPost, actor: '$request.body#/post/by' };
+
+const postedByAMember = [mapping(ofTheApp, byAMember)];
+
+function askedBy(identity: object): readonly string[] {
+  return pathsOf(identifying({ ...whoItActsAs, ...identity }, postedByAMember));
+}
+
+describe('the account a connection acts as, and the account that did what an event reports', () => {
+  it('are a call that asks the service, by a request or a tool, and a place on each event, in an entry of any shape', () => {
+    const openedBy = { ...aRoomOverASocket, actor: '$message.payload#/room/opened_by' };
+    const askedAsAQuery = { ...whoItActsAs, method: 'POST', body: { query: 'query { viewer { id } }' } };
+
+    expect([
+      identifying(whoItActsAs, postedByAMember),
+      identifying(whoItActsAsThroughATool, [mapping(overASocket, openedBy)]),
+      identifying({ ...whoItActsAsThroughATool, with: { fields: ['uid'] } }, postedByAMember),
+      identifying(askedAsAQuery, postedByAMember),
+      identifying(whoItActsAs, [mapping(ofTheApp, aPost)]),
+    ]).toEqual([[], [], [], [], []]);
+  });
+
+  it('refuse a pointer into what the call answered that is not one', () => {
+    expect(askedBy({ identified: { id: 'member/key', name: '' } })).toEqual([
+      '/events/identity/identified/id',
+      '/events/identity/identified/name',
+    ]);
+  });
+
+  it('refuse an actor read anywhere but the body, which the proof covers', () => {
+    expect(
+      pathsOf(identifying(whoItActsAs, [mapping(ofTheApp, { ...byAMember, actor: '$request.header.X-Chat-Member' })])),
+    ).toEqual([`${firstEvent}/actor`]);
+  });
+
+  it('refuse an actor where the entry declares no identity, the account it is compared with', () => {
+    expect(pathsOf(reporting([mapping(ofTheApp, aRoomOpened, byAMember)]))).toEqual([
+      '/events/destinations/0/events/1/actor',
+    ]);
+  });
+});
+
+describe('the call that asks which account the connection acts as', () => {
+  it('is refused written both ways or neither, as every call of the format is', () => {
+    expect([
+      askedBy({ tool: 'whoami' }),
+      pathsOf(identifying({ identified: { id: '/member/key' } }, postedByAMember)),
+      askedBy({ body: { fields: ['key'] } }),
+    ]).toEqual([['/events/identity'], ['/events/identity'], ['/events/identity/body']]);
+  });
+
+  it('is refused with a URL not written out whole or a template, since it has nothing to fill in', () => {
+    expect([
+      askedBy({ url: 'https://api.tracker.example.com/members/{{ topic }}' }),
+      askedBy({ url: 'http://api.tracker.example.com/me' }),
+      pathsOf(
+        identifying({ ...whoItActsAsThroughATool, with: { member: '{{ topic }}', also: ['{% raw %}', '${KEY}'] } }, [
+          mapping(ofTheApp, byAMember),
+        ]),
+      ),
+      askedBy({ method: 'POST', body: { query: 'query { viewer { id } }', as: '{{ topic }}' } }),
+    ]).toEqual([
+      ['/events/identity/url'],
+      ['/events/identity/url'],
+      ['/events/identity/with/member', '/events/identity/with/also/0', '/events/identity/with/also/1'],
+      ['/events/identity/body/as'],
+    ]);
+  });
+});
+
+function askingOf(entry: object, identity: object) {
+  return { ...entry, events: { identity, destinations: [intoAQueue] } };
+}
+
+describe('the call that asks which account the connection acts as, written as an HTTP request', () => {
+  it('is declared where a way gives a bearer token, by the rule of the calls of a subscription', () => {
+    expect([
+      problemsOf(askingOf(tracker, whoItActsAs)),
+      problemsOf(askingOf(regions, whoItActsAs)),
+      problemsOf(askingOf(regions, whoItActsAsThroughATool)),
+    ]).toEqual([[], [['/events/identity', expect.any(String)]], []]);
+  });
+
+  it('sends the credential to the origin it is written out to, and nowhere through a tool', () => {
+    const elsewhere = { ...whoItActsAs, url: 'https://accounts.tracker.example.com/me' };
+
+    expect([
+      requestOriginsOf(decodedEntry(askingOf(tracker, elsewhere))),
+      requestOriginsOf(decodedEntry(askingOf(tracker, whoItActsAsThroughATool))),
+    ]).toEqual([['https://accounts.tracker.example.com'], []]);
   });
 });
 

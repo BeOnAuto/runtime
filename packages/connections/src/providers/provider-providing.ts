@@ -1,5 +1,6 @@
 import {
   documentServerOf,
+  isTheWayAsked,
   providerNamed,
   requestOriginsOf,
   type Provider,
@@ -24,9 +25,11 @@ function gatewayProvidedBy(provider: Provider): Pick<Providing, 'gateway'> {
   return gateway === undefined ? {} : { gateway };
 }
 
-function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'> {
+type OfAWay = Pick<AdditionInput, 'provider' | 'credential'>;
+
+function providedBy(provider: Provider, { credential }: OfAWay): Omit<Providing, 'documents' | 'values'> {
   const { entry } = provider;
-  const consenting = entry.credentials.find(({ kind }) => kind === 'authorization');
+  const consenting = entry.credentials.find((way) => way.kind === 'authorization' && isTheWayAsked(way, credential));
   return {
     ...gatewayProvidedBy(provider),
     documentServer: documentServerOf(provider),
@@ -41,13 +44,14 @@ function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'>
 }
 
 export function providingOf(
-  { provider }: Pick<AdditionInput, 'provider'>,
+  connection: OfAWay,
   { providers, providerValues }: ProviderServices,
 ): Providing | undefined {
+  const { provider } = connection;
   if (provider === null) {
     return undefined;
   }
   const named = Result.getOrUndefined(providerNamed(providers, provider));
   const given = { documents: providers.documents, values: providerValues };
-  return named === undefined ? { ...given, documentServer: undefined } : { ...given, ...providedBy(named) };
+  return named === undefined ? { ...given, documentServer: undefined } : { ...given, ...providedBy(named, connection) };
 }

@@ -4,6 +4,7 @@ import {
   mayChange,
   problems,
   quickOpening,
+  openingEndsOnceListed,
   sentNothing,
   someDetail,
   unworkable,
@@ -73,7 +74,7 @@ export const beforeAnything: Rows = [
   ],
   [
     'a server that cannot be reached',
-    { before: (server) => server.fake.close() },
+    { before: (server) => server.fake.close(), alone: true },
     sentNothing('unreachable', expect.stringContaining('could not be reached'), 'tool_server_failed'),
   ],
   [
@@ -111,7 +112,7 @@ export const beforeAnything: Rows = [
   [
     'a listing of the tools that does not answer in time',
     {
-      server: { timing: quickOpening },
+      server: { timing: quickOpening, toldBounds: openingEndsOnceListed },
       before: (server) => {
         server.fake.holdNextOf('tools/list');
       },

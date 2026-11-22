@@ -7,7 +7,7 @@ import { afterAll, afterEach, describe, expect, it, onTestFinished } from 'vites
 import { goalIdentityIn } from '../testing/goals/goal-identities.ts';
 import { onTheLedgerIn, tableDropped } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { servingReasoning, testServersStartAt, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { createdWithGoals, leadGoalId, servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
 const FactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, context: ContextSchema });
@@ -26,7 +26,7 @@ const passed = '6f1c7a2e-3b4d-5e6f-8a9b-0c1d2e3f4a5b';
 
 const late = '7a2d8b3f-4c5e-5f60-9b0a-1d2e3f4a5b6c';
 
-const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+const hoursAgo = (hours: number) => new Date(testServersStartAt - hours * 3_600_000).toISOString();
 
 const judgedAt = hoursAgo(2);
 

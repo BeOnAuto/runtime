@@ -1,46 +1,46 @@
+import { Effect } from 'effect';
+
 import type { HostDatabase } from '../database/host-database.ts';
 import { playbookCreated, testDefinitionsPlaced } from '../reaction-testing/playbook-writes.ts';
-import { aSQLiteFile, openedOn, type DatabaseSettings } from '../testing/host-files.ts';
-import { hostedOn, type HostedOptions } from '../testing/host-runs.ts';
+import type { HeldWork } from '../testing/clock-sleepers.ts';
+import { aLedgerInMemory, openedOn, type LedgerOn } from '../testing/host-files.ts';
+import { hostedOn, hostedStartsAt, type SteppedHostedOptions } from '../testing/host-runs.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { settledIn, type FollowedHost } from './followed-host.ts';
 
 export interface HeldFollower extends FollowedHost {
   readonly release: () => void;
 }
 
-function placingHeldUntil(released: Promise<void>, database: HostDatabase): HostDatabase {
+function placingHeldUntil(work: HeldWork, database: HostDatabase): HostDatabase {
   return {
     ...database,
     store: {
       ...database.store,
       definitionStreams: async (definitionType) => {
-        await released;
+        await Effect.runPromise(work.wait);
         return database.store.definitionStreams(definitionType);
       },
     },
   };
 }
 
-function aSQLiteLedger(): DatabaseSettings {
-  return { store: 'sqlite', file: aSQLiteFile() };
-}
-
 export async function heldFollower(
-  options: HostedOptions = {},
-  settings: DatabaseSettings = aSQLiteLedger(),
+  options: Omit<SteppedHostedOptions, 'clock'> = {},
+  given?: LedgerOn,
 ): Promise<HeldFollower> {
+  const settings = given ?? (await aLedgerInMemory());
   const database = await openedOn(settings);
   await playbookCreated(database.store, 'alpha');
   await testDefinitionsPlaced(database.store);
-  const released = Promise.withResolvers<void>();
-  const held = placingHeldUntil(released.promise, await openedOn(settings));
-  const hosted = await hostedOn({ database: held }, options);
+  const clock = steppedClock(hostedStartsAt);
+  const work = clock.hold();
+  const held = placingHeldUntil(work, await openedOn(settings));
+  const hosted = await hostedOn({ database: held }, { ...options, clock });
   return {
     database,
     hosted,
     settled: settledIn(hosted),
-    release: () => {
-      released.resolve();
-    },
+    release: work.release,
   };
 }

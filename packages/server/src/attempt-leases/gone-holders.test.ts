@@ -1,9 +1,18 @@
 import { playbookCallerOf, rejected } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { ForkWatch } from '@on.auto/workflow-host';
+import { steppedClock } from '@on.auto/workflow-host/testing';
+import { Context, Effect, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { goneHoldersGiven, run, startedBy, writer, type Given } from '../testing/attempt-leases/gone-holder-parts.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  at,
+  goneHoldersGiven,
+  run,
+  startedBy,
+  writer,
+  type Given,
+} from '../testing/attempt-leases/gone-holder-parts.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const thePlaybook = playbookCallerOf(run);
 
@@ -23,7 +32,7 @@ describe('a run whose holder is gone, which outlives its call', () => {
 
     await Effect.runPromise(gone.resumed(run));
     const heldWhileAsked = await leases();
-    const asked = await until(nextAsked, (made) => made.length > 0);
+    const asked = await whenHeld(nextAsked, (made) => made.length > 0);
 
     expect(heldWhileAsked).toEqual([{ name: `attempt/acme/alpha/${run.runId}/this-process`, holder: 'this-process' }]);
     expect(asked).toEqual([
@@ -39,7 +48,40 @@ describe('a run whose holder is gone, which outlives its call', () => {
         attemptDied: true,
       },
     ]);
-    expect(await until(leases, (held) => held.length === 0)).toEqual([]);
+    expect(await whenHeld(leases, (held) => held.length === 0)).toEqual([]);
+  });
+});
+
+describe('a run whose holder is gone, resumed by a host whose clock a test steps', () => {
+  it('keeps the host from rest while its resumed attempt works, though the sweep that resumed it has ended', async () => {
+    const clock = steppedClock(at);
+    const answer = Promise.withResolvers<void>();
+    const { gone, nextAsked } = await goneHoldersGiven({ callerNow: writer, answeredOnce: answer.promise });
+    const context = clock.watching();
+    const said: string[] = [];
+    const sweep = Effect.runForkWith(context)(gone.resumed(run));
+    Context.get(context, ForkWatch).forked(
+      (ended) => {
+        sweep.addObserver(ended);
+      },
+      { label: 'sweep' },
+    );
+    const rested = clock.atRest().then(() => said.push('at rest'));
+
+    await whenHeld(nextAsked, (asked) => asked.length > 0);
+    await Effect.runPromise(Fiber.await(sweep));
+    // The clock decides its rest on the macrotask after a change, the sweep's end among them: a macrotask queued
+    // after that end comes after that decision.
+    await new Promise<void>((decided) => {
+      setImmediate(decided);
+    });
+    const awakeWhileItWorks = clock.awake();
+    said.push('attempt answered');
+    answer.resolve();
+    await rested;
+
+    expect(said).toEqual(['attempt answered', 'at rest']);
+    expect(awakeWhileItWorks).toEqual([expect.stringMatching(/^resumed attempt /u)]);
   });
 });
 
@@ -51,8 +93,8 @@ describe('a run whose holder is gone, which outlives its call, whose next attemp
     const { gone, nextAsked, leases } = await goneHoldersGiven({ callerNow: writer, notMade });
 
     await Effect.runPromise(gone.resumed(run));
-    await until(nextAsked, (asked) => asked.length > 0);
-    const left = await until(leases, (held) => !held.some(({ holder }) => holder === 'this-process'));
+    await whenHeld(nextAsked, (asked) => asked.length > 0);
+    const left = await whenHeld(leases, (held) => !held.some(({ holder }) => holder === 'this-process'));
 
     expect(left).toEqual([{ name: `attempt/acme/alpha/${run.runId}/this-process`, holder: '' }]);
   });
@@ -67,7 +109,7 @@ describe('a run whose holder is gone, which outlives its call, started by a trig
     });
 
     await Effect.runPromise(gone.resumed(run));
-    const [made] = await until(nextAsked, (next) => next.length > 0);
+    const [made] = await whenHeld(nextAsked, (next) => next.length > 0);
 
     expect(made).toMatchObject({ caller: thePlaybook, trigger, actsFor: 'person:ada', depth: 1 });
   });
@@ -76,7 +118,7 @@ describe('a run whose holder is gone, which outlives its call, started by a trig
     const { gone, nextAsked, refusedAsked } = await goneHoldersGiven({ answered: lacksWrite });
 
     await Effect.runPromise(gone.resumed(run));
-    const [refused] = await until(refusedAsked, (made) => made.length > 0);
+    const [refused] = await whenHeld(refusedAsked, (made) => made.length > 0);
 
     expect(nextAsked()[0]?.caller).toEqual({
       id: writer.id,

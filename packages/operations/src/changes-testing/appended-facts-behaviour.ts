@@ -1,3 +1,4 @@
+import { onATestClock, settledYet, type OnATestClock } from '@on.auto/content/testing';
 import { Clock, Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -56,16 +57,14 @@ function withAnotherId(cursor: string): string {
   return cursorOfParts([...Option.getOrThrow(partsOfCursor(cursor)).slice(0, -1), unheldId]);
 }
 
-interface Waited {
-  readonly ms: number;
-  readonly waited: string;
-}
-
-async function waitedFor(ledger: LedgerPorts, scope: AppendedScope, after: string, ms: number): Promise<Waited> {
-  const deadline = (await Effect.runPromise(Clock.currentTimeMillis)) + ms;
-  const started = performance.now();
-  const waited = await Effect.runPromise(ledger.waitForAppend(scope, after, deadline));
-  return { ms: performance.now() - started, waited };
+/** Waits for an append to the scope after the point, until a deadline the given time ahead on the test's clock. */
+function waitedFor(
+  [clock, ledger]: readonly [OnATestClock, LedgerPorts],
+  scope: AppendedScope,
+  after: string,
+  ms: number,
+): Promise<string> {
+  return clock.run(Effect.flatMap(Clock.currentTimeMillis, (now) => ledger.waitForAppend(scope, after, now + ms)));
 }
 
 function readAfterACursor(entry: AppendedFactsEntry): void {
@@ -155,14 +154,14 @@ function readStreamsOfAKind(entry: AppendedFactsEntry): void {
     const ledger = await entry.aLedger();
     const ofAKind: AppendedScope = { kind: 'streams', streams: ['org/acme/playbooks', 'org/acme/comments/'] };
     const start = await read(ledger, ofAKind, heads);
-    const waiting = waitedFor(ledger, ofAKind, start.through, 10_000);
+    const waiting = waitedFor([onATestClock(), ledger], ofAKind, start.through, 10_000);
     await appended(ledger, 'org/acme/comments/first', opened('first'));
     await appended(ledger, 'org/beta/comments/first', opened('elsewhere'));
     await appended(ledger, 'org/acme/activity/first', opened('seen'));
     await appended(ledger, 'org/acme/comments/second', opened('second'));
     await appended(ledger, 'org/acme/playbooks', opened('made'));
 
-    expect((await waiting).waited).toBe('appended');
+    expect(await waiting).toBe('appended');
     expect(streamsOf(await read(ledger, ofAKind, { ...heads, after: start.cursor }))).toEqual([
       'org/acme/comments/first',
       'org/acme/comments/second',
@@ -197,15 +196,14 @@ function waitsForTheNext(entry: AppendedFactsEntry): void {
     const now = await read(ledger, alpha, heads);
     await appended(ledger, 'playbook/acme/alpha/topics/early', opened('early'));
 
-    const atOnce = await waitedFor(ledger, alpha, now.through, 10_000);
+    const clock = onATestClock();
+    const atOnce = await waitedFor([clock, ledger], alpha, now.through, 10_000);
     const caughtUp = await read(ledger, alpha, { ...heads, after: now.cursor });
-    const held = waitedFor(ledger, alpha, caughtUp.through, 10_000);
-    await Effect.runPromise(Effect.sleep(50));
+    const held = waitedFor([clock, ledger], alpha, caughtUp.through, 10_000);
+    const beforeTheAppend = await settledYet(held);
     await appended(ledger, 'playbook/acme/alpha/topics/late', opened('late'));
-    const late = await held;
 
-    expect([atOnce.waited, late.waited]).toEqual(['appended', 'appended']);
-    expect(Math.max(atOnce.ms, late.ms)).toBeLessThan(5000);
+    expect([atOnce, beforeTheAppend, await held]).toEqual(['appended', false, 'appended']);
   });
 }
 
@@ -214,12 +212,15 @@ function waitsUntilTheDeadline(entry: AppendedFactsEntry): void {
     const ledger = await entry.aLedger();
     const now = await read(ledger, alpha, heads);
 
-    const held = waitedFor(ledger, alpha, now.through, 400);
+    const clock = onATestClock();
+    const held = waitedFor([clock, ledger], alpha, now.through, 400);
     await appended(ledger, 'playbook/acme/beta/topics/other', opened('other'));
     const after = await read(ledger, alpha, { ...heads, after: now.cursor });
-    const ended = await held;
+    await clock.advance(399);
+    const beforeItsDeadline = await settledYet(held);
+    await clock.advance(1);
 
-    expect([ended.waited, ended.ms >= 390]).toEqual(['ended', true]);
+    expect([beforeItsDeadline, await held]).toEqual([false, 'ended']);
     expect(after.facts).toEqual([]);
   });
 
@@ -227,15 +228,17 @@ function waitsUntilTheDeadline(entry: AppendedFactsEntry): void {
     const ledger = await entry.aLedger();
     const now = await read(ledger, registries, heads);
 
-    const passed = await waitedFor(ledger, registries, now.through, -1);
-    const many = Promise.all(Array.from({ length: 50 }, () => waitedFor(ledger, registries, now.through, 10_000)));
-    await Effect.runPromise(Effect.sleep(50));
+    const clock = onATestClock();
+    const passed = await waitedFor([clock, ledger], registries, now.through, -1);
+    const many = Promise.all(
+      Array.from({ length: 50 }, () => waitedFor([clock, ledger], registries, now.through, 10_000)),
+    );
+    const beforeTheAppend = await settledYet(many);
     await appended(ledger, 'org/acme/connections', opened('added'));
     const woken = await many;
 
-    expect([passed.waited, passed.ms < 1000]).toEqual(['ended', true]);
-    expect(new Set(woken.map(({ waited }) => waited))).toEqual(new Set(['appended']));
-    expect(Math.max(...woken.map(({ ms }) => ms))).toBeLessThan(5000);
+    expect([passed, beforeTheAppend]).toEqual(['ended', false]);
+    expect(new Set(woken)).toEqual(new Set(['appended']));
   });
 }
 

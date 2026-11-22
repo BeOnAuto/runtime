@@ -48,6 +48,7 @@ export interface DefinitionPlace extends PlaybookAddress {
 export interface StandingRequest {
   readonly org: string;
   readonly playbook: string;
+  readonly definition: string;
   readonly name: string;
   readonly version: number;
   readonly status: 'active' | 'retired';

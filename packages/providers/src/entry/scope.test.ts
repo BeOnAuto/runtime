@@ -157,7 +157,10 @@ describe('the words of the groups of scopes a way of consent may add', () => {
 
     expect(growingBy([])).toEqual([['/credentials/0/more', 'Expected a value with a length of at least 1']]);
     expect(problemsOf({ ...ledgers, credentials: [credentialsWithMore] })).toEqual([
-      ['/credentials/0/more', 'Expected no more: a client_credentials way takes issuer, scope, and says'],
+      [
+        '/credentials/0/more',
+        'Expected no more: a client_credentials way takes issuer, scope, says, key_page, key_page_title, and steps',
+      ],
     ]);
     expect(problemsOf({ ...drive, credentials: [scopeless] })).toEqual([
       ['/credentials/0/more', 'Expected more only on a way that asks a scope, to which each group adds its own'],

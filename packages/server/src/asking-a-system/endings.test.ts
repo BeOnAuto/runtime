@@ -3,8 +3,8 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
-  endedFor,
   endingOf,
+  endingsOn,
   mayChange,
   problems,
   someDetail,
@@ -19,8 +19,13 @@ const anotherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
 
 const anIncident: unknown = expect.stringMatching(/^urn:uuid:/u);
 
+const endedOnItsServer = endingsOn(
+  'interaction',
+  [...beforeAnything, ...afterSending, ...unreadable].map(([, row]) => acting(row)),
+);
+
 function endedActing(row: Row) {
-  return endedFor('interaction', acting(row));
+  return endedOnItsServer(acting(row));
 }
 
 describe('a run that calls a tool that acts and ends before anything is sent, over HTTP', () => {

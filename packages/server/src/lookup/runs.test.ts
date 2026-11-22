@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { sleepsUntilWoken, wokenOnceAsleep } from '../testing/interaction-servers/call-endings.ts';
 import {
   calling,
   lookingUp,
@@ -11,7 +12,8 @@ import {
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const withinItsCall =
   'The run takes place within the call that started it, which no server can interrupt from outside, so it cannot be cancelled; it ends when that call does';
@@ -19,7 +21,7 @@ const withinItsCall =
 const callFacts = ['run_started', 'tool_call_started', 'tool_call_answered', 'run_succeeded'];
 
 async function sleeping(): Promise<SystemServer> {
-  const serverRuns = await lookingUp({ over: 'http' });
+  const serverRuns = await lookingUp({ toldBounds: sleepsUntilWoken, over: 'http' });
   await serverRuns.define('sleeping', calling('sleep', ['    ms: 1000']));
   return serverRuns;
 }
@@ -32,10 +34,7 @@ async function leftOnceCalled(serverRuns: SystemServer, url: string, body: strin
     body,
     signal: leaving.signal,
   }).catch((error: unknown) => error);
-  await until(
-    () => Promise.resolve(serverRuns.fake.received().length),
-    (received) => received === 1,
-  );
+  await serverRuns.fake.once(() => serverRuns.fake.received().length === 1);
   leaving.abort();
   return gone;
 }
@@ -133,6 +132,7 @@ describe('a run of a lookup function while its call is in flight, over HTTP', ()
     const cancelling = await serverRuns.call('POST', `${alpha}/runs/${systemRunId}/cancel`, {
       body: { reason: 'Stop' },
     });
+    await wokenOnceAsleep(serverRuns.fake);
     const ended = await settledRun(serverRuns, `${alpha}/runs/${systemRunId}`);
 
     expect([cancelling.status, cancelling.body]).toEqual([409, problemWith({ detail: withinItsCall })]);
@@ -141,6 +141,9 @@ describe('a run of a lookup function while its call is in flight, over HTTP', ()
   });
 });
 
+/** A day of the example in the lookup format, after the day it reads the runs since. */
+const theExampleDay = Date.parse('2026-10-07T09:00:00.000Z');
+
 describe('reading runs', () => {
   afterEach(async () => {
     await server.stop();
@@ -148,7 +151,7 @@ describe('reading runs', () => {
 
   describe('the example of a lookup function that reads runs, through the server', () => {
     it('answers the runs of the computation function the page names, which then names the lookup among its users', async () => {
-      server = await servingReasoning([]);
+      server = await servingReasoning([], {}, undefined, { clock: steppedServerClock(theExampleDay) });
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       const {
         runs: [shown],
@@ -184,7 +187,7 @@ describe('the runs of a function renamed with new_name, through the server', () 
   });
 
   it('are still called by the workflow and read by the lookup that use it, each saved again with the new name, and counted by its own page', async () => {
-    server = await servingReasoning([]);
+    server = await servingReasoning([], {}, undefined, { clock: steppedServerClock(theExampleDay) });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await saved('computation', 'campaign-pace', pace);
     await saved('lookup', 'pace-history', history);
@@ -204,7 +207,7 @@ describe('the runs of a function renamed with new_name, through the server', () 
       await server.call('GET', `${alpha}/definitions/workflow/pacing`),
       await server.call('GET', `${alpha}/definitions/lookup/pace-history`),
     ];
-    const ownPage = await until(async () => {
+    const ownPage = await whenHeld(async () => {
       const { body } = await server.call('GET', `${alpha}/definitions/computation/spend-pace`);
       expect(body).toMatchObject({ page: { standing: { state: 'live', version: 2, folded: 2 } } });
       return body;

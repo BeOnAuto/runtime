@@ -1,9 +1,15 @@
 import { withMcpSession } from '@on.auto/api/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { aLedgerHoldingAReasoningFunctionSavedEarlierAt } from '../testing/records/a-ledger-of-another-version.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { alpha, noNetwork, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  alphaIn,
+  noNetwork,
+  type ReasoningServer,
+  servingReasoning,
+} from '../testing/servers/reasoning-server.ts';
 
 const seventeenOptionalFields = Object.fromEntries(
   Array.from({ length: 17 }, (_, index) => [`field${index}`, { type: 'string' }]),
@@ -36,8 +42,11 @@ const summary = [
 
 let server: ReasoningServer;
 
+/** The playbook a case saves its definitions in. */
+let playbook = alpha;
+
 function creating(name: string, source: string) {
-  return server.call('POST', `${alpha}/definitions/reasoning`, { body: { name, source, diagram: 'none' } });
+  return server.call('POST', `${playbook}/definitions/reasoning`, { body: { name, source, diagram: 'none' } });
 }
 
 const profileSchema = { type: 'object', properties: seventeenOptionalFields, additionalProperties: false };
@@ -65,13 +74,27 @@ async function onAlpha(shared?: TemporaryLedger): Promise<void> {
 }
 
 describe('definitions over http', () => {
-  beforeEach(async () => {
-    server = await servingReasoning([]);
-    await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  let shared: ReasoningServer;
+  let orgs = 0;
+
+  // One server for these cases, each saving its definitions in a playbook alpha of an org of its own.
+  beforeAll(async () => {
+    shared = await servingReasoning([]);
   });
 
-  afterEach(async () => {
-    await server.stop();
+  afterAll(async () => {
+    await shared.stop();
+  });
+
+  beforeEach(async () => {
+    server = shared;
+    orgs += 1;
+    playbook = alphaIn(`acme-${orgs}`);
+    await server.call('POST', `/v1/orgs/acme-${orgs}/playbooks`, { body: { playbook: 'alpha', name: 'Alpha' } });
+  });
+
+  afterEach(() => {
+    playbook = alpha;
   });
 
   describe('the reasoning function definitions of a playbook over HTTP', () => {
@@ -95,12 +118,12 @@ describe('definitions over http', () => {
   describe('the life of a reasoning function definition over HTTP', () => {
     it('lists, reads, updates and retires a definition', async () => {
       await creating('summary', summary);
-      const listed = await server.call('GET', `${alpha}/definitions/reasoning`);
-      const read = await server.call('GET', `${alpha}/definitions/reasoning/summary`);
-      const updated = await server.call('PUT', `${alpha}/definitions/reasoning/summary`, {
+      const listed = await server.call('GET', `${playbook}/definitions/reasoning`);
+      const read = await server.call('GET', `${playbook}/definitions/reasoning/summary`);
+      const updated = await server.call('PUT', `${playbook}/definitions/reasoning/summary`, {
         body: { source: summary.replace('Be brief.', 'Be very brief.'), diagram: 'none' },
       });
-      const retired = await server.call('POST', `${alpha}/definitions/reasoning/summary/retire`);
+      const retired = await server.call('POST', `${playbook}/definitions/reasoning/summary/retire`);
 
       expect(listed).toMatchObject({
         status: 200,
@@ -134,7 +157,7 @@ describe('definitions over http', () => {
           errors: [{ pointer: '/source', detail: atTheModel }],
         },
       });
-      expect((await server.call('GET', `${alpha}/definitions/reasoning`)).body).toEqual({ definitions: [] });
+      expect((await server.call('GET', `${playbook}/definitions/reasoning`)).body).toEqual({ definitions: [] });
     });
   });
 });

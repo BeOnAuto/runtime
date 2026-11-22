@@ -3,10 +3,10 @@ import { Effect, Function } from 'effect';
 import type { HostDatabase } from '../database/host-database.ts';
 import { hostEngineOn, type HostEngine } from '../host/host-engine.ts';
 import type { RunStart } from '../host/run-requests.ts';
-import { systemClock } from '../loop/host-clock.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
 import { testMachine } from '../testing/host-documents.ts';
 import { recordingReports, recordingSettlements } from '../testing/recording-reports.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { executorWaitingOf } from '../waiting/waiting-parts.ts';
 import { recordedWaiting } from './recorded-waiting.ts';
 
@@ -19,7 +19,7 @@ export function bareEngineOn(database: HostDatabase): HostEngine {
       settle: recordingSettlements(Function.constFalse).settle,
       reports: recordingReports().reports,
       mostCallsAtOnce: 4,
-      clock: systemClock,
+      clock: steppedClock(Date.parse('2026-10-05T09:00:00.000Z')),
       reactions: recordedReactions().options,
     },
     executorWaitingOf(database, testMachine, recordedWaiting().options),

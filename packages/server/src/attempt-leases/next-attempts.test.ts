@@ -7,11 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { recordedUnderItsDefinition } from '../testing/attempt-leases/recorded-runtime.ts';
 import { defineNextAttempt, defineRefusedAttempt } from './next-attempts.ts';
 
-const services = Layer.mergeAll(
-  memoryLedgerWith({ definitionNames: definitionNamesWith(['echo']) }).layer,
-  memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
-  recordingReporter().layer,
-);
+/** A ledger of its own for each call, so that no run another test recorded is found by the next. */
+function services() {
+  return Layer.mergeAll(
+    memoryLedgerWith({ definitionNames: definitionNamesWith(['echo']) }).layer,
+    memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]),
+    recordingReporter().layer,
+  );
+}
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -38,7 +41,7 @@ function dispatchedIn(operation: Operation, input: object) {
 }
 
 function dispatched(operation: Operation, input: object) {
-  return Effect.runPromise(dispatchedIn(operation, input).pipe(Effect.provide(services)));
+  return Effect.runPromise(dispatchedIn(operation, input).pipe(Effect.provide(services())));
 }
 
 describe('the next attempt of a run whose holder is gone, where the server keeps no live attempts', () => {
@@ -83,7 +86,7 @@ describe('the next attempt of a run that has ended', () => {
       return yield* dispatchedIn(nextAttempt, { type: 'echo', run_id: runId });
     });
 
-    expect(await Effect.runPromise(ran.pipe(Effect.provide(services)))).toMatchObject({
+    expect(await Effect.runPromise(ran.pipe(Effect.provide(services())))).toMatchObject({
       status: 'succeeded',
       output: { run_id: runId, status: 'succeeded', output: 'Hello' },
     });

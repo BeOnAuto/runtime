@@ -10,7 +10,7 @@ import {
   limitedCreditExplanationOf,
 } from './credit-explanations.ts';
 import { moveExplanationsAs } from './move-explanations.ts';
-import { roleRefusal, tokenTypeRefusal } from './plain-language.ts';
+import { busyExplanation, roleRefusal, tokenTypeRefusal, withTheWait } from './plain-language.ts';
 import type { Explanation, Explanations, RefusalTerms, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 import { requestExplanations } from './request-explanations.ts';
@@ -160,6 +160,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     why: 'something it needs, which its playbook keeps in its stored content, could not be read just now',
     remedy: 'Nothing needs to change; it can be tried again shortly.',
   },
+  busy: busyExplanation,
   tools_unfinished: {
     why: 'it called tools but could not finish',
     remedy:
@@ -259,7 +260,7 @@ function rejectionWords(
   rejection: Rejected,
   { remedies, explanations }: RefusalTerms,
 ): string {
-  const { why, remedy, mayHaveChanged } = explanationOf(rejection, remedies, explanations);
+  const { why, remedy, mayHaveChanged } = withTheWait(explanationOf(rejection, remedies, explanations), rejection);
   const unchanged = operationKind === 'command' && mayHaveChanged === undefined ? ' Nothing was changed.' : '';
   return `${questionFirst(rejection)}Could not ${attempt}: ${why}.${unchanged} ${remedy}`;
 }

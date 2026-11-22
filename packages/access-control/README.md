@@ -184,7 +184,7 @@ Each of these leaves the question as it is and takes at most one more policy (`s
 
 ## The pinned table
 
-`pinnedTableBehaviour` (`src/testing/pinned-table-behaviour.ts`) lists, for each role and each kind of caller, what the decision point allows of each kind of operation the runtime declares, on the org, on a playbook, on another and on a definition in the first. A change to a policy shows as a change to a row. It asks the table again with each kind of caller's requests in one batch, which must give the same table and read the roles once for each kind. `src/decision-point/pinned-table.test.ts` runs it over the engine each loader loads, and a host that loads the engine its own way runs it over that engine, from the testing entry, `@on.auto/access-control/testing`, so every loader decides the same table.
+`pinnedTableBehaviour` (`src/testing/pinned-table-behaviour.ts`) lists, for each role and each kind of caller, what the decision point allows of each kind of operation the runtime declares, on the org, on a playbook, on another and on a definition in the first. A change to a policy shows as a change to a row. It asks the table again with each kind of caller's requests in one batch, which must give the same table and read the roles once for each kind. `src/decision-point/decision-point.test.ts` runs it over the engine Node loads. In Node, `cedarModuleBundled` hands over the module it is given, and `src/engine/cedar.test.ts` proves it, so the table is not run a second time there. A host that loads the engine its own way runs the table over that engine, from the testing entry, `@on.auto/access-control/testing`, so every loader decides the same table.
 
 ## Cedar's licence
 

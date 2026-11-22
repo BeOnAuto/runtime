@@ -3,7 +3,7 @@ import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { ledgerRunLogStore } from './ledger-run-store.ts';
 import { runKeyOf, runLogStreamOf } from './run-address.ts';
@@ -39,14 +39,14 @@ const attributes = {
 
 describe('the run store of the host, ending a run', () => {
   it('forgets how far the follower passed the log of the run ahead of its dispatch', async () => {
-    const file = aSQLiteFile();
-    const database = await openedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const database = await openedOn(ledger);
     await Effect.runPromise(
       database.write(
         statement`INSERT INTO workflow_passed_runs (run_key, passed_through) VALUES (${runKeyOf(run)}, ${1000})`,
       ),
     );
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const hosted = await hostedOn(ledger);
 
     await Effect.runPromise(hosted.host.start(run, startOf(workflow('do:\n  - done: { set: { done: true } }'))));
     const left = await Effect.runPromise(database.read(statement`SELECT run_key FROM workflow_passed_runs`));
@@ -57,10 +57,10 @@ describe('the run store of the host, ending a run', () => {
 
 describe('the run store of the host, recording the end of a run', () => {
   it('records nothing of the end when the append that ends the run meets a conflict, since both are one transaction', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(run, startOf(workflow('do:\n  - done: { set: { done: true } }'))));
-    const database = await openedOn({ store: 'sqlite', file });
+    const database = await openedOn(ledger);
     const store = ledgerRunLogStore(database);
     const ends = () => Effect.runPromise(database.read(statement`SELECT ended_at, ended_time FROM workflow_runs`));
     const ending = onlyOf(await Effect.runPromise(store.eventsAfter(runKeyOf(run), 0)));
@@ -89,10 +89,10 @@ describe('the run store of the host, recording the end of a run', () => {
 
 describe('the run store of the host, keeping a run', () => {
   it('keeps a snapshot larger than a chunk in chunks outside the ledger, and loads the run from it', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(run, startOf(waiting, largeInput)));
-    const database = await openedOn({ store: 'sqlite', file });
+    const database = await openedOn(ledger);
     const chunks = await Effect.runPromise(
       database.read(statement`SELECT version, chunk, chunks FROM workflow_snapshot_chunks ORDER BY chunk`),
     );

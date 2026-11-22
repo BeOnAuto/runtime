@@ -8,6 +8,7 @@ import {
 } from '../registry/definition-events.ts';
 import { definitionEvolvedIn, type DefinitionState } from '../registry/definition-registry.ts';
 import { isRetired } from '../registry/definition.ts';
+import { changedMeanwhile } from '../registry/registry-decisions.ts';
 import { definitionNotFound } from '../registry/registry-lookup.ts';
 import { retiredWords } from './move-words.ts';
 
@@ -21,6 +22,7 @@ interface DefinitionMove {
   readonly from: string;
   readonly to: string;
   readonly moved_by: RecordedCaller;
+  readonly expectedVersion: number;
   readonly by: string;
   readonly at: string;
 }
@@ -52,15 +54,18 @@ type Decision = Result.Result<readonly DefinitionEvent[], Rejection<'not_found' 
 
 function decidedMove(
   type: string,
-  { name, from, to, moved_by: movedBy }: DefinitionMove,
+  { name, from, to, moved_by: movedBy, expectedVersion }: DefinitionMove,
   { definition, playbook }: DefinitionPlacement,
 ): Decision {
   if (definition === undefined || playbook !== from) {
     return Result.fail(definitionNotFound(type, name));
   }
-  return isRetired(definition)
-    ? Result.fail(retiredRefusal(type, name))
-    : Result.succeed([{ type: 'definition_moved', data: { from, to, moved_by: movedBy } }]);
+  if (isRetired(definition)) {
+    return Result.fail(retiredRefusal(type, name));
+  }
+  return definition.version === expectedVersion
+    ? Result.succeed([{ type: 'definition_moved', data: { from, to, moved_by: movedBy } }])
+    : Result.fail(changedMeanwhile);
 }
 
 function contextOfTheMove(type: string, definition: string) {

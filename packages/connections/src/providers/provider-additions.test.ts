@@ -1,6 +1,7 @@
 import {
   type AccessDecision,
   type AccessRequest,
+  busyRefusal,
   type CallerIdentity,
   CallPermission,
   callPermissionDecidedBy,
@@ -353,6 +354,19 @@ describe('whether a caller may add a connection, where a policy decision point d
       { may_add: true, refusal: null },
       { may_add: false, refusal: roleRefusalDetail },
     ]);
+  });
+
+  it('offers search no answer at all, rather than no providers, where whether the caller may add is not decided in time', () => {
+    const offering = makeProviderOffering(
+      connectionServicesWith({ policy: connectionPolicyOf({}), pages: harnessPages, consent: consentClientWith() }),
+    );
+    const refused = Effect.runSync(
+      Effect.flip(offering(ada)).pipe(
+        Effect.provideService(CallPermission, () => Effect.fail(busyRefusal('nothing was done', 4))),
+      ),
+    );
+
+    expect(refused).toMatchObject({ _tag: 'unavailable', kind: 'busy', retry_after: 4 });
   });
 
   it('offers search the providers to a caller it allows to add, and none to a caller it does not', () => {

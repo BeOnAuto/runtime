@@ -146,6 +146,20 @@ const context = { at: '2026-10-05T09:00:00.000Z', by: 'ada' };
 
 const catalog = changeCatalogOf([connectionChanges]);
 
+describe('the change the account a connection acts as makes', () => {
+  it('names nothing, since no read of the connection answers it', () => {
+    expect(
+      catalog.changesOf({
+        id: 'm1',
+        stream: 'connections',
+        type: 'connection_identified',
+        data: { connection: 'c1', connected_at: context.at, user: { id: 'h-7' } },
+        context,
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe('the changes the facts of the connections of an org make', () => {
   it('name a connection broken or removed by its id to a caller who may read the org, and nothing for the steps of its consent', () => {
     expect([
@@ -180,6 +194,7 @@ describe('the changes the facts of the connections of an org make', () => {
       ['connections'],
       [
         'connection_added',
+        'connection_way_chosen',
         'connection_client_given',
         'connection_consent_started',
         'connection_connected',
@@ -187,6 +202,7 @@ describe('the changes the facts of the connections of an org make', () => {
         'connection_app_credential_refused',
         'connection_removed',
         'connection_playbooks_set',
+        'connection_account_type_set',
         'connection_signing_secret_set',
         'connection_signing_secret_removed',
       ],
@@ -220,6 +236,19 @@ describe('the change a setting of playbooks makes', () => {
         context,
       }),
     ).toEqual([{ kind: 'connection', connection: 'c4' }]);
+  });
+});
+
+const appWay = { kind: 'client_credentials', issuer: 'https://a.example.com', permissions: 'application' } as const;
+
+describe('the change a setting of the account type or a choice of the way makes', () => {
+  it.each([
+    ['connection_account_type_set', { connection: 'c5', account_type: 'service' }],
+    ['connection_way_chosen', { connection: 'c5', credential: appWay, says: {} }],
+  ] as const)('names the connection of %s by its id, since its record then answers another type', (type, data) => {
+    expect(catalog.changesOf({ id: 'm1', stream: 'connections', type, data, context })).toEqual([
+      { kind: 'connection', connection: 'c5' },
+    ]);
   });
 });
 

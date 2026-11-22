@@ -130,6 +130,7 @@ export { TriggerKindSchema, triggerKinds, triggerKindsInWords, type TriggerKind 
 export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { reportedDifferenceMessage } from './access-control/report-only.ts';
+export { DecisionPointPatience } from './access-control/asked-in-time.ts';
 export { enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
 export { roleRefusalDetail, roleRefusalKind, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
 export { CallPermission, callPermissionDecidedBy, callPermissionReportedTo } from './access-control/call-permission.ts';
@@ -276,6 +277,8 @@ export {
   type RejectionBecause,
 } from './outcome/rejection-because.ts';
 export { Unavailable, UnavailableKindSchema, type UnavailableKind } from './outcome/unavailable.ts';
+export { busyRefusal, busyWaitsOf, type BusyWaits } from './outcome/busy.ts';
+export { busyMessage } from './access-control/enforcement.ts';
 export {
   StudioLinks,
   studioLinkField,

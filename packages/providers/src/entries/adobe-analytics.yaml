@@ -27,6 +27,7 @@ credentials:
       additional_info.projectedProductContext: Read the Adobe product profiles and Adobe Analytics permissions of the account.
     description: The client id and secret of a Server-to-Server credential of an Adobe Developer Console project with the Adobe Analytics API.
   - kind: authorization
+    account_types: [personal]
     issuer: https://ims-na1.adobelogin.com
     scope: openid AdobeID read_organizations additional_info.projectedProductContext additional_info.job_function offline_access
     says:

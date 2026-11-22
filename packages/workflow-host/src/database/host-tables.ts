@@ -65,6 +65,8 @@ const followerTables: readonly Statement[] = [
     PRIMARY KEY (definition_key, run_id)
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_reaction_backlog_due ON workflow_reaction_backlog (due)`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_reaction_backlog_by_definition
+    ON workflow_reaction_backlog (definition_key, due, run_id)`,
   reactionRefusalsTable,
 ];
 

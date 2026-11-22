@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { GenerationDeferredSchema, generationWaitOf, type GenerationWait } from './generation-wait.ts';
 import { waitAfterPoll } from './poll-cadence.ts';
-import { generationsWaiting } from './waiting-rows.ts';
+import { generationsWaiting, waitingRowFrom } from './waiting-rows.ts';
 
 const wait: GenerationWait = {
   kind: 'video',
@@ -142,5 +142,49 @@ describe('the waits between the polls of a generation', () => {
       waitAfterPoll({ polls: 1, deferredAt: 0, now: 60_000, progress: 95 }),
       waitAfterPoll({ polls: 1, deferredAt: 0, now: 60_000, progress: 100 }),
     ]).toEqual([30_000, 60_000, 5000, 5000]);
+  });
+
+  it.each([
+    [40, 7001, 5251],
+    [40, 6667, 5001],
+    [30, 5001, 5835],
+    [70, 30_001, 6429],
+    [40, 6000, 5000],
+    [40, 90_001, 60_000],
+  ])(
+    'come out in whole milliseconds, rounded up within the least and the most, at progress %i, %i ms after the deferral',
+    (progress, elapsed, waited) => {
+      const after = waitAfterPoll({
+        polls: 1,
+        deferredAt: 1_795_000_000_000,
+        now: 1_795_000_000_000 + elapsed,
+        progress,
+      });
+
+      expect([after, Number.isInteger(after)]).toEqual([waited, true]);
+    },
+  );
+});
+
+describe('a row of a waiting generation as it is read', () => {
+  const kept = {
+    deferred_id: 'deferral',
+    handle: 'video_1',
+    gateway: 'gateway',
+    deferred_at: 1_795_000_000_000,
+    waits_until: 1_795_000_600_000,
+    open: true,
+    polls: 1,
+    progress: 40,
+    ending_due_at: 1_795_000_600_000,
+  };
+
+  it('is read with the time of its next poll that an earlier version kept with a fraction of a millisecond', () => {
+    const fractional = 1_795_000_012_251.75;
+
+    expect(waitingRowFrom({ ...kept, next_poll_at: fractional, poll_due_at: fractional })).toMatchObject({
+      next_poll_at: fractional,
+      poll_due_at: fractional,
+    });
   });
 });

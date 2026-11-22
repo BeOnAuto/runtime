@@ -327,6 +327,20 @@ How a judging ends:
 
 To change what a goal is called for the person, change its `name` in the list and ask for their yes, as for any change. To change its `id`, call update_playbook with `rename_goal` alone: the `id` it has and the `new_id`. The goal keeps its results and the person's yes, and each workflow that serves it gets a new version that names the new id, so write the new id in `contributes` from then on. A rename is refused while one of those workflows has a run that has not ended. Change an `id` when the person asks for it, or when a move was refused because the other playbook already has a goal of that id.
 
+## Moving a goal to another playbook
+
+<!-- with messages -->
+
+When the person asks to move a goal to another playbook, call move_definitions in the playbook that has it: put the goal's id in `goals`, and every workflow that serves it, with everything those workflows use, in `definitions`. list_definitions with `type` workflow shows the goals each workflow serves, in `details.contributes`. If one of them also serves a goal that stays, ask the person first whether that goal moves too or the workflow stops serving it. Put the goal's notification function in `definitions` too, unless the other playbook already has one of that name. The goal keeps its id, its results and the person's yes, so do not ask for the yes again; a judging that is open, such as this week's, carries on. After a move, read a playbook's goals again with get_playbook before you send it a goals list: a list that still names a goal that moved away would make a new goal of that id.
+
+<!-- end -->
+
+<!-- without messages -->
+
+When the person asks to move a goal to another playbook, call move_definitions in the playbook that has it: put the goal's id in `goals`, and every workflow that serves it, with everything those workflows use, in `definitions`. list_definitions with `type` workflow shows the goals each workflow serves, in `details.contributes`. If one of them also serves a goal that stays, ask the person first whether that goal moves too or the workflow stops serving it. The goal keeps its id, its results and the person's yes, so do not ask for the yes again; a judging that is open, such as this week's, carries on. After a move, read a playbook's goals again with get_playbook before you send it a goals list: a list that still names a goal that moved away would make a new goal of that id.
+
+<!-- end -->
+
 ## What a workflow contributes
 
 Once a playbook has goals, every workflow you save says what it does for them, in a top-level `contributes` list beside `document`, `schedule` and `do`. A workflow without it is refused, and so is one that names a goal or a milestone the playbook does not have.

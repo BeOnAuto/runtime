@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeGatewayInProcess, inProcessFetch } from '../testing/index.ts';
 import { gatewayDocumentOf, type FakeGateway, type FakeGatewayOptions } from '../testing/served-fakes.ts';
+import { connectionGatewayBehaviour } from './connection-gateway-behaviour.ts';
+import { fakeGatewayAnswers } from './fake-gateway.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -87,5 +89,20 @@ describe('the fake gateway', () => {
     gateway.answeringAsItself('call');
 
     expect([told, (await inProcessFetch(`${gateway.origin}/api/whoami`)).status]).toEqual([503, 401]);
+  });
+});
+
+connectionGatewayBehaviour('the fake', () => {
+  const origin = 'https://gateway.example';
+  const answers = fakeGatewayAnswers();
+  const gateway = answers.gatewayAt({ origin, heard: () => [], failures: () => [], close: () => Promise.resolve() });
+  return Promise.resolve({
+    handler: answers.handlerAt(origin),
+    connections: gateway.url,
+    calls: `${origin}/api`,
+    keyHeader: gateway.keyHeader,
+    aCall: { method: 'GET', path: '/whoami' },
+    noted: () => Promise.resolve({}),
+    consentAt: (startUrl) => Promise.resolve(gateway.allow(startUrl).handle),
   });
 });

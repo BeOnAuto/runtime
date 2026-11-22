@@ -8,7 +8,7 @@ import { deliveryRowsOf } from '../../testing/interaction-servers/chat-deliverie
 import { goalTrigger, notice, noticeRunId, servingNotices } from '../../testing/interaction-servers/notice-starts.ts';
 import type { TemporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
-import { until } from '../../testing/waiting/until.ts';
+import { whenSwept } from '../../testing/servers/workflow-server.ts';
 
 const brief = `${alpha}/definitions/interaction/brief-out`;
 
@@ -45,7 +45,8 @@ describe('a notification function started again under the id of a run that has e
     await chat.close();
 
     await start(notice);
-    await until(
+    await whenSwept(
+      server,
       () => deliveryRowsOf(server, noticeRunId),
       (rows) => rows.some(({ type }) => type === 'delivery_failed'),
     );
@@ -134,7 +135,8 @@ describe('a notification function the runtime cannot admit', () => {
     const before = await runs();
     meter.admitAgain();
     await start(notice);
-    await until(
+    await whenSwept(
+      server,
       () => chat.chat.posted(),
       (posted) => posted.length === 1,
     );

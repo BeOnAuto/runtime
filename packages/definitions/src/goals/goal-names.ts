@@ -1,4 +1,4 @@
-import { Conflict, recordedDecoder, streamPrefixOfPlaybook } from '@on.auto/operations';
+import { Conflict, playbookOfStreamPrefix, recordedDecoder, streamPrefixOfPlaybook } from '@on.auto/operations';
 import type {
   DefinitionName,
   DefinitionNames,
@@ -8,6 +8,7 @@ import type {
 } from '@on.auto/operations/definition-names';
 import { Option } from 'effect';
 
+import { goalsKeptBeyondWords, goalTakenWords } from '../moving/move-words.ts';
 import { changedMeanwhile } from '../registry/registry-decisions.ts';
 import { goalIdTakenWords } from '../renaming/rename-words.ts';
 import { goalStream } from './goal-decider.ts';
@@ -48,12 +49,15 @@ function createdName({ org }: GoalPlace, { playbook, goal }: { readonly playbook
   };
 }
 
-function nameChangedBy(held: DefinitionName, fact: RecordedGoalEvent): NameAfter {
+function nameChangedBy({ org }: GoalPlace, held: DefinitionName, fact: RecordedGoalEvent): NameAfter {
   if (fact.type === 'goal_removed') {
     return 'released';
   }
   if (fact.type === 'goal_renamed') {
     return { ...held, name: fact.data.to };
+  }
+  if (fact.type === 'goal_moved') {
+    return { ...held, playbookKey: streamPrefixOfPlaybook({ org, playbook: fact.data.to }) };
   }
   const status = fact.type === 'goal_updated' ? statusOf(fact.data.goal) : held.status;
   return status === held.status ? undefined : { ...held, status };
@@ -68,7 +72,20 @@ function nameAfter(held: DefinitionName | undefined, message: NamedMessage): Nam
   if (fact.type === 'goal_created') {
     return createdName(place, fact.data);
   }
-  return held === undefined ? undefined : nameChangedBy(held, fact);
+  return held === undefined ? undefined : nameChangedBy(place, held, fact);
+}
+
+const moved = 'goal_moved';
+
+function playbookMovedInto({ playbookKey }: DefinitionName, factTypes: readonly string[]): string | undefined {
+  return factTypes.includes(moved)
+    ? Option.getOrUndefined(Option.map(playbookOfStreamPrefix(playbookKey), ({ playbook }) => playbook))
+    : undefined;
+}
+
+function keptBeyond(claimed: DefinitionName, factType: string, before: number, most: number): Conflict {
+  const to = playbookMovedInto(claimed, [factType]);
+  return to === undefined ? changedMeanwhile : new Conflict({ detail: goalsKeptBeyondWords(to, before, most) });
 }
 
 function renamedFrom(changedBy: readonly NamedMessage[]): string | undefined {
@@ -79,22 +96,33 @@ function renamedFrom(changedBy: readonly NamedMessage[]): string | undefined {
   return from;
 }
 
-function takenBy(_claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]): Conflict {
+function takenWhere(claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]) {
+  const retired = holder.status === 'retired';
+  const to = playbookMovedInto(
+    claimed,
+    changedBy.map(({ type }) => type),
+  );
+  if (to !== undefined) {
+    return goalTakenWords(to, claimed.name, retired);
+  }
   const from = renamedFrom(changedBy);
-  return from === undefined
-    ? changedMeanwhile
-    : new Conflict({ detail: goalIdTakenWords(holder.name, from, holder.status === 'retired'), kind: 'taken' });
+  return from === undefined ? undefined : goalIdTakenWords(holder.name, from, retired);
+}
+
+function takenBy(claimed: DefinitionName, holder: DefinitionName, changedBy: readonly NamedMessage[]): Conflict {
+  const detail = takenWhere(claimed, holder, changedBy);
+  return detail === undefined ? changedMeanwhile : new Conflict({ detail, kind: 'taken' });
 }
 
 export const mostGoalsAPlaybookKeeps: NameBound = {
-  checkedBy: ['goal_created'],
+  checkedBy: ['goal_created', moved],
   counts: () => true,
   most: (definitionType) => (definitionType === goalType ? mostGoals : Number.POSITIVE_INFINITY),
-  beyond: () => changedMeanwhile,
+  beyond: keptBeyond,
 };
 
 export const goalNames: DefinitionNames = {
-  types: ['goal_created', 'goal_updated', 'goal_removed', 'goal_renamed'],
+  types: ['goal_created', 'goal_updated', 'goal_removed', 'goal_renamed', moved],
   holdsNames: (stream) => goalStreamOf(stream) !== undefined,
   definitionKeyOf: ({ stream }) => goalStreamOf(stream)?.definitionKey,
   nameAfter,

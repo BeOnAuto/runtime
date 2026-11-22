@@ -75,6 +75,31 @@ export const UnsubscribeSchema = Schema.Struct(callFields).annotate({
   description: 'The call that removes a subscription, without which none is made',
 });
 
+export const IdentitySchema = Schema.Struct({
+  tool: callFields.tool,
+  with: Schema.optionalKey(
+    ArgumentsSchema.annotate({ description: 'Beside tool, its arguments, written out as they are' }),
+  ),
+  method: callFields.method,
+  url: Schema.optionalKey(
+    Schema.String.annotate({ description: 'Beside method, the https URL of the request, written out whole' }),
+  ),
+  body: Schema.optionalKey(
+    ArgumentsSchema.annotate({
+      description: 'Beside method and url, the JSON body of the request, written out as it is',
+    }),
+  ),
+  identified: Schema.Struct({
+    id: Schema.String.annotate({ description: "A JSON Pointer into what the call answered, to the account's id" }),
+    name: Schema.optionalKey(
+      Schema.String.annotate({ description: "A JSON Pointer to the account's name, where the answer gives one" }),
+    ),
+  }).annotate({ description: 'Where what the call answered names that account' }),
+}).annotate({
+  description:
+    'The call that asks the service which account the connection acts as, a tool of the connection or an HTTP request',
+});
+
 type Call = typeof UnsubscribeSchema.Type;
 
 const sample = {
@@ -140,6 +165,8 @@ export const unsubscribeTemplates = templatesOf(
   'subscription',
 );
 
+export const identityTemplates = templatesOf('the call that asks which account the connection acts as', [], 'with');
+
 export interface Placed {
   readonly pointer: string;
   readonly detail: string;
@@ -154,9 +181,33 @@ const writtenOutToItsHost = /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:[/?#]|$)/u;
 const notWrittenOut =
   "Expected an https URL written out up to its host, since the request carries the connection's credential there, with templates in its path and query alone";
 
+const writtenOutWhole = /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:[/?#][^{}\s]*)?$/u;
+
+export const notWrittenOutWhole = 'Expected an https URL written out whole';
+
+export function isWrittenOutWhole(url: string): boolean {
+  return writtenOutWhole.test(url);
+}
+
+const opensATemplate = /\{\{|\{%|\$\{/u;
+
+function readsNoName({ names }: TemplateSet): boolean {
+  return names.length === 0;
+}
+
+function writtenAsItIsIssues(set: TemplateSet, pointer: string, written: Schema.Json): readonly Placed[] {
+  const detail = `Expected no template, since ${set.what} has nothing to fill in: write the text out as it is`;
+  return textsIn(written, pointer)
+    .filter(({ text }) => opensATemplate.test(text))
+    .map((placed) => ({ pointer: placed.pointer, detail }));
+}
+
 function templatedIssues(set: TemplateSet, pointer: string, written: Call['with']): readonly Placed[] {
-  return written === undefined
-    ? []
+  if (written === undefined) {
+    return [];
+  }
+  return readsNoName(set)
+    ? writtenAsItIsIssues(set, pointer, written)
     : templatesIssues(set, written, { lines: noLines, pointer, inputSchema: undefined, clock: checkedOn });
 }
 
@@ -197,6 +248,9 @@ function urlIssues(pointer: string, url: string | undefined, set: TemplateSet): 
   const at = `${pointer}/url`;
   if (url === undefined) {
     return [{ pointer: at, detail: 'Expected url beside method' }];
+  }
+  if (readsNoName(set)) {
+    return isWrittenOutWhole(url) ? [] : [{ pointer: at, detail: notWrittenOutWhole }];
   }
   return writtenOutToItsHost.test(url)
     ? [...textIssues(set, at, url), ...secretIssuesOf(at, url, set)]

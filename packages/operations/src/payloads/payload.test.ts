@@ -68,6 +68,24 @@ describe('the texts of payloads kept in memory', () => {
   });
 });
 
+describe('the bytes the texts of payloads kept in memory are counted at', () => {
+  it.each([
+    ['one byte a character in UTF-8', 'a'],
+    ['two bytes a character in UTF-8', 'é'],
+    ['three bytes a character in UTF-8', '漢'],
+    ['two code units a character', '😀'],
+  ])('are two for each UTF-16 code unit of a text for each of its UTF-16 code units, %s', (_shape, letter) => {
+    const text = letter.repeat(10);
+    const fitting = payloadCacheWithin(text.length * 2);
+    const short = payloadCacheWithin(text.length * 2 - 1);
+
+    fitting.kept(alpha, first, text);
+    short.kept(alpha, first, text);
+
+    expect([fitting.textOf(alpha, first), short.textOf(alpha, first)]).toEqual([text, undefined]);
+  });
+});
+
 describe('the texts of payloads where a shell keeps none', () => {
   it('are never kept', () => {
     noPayloadCache.kept(alpha, first, 'text');

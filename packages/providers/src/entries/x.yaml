@@ -7,6 +7,7 @@ document: documents/x.openapi.json
 request_id: x-transaction-id
 credentials:
   - kind: authorization
+    account_types: [service, personal]
     issuer: https://api.x.com
     authorization_endpoint: https://x.com/i/oauth2/authorize
     token_endpoint: https://api.x.com/2/oauth2/token

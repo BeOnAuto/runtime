@@ -1,10 +1,10 @@
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import {
   authorizationAskedBy,
   backFrom,
@@ -22,7 +22,7 @@ async function startedOn(port: number, environment: Readonly<Record<string, stri
   const ledger = temporaryLedger();
   const server = await startServer(
     { HOST: '127.0.0.1', PORT: String(port), LEDGER_FILE: ledger.fileName, ...environment },
-    compositionRoot,
+    testComposition(),
   );
   onTestFinished(async () => {
     await server.stop();

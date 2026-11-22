@@ -2,9 +2,11 @@ import { SignInNeedsAListener, startServer, startServerInProcess } from '../../l
 import type { ComposedServerOptions } from '../../server-options/composed-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
+import type { WorkInHand } from '../waiting/work-in-hand.ts';
 import type { Answering } from './http-client.ts';
 import { answeredAt, asSentTo, inProcessOrigin } from './in-process-origins.ts';
 import type { ServedParts } from './served-parts.ts';
+import { toldOf, type ToldComposition } from './told-composition.ts';
 
 export function loopbackSettingsOver(ledger: TemporaryLedger): Readonly<Record<string, string>> {
   return {
@@ -22,13 +24,17 @@ function inProcessSettingsOver(ledger: TemporaryLedger | undefined): Readonly<Re
 
 export interface StartedServer extends Answering {
   readonly stop: () => Promise<void>;
+  readonly answered: ToldComposition['answered'];
+  readonly arrived: ToldComposition['arrived'];
 }
+
+type Started = Omit<StartedServer, 'answered' | 'arrived'>;
 
 async function startedOverHttp(
   environment: Readonly<Record<string, string>>,
   composed: ComposedServerOptions,
   shared: TemporaryLedger | undefined,
-): Promise<StartedServer> {
+): Promise<Started> {
   const ledger = shared ?? temporaryLedger();
   const own = [ledger].filter((each) => each !== shared);
   const removeOwn = (): void => {
@@ -53,7 +59,7 @@ async function startedInProcess(
   environment: Readonly<Record<string, string>>,
   composed: ComposedServerOptions,
   shared: TemporaryLedger | undefined,
-): Promise<StartedServer> {
+): Promise<Started> {
   const origin = inProcessOrigin(environment['PORT']);
   const server = await startServerInProcess({ ...inProcessSettingsOver(shared), ...environment }, composed, origin);
   const answer = asSentTo(server.fetch);
@@ -72,7 +78,7 @@ async function startedInProcessUnlessSigningIn(
   environment: Readonly<Record<string, string>>,
   composed: ComposedServerOptions,
   shared: TemporaryLedger | undefined,
-): Promise<StartedServer> {
+): Promise<Started> {
   try {
     return await startedInProcess(environment, composed, shared);
   } catch (refused) {
@@ -92,7 +98,13 @@ export function startedOver(
   over: ServedParts['over'],
   environment: Readonly<Record<string, string>>,
   composed: ComposedServerOptions,
-  shared: TemporaryLedger | undefined,
+  { shared, inHand }: { readonly shared: TemporaryLedger | undefined; readonly inHand: WorkInHand },
 ): Promise<StartedServer> {
-  return (over === 'http' ? startedOverHttp : startedInProcessUnlessSigningIn)(environment, composed, shared);
+  const starting = over === 'http' ? startedOverHttp : startedInProcessUnlessSigningIn;
+  const told = toldOf(composed, inHand);
+  return starting(environment, told.composed, shared).then((server) => ({
+    ...server,
+    answered: told.answered,
+    arrived: told.arrived,
+  }));
 }

@@ -64,6 +64,12 @@ function clientsAt(
   return taken === undefined ? Effect.fail(atTheIssuer(issuer, noClient)) : Effect.succeed([taken]);
 }
 
+const clientCredentialsGrant = 'client_credentials';
+
+function listsClientCredentials({ grant_types_supported: listed = [] }: AuthorizationServer): boolean {
+  return listed.includes(clientCredentialsGrant);
+}
+
 function listedScopeOf({ scopes_supported: listed = [] }: ProtectedResource): string | undefined {
   return listed.length === 0 ? undefined : listed.join(' ');
 }
@@ -94,6 +100,6 @@ export function namedWayOf(
     yield* Effect.mapError(checkedServer(read.server, reaches), (refusal) => atTheIssuer(read.issuer, refusal));
     const clients = yield* clientsAt(read, publicUrl);
     const scope = yield* scopeNamedBy(challenge, resource);
-    return { issuer: read.issuer, clients, scope };
+    return { issuer: read.issuer, clients, scope, takesClientCredentials: listsClientCredentials(read.server) };
   });
 }

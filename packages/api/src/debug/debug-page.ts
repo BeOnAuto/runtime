@@ -84,9 +84,11 @@ function instructionsOf(connection: SurfaceConnection, version: string): Markup 
     </p>
     <pre class="verbatim">${connection.instructions}</pre>
     <p class="note">
-      On a real connection the text holds one more sentence, just before its last, which names the caller and the
-      organization, such as “This connection acts as the key ci-bot in the org acme.” This page has no caller, so it
-      leaves that sentence out. The server names itself Auto Runtime, version ${version}.
+      On a real connection the text holds one more sentence, which names the caller and the organization, such as “You
+      are using the key ci-bot in the organization acme.” That sentence gives the organization’s name where the caller’s
+      access token names it, and its id otherwise. It comes just before the last sentence, or before the sentence about
+      asking questions first where the text has one. This page has no caller, so it leaves that sentence out. The server
+      names itself Auto Runtime, version ${version}.
     </p>
   </section>`;
 }

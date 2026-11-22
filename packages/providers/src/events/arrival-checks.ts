@@ -5,7 +5,13 @@ import {
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
-import { answerIssuesOf, eventTopicTemplates, textIssues } from './event-calls.ts';
+import {
+  answerIssuesOf,
+  eventTopicTemplates,
+  isWrittenOutWhole,
+  notWrittenOutWhole,
+  textIssues,
+} from './event-calls.ts';
 import { provesTheBody, provesTheBodyAndATime } from './event-proofs.ts';
 import { pathOf } from './json-texts.ts';
 import { expressionIssueOf, inEveryPlaceOf, type ExpressionPlace } from './runtime-expressions.ts';
@@ -87,7 +93,7 @@ function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
 
 type DeclaredEvent = NonNullable<Destination['events']>[number];
 
-const placesOfAnEvent: readonly ('time' | 'subject')[] = ['time', 'subject'];
+const placesOfAnEvent: readonly ('time' | 'subject' | 'actor')[] = ['time', 'subject', 'actor'];
 
 const whereEachApplies: readonly ('automatic' | 'changed')[] = ['automatic', 'changed'];
 
@@ -202,16 +208,12 @@ function acknowledgeIssuesOf(destination: Destination): readonly DestinationIssu
   return expressionIssuesAt(['acknowledge'], destination.acknowledge, inEveryPlaceOf(transportOf(destination)));
 }
 
-const writtenOutWhole = /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:[/?#][^{}\s]*)?$/u;
-
-const notWrittenOutWhole = 'Expected an https URL written out whole';
-
 function openIssuesOf({ open }: Destination): readonly DestinationIssue[] {
   if (open === undefined) {
     return [];
   }
   return [
-    ...(writtenOutWhole.test(open.url) ? [] : [{ path: ['open', 'url'], issue: notWrittenOutWhole }]),
+    ...(isWrittenOutWhole(open.url) ? [] : [{ path: ['open', 'url'], issue: notWrittenOutWhole }]),
     ...answerIssuesOf([['/open/address', open.address]]).map(({ pointer, detail }) => ({
       path: pathOf(pointer),
       issue: detail,

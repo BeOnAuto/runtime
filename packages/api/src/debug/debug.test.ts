@@ -12,7 +12,7 @@ import {
   idsIn,
 } from '../testing/debug-pages.ts';
 import { textOf, withMcpSession } from '../testing/mcp-clients.ts';
-import { acmeAdmin } from '../testing/operation-server.ts';
+import { acmeAdmin, acmeAdminActing } from '../testing/operation-server.ts';
 import { toolNamesIn } from '../testing/tool-listing.ts';
 import { debugPageAnswerOf } from './debug-routes.ts';
 import { argumentsIn, type ShownTool, toolGroupsOf } from './shown-tools.ts';
@@ -160,13 +160,19 @@ interface Served {
   readonly prompts: readonly string[];
 }
 
+const namingTheCaller = new RegExp(` [^.]* ${acmeAdminActing.caller.id} [^.]*\\.`, 'u');
+
+const addressWithTheOrg = `/orgs/${acmeAdminActing.org}/playbooks/`;
+
 function servedAt(path: string): Promise<Served> {
   const connecting = {
     url: `${served.listening.origin}${path}`,
     headers: { authorization: `Bearer ${acmeAdmin.key}` },
   };
   return withMcpSession('current revision', connecting, async (session) => ({
-    instructions: String(session.instructions).replace(/ This connection acts as [^.]+\./u, ''),
+    instructions: String(session.instructions)
+      .replace(namingTheCaller, '')
+      .replace(addressWithTheOrg, '/orgs/{org}/playbooks/'),
     tools: toolNamesIn(await session.listTools()).toSorted(),
     prompts: Schema.decodeUnknownSync(PromptsSchema)(await session.listPrompts())
       .prompts.map(({ name }) => name)

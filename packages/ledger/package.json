@@ -21,6 +21,7 @@
     "measure:run-filters": "node measure-run-filters.ts",
     "measure:message-index": "node measure/message-index.ts",
     "measure:content": "node --expose-gc measure/recorded-content.ts",
+    "measure:keyed-fill": "node --expose-gc filled-heap.ts",
     "measure:waits": "node measure/appended-waits.ts",
     "measure:scrub": "node measure/fact-scrub.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",

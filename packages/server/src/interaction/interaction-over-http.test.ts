@@ -4,7 +4,6 @@ import { openRequests } from '@on.auto/interaction';
 import { agentDelivery, notificationDocument } from '@on.auto/interaction/testing';
 import { projectedTableOf } from '@on.auto/operations';
 import { answers, textResult } from '@on.auto/reasoning/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -20,8 +19,14 @@ import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { approvalRunOn, fencedBlocksOf, pageOf } from '../testing/servers/tutorial-calls.ts';
-import { runIdIn, servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledAsSwept,
+  whenSwept,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
+import { steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
 
 const answerIdOf = Schema.decodeUnknownSync(Schema.Struct({ answer_id: Schema.String }));
 
@@ -37,8 +42,8 @@ function ledgerFile(): string {
   return ledger.fileName;
 }
 
-async function expiredAgo(file: string, milliseconds: number): Promise<void> {
-  const past = Date.now() - milliseconds;
+async function expiredAgo(file: string, now: number, milliseconds: number): Promise<void> {
+  const past = now - milliseconds;
   await onTheLedgerIn(file, (connection) =>
     connection.write(everyRowSet(projectedTableOf(openRequests), { expires_at: past, ending_due_at: past })),
   );
@@ -225,7 +230,11 @@ describe('the approval workflow in the MCP reference', () => {
       chatEnvironment(chat.url, { org: 'local' }),
     );
     onTestFinished(server.stop);
-    const run = await withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, approvalRunOn);
+    const run = await withMcpSession(
+      'current revision',
+      { url: `${server.origin}/mcp`, headers: {} },
+      approvalRunOn(server),
+    );
     const quoted = pageOf('reference/mcp.md');
 
     expect(run.summaries.filter((summary) => !quoted.includes(summary))).toEqual([]);
@@ -246,7 +255,7 @@ describe('requests past their expiry while the server was stopped', () => {
     const uncaught = await first.workflow('approval', `do:\n${asking('approve-brief', 'approve')}`);
     await first.openRequests(3);
     await first.stop();
-    await expiredAgo(file, 1000);
+    await expiredAgo(file, first.runsOn.now(), 1000);
 
     const second = await interactionServerOn({ LEDGER_FILE: file });
 
@@ -269,7 +278,8 @@ describe('another workflow, triggered by the answer to a request', () => {
     const runId = await server.ask('approve-brief');
 
     await server.answer(runId, { answer: { choice: 'approve' } });
-    const [reaction] = await until(
+    const [reaction] = await whenSwept(
+      server,
       async () => decodeRuns((await server.call('GET', `${alpha}/runs?type=workflow&name=on-approval`)).body).runs,
       (runs) => runs.some(({ status }) => status !== 'started'),
     );
@@ -283,14 +293,14 @@ describe('another workflow, triggered by the answer to a request', () => {
 
 describe('a request a workflow step waits for past its deadline', () => {
   it('is cancelled with the kind deadline, and leaves the open requests', async () => {
-    const clock = movedClock(Date.now());
+    const clock = steppedServerClock();
     const server = await servingInteractions(agentDelivery, {}, { clock });
     const workflowId = await server.workflow('hurried', hurried);
 
     const [request] = await server.openRequests(1);
     clock.moveTo(clock.now() + stepTimeoutMs);
-    const workflow = await server.settled(workflowId);
-    const asked = await server.settled(String(request));
+    const workflow = (await settledAsSwept(server, clock, `${alpha}/runs/${workflowId}`)).body;
+    const asked = (await settledAsSwept(server, clock, `${alpha}/runs/${String(request)}`)).body;
 
     expect(workflow).toMatchObject({ status: 'rejected', rejection: { reason: 'unavailable' } });
     expect(asked).toMatchObject({ status: 'rejected', rejection: { reason: 'cancelled', kind: 'deadline' } });

@@ -8,7 +8,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { at, began } from '../multi-stream/multi-stream-cases.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../postgresql/postgresql-ledger.ts';
 import { conflictOfARefusal } from '../refusals/append-refused.ts';
-import { until } from '../testing/until.ts';
+import { aStatementGate, type StatementGate } from '../testing/statement-gate.ts';
 import { runIdsOnStoresBehaviour } from './run-ids-on-stores-behaviour.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -39,9 +39,9 @@ async function aDatabase(): Promise<string> {
   return database.href;
 }
 
-async function aStoreOn(database: string): Promise<ReturnType<typeof postgresqlEventStore>> {
+async function aStoreOn(database: string, gate: StatementGate): Promise<ReturnType<typeof postgresqlEventStore>> {
   const store = postgresqlEventStore({
-    pools: plainPoolsOn(database),
+    pools: gate.pools(database),
     reportLostConnection: Function.constVoid,
     runIds: runIdsOfTheTests,
   });
@@ -50,37 +50,27 @@ async function aStoreOn(database: string): Promise<ReturnType<typeof postgresqlE
   return store;
 }
 
-const decodeWaiting = Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ waiting: Schema.Number })]));
-
-async function untilOneWaitsOnALock(database: string): Promise<void> {
-  const watching = await connected(database);
-  await until(
-    async () => {
-      const { rows } = await watching.query(
-        "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()",
-      );
-      return decodeWaiting(rows)[0].waiting;
-    },
-    (waiting) => waiting > 0,
-  );
-}
-
 const decodeHolders = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ definition_key: Schema.String })));
 
 async function racedWith(ending: 'COMMIT' | 'ROLLBACK') {
   const database = await aDatabase();
-  const store = await aStoreOn(database);
-  const holding = await connected(database);
-  await holding.query('BEGIN');
-  await holding.query(
-    "INSERT INTO run_ids_1 (org_key, run_id, definition_key) VALUES ('org/acme/', 'r1', 'definition/acme/d1/')",
-  );
+  const gate = aStatementGate();
+  const store = await aStoreOn(database, gate);
+  const claiming = gate.stopBefore('INSERT INTO run_ids_1');
+  const claimAsked = gate.sent('INSERT INTO run_ids_1');
 
   const appending = store.append('definition/acme/d2/runs/r1', [began], at(0)).then(
     () => 'kept',
     (error: unknown) => conflictOfARefusal(error),
   );
-  await untilOneWaitsOnALock(database);
+  await claiming.reached;
+  const holding = await connected(database);
+  await holding.query('BEGIN');
+  await holding.query(
+    "INSERT INTO run_ids_1 (org_key, run_id, definition_key) VALUES ('org/acme/', 'r1', 'definition/acme/d1/')",
+  );
+  claiming.go();
+  await claimAsked;
   await holding.query(ending);
   const answer = await appending;
   const { rows } = await holding.query('SELECT definition_key FROM run_ids_1');

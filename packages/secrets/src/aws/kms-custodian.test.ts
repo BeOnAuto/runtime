@@ -6,9 +6,9 @@ import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 import type { Custodian } from '../custodians/custodian.ts';
 import { aClosedPort } from '../fakes/closed-port.ts';
 import { fakeKmsInProcess, type FakeKeyState } from '../fakes/fake-kms.ts';
+import { retriesOnATimer, type RetriesOnATimer } from '../fakes/retries-on-a-timer.ts';
 import { waitedOut } from '../fakes/waited-out.ts';
 import type { KeepingFailure } from '../keepers/keeper.ts';
-import type { AwsWaits } from './aws-requests.ts';
 import { encryptionContext, kidOfKey, kmsCustodian } from './kms-custodian.ts';
 
 const account = '111122223333';
@@ -38,15 +38,37 @@ afterAll(fake.close);
 
 const credentials = { accessKeyId: 'an-access-key', secretAccessKey: 'a-secret-access-key' };
 
+type AwsWaits = NonNullable<Parameters<typeof kmsCustodian>[0]['waits']>;
+
 const noProxy = { enabled: false, environment: {} };
 
-function madeOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Effect.Effect<Custodian, KeepingFailure> {
+function madeOf(
+  keyId: string,
+  endpoint = fake.url,
+  waits?: AwsWaits,
+  retries?: RetriesOnATimer,
+): Effect.Effect<Custodian, KeepingFailure> {
   const reaching = endpoint === fake.url ? { requestHandlerOf: fake.requestHandlerOf } : {};
-  return kmsCustodian({ keyId, region: 'eu-west-1', proxy: noProxy, credentials, endpoint, waits, ...reaching });
+  const retrying = retries === undefined ? {} : { retryStrategyOf: retries.retryStrategyOf };
+  return kmsCustodian({
+    keyId,
+    region: 'eu-west-1',
+    proxy: noProxy,
+    credentials,
+    endpoint,
+    waits,
+    ...reaching,
+    ...retrying,
+  });
 }
 
-function custodianOf(keyId: string, endpoint = fake.url, waits?: AwsWaits): Promise<Custodian> {
-  return Effect.runPromise(madeOf(keyId, endpoint, waits));
+function custodianOf(
+  keyId: string,
+  endpoint = fake.url,
+  waits?: AwsWaits,
+  retries?: RetriesOnATimer,
+): Promise<Custodian> {
+  return Effect.runPromise(madeOf(keyId, endpoint, waits, retries));
 }
 
 function aDataKey(): Redacted.Redacted<Uint8Array> {
@@ -151,7 +173,8 @@ describe('the custodian of an alias KMS does not describe', () => {
   it('is not made where KMS does not answer DescribeKey within the waits of its client, as a keeper that does not answer, naming the alias', async () => {
     fake.tell(aliasedKey, 'stalling');
 
-    const stalled = await failureOf(madeOf(alias, fake.url, waitsOf100Ms));
+    const retries = retriesOnATimer();
+    const stalled = await retries.retriedThrough(failureOf(madeOf(alias, fake.url, waitsOf100Ms, retries)));
     fake.tell(aliasedKey, 'enabled');
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable', kid: 'alias/auto-runtime' });
@@ -244,12 +267,14 @@ describe('the custodian of a key in a KMS that throttles it', () => {
 
 describe('the custodian of a key in a KMS that does not answer', () => {
   it('gives up within the waits of 100 ms its client is given, the bound this test is about, where KMS stalls, as a keeper that does not answer, naming its kid', async () => {
-    const stalling = await custodianOf(key, fake.url, waitsOf100Ms);
+    const retries = retriesOnATimer();
+    const stalling = await custodianOf(key, fake.url, waitsOf100Ms, retries);
     fake.tell(key, 'stalling');
     onTestFinished(() => {
       fake.tell(key, 'enabled');
     });
-    const stalled = await failureOf(stalling.wrap(aDataKey()));
+    const stalled = await retries.retriedThrough(failureOf(stalling.wrap(aDataKey())));
+    expect(retries.attempts()).toBe(3);
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
     const opening = `The custodian of the key ${idOf(key)} did not answer a request to wrap a data key: TimeoutError`;
@@ -257,9 +282,10 @@ describe('the custodian of a key in a KMS that does not answer', () => {
   });
 
   it('does not answer where KMS cannot be reached, in the words of the refused connection, naming its kid', async () => {
-    const unreachable = await custodianOf(key, await aClosedPort());
+    const retries = retriesOnATimer();
+    const unreachable = await custodianOf(key, await aClosedPort(), undefined, retries);
 
-    const unreached = await failureOf(unreachable.unwrap('d3JhcHBlZA=='));
+    const unreached = await retries.retriedThrough(failureOf(unreachable.unwrap('d3JhcHBlZA==')));
 
     expect(unreached).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
     expect(unreached.detail).toMatch(/did not answer a request to unwrap a data key: .*ECONNREFUSED/u);

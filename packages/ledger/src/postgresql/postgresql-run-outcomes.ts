@@ -53,7 +53,7 @@ export const longestMigrationLockWaitMs = 60_000;
 
 const lockTriedEveryMs = 100;
 
-interface LockWaiting {
+export interface LockWaiting {
   readonly mostWaitMs: number;
   readonly now: () => number;
   readonly pause: (milliseconds: number) => Promise<unknown>;
@@ -89,7 +89,7 @@ async function lockTakenBy(execute: StatementExecutor, deadline: number, waiting
 }
 
 export function migrationLockTakenWithin(
-  waiting: LockWaiting = onTheSystemClock,
+  waiting: LockWaiting | undefined = onTheSystemClock,
 ): (migration: { readonly execute: StatementExecutor }) => Promise<void> {
   return ({ execute }) => lockTakenBy(execute, waiting.now() + waiting.mostWaitMs, waiting);
 }

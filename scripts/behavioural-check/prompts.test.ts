@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import { instructionsShownInFull, promptOf, type Brief, type Shown } from './prompts.ts';
 
-const instructions = `Read the guide start first. ${'Then build from the job. '.repeat(30)}This connection acts as someone.`;
+const instructions = `Read the guide start first. ${'Then build from the job. '.repeat(30)}You are acting on behalf of someone.`;
 
 const shown: Shown = {
   instructions,

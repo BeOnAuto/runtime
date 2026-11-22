@@ -5,7 +5,10 @@ import { Ledger, playbookCallerOf, type CallerIdentity, type PlaybookRequest } f
 import {
   attemptLeasesOn,
   attemptKeyOfRun,
+  ForkWatch,
+  InForkedFiber,
   type AttemptLeaseSettings,
+  type FiberWatch,
   type GoneHolders,
   type RunInAPlaybook,
   type WorkflowStore,
@@ -93,7 +96,12 @@ function resumedOrRefused({ dispatches }: GoneHolderParts, { run, holding, reque
   });
 }
 
-function resumedNow(parts: GoneHolderParts, run: RunInAPlaybook) {
+/**
+ * Resumes the run in the server's runtime, its attempt forked apart from the host's sweep that found it. The host's
+ * watch, nothing in production, is told of that fork as of the host's own, so a test stepping the host's clock does not
+ * take the host to be at rest while the resumed attempt still works.
+ */
+function resumedNow(parts: GoneHolderParts, run: RunInAPlaybook, watch: FiberWatch) {
   return Effect.gen(function* () {
     const ledger = yield* Ledger;
     const address = streamAddressOf(run);
@@ -107,11 +115,16 @@ function resumedNow(parts: GoneHolderParts, run: RunInAPlaybook) {
     const runKey = attemptKeyOfRun(run);
     yield* Effect.orDie(leases.taken(runKey));
     const resumed = resumedOrRefused(parts, { run, holding, request });
-    yield* Effect.forkDetach(
+    const named = { label: `resumed attempt ${runKey}` };
+    const attempt = yield* Effect.forkDetach(
       Effect.andThen(resumed, Effect.ignore(leases.released(runKey))).pipe(
         Effect.onError(() => Effect.ignore(leases.handedOver(runKey))),
+        Effect.provideService(InForkedFiber, named),
       ),
     );
+    watch.forked((ended) => {
+      attempt.addObserver(ended);
+    }, named);
   });
 }
 
@@ -137,6 +150,7 @@ export function goneHoldersOn(parts: GoneHolderParts): GoneHolders {
           return yield* deadAttemptEnder(ledger)(noNextAttempt ? { ...named, noNextAttempt } : named);
         }),
       ),
-    resumed: (run) => inRuntime(runtime, resumedNow(parts, run)),
+    resumed: (run) =>
+      Effect.flatMap(Effect.service(ForkWatch), (watch) => inRuntime(runtime, resumedNow(parts, run, watch))),
   };
 }

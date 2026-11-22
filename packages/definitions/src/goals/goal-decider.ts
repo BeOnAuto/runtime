@@ -5,13 +5,12 @@ import {
   type Decided,
   type Decider,
   type Fold,
-  type Issue,
   type RecordedCaller,
 } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import { changedMeanwhile } from '../registry/registry-decisions.ts';
-import { agentIssue, type GoalIssue } from './goal-issues.ts';
+import { agentIssue, changedSince, notReplacing, retiredWords, type GoalIssue } from './goal-issues.ts';
 import { isCalendarWindow, type Goal } from './goals-document.ts';
 import { GoalEventSchema, type RecordedGoalEvent } from './goals-facts.ts';
 
@@ -63,7 +62,15 @@ interface GoalRenaming extends Acting {
   readonly renamed_by: RecordedCaller;
 }
 
-export type GoalCommand = GoalSaving | GoalRemoval | GoalAgreeing | GoalRenaming;
+interface GoalMoving extends Acting {
+  readonly type: 'move';
+  readonly to: string;
+  readonly moved_by: RecordedCaller;
+  readonly position: number;
+  readonly expectedVersion: number;
+}
+
+export type GoalCommand = GoalSaving | GoalRemoval | GoalAgreeing | GoalRenaming | GoalMoving;
 
 type Rejected = InvalidInput | Conflict;
 
@@ -111,15 +118,6 @@ function shapeIssuesOf(held: Goal, { goal, position }: GoalSaving): readonly Goa
     );
 }
 
-const notReplacingWords = 'These goals cannot replace the goals saved before';
-
-export function notReplacing(issues: readonly Issue[]): InvalidInput {
-  return new InvalidInput({
-    detail: notReplacingWords,
-    issues: issues.map(({ pointer, detail }) => ({ pointer, detail })),
-  });
-}
-
 function sortedOf(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((each: unknown) => sortedOf(each));
@@ -153,17 +151,6 @@ export function standingYesOf({ goal, agreed }: GoalState): StandingYes | undefi
 
 export function isRetired({ goal }: Pick<GoalState, 'goal'>): boolean {
   return goal.retired === true;
-}
-
-export function retiredWords(id: string): string {
-  return `The goal ${id} is retired; a yes is recorded only for goals that are not retired`;
-}
-
-function changedSince(id: string, seen: number, now: number): string {
-  return [
-    `The goal ${id} changed after version ${String(seen)}, and is at version ${String(now)} now.`,
-    'Show the person the goal as it is saved now, and ask again before you record a yes',
-  ].join(' ');
 }
 
 export const theIdItHas = '`new_id` is the id it has; give another id';
@@ -218,6 +205,13 @@ function decidedYes({ playbook, seen }: GoalAgreeing, state: GoalState | undefin
     : Result.succeed([]);
 }
 
+function decidedMove(moving: GoalMoving, state: GoalState | undefined): Decision {
+  const { playbook, to, moved_by: movedBy, position, expectedVersion } = moving;
+  return isHeldIn(state, playbook) && state.version === expectedVersion
+    ? Result.succeed([{ type: 'goal_moved', data: { from: playbook, to, moved_by: movedBy, position } }])
+    : Result.fail(changedMeanwhile);
+}
+
 function decidedRename(
   { playbook, from, to, renamed_by: renamedBy }: GoalRenaming,
   state: GoalState | undefined,
@@ -233,6 +227,9 @@ function decidedRename(
 export function decidedOnAGoal(command: GoalCommand, state: GoalState | undefined): Decision {
   if (command.type === 'save') {
     return decidedSave(command, state);
+  }
+  if (command.type === 'move') {
+    return decidedMove(command, state);
   }
   if (command.type === 'remove') {
     return decidedRemoval(command, state);
@@ -259,6 +256,9 @@ function heldAfter(held: GoalState, fact: Exclude<RecordedGoalEvent, { type: 'go
   if (fact.type === 'goal_renamed') {
     const { to } = fact.data;
     return { ...held, name: to, goal: { ...held.goal, id: to } };
+  }
+  if (fact.type === 'goal_moved') {
+    return { ...held, playbook: fact.data.to, position: fact.data.position };
   }
   return { ...held, removed: true };
 }

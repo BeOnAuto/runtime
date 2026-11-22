@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { defaultStudioOrigin } from '../index.ts';
 import { fakeIssuer, principalIn, signedTokens, type Claims } from '../testing/index.ts';
 
 const atStart = { now: () => Date.parse('2026-10-13T09:00:00Z') };
@@ -31,6 +32,51 @@ describe('the person a token names, by id and by name', () => {
     );
 
     expect([person?.own.id, person?.own.name]).toEqual(['person:user_ada', 'user_ada']);
+  });
+});
+
+const orgsOfNoName: ReadonlyArray<readonly [string, Claims, string]> = [
+  ['no org_name', {}, 'acme'],
+  ['an empty org_name', { org_name: '' }, 'acme'],
+  ['an org_name that is not a string', { org_name: 7 }, 'acme'],
+  ['an org_name over 256 bytes', { org_name: 'ü'.repeat(129) }, 'acme'],
+  ['an org_name with a line break', { org_name: 'Initech\nInc' }, 'acme'],
+  ['an org_name with a noncharacter', { org_name: 'Initech\uFFFF' }, 'acme'],
+  ['an org_name beside no org_id', { org_id: undefined, sub: 'user_ada', org_name: 'Initech' }, 'user_ada'],
+];
+
+describe('the organization a token names, by its name', () => {
+  it('is named by the name its org_name claim gives beside its org_id, of up to 256 bytes', async () => {
+    const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const named = await Promise.all(
+      ['Initech', ofTheBytesOfAReference].map(async (orgName) => {
+        const person = principalIn(await identityService.personOf(await token({ org_name: orgName }), '/mcp'));
+        return [person?.own.org, person?.orgName];
+      }),
+    );
+
+    expect(named).toEqual([
+      ['acme', 'Initech'],
+      ['acme', ofTheBytesOfAReference],
+    ]);
+  });
+
+  it.each(orgsOfNoName)(
+    'is named by no name, and the token refused for nothing, for %s',
+    async (_case, claims, org) => {
+      const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+      const person = principalIn(await identityService.personOf(await token(claims), '/mcp'));
+
+      expect([person?.own.org, person?.orgName]).toEqual([org, undefined]);
+    },
+  );
+
+  it('is named by no name in a session, which names its org in its o claim', async () => {
+    const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const page = defaultStudioOrigin;
+    const person = principalIn(await identityService.personOf(await session(page, { org_name: 'Initech' }), '', page));
+
+    expect([person?.own.org, person?.orgName]).toEqual(['acme', undefined]);
   });
 });
 

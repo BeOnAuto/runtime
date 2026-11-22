@@ -3,13 +3,12 @@ import { expect, it } from 'vitest';
 
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
-import { movedClock } from './moved-clock.ts';
+import { startsReaching } from './kept-triggers.ts';
 import {
   at,
   byAdmin,
   definitionKeyNamed,
   definitionMoved,
-  definitionRecorded,
   definitionStreamNamed,
   eventRecordOf,
   eventTrigger,
@@ -17,7 +16,7 @@ import {
   published,
   recorded,
 } from './playbook-writes.ts';
-import { reactingHost, type ReactingHost } from './reacting-host.ts';
+import { keptDefinition, steppedReacting, type SteppedReacting } from './stepped-reactions.ts';
 
 const beta = 'playbook/acme/beta/';
 
@@ -30,30 +29,27 @@ function definitionRenamed(store: LedgerStreams, from: string, to: string, versi
   return recorded(store, definitionStreamNamed(from), renamed, context);
 }
 
-function startsBeyond({ reactions, whenRead }: ReactingHost, count: number) {
-  return whenRead(
-    () => Promise.resolve(reactions.starts()),
-    (found) => found.length > count,
-  );
+function startsBeyond({ reacting, sweeps }: SteppedReacting, count: number) {
+  return startsReaching(sweeps, reacting.reactions.starts, count + 1);
 }
 
 export function movedReactionsSuite(settings: SettingsOf): void {
   it('starts a workflow moved between two due times once at each under the ids it would have had, and for an event of the playbook it moved to alone', async () => {
     const activatedAt = Date.parse(at);
-    const clock = movedClock(activatedAt + 1000);
-    const reacting = await reactingHost({ settings: await settings(), clock });
+    const stepped = await steppedReacting({ settings: await settings() });
+    const { reacting, clock } = stepped;
     const { store } = reacting.database;
     const triggers = [everyTrigger(60_000), eventTrigger({ type: 'com.acme.closed' })];
-    await definitionRecorded(store, { name: 'tick', version: 1, triggers });
+    await keptDefinition(stepped, { name: 'tick', version: 1, triggers });
     clock.moveTo(activatedAt + 60_000);
-    await startsBeyond(reacting, 0);
+    await startsBeyond(stepped, 0);
 
     await definitionMoved(store, 'tick', 1, 'beta');
     await published(store, { id: 'e1', type: 'com.acme.closed' });
     await published(store, { id: 'e2', type: 'com.acme.closed' }, byAdmin, beta);
-    await startsBeyond(reacting, 1);
+    await startsBeyond(stepped, 1);
     clock.moveTo(activatedAt + 120_000);
-    const starts = await startsBeyond(reacting, 2);
+    const starts = await startsBeyond(stepped, 2);
 
     const tick = definitionKeyNamed('tick');
     expect(starts.map(({ playbook, runId }) => [playbook, runId])).toEqual([
@@ -65,16 +61,16 @@ export function movedReactionsSuite(settings: SettingsOf): void {
 
   it('starts a workflow renamed between two due times once at each under the ids it would have had, by the name it holds then', async () => {
     const activatedAt = Date.parse(at);
-    const clock = movedClock(activatedAt + 1000);
-    const reacting = await reactingHost({ settings: await settings(), clock });
+    const stepped = await steppedReacting({ settings: await settings() });
+    const { reacting, clock } = stepped;
     const { store } = reacting.database;
-    await definitionRecorded(store, { name: 'tick', version: 1, triggers: [everyTrigger(60_000)] });
+    await keptDefinition(stepped, { name: 'tick', version: 1, triggers: [everyTrigger(60_000)] });
     clock.moveTo(activatedAt + 60_000);
-    await startsBeyond(reacting, 0);
+    await startsBeyond(stepped, 0);
 
     await definitionRenamed(store, 'tick', 'tock', 1);
     clock.moveTo(activatedAt + 120_000);
-    const starts = await startsBeyond(reacting, 1);
+    const starts = await startsBeyond(stepped, 1);
 
     const tick = definitionKeyNamed('tick');
     expect(starts.map(({ workflow, runId }) => [workflow, runId])).toEqual([

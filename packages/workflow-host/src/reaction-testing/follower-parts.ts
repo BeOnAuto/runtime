@@ -4,6 +4,7 @@ import type { PartsOptions } from '../host/host-parts.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { testMachine } from '../testing/host-documents.ts';
 import { recordingReports, recordingSettlements } from '../testing/recording-reports.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { recordedWaiting } from '../waiting-testing/recorded-waiting.ts';
 import { recordedReactions, unreadWhile } from './recorded-reactions.ts';
 
@@ -43,7 +44,8 @@ export function followerPartsOf(time: MovingTime, { unread, takesMs }: Trying): 
       mostCallsAtOnce: 4,
       reactions: reactions.options,
       waiting: recordedWaiting().options,
-      clock: { now: time.now, sleep: Effect.sleep },
+      // Woken by hand at the times a test names: a sleep of these parts ends only when the test steps it.
+      clock: { now: time.now, sleep: steppedClock(time.now()).sleep },
       closesEndedRuns: false,
     },
     notes: reports.notes,

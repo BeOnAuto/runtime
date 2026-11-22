@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { setTimeout } from 'node:timers/promises';
 
 import { connectMcp, plainTextIn, withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
@@ -15,11 +14,12 @@ import {
 } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Schema } from 'effect';
-import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { heldAnswerOn, ownClockOf } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const summary = [
   '---',
@@ -83,8 +83,6 @@ const summaryAttemptsAtOnce = ['---', 'model: anthropic/claude-sonnet-4-5', '---
 
 const runIdAttemptsAtOnce = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
 
-const timeForTheRetryToArrive = 300;
-
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const summaryCancelledAcrossServers = [
@@ -139,13 +137,27 @@ const summaryOutlivedClient = ['---', 'model: anthropic/claude-sonnet-4-5', '---
 
 const runIdOutlivedClient = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
 
-const timeForTheServerToSeeItGone = 300;
-
 const asked = { input: { text: 'the quarter' }, run_id: runIdOutlivedClient };
 
 const decodeHistoryOutlivedClient = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
+
+/** The requests to run the summary that reached the server, answered or not. */
+function runsAsked(asking: ReasoningServer): number {
+  return asking.arrived().filter(({ method, path }) => method === 'POST' && path.endsWith('/summary/run')).length;
+}
+
+/** The requests the server answered after its client had gone. */
+function seenGone(answering: ReasoningServer): number {
+  return answering.answered().filter(({ status }) => status === 499).length;
+}
+
+/** The requests to the MCP endpoint the server has not answered yet: none once it let its client go. */
+function mcpStillAnswering(answering: ReasoningServer): number {
+  const arrived = answering.arrived().filter(({ path }) => path.endsWith('/mcp')).length;
+  return arrived - answering.answered().filter(({ path }) => path.endsWith('/mcp')).length;
+}
 
 function givenUp(): { readonly gaveUp: Promise<unknown>; readonly giveUp: () => void } {
   const givingUp = new AbortController();
@@ -163,7 +175,26 @@ function givenUp(): { readonly gaveUp: Promise<unknown>; readonly giveUp: () => 
   };
 }
 
-const neverAnswering: ScriptedReply = () => Effect.never;
+/** A model that never answers, its call held on the server's clock, so the server can still come to rest. */
+const neverAnswering: ScriptedReply = () => heldAnswerOn(ownClockOf(server));
+
+/**
+ * A model that never answers, and the promise of its call: a request an MCP client sends tells no wait before it
+ * reaches the server, so the test awaits the model's own signal that the run called it.
+ */
+function neverAnsweringOnceCalled(): { readonly reply: ScriptedReply; readonly called: Promise<void> } {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  return {
+    reply: () =>
+      Effect.andThen(
+        Effect.sync(() => {
+          resolve();
+        }),
+        heldAnswerOn(ownClockOf(server)),
+      ),
+    called: promise,
+  };
+}
 
 const summaryOutlivedClientOverMcp = [
   '---',
@@ -392,12 +423,15 @@ describe('two requests for one run at once, in one server', () => {
     const request = { body: { input: { text: 'the quarter' }, run_id: runIdAttemptsAtOnce } };
 
     const first = serverAttemptsAtOnce.call('POST', `${alpha}/definitions/reasoning/summary/run`, request);
-    await until(
+    await whenHeld(
       () => serverAttemptsAtOnce.modelCalls(),
       (calls) => calls > 0,
     );
     const retry = serverAttemptsAtOnce.call('POST', `${alpha}/definitions/reasoning/summary/run`, request);
-    await setTimeout(timeForTheRetryToArrive);
+    await whenHeld(
+      () => runsAsked(serverAttemptsAtOnce),
+      (arrived) => arrived === 2,
+    );
     answering.resolve();
     const answersAttemptsAtOnce = await Promise.all([first, retry]);
 
@@ -429,7 +463,7 @@ describe('a reasoning run cancelled through another server while its model answe
         body: { input: {}, run_id: runIdCancelledAcrossServers },
       },
     );
-    await until(
+    await whenHeld(
       () => runningCancelledAcrossServers.modelCalls(),
       (calls) => calls > 0,
     );
@@ -479,12 +513,15 @@ describe('outlived client over http', () => {
       });
 
       const client = givenUp();
-      await until(
+      await whenHeld(
         () => server.modelCalls(),
         (calls) => calls > 0,
       );
       client.giveUp();
-      await setTimeout(timeForTheServerToSeeItGone);
+      await whenHeld(
+        () => seenGone(server),
+        (gone) => gone > 0,
+      );
       const whileLive = server.call('POST', `${alpha}/definitions/reasoning/summary/run`, { body: asked });
       answering.resolve();
       const retried = await whileLive;
@@ -516,12 +553,15 @@ describe('outlived client over http', () => {
       });
 
       const client = givenUp();
-      await until(
+      await whenHeld(
         () => server.modelCalls(),
         (calls) => calls > 0,
       );
       client.giveUp();
-      await setTimeout(timeForTheServerToSeeItGone);
+      await whenHeld(
+        () => seenGone(server),
+        (gone) => gone > 0,
+      );
       const cancelled = await server.call('POST', `${alpha}/runs/${runIdOutlivedClient}/cancel`, {
         body: { reason: 'Not needed' },
       });
@@ -556,7 +596,8 @@ describe('outlived client over mcp', () => {
 
   describe('a reasoning run whose MCP client goes away while the model answers', () => {
     it('goes on without its client, and cancel_run over MCP stops it, its model call ended, the model called once', async () => {
-      server = await servingReasoning([neverAnswering]);
+      const model = neverAnsweringOnceCalled();
+      server = await servingReasoning([model.reply]);
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       await server.call('POST', `${alpha}/definitions/reasoning`, {
         body: { name: 'summary', source: summaryOutlivedClientOverMcp, diagram: 'none' },
@@ -572,13 +613,13 @@ describe('outlived client over mcp', () => {
           run_id: runIdOutlivedClientOverMcp,
         })
         .catch((error: unknown) => error);
-      await until(
-        () => server.modelCalls(),
-        (calls) => calls > 0,
-      );
+      await model.called;
       await leaving.close();
       await leftBehind;
-      await setTimeout(timeForTheServerToSeeItGone);
+      await whenHeld(
+        () => mcpStillAnswering(server),
+        (answering) => answering === 0,
+      );
       const { going, cancelled } = await withMcpSession('current revision', connection, async (session) => ({
         going: await session.callTool('get_run', { run_id: runIdOutlivedClientOverMcp }),
         cancelled: await session.callTool('cancel_run', { run_id: runIdOutlivedClientOverMcp, reason: 'Not needed' }),
@@ -696,7 +737,7 @@ describe('the digests of what a call sent and received, over HTTP', () => {
 });
 
 describe('reasoning isolation over http', () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
     server = await servingReasoning([answers(textResult('Done'))], {
       API_KEYS: JSON.stringify([acmeAdmin.entry, globexAdmin.entry]),
     });
@@ -717,7 +758,7 @@ describe('reasoning isolation over http', () => {
     });
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     await server.stop();
   });
 

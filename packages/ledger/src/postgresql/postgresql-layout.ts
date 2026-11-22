@@ -6,13 +6,15 @@ import { layoutCarryingBy, type CarriedTables, type LayoutCarrying } from '../la
 import type { NamedProjection } from '../projections/projection-fill.ts';
 import { migrationLockTakenWithin } from './postgresql-run-outcomes.ts';
 
-export const migrationLockTaken = migrationLockTakenWithin();
+export { migrationLockTakenWithin };
 
-function underTheMigrationLock(connections: ContentConnections): InTransaction {
+export type MigrationLockTaken = ReturnType<typeof migrationLockTakenWithin>;
+
+function underTheMigrationLock(connections: ContentConnections, lockTaken: MigrationLockTaken): InTransaction {
   const inTransaction = inTransactionOn(connections);
   return (work) =>
     inTransaction(async (execute) => {
-      await migrationLockTaken({ execute });
+      await lockTaken({ execute });
       return work(execute);
     });
 }
@@ -21,14 +23,16 @@ export function postgresqlLayoutCarried(
   connections: ContentConnections,
   projected: readonly NamedProjection[],
   carrying: LayoutCarrying,
+  lockTaken: MigrationLockTaken = migrationLockTakenWithin(),
 ): Promise<void> {
-  return requireTheLayoutKept(underTheMigrationLock(connections), postgresqlLayout, projected, carrying);
+  return requireTheLayoutKept(underTheMigrationLock(connections, lockTaken), postgresqlLayout, projected, carrying);
 }
 
 export function postgresqlLayoutKept(
   connections: ContentConnections,
   projected: readonly NamedProjection[],
   carried?: CarriedTables,
+  lockTaken?: MigrationLockTaken,
 ): Promise<void> {
-  return postgresqlLayoutCarried(connections, projected, layoutCarryingBy(carried));
+  return postgresqlLayoutCarried(connections, projected, layoutCarryingBy(carried), lockTaken);
 }

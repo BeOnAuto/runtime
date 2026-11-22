@@ -1,7 +1,7 @@
 import { moduleOfSource } from '@on.auto/workflow-engine/testing';
 import { describe, expect, it } from 'vitest';
 
-import { onSQLite } from '../testing/host-files.ts';
+import { onASQLiteFile, onSQLite } from '../testing/host-files.ts';
 import { busyOnce } from '../views-testing/pool-faults.ts';
 import { foldingWorker } from '../views-testing/test-fold-workers.ts';
 import {
@@ -12,7 +12,7 @@ import {
   isStalled,
   viewTestTimeoutMs,
 } from '../views-testing/view-documents.ts';
-import { viewHarness } from '../views-testing/view-harness.ts';
+import { viewHarness, viewHarnessOnAWorker } from '../views-testing/view-harness.ts';
 import type { StallCause } from '../views/view-rows.ts';
 
 const foldingAPage = 'a page the projector folds';
@@ -95,7 +95,10 @@ describe('a page of folds the pool cannot finish', () => {
   it.each(workersThatStop)(
     'counts against the fold that was going when it %s, and stalls it after its tries',
     async (_way, source, stall, foldDeadlineMs) => {
-      const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source), heapMegabytes: 16 });
+      const views = await viewHarnessOnAWorker(await onSQLite(), {
+        foldWorker: moduleOfSource(source),
+        heapMegabytes: 16,
+      });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
       views.start(triesWithADeadlineOf(foldDeadlineMs));
@@ -109,12 +112,12 @@ describe('a page of folds the pool cannot finish', () => {
   it.each(workersThatNameNoFold)(
     'is reported and tried again, counting against no fold, when its worker %s',
     async (_way, source, trouble, foldDeadlineMs) => {
-      const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(source) });
+      const views = await viewHarnessOnAWorker(await onSQLite(), { foldWorker: moduleOfSource(source) });
       await views.saved('runs', counting);
       await views.ran('reasoning/runs', 1);
       views.start(triesWithADeadlineOf(foldDeadlineMs));
 
-      const troubles = await views.reports.when(views.reports.troubles, (reported) => reported.length > 1);
+      const troubles = await views.whenFolded(views.reports.troubles, (reported) => reported.length > 1);
       const kept = await views.viewOf('runs');
 
       expect(kept).toMatchObject({ phase: 'rebuilding', folded: 0 });
@@ -138,7 +141,7 @@ describe('a page of folds the pool cannot finish', () => {
 describe('a page of folds lost twice', () => {
   it('counts a try and keeps the checkpoint when what it folds before the event breaks its worker too', async () => {
     const atTheSecondRun = markingThen(2, 'throw new Error("broken on purpose");');
-    const views = await viewHarness(await onSQLite(), { foldWorker: moduleOfSource(atTheSecondRun) });
+    const views = await viewHarnessOnAWorker(await onSQLite(), { foldWorker: moduleOfSource(atTheSecondRun) });
     await views.saved('runs', counting);
     await views.ranEach('reasoning/runs', [1, 2]);
     views.start(triesWithADeadlineOf(aDeadlineNoFoldReaches));
@@ -156,11 +159,11 @@ describe('a page of folds lost twice', () => {
 
 describe('a projector stopped while it folds', () => {
   it('repeats the page when it starts again, and writes each fold once', async () => {
-    const settings = await onSQLite();
+    const settings = await onASQLiteFile();
     const blocked = {
       folding: { ...foldingOf(), foldDeadlineMs: 2 * viewTestTimeoutMs, worker: blockedAtItsFirstFold },
     };
-    const first = await viewHarness(settings);
+    const first = await viewHarnessOnAWorker(settings);
     await first.saved('outputs', collecting);
     await first.ranEach('reasoning/runs', [1, 2, 3]);
     const folding = heardOn(foldingAPage);

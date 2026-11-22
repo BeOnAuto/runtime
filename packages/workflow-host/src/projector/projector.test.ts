@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { onSQLite } from '../testing/host-files.ts';
-import { steppedClock } from '../testing/stepped-clock.ts';
 import { watchedClock } from '../testing/watched-clock.ts';
 import { failingOnce } from '../views-testing/pool-faults.ts';
 import { counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
-import { viewHarness } from '../views-testing/view-harness.ts';
+import { viewHarness, viewHarnessOnAWorker } from '../views-testing/view-harness.ts';
 import { firstSeenOf } from './projector.ts';
 
 const anyText: unknown = expect.any(String);
@@ -41,6 +40,19 @@ describe('the records a projector reports', () => {
   });
 });
 
+describe('a projector on the pool of worker threads it runs on in production', () => {
+  it('folds a view there, as every other case does on the thread of the test', async () => {
+    const views = await viewHarnessOnAWorker(await onSQLite());
+    await views.saved('runs', counting);
+    await views.ranEach('reasoning/runs', [1, 2]);
+    views.start();
+
+    const kept = await views.folded('runs', foldedAll(2));
+
+    expect([kept.phase, kept.view]).toEqual(['live', 2]);
+  });
+});
+
 describe('a projector that fails', () => {
   it('reports a sweep that failed, and sweeps again', async () => {
     const views = await viewHarness(await onSQLite());
@@ -61,8 +73,8 @@ describe('a projector that fails', () => {
     const views = await viewHarness(await onSQLite());
     await views.saved('runs', counting);
     views.failingDiscovery(true);
-    const clock = watchedClock(steppedClock(Date.now()));
-    views.start({ sweepEveryMs: 1000, clock });
+    const clock = watchedClock(views.clock);
+    views.start({ sweepEveryMs: 1000, pace: clock });
 
     const asked = await clock.when(clock.asked, (sleeps) => sleeps.length > 0);
 

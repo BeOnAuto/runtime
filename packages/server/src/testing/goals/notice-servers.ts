@@ -1,4 +1,3 @@
-import type { HostClock } from '@on.auto/workflow-host';
 import { Effect, Schema } from 'effect';
 
 import { goalNoticesOnNode } from '../../goals/notices/goal-notices.ts';
@@ -7,12 +6,13 @@ import { chatEnvironment, chatServer } from '../interaction-servers/chat-deliver
 import { interactionServerOn, type InteractionServer } from '../interaction-servers/interaction-server.ts';
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 import { alpha } from '../servers/reasoning-server.ts';
+import type { ServedParts } from '../servers/served-parts.ts';
 import { createdWithGoals } from '../settings/goals-kept.ts';
 import { assessedIn, factsIn, goalIdentityOf, tellOwner, type NoticedIds } from './notice-facts.ts';
 
 export interface Noticing {
   readonly ledger?: TemporaryLedger;
-  readonly clock?: HostClock;
+  readonly clock?: NonNullable<ServedParts['clock']>;
   readonly notices?: boolean;
   readonly goalsPortsOver?: NonNullable<NonNullable<Parameters<typeof interactionServerOn>[1]>['goalsPortsOver']>;
 }

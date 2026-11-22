@@ -27,7 +27,7 @@ export function laggingSuite(settingsOf: SettingsOf): void {
       await tallies.saved('runs', counting);
       await tallies.savedTally('succeeded', succeeded);
       await tallies.ran('reasoning/runs', 1);
-      tallies.startWithTallies({ pool: overrunning.pool, clock: watched, sweepEveryMs: sweepMs });
+      tallies.startWithTallies({ pool: overrunning.pool, clock, pace: watched, sweepEveryMs: sweepMs });
       await tallies.folded('runs', liveWith(1));
       await tallies.untilTally(succeeded, liveCounting(1));
       overrunning.overrunNext();

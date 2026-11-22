@@ -5,7 +5,6 @@ import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-f
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -29,16 +28,22 @@ interface Serving {
   readonly graph: FakeMcpServer;
 }
 
-async function serving(): Promise<Serving> {
+async function serving(over?: 'http'): Promise<Serving> {
+  // The fake's sleep ends only when its call is aborted: no time passes by itself.
   const graph = await serveFakeMcp({ bearer: apiKey });
   closing.push(graph.close);
-  const server = await servingReasoning([], {
-    API_KEYS: JSON.stringify([builder.entry, reader.entry]),
-    GRAPH_API_KEY: apiKey,
-    TOOL_SERVERS: JSON.stringify({
-      graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
-    }),
-  });
+  const server = await servingReasoning(
+    [],
+    {
+      API_KEYS: JSON.stringify([builder.entry, reader.entry]),
+      GRAPH_API_KEY: apiKey,
+      TOOL_SERVERS: JSON.stringify({
+        graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
+      }),
+    },
+    undefined,
+    over === undefined ? {} : { over },
+  );
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', {
     key: builder.key,
@@ -143,7 +148,7 @@ describe('execute_connection and query_connection for a key that may only read',
 
 describe('a call made by hand whose caller goes away over MCP while the tool is called', () => {
   it('records a start and no answer, sends no second call, and still lets the session go', async () => {
-    const { server, graph } = await serving();
+    const { server, graph } = await serving('http');
     const leaving = new AbortController();
     const call = { name: 'execute_connection', arguments: { server: 'graph', tool: 'sleep', arguments: { ms: 5000 } } };
 
@@ -158,19 +163,12 @@ describe('a call made by hand whose caller goes away over MCP while the tool is 
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: call }),
       signal: leaving.signal,
     }).catch((error: unknown) => error);
-    await until(
-      () => graph.received().length,
-      (received) => received === 1,
-    );
+    await graph.once(() => graph.received().length === 1);
     leaving.abort();
     await gone;
 
-    expect(
-      await until(
-        () => graph.endedSessions(),
-        (ended) => ended === 1,
-      ),
-    ).toBe(1);
+    await graph.once(() => graph.endedSessions() === 1);
+    expect(graph.endedSessions()).toBe(1);
     const events = await server.call('GET', `${alpha}/events?order=asc`, { key: builder.key });
     expect(events.body).toMatchObject({ events: [{ type: 'tool_call_started' }] });
     expect(events.body).not.toMatchObject({ events: [{}, {}] });

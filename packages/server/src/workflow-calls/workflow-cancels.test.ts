@@ -1,12 +1,12 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { ended, impatientTimeoutMs, runsOf, servingCalls, startedRunOf } from '../testing/servers/workflow-calls.ts';
-import { runIdIn, settledRun, settledOverMcp } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { runIdIn, settledAsSwept, settledRun, settledOverMcp } from '../testing/servers/workflow-server.ts';
+import { fewSweeps, steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 let server: ReasoningServer;
 
@@ -20,7 +20,7 @@ function cancelOf(runId: string, body: object) {
 
 async function waitingRunOf(name: string): Promise<string> {
   const started = await startedRunOf(server, name);
-  await until(
+  await whenHeld(
     () => runsOf(server, 'pending'),
     (runs) => runs.length === 1,
   );
@@ -34,7 +34,7 @@ describe('a cancel of a workflow run, over HTTP', () => {
 
     const cancelled = await cancelOf(runId, { reason: 'No longer needed' });
     const settled = await settledRun(server, `${alpha}/runs/${runId}`);
-    const pending = await until(() => runsOf(server, 'pending'), ended);
+    const pending = await whenHeld(() => runsOf(server, 'pending'), ended);
     const again = await cancelOf(runId, { reason: 'No longer needed' });
 
     expect(cancelled).toMatchObject({ status: 200, body: { run_id: runId, status: 'started' } });
@@ -51,8 +51,8 @@ describe('a cancel of a workflow run, over HTTP', () => {
 
     await cancelOf(runId, {});
     const settled = await settledRun(server, `${alpha}/runs/${runId}`);
-    const middle = await until(() => runsOf(server, 'middle'), ended);
-    const pending = await until(() => runsOf(server, 'pending'), ended);
+    const middle = await whenHeld(() => runsOf(server, 'middle'), ended);
+    const pending = await whenHeld(() => runsOf(server, 'pending'), ended);
 
     expect(settled).toMatchObject({
       body: { rejection: { reason: 'cancelled', kind: 'requested', detail: 'Cancelled at the request of local' } },
@@ -61,17 +61,17 @@ describe('a cancel of a workflow run, over HTTP', () => {
   });
 
   it('is cancelled by the timeout of the step that waits for it, as past its deadline', async () => {
-    const clock = movedClock(Date.now());
+    const clock = steppedServerClock();
     server = await servingCalls([], {}, clock);
 
     const started = await startedRunOf(server, 'impatient');
-    await until(
+    await whenHeld(
       () => runsOf(server, 'pending'),
       (runs) => runs.length > 0,
     );
     clock.moveTo(clock.now() + impatientTimeoutMs);
-    const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
-    const pending = await until(() => runsOf(server, 'pending'), ended);
+    const settled = await settledAsSwept(server, clock, `${alpha}/runs/${runIdIn(started.body)}`);
+    const pending = await clock.swept.until(() => runsOf(server, 'pending'), ended, fewSweeps);
 
     expect(settled).toMatchObject({ body: { status: 'rejected', rejection: { reason: 'unavailable' } } });
     expect(pending).toMatchObject([{ status: 'rejected', rejection: { kind: 'deadline' } }]);

@@ -1,4 +1,10 @@
-import { callMarginMs, defineSendRunEvent, makeWorkflowAdapter, type ExpressionCheck } from '@on.auto/coordination';
+import {
+  callMarginMs,
+  defineListQueuedStarts,
+  defineSendRunEvent,
+  makeWorkflowAdapter,
+  type ExpressionCheck,
+} from '@on.auto/coordination';
 import {
   operationsInTheDirectoryListing,
   operationsOfCapabilities,
@@ -79,7 +85,7 @@ export function longestCallOf(capabilities: readonly Pick<Capability, 'longestAn
 function catalogsOf(
   parts: WorkflowParts,
   capabilities: readonly Capability[],
-  sendRunEvent: ReturnType<typeof defineSendRunEvent>,
+  runOperations: readonly PlaybookOperation[],
 ) {
   const { playbooks, imports } = parts.playbooksOver(capabilities);
   const catalogOf = (
@@ -94,7 +100,7 @@ function catalogsOf(
       ...definitionOperations,
       ...parts.playbookOperations,
       ...capabilityOperations.filter((operation) => !isOrgOperation(operation)),
-      sendRunEvent,
+      ...runOperations,
     ]);
   return {
     catalog: catalogOf(
@@ -109,10 +115,11 @@ function catalogsOf(
 }
 
 export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts): Promise<Served> {
-  const { runs, opened } = hostOnceOpened();
+  const { runs, queued, opened } = hostOnceOpened(parts.store);
   const { names, shippedFiles } = parts;
   const workflow = makeWorkflowAdapter({
     runs,
+    queued,
     check: parts.check,
     connectionEvents: parts.connectionEvents,
     mostDurationMs: parts.workflows.mostDurationMs,
@@ -122,7 +129,8 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
   });
   const capabilities = [...parts.capabilities, workflow];
   const hostOperations = hostOperationsOf(capabilities);
-  const { catalog, directoryCatalog } = catalogsOf(parts, capabilities, defineSendRunEvent(runs, names));
+  const runOperations = [defineListQueuedStarts(queued), defineSendRunEvent(runs, names)];
+  const { catalog, directoryCatalog } = catalogsOf(parts, capabilities, runOperations);
   const dispatched = { catalogs: [catalog, directoryCatalog], host: hostOperations };
   const { decisionPoint, callContext } = await accessControlServing(runtime, dispatched, shippedFiles);
   const dispatcher = makeDispatcher([], { decidedBy: decisionPoint });

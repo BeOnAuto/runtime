@@ -126,3 +126,25 @@ describe('the playbook a record of a goal is followed under', () => {
     ]);
   });
 });
+
+describe('the playbook a record of a goal that moved is followed under', () => {
+  it('is the playbook it moved to, from its move on', async () => {
+    const goal = 'definition/acme/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7d/';
+    const inBeta = {
+      definitionKey: goal,
+      playbookKey: 'playbook/acme/beta/',
+      definitionType: 'goal',
+      name: 'weekly-leads',
+      status: 'active',
+      hasTriggers: false,
+    };
+    const names = new Map([[goal, inBeta]]);
+    const playbookOf = playbooksOfRecords({ nameHeldBy: (definitionKey) => Promise.resolve(names.get(definitionKey)) });
+
+    const before = await Effect.runPromise(playbookOf({ stream: `${goal}assessments/a1`, type: 'goal_observed' }));
+    names.set(goal, { ...inBeta, playbookKey: 'playbook/acme/gamma/' });
+    const after = await Effect.runPromise(playbookOf({ stream: `${goal}goals/goal`, type: 'goal_moved' }));
+
+    expect([before, after].map((place) => place?.playbookKey)).toEqual(['playbook/acme/beta/', 'playbook/acme/gamma/']);
+  });
+});

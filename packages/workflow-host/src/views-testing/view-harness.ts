@@ -24,17 +24,25 @@ export interface ViewHarness extends PlaybookAppends, ViewReading, HarnessProjec
   readonly gone: (name: string) => Promise<boolean>;
 }
 
+/** A harness whose folds are served on the thread of the test, for every rule that is not the worker thread itself. */
 export function viewHarness(
   settings: DatabaseSettings,
   poolSettings: Parameters<typeof testFoldPoolOf>[0] = {},
   besides: ViewsProjecting['besides'] = [],
 ): Promise<ViewHarness> {
-  return viewHarnessOver(settings, testFoldPoolOf(poolSettings), besides);
+  return viewHarnessOver(settings, testFoldThreadPoolOf(poolSettings), besides);
 }
 
-/** The harness of `viewHarness`, its folds served on the thread of the test, for a test that breaks no worker. */
-export function viewHarnessOnTheThread(settings: DatabaseSettings): Promise<ViewHarness> {
-  return viewHarnessOver(settings, testFoldThreadPoolOf({}), []);
+/**
+ * The harness of `viewHarness`, its folds served on worker threads, for a rule about the worker itself: its memory,
+ * its deadline, its crash, and the wiring of the pool to real threads.
+ */
+export function viewHarnessOnAWorker(
+  settings: DatabaseSettings,
+  poolSettings: Parameters<typeof testFoldPoolOf>[0] = {},
+  besides: ViewsProjecting['besides'] = [],
+): Promise<ViewHarness> {
+  return viewHarnessOver(settings, testFoldPoolOf(poolSettings), besides);
 }
 
 async function viewHarnessOver(

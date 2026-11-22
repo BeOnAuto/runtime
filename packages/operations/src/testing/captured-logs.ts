@@ -18,6 +18,7 @@ const decodeLine = Schema.decodeUnknownSync(
 
 export interface CapturedLogs {
   readonly layer: Layer.Layer<never>;
+  readonly loggers: ReadonlySet<Logger.Logger<unknown, void>>;
   readonly logged: () => readonly CapturedLog[];
   readonly text: () => string;
 }
@@ -30,5 +31,10 @@ export function capturedLogs(): CapturedLogs {
     lines.push(line);
     captured.push({ message: String(message), level, annotations });
   });
-  return { layer: Logger.layer([logger]), logged: () => captured, text: () => lines.join('\n') };
+  return {
+    layer: Logger.layer([logger]),
+    loggers: new Set([logger]),
+    logged: () => captured,
+    text: () => lines.join('\n'),
+  };
 }

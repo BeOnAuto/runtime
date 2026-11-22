@@ -1,5 +1,4 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Abort, DumboError, type PoolCloseOptions } from '@event-driven-io/dumbo';
 
@@ -8,6 +7,7 @@ import type { ReadonlyAbort, ReadonlyAbortContext, ReadonlyAbortOptions } from '
 export interface WriterQueueBounds {
   readonly mostWaiting: number;
   readonly longestWaitToStart: number;
+  readonly onWaiting?: (() => void) | undefined;
 }
 
 type WriterTask<A> = (context: ReadonlyAbortContext) => Promise<A>;
@@ -82,10 +82,15 @@ function endOf(running: Promise<void>, { force = false, closeDeadline }: Readonl
   }
   return closeDeadline === undefined
     ? running
-    : Promise.race([running, sleep(closeDeadline, undefined, { ref: false })]);
+    : Promise.race([
+        running,
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, closeDeadline).unref();
+        }),
+      ]);
 }
 
-export function writerQueue({ mostWaiting, longestWaitToStart }: WriterQueueBounds): WriterQueue {
+export function writerQueue({ mostWaiting, longestWaitToStart, onWaiting }: WriterQueueBounds): WriterQueue {
   const waiting = new Set<Turn>();
   const now: { turn?: Turn; running: Promise<void>; stopped: boolean } = { running: Promise.resolve(), stopped: false };
   const startNext = (): void => {
@@ -110,8 +115,12 @@ export function writerQueue({ mostWaiting, longestWaitToStart }: WriterQueueBoun
         return Promise.reject(new DumboError(now.stopped ? writerClosed : tooManyWaiting));
       }
       const answer = Promise.withResolvers<A>();
-      waiting.add(turnOf(task, options.abort, answer, { leave, longestWaitToStart }));
+      const turn = turnOf(task, options.abort, answer, { leave, longestWaitToStart });
+      waiting.add(turn);
       startNext();
+      if (waiting.has(turn)) {
+        onWaiting?.();
+      }
       return answer.promise;
     },
     stop: async (options = {}) => {

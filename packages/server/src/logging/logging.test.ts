@@ -1,14 +1,16 @@
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { Cause, Effect, Redacted } from 'effect';
-import { describe, expect, it } from 'vitest';
+import type { RegisterRoutes } from '@on.auto/api';
+import { Cause, Effect, Function, Redacted, Schema } from 'effect';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
+import { runServer } from '../lifecycle/run-server.ts';
+import { servedBy } from '../server-options/server-options.ts';
 import { secretsKey } from '../testing/databases/secrets-key.ts';
-import { serverHoldingARequest, type SpawnedServer, spawnServer } from '../testing/processes/spawned-server.ts';
+import { optionsServing } from '../testing/entries/serving-options.ts';
+import { heldRequests, testRoutesHeldBy } from '../testing/entries/test-routes.ts';
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
-import { until } from '../testing/waiting/until.ts';
 import { logExtensions } from './extension-logging.ts';
 import {
   logAccessMode,
@@ -26,7 +28,7 @@ import {
   logWorkflows,
   logWorkflowTrouble,
 } from './logging.ts';
-import { logOperatorHint, logProviderMessage } from './provider-logging.ts';
+import { logModelProviders, logOperatorHint, logProviderMessage } from './provider-logging.ts';
 import {
   logFirstAdmin,
   logFirstSignInAwaited,
@@ -57,23 +59,50 @@ function syntaxErrorParsing(text: string): SyntaxError {
   throw new TypeError(`${text} parsed as JSON`);
 }
 
-const serveWithTestRoutes = fileURLToPath(new URL('../testing/entries/serve-with-test-routes.ts', import.meta.url));
-
 const served = { origin: 'https://studio.on.auto', served: true };
-
-const serveWithSelfCausedError = fileURLToPath(
-  new URL('../testing/entries/serve-with-self-caused-error.ts', import.meta.url),
-);
 
 const selfCaused = new Error('an error whose cause is itself');
 
 selfCaused.cause = selfCaused;
 
-function stderrOnceItContains(child: SpawnedServer, text: string): Promise<string> {
-  return until(
-    () => child.output().stderr,
-    (stderr) => stderr.includes(text),
+const selfCausedRoute: RegisterRoutes = (routes) => {
+  routes.add('GET', '/self-caused', () => {
+    throw selfCaused;
+  });
+};
+
+interface ServedInProcess {
+  readonly port: number;
+  readonly written: readonly string[];
+  readonly logged: () => string;
+}
+
+/** A server runServer runs in this process on the routes given, what it writes to stdout and what it logs. */
+async function servedInProcess(routes: RegisterRoutes): Promise<ServedInProcess> {
+  const logged = vi.spyOn(console, 'error');
+  onTestFinished(() => {
+    logged.mockRestore();
+  });
+  const written: string[] = [];
+  const never = Promise.withResolvers<void>().promise;
+  const serverProcess = {
+    env: { HOST: '127.0.0.1', PORT: '0' },
+    stdout: { write: (message: string) => written.push(message) },
+    stderr: {
+      write: (_message: string, flushed: () => void) => {
+        flushed();
+      },
+    },
+    exit: Function.constVoid,
+  };
+  const server = await runServer(
+    serverProcess,
+    optionsServing(() => servedBy([routes])),
+    never,
+    never,
   );
+  onTestFinished(() => server.stop());
+  return { port: server.port, written, logged: () => logged.mock.calls.flat().map(String).join('\n') };
 }
 
 describe('logAccessMode', () => {
@@ -369,33 +398,37 @@ describe('logMcpError', () => {
 });
 
 describe('the server process', () => {
-  it('logs an unexpected error to stderr under the incident id it answers with', async () => {
-    const child = spawnServer(serveWithTestRoutes, { HOST: '127.0.0.1', PORT: '0' });
-    const port = await child.port;
+  it('logs an unexpected error under the incident id it answers with', async () => {
+    const serving = await servedInProcess(heldRequests().routes);
 
-    const response = await fetch(`http://127.0.0.1:${port}/fail`);
+    const response = await fetch(`http://127.0.0.1:${serving.port}/fail`);
     const text = await response.text();
-    child.signal('SIGTERM');
-    await child.exited;
     const incident = /"instance":"urn:uuid:([^"]+)"/u.exec(text)?.[1];
 
     expect(text).not.toContain('hunter2');
-    expect(child.output().stderr).toContain(
+    expect(serving.logged()).toContain(
       `"annotations":{"requestId":"${String(response.headers.get('x-request-id'))}","incident":"${String(incident)}"}`,
     );
-    expect(child.output().stderr).toContain('database password is hunter2');
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
+    expect(serving.logged()).toContain('database password is hunter2');
+    expect(serving.written).toEqual([`Auto Runtime listening on port ${serving.port}\n`]);
   });
 
   it('writes nothing more to stdout when a client abandons a request its route answers once abandoned', async () => {
-    const { child, port, answer, abandon } = await serverHoldingARequest(serveWithTestRoutes, {});
+    const held = Promise.withResolvers<void>();
+    const serving = await servedInProcess(
+      testRoutesHeldBy({ arrived: held.resolve, released: () => Promise.withResolvers().promise }),
+    );
+    const client = new AbortController();
+    const answer = fetch(`http://127.0.0.1:${serving.port}/held`, { signal: client.signal }).then(
+      () => 'answered',
+      () => 'unanswered',
+    );
+    await held.promise;
 
-    abandon();
-    const abandoned = await answer;
-    child.signal('SIGTERM');
+    client.abort();
 
-    expect({ abandoned, exitCode: await child.exited }).toEqual({ abandoned: 'unanswered', exitCode: 0 });
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
+    expect(await answer).toBe('unanswered');
+    expect(serving.written).toEqual([`Auto Runtime listening on port ${serving.port}\n`]);
   });
 });
 
@@ -450,6 +483,56 @@ describe('logOperatorHint', () => {
     expect(line).toContain('"message":"Model provider gateway could not be');
     expect(line).toContain('"level":"WARN"');
     expect(line).toContain('"annotations":{"provider":"gateway","model":"gateway/llama-3.3-70b","run_id":null}');
+  });
+});
+
+type ProviderStatus = Parameters<typeof logModelProviders>[0];
+
+const ProviderLine = Schema.Struct({ level: Schema.String, annotations: Schema.Record(Schema.String, Schema.Unknown) });
+
+const anthropicUnset = { provider: 'anthropic', missing: ['ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN'] };
+
+const vertexHalfSet = { provider: 'vertex', missing: ['GOOGLE_VERTEX_LOCATION'], partial: true } as const;
+
+const modelProviderLines: ReadonlyArray<readonly [string, ProviderStatus, readonly unknown[]]> = [
+  [
+    'names the configured providers in one line at INFO, every provider in its annotations',
+    { configured: ['openai'], unconfigured: [anthropicUnset] },
+    [
+      {
+        level: 'INFO',
+        annotations: {
+          providers: [
+            { provider: 'openai', configured: true },
+            { provider: 'anthropic', configured: false, missing: anthropicUnset.missing },
+          ],
+        },
+      },
+    ],
+  ],
+  [
+    'warns that no provider is configured, then once more for each provider that has some of its settings',
+    { configured: [], unconfigured: [anthropicUnset, vertexHalfSet] },
+    [
+      {
+        level: 'WARN',
+        annotations: {
+          providers: [
+            { provider: 'anthropic', configured: false, missing: anthropicUnset.missing },
+            { provider: 'vertex', configured: false, missing: vertexHalfSet.missing },
+          ],
+        },
+      },
+      { level: 'WARN', annotations: { provider: 'vertex', configured: false, missing: vertexHalfSet.missing } },
+    ],
+  ],
+];
+
+describe('logModelProviders', () => {
+  it.each(modelProviderLines)('%s', async (_case, status, logged) => {
+    const lines = await linesLoggedBy(logModelProviders(status));
+
+    expect(lines.map((line) => Schema.decodeUnknownSync(Schema.fromJsonString(ProviderLine))(line))).toEqual(logged);
   });
 });
 
@@ -812,22 +895,15 @@ describe('logIncident for an error whose cause cannot be formatted', () => {
 
 describe('a server whose route throws an error that is its own cause', () => {
   it('answers 500, logs the incident and keeps serving', async () => {
-    const child = spawnServer(serveWithSelfCausedError, { HOST: '127.0.0.1', PORT: '0' });
-    const port = await child.port;
+    const serving = await servedInProcess(selfCausedRoute);
 
-    const failed = await fetch(`http://127.0.0.1:${port}/self-caused`);
+    const failed = await fetch(`http://127.0.0.1:${serving.port}/self-caused`);
     const incident = /"instance":"urn:uuid:([^"]+)"/u.exec(await failed.text())?.[1];
-    const stderr = await stderrOnceItContains(child, `"incident":"${String(incident)}"`);
-    const health = await fetch(`http://127.0.0.1:${port}/health`);
-    child.signal('SIGTERM');
+    const health = await fetch(`http://127.0.0.1:${serving.port}/health`);
 
-    expect({ failed: failed.status, health: health.status, exitCode: await child.exited }).toEqual({
-      failed: 500,
-      health: 200,
-      exitCode: 0,
-    });
-    expect(stderr).toContain('"message":"Unexpected error whose cause could not');
-    expect(stderr).toContain(
+    expect({ failed: failed.status, health: health.status }).toEqual({ failed: 500, health: 200 });
+    expect(serving.logged()).toContain('"message":"Unexpected error whose cause could not');
+    expect(serving.logged()).toContain(
       `"annotations":{"requestId":"${String(failed.headers.get('x-request-id'))}","incident":"${String(incident)}"}`,
     );
   });

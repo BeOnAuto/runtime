@@ -4,7 +4,7 @@ import { Ledger } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { alpha, aMomentApart, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import type { LedgerOver } from '../testing/servers/served-parts.ts';
 import { savedSourceOf, servingReasoningWithGoals, versionsOf } from '../testing/settings/goals-kept.ts';
 
@@ -95,7 +95,8 @@ function importing(written: object, importId = 'import-one') {
   return { body: { playbook: 'beta', import_id: importId, title: 'Beta', package: written } };
 }
 
-async function aPlaybookWithItsMethod({ call }: ReasoningServer): Promise<void> {
+async function aPlaybookWithItsMethod(made: ReasoningServer): Promise<void> {
+  const call = aMomentApart(made);
   await call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha', goals } });
   await call('PUT', alpha, { body: { page } });
   await call('POST', `${alpha}/definitions/reasoning`, {

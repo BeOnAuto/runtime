@@ -4,40 +4,39 @@ import { movedReactionsSuite } from '../reaction-testing/moved-reactions-suite.t
 import { reactionSuite } from '../reaction-testing/reaction-suite.ts';
 import { dispatchSuite } from '../suite-testing/dispatch-suite.ts';
 import { failureSuite } from '../suite-testing/failure-suite.ts';
-import { claimSuite, leaseSuite } from '../suite-testing/lease-suite.ts';
+import { leaseSuite } from '../suite-testing/lease-suite.ts';
 import { longRunSuite } from '../suite-testing/long-run-suite.ts';
 import { portSuite } from '../suite-testing/port-suite.ts';
 import { runSuite } from '../suite-testing/run-suite.ts';
-import { onSQLite } from '../testing/host-files.ts';
+import { onASQLiteFile } from '../testing/host-files.ts';
 
 describe('the host on SQLite', () => {
   describe('its ports', () => {
-    portSuite(onSQLite);
+    portSuite(onASQLiteFile);
   });
 
   describe('a workflow it runs', () => {
-    runSuite(onSQLite);
+    runSuite(onASQLiteFile);
   });
 
   describe('its waiting calls, dispatched again', () => {
-    dispatchSuite(onSQLite);
+    dispatchSuite(onASQLiteFile);
   });
 
   describe('a long run', () => {
-    longRunSuite(onSQLite);
+    longRunSuite(onASQLiteFile);
   });
 
   describe('killed while it dispatches, then started again', () => {
-    failureSuite(onSQLite);
+    failureSuite(onASQLiteFile);
   });
 
   describe('the reactions of its playbooks', () => {
-    reactionSuite(onSQLite);
-    movedReactionsSuite(onSQLite);
+    reactionSuite(onASQLiteFile);
+    movedReactionsSuite(onASQLiteFile);
   });
 
   describe('one of two hosts on one database', () => {
-    leaseSuite(onSQLite);
-    claimSuite(onSQLite, 'host');
+    leaseSuite(onASQLiteFile, 'host');
   });
 });

@@ -36,7 +36,7 @@ describe('the clock of goals with no calendar window', () => {
 
     await harness.goalsSaved([experiments], '2026-11-08T12:00:00.000Z');
     await harness.observed('r1', results(0).output, '2026-11-09T09:00:00.000Z', 'measure');
-    await harness.until('2027-11-08T00:00:00.000Z');
+    await harness.steppedTo('2027-11-08T00:00:00.000Z');
 
     expect(await harness.row(clocksName, clockKey)).toMatchObject({ opens_at: null });
     expect(await harness.row(assessmentsName, experimentId('MAR-41'))).toMatchObject({ judging_due_at: null });
@@ -64,7 +64,7 @@ describe('the clock of a calendar goal', () => {
     const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
     await harness.book.workflowSaved('check', 1, checking);
     await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-    await harness.until('2026-11-09T00:00:00.000Z');
+    await harness.steppedTo('2026-11-09T00:00:00.000Z');
     const later = Date.parse('2026-11-12T00:00:00.000Z');
 
     expect((await run(harness.clock.due(later, 1, false))).map(({ key }) => key)).toEqual([
@@ -82,7 +82,7 @@ describe('a due row of a calendar goal with nothing to do', () => {
     const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
     await harness.book.workflowSaved('check', 1, checking);
     await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-    await harness.until('2026-11-09T00:00:00.000Z');
+    await harness.steppedTo('2026-11-09T00:00:00.000Z');
     const early = Date.parse('2026-11-09T06:00:00.000Z');
     const advanced = (judging: number) =>
       run(
@@ -149,7 +149,7 @@ async function resumedMidDay() {
   await harness.book.workflowSaved('check', 1, checking);
   await harness.paused('check', '2026-11-08T08:00:00.000Z');
   await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-  await harness.until('2026-11-11T10:00:00.000Z');
+  await harness.steppedTo('2026-11-11T10:00:00.000Z');
   const whilePaused = harness.wakes.map(({ at }) => new Date(at).toISOString());
   const quiet = await harness.row(clocksName, clockKey);
   await harness.book.workflowChanged(
@@ -165,7 +165,7 @@ describe('the clock of a calendar goal whose only contribution is paused', () =>
   it('is woken at each boundary while paused and opens nothing, and opens the windows after a resume, never the one it was resumed in', async () => {
     const { harness, whilePaused, quiet } = await resumedMidDay();
     const afterTheResume = await harness.row(clocksName, clockKey);
-    await harness.until('2026-11-13T02:00:00.000Z');
+    await harness.steppedTo('2026-11-13T02:00:00.000Z');
     const resumed = harness.wakes.slice(whilePaused.length).map(({ at }) => new Date(at).toISOString());
     const rows = await harness.book.rows(assessmentsName);
 
@@ -184,7 +184,7 @@ describe('the clock of a calendar goal whose only contribution is paused', () =>
   it('opens the window it was resumed in only by a run that falls in it', async () => {
     const { harness } = await resumedMidDay();
     await harness.observed('t1', { failed: 1 }, '2026-11-11T11:00:00.000Z', 'check');
-    await harness.until('2026-11-12T02:00:00.000Z');
+    await harness.steppedTo('2026-11-12T02:00:00.000Z');
 
     expect(await harness.book.factsOf('controls-hold', `assessments/${tuesdayId}`)).toEqual([
       'goal_assessment_opened',
@@ -214,7 +214,7 @@ describe('a due row read under a playbook that no longer holds its goal', () => 
     const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
     await harness.book.workflowSaved('check', 1, checking);
     await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-    await harness.until('2026-11-09T00:00:00.000Z');
+    await harness.steppedTo('2026-11-09T00:00:00.000Z');
     const at = Date.parse('2026-11-10T02:00:00.000Z');
     const elsewhere = clockHarnessOf('2026-11-10T02:00:00.000Z', harness.book, readElsewhere);
     const before = [await harness.row(clocksName, clockKey), await harness.row(assessmentsName, mondayId)];

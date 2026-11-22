@@ -24,7 +24,7 @@ const choosingAnAccount: unknown = expect.stringMatching(/^\/interaction\/[^/]+\
 describe('a sign-in that does not admit the person', () => {
   it('shows its refusal, with the account choice asked of the provider on trying again for another account', async () => {
     const server = await aServer(signInEndingIn({ refused: 'not_that_account' }));
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
 
     const refused = await backFromTheSignIn(
       browser,
@@ -38,8 +38,8 @@ describe('a sign-in that does not admit the person', () => {
   it('shows the refusal of a person it does not take, and the failure of a sign-in, each with trying again', async () => {
     const removed = await aServer(signInEndingIn({ refused: 'no_access' }));
     const failed = await aServer({ signIn: { ...signingIn, started: () => Promise.resolve({ notStarted: true }) } });
-    const browser = browserAt(removed.at);
-    const another = browserAt(failed.at);
+    const browser = browserAt(removed);
+    const another = browserAt(failed);
 
     await backFromTheSignIn(browser, await signInBegun(browser, { clientId: await registered(browser) }));
     await signInBegun(another, { clientId: await registered(another) });
@@ -53,7 +53,7 @@ describe('a sign-in that does not admit the person', () => {
 
 describe('a sign-in the person leaves, or asks to choose an account at', () => {
   it('sends the client access_denied when the person gives up', async () => {
-    const browser = browserAt((await aServer(signInEndingIn({ gaveUp: true }))).at);
+    const browser = browserAt(await aServer(signInEndingIn({ gaveUp: true })));
 
     const gaveUp = await backFromTheSignIn(
       browser,
@@ -75,7 +75,7 @@ describe('a sign-in the person leaves, or asks to choose an account at', () => {
         },
       },
     });
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
 
     const consent = await signedInAs(browser, { clientId: await registered(browser), prompt: 'select_account' });
 
@@ -90,7 +90,7 @@ describe('a request of the sign-in that is no longer open', () => {
 
   it('shows the page that says so once the request has ended, by its client, and with no client for one it never held', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
     const asked = locationOf(await browser.at(authorizationAskedBy({ clientId: await registered(browser) })));
     vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + pastTheEndOfARequestMs });
 
@@ -111,7 +111,7 @@ describe('a request of the sign-in that is no longer open', () => {
 
   it('shows the page that says so to a person who returns from the sign-in after the request ended', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
     const begun = await signInBegun(browser, { clientId: await registered(browser) });
     vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + pastTheEndOfARequestMs });
 
@@ -122,7 +122,7 @@ describe('a request of the sign-in that is no longer open', () => {
 
   it('answers a request it refuses before it can trust the client with the error, and a stray return with a failure', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
 
     const untrusted = await browser.at(authorizationAskedBy({ clientId: 'never-registered' }));
     const stray = await browser.at('/auth/oidc/callback?code=upstream-code&state=s');
@@ -135,7 +135,7 @@ describe('a request of the sign-in that is no longer open', () => {
 describe('two requests of one browser', () => {
   it('keep each its own sign-in, so a page or a return of one is not taken for the other', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
     const clientId = await registered(browser);
     const first = locationOf(await browser.at(authorizationAskedBy({ clientId })));
     await signInBegun(browser, { clientId });
@@ -153,7 +153,7 @@ describe('two requests of one browser', () => {
 
   it('answers a step it does not know as no route, and a request it cannot read as a failure', async () => {
     const failing = await aServer({ rowsOver: rowsFailingToRead('Interaction') });
-    const browser = browserAt(failing.at);
+    const browser = browserAt(failing);
     const asked = locationOf(await browser.at(authorizationAskedBy({ clientId: await registered(browser) })));
 
     const unknownStep = await browser.at(`${asked}/confirm`);
@@ -193,7 +193,7 @@ describe('an agent named by its Client ID Metadata Document', () => {
   it('is asked about by where its document is published and where its access goes, and gets tokens for this server', async () => {
     documentPublished();
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
     const asked = { clientId: documentAddress, redirectUri: documentedRedirect };
 
     const code = await allowed(browser, locationOf(await signedInAs(browser, asked)));

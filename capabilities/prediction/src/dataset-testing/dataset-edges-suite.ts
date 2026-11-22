@@ -74,7 +74,7 @@ function stoppedTest(settingsOf: SettingsOf): void {
     const document = await datasets.saved('orders', outOfMemory);
     const { dataSha256 } = document;
     await datasets.published(runsOutOfMemoryOnItsSecond);
-    const watch = watchingDatasets();
+    const watch = watchingDatasets(datasets.steppedUntil);
     datasets.start({ through: watch.through });
     await watch.until(dataSha256, triedOnce);
     await watch.until(dataSha256, triedTwice);

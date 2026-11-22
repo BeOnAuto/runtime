@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
-const command = fileURLToPath(new URL('../../../auto-runtime.ts', import.meta.url));
+import { heardUntilItExits, somethingHappened } from '../waiting/happenings.ts';
 
-const relayWithShortBounds = fileURLToPath(new URL('../entries/relay-with-short-bounds.ts', import.meta.url));
+const command = fileURLToPath(new URL('../../../auto-runtime.ts', import.meta.url));
 
 export interface RuntimeCommandRun {
   readonly pid: number | undefined;
@@ -18,7 +18,6 @@ export interface RuntimeCommandRun {
   readonly killGroup: () => void;
   readonly interrupt: () => void;
   readonly stdout: () => string;
-  readonly stderr: () => string;
   readonly exited: Promise<unknown>;
 }
 
@@ -70,10 +69,14 @@ function spawnedEntry(
   const output = { stdout: '', stderr: '' };
   child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stdout += chunk;
+    somethingHappened();
   });
   child.stderr?.setEncoding('utf8').on('data', (chunk: string) => {
     output.stderr += chunk;
+    somethingHappened();
   });
+  const exited = once(child, 'exit').then(([code]: readonly unknown[]) => code);
+  heardUntilItExits(exited);
   return {
     pid: child.pid,
     write: (text) => {
@@ -89,25 +92,10 @@ function spawnedEntry(
       child.kill('SIGINT');
     },
     stdout: () => output.stdout,
-    stderr: () => output.stderr,
-    exited: once(child, 'exit').then(([code]: readonly unknown[]) => code),
+    exited,
   };
 }
 
 export function spawnRuntimeCommand(args: readonly string[], place: RuntimeCommandPlace): RuntimeCommandRun {
   return spawnedEntry(command, args, place);
-}
-
-export function spawnRelayWithShortBounds(place: RuntimeCommandPlace): RuntimeCommandRun {
-  return spawnedEntry(relayWithShortBounds, [], place);
-}
-
-export async function ranToEnd(
-  args: readonly string[],
-  place: RuntimeCommandPlace,
-): Promise<{ readonly code: unknown; readonly stdout: string }> {
-  const run = spawnRuntimeCommand(args, place);
-  run.end();
-  const code = await run.exited;
-  return { code, stdout: run.stdout() };
 }

@@ -26,6 +26,11 @@
   "src/registry/0.67.0/connection_app_credential_refused.json": "9e5f08764d34a28ceb64d5c439aa4e31d59eeaf2ac2661e958604ecee1d19074",
   "src/registry/0.67.0/connection_connected.json": "8cc5d85fbae42746ea6f8b290ec3a71179376d4bafe7c1be9ef4d56d2d5d3d8f",
   "src/registry/0.69.0/connection_added.json": "b71c22a36c768e32da33699ddc36eb04566710369e103fe331efc9f3468e9713",
+  "src/registry/0.69.0/connection_identified.json": "0f90012e9564e55538c1dad9ee5bdd66ae675f8075b680b6cc994ba4b8187132",
+  "src/registry/0.70.0/connection_account_type_set.json": "05fb3c558c5e312108ea00adac70b6a2a9f0e23e5a8d3b24cb9cc50d71b201fe",
+  "src/registry/0.70.0/connection_added.json": "83647f5e0875e25d79939366c2a7a4adeffa13d6ca5a2d7683c42a56e405d929",
+  "src/registry/0.70.0/connection_way_chosen.json": "b0ba8c73d2feb74808808ae739b496c39cc97e9826410929c684126ee4b5ee54",
+  "src/registry/0.71.0/connection_added.json": "41cf726ed584981534b33b1ffc785e0e06de89c5fe03aea68b5e46932719ca7f",
   "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
   "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",
   "src/subscriptions/0.64.0/event_subscription_removed.json": "25607b688406a95f66de1bbf44714309a90c18c58b275afe822fbc2751e34b8e"

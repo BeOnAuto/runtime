@@ -5,8 +5,9 @@ import { describe, expect, it } from 'vitest';
 
 import { startedRow } from '../calls/call-rows.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
+import { steppedOn } from '../suite-testing/stepped-hosts.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn, type LedgerOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { runKeyOf, runLogStreamOf } from './run-address.ts';
 import { lineageOfRecord } from './run-lineage.ts';
@@ -21,8 +22,8 @@ const start = '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a';
 
 const given = { lineage: { start, correlation: 'root' } };
 
-async function lineagesOf(file: string): Promise<readonly unknown[]> {
-  const database = await openedOn({ store: 'sqlite', file });
+async function lineagesOf(ledger: LedgerOn): Promise<readonly unknown[]> {
+  const database = await openedOn(ledger);
   const { messages } = await database.store.read(stream);
   return messages.map(({ lineage }) => lineage);
 }
@@ -48,14 +49,15 @@ function resumedLineage(database: Awaited<ReturnType<typeof openedOn>>) {
 
 describe('the lineage the host writes with each record of a run', () => {
   it('is the start it was given for the first, the record that armed the timer of a wait, and the root as correlation', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     hosted.know(runId);
     const document = workflow('do:\n  - pause: { wait: PT0.05S }');
     await Effect.runPromise(hosted.host.start(run, { ...startOf(document), attributes: given }));
+    await steppedOn(hosted.clock, 50);
     await hosted.when(hosted.settlements, (settled) => settled.size > 0);
 
-    expect(await lineagesOf(file)).toEqual([
+    expect(await lineagesOf(ledger)).toEqual([
       { id: messageIdOf(stream, 1), causationId: start, correlationId: 'root' },
       { id: messageIdOf(stream, 2), causationId: messageIdOf(stream, 1), correlationId: 'root' },
     ]);
@@ -65,16 +67,17 @@ describe('the lineage the host writes with each record of a run', () => {
 
 describe('the lineage of the fire of a timer', () => {
   it('is the record that armed a timer for its fire, after the host started again, and none for a run given no lineage', async () => {
-    const file = aSQLiteFile();
-    const first = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const first = await hostedOn(ledger);
     const document = workflow('do:\n  - slow: { timeout: { after: PT0.3S }, wait: PT1H }');
     await Effect.runPromise(first.host.start(run, startOf(document)));
     await first.host.stop();
-    const second = await hostedOn({ store: 'sqlite', file });
+    const second = await hostedOn(ledger);
     second.know(runId);
+    await steppedOn(second.clock, 300);
     await second.when(second.settlements, (settled) => settled.size > 0);
 
-    expect(await lineagesOf(file)).toEqual([
+    expect(await lineagesOf(ledger)).toEqual([
       { id: messageIdOf(stream, 1), causationId: null, correlationId: runId },
       { id: messageIdOf(stream, 2), causationId: messageIdOf(stream, 1), correlationId: runId },
     ]);
@@ -84,8 +87,8 @@ describe('the lineage of the fire of a timer', () => {
 
 describe('the lineage of a record nothing waited for', () => {
   it('is nothing for an event no step took, and the record that ended a run with no step settles it', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     hosted.know(runId);
     const waiting = { ...startOf(workflow('do:\n  - pause: { wait: PT1H }')), attributes: given };
     await Effect.runPromise(hosted.host.start(run, waiting));
@@ -96,7 +99,7 @@ describe('the lineage of a record nothing waited for', () => {
       ),
     );
     await hosted.when(hosted.settlements, (settled) => settled.size > 0);
-    const lineages = await lineagesOf(file);
+    const lineages = await lineagesOf(ledger);
 
     expect([lineages[1], lineages.length]).toEqual([
       { id: messageIdOf(stream, 2), causationId: null, correlationId: 'root' },
@@ -109,7 +112,7 @@ describe('the lineage of a record nothing waited for', () => {
   });
 
   it('is nothing for the fire of a timer the host keeps no arming record of, as one a sweep armed again', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
 
     expect(
       await Effect.runPromise(
@@ -121,7 +124,7 @@ describe('the lineage of a record nothing waited for', () => {
 
 describe('the lineage of a record a waiting step resumed', () => {
   it('is the record that started the call the step waited for', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const call = {
       kind: 'start_call',
       key: { runId: runKeyOf(runResumedLineage), reference: '/do/0/ask', run: 1 },
@@ -146,7 +149,7 @@ describe('the lineage of a record a waiting step resumed', () => {
   });
 
   it('is the record that armed the listener the step waited with, and nothing when the host keeps neither', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const nothing = await resumedLineage(database);
     await Effect.runPromise(
       insertedListener(database, {

@@ -3,9 +3,10 @@ import { Context, Effect } from 'effect';
 
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { checkedMove, type MoveAsked } from '../moving/move-checks.ts';
-import { connections, movingCapabilities, started, type Definitions } from './moving.ts';
+import { goalCapabilities } from './moving-goals.ts';
+import { connections, started, type Definitions } from './moving.ts';
 
-const checking = { known: knownCapabilities(movingCapabilities), started, connections };
+const checking = { known: knownCapabilities(goalCapabilities), started, connections, messages: true };
 
 export async function recordOfTheRefusal(definitions: Definitions, asked: Omit<MoveAsked, 'to'>): Promise<unknown> {
   const { service } = definitions.ledger;

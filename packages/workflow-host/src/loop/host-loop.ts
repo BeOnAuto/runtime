@@ -1,7 +1,7 @@
 import { Effect, Fiber } from 'effect';
 
 import { forkedIn } from './forked-fibers.ts';
-import type { HostClock } from './host-clock.ts';
+import { sleepOr, type HostClock } from './host-clock.ts';
 import type { HostWakeUp, NextWake, WakeSignal, WakeUpParts } from './host-wake-up.ts';
 
 export interface LoopParts extends Pick<WakeUpParts, 'clock' | 'sweepEveryMs' | 'context'> {
@@ -52,12 +52,13 @@ function runningLoop(parts: LoopParts, wakeUpWith: WakeUpWith): RunningLoop {
       const now = clock.now();
       const nextSweepAt = now + plan.lastSweptAt + sweepEveryMs - pace.now();
       plan.wakeAt = Math.min(nextDueAt ?? Number.POSITIVE_INFINITY, nextSweepAt, plan.armedSince);
-      return Effect.raceFirst(
-        pace.sleep(Math.max(0, plan.wakeAt - now)),
+      return sleepOr(
+        pace,
+        Math.max(0, plan.wakeAt - now),
         Effect.promise(() => promise),
       );
     });
-  const fiber = forkedIn(parts.context, Effect.forever(Effect.flatMap(woken, slept)));
+  const fiber = forkedIn(parts.context, Effect.forever(Effect.flatMap(woken, slept)), 'host loop');
   return {
     armed: (dueAt) => {
       plan.armedSince = Math.min(plan.armedSince, dueAt);

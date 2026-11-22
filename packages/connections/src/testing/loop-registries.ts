@@ -1,4 +1,4 @@
-import type { Decided } from '@on.auto/operations';
+import type { Decided, StreamReader, StreamWriter } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { RecordedEvents } from '@on.auto/providers';
 import { throughItsTools } from '@on.auto/providers/testing';
@@ -56,13 +56,31 @@ function recordedAt(at: string) {
 
 type Recorded = readonly [string, readonly Decided<RecordedConnectionEvent>[]];
 
+function appendedTo(registry: Pick<StreamWriter, 'execute'>, [at, facts]: Recorded) {
+  return registry.execute(connectionsStreamOfOrg('acme'), recordedAt(at), facts);
+}
+
+export function recordedIn(registry: Pick<StreamWriter, 'execute'>, recorded: Recorded): Promise<unknown> {
+  return Effect.runPromise(appendedTo(registry, recorded));
+}
+
 export async function registryOf(...recorded: readonly Recorded[]) {
   const registry = memoryLedger().service;
-  const stream = connectionsStreamOfOrg('acme');
-  await Effect.runPromise(
-    Effect.forEach(recorded, ([at, facts]) => registry.execute(stream, recordedAt(at), facts), { discard: true }),
-  );
+  await Effect.runPromise(Effect.forEach(recorded, (each) => appendedTo(registry, each), { discard: true }));
   return registry;
+}
+
+const nothingRecorded: readonly RecordedConnectionEvent[] = [];
+
+const everyFact = {
+  initialState: nothingRecorded,
+  evolve: (facts: readonly RecordedConnectionEvent[], fact: RecordedConnectionEvent) => [...facts, fact],
+  eventSchema: ConnectionEventSchema,
+};
+
+export async function factsIn(registry: Pick<StreamReader, 'load'>): Promise<readonly RecordedConnectionEvent[]> {
+  const { state } = await Effect.runPromise(registry.load(connectionsStreamOfOrg('acme'), everyFact));
+  return state;
 }
 
 const jwtWithoutItsAlgorithm = { scheme: 'jwt', secret: 'subscription', token: '$request.header.X-Tracker-Token' };

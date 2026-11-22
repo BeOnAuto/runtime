@@ -7,13 +7,13 @@ import {
   readingEarlierShapes,
   type Decided,
 } from '@on.auto/operations';
-import { RecordedEventsSchema } from '@on.auto/providers';
+import { AccountTypeSchema, RecordedEventsSchema } from '@on.auto/providers';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { RecordedCredentialSchema, type RecordedCredential } from './acting-fields.ts';
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { AccountSchema, BrokenKindSchema } from './connection.ts';
-import { CredentialSchema, type Credential } from './credential.ts';
 
 const ofTheConnection = { connection: Schema.String };
 
@@ -21,10 +21,10 @@ const clientsOfTheRuntimesOwn: ReadonlySet<string> = new Set(['metadata_document
 
 interface Credentialled {
   readonly provider: string | null;
-  readonly credential: Credential;
+  readonly credential: RecordedCredential;
 }
 
-function holdsClientsOfItsOwn({ clients }: Credential): boolean {
+function holdsClientsOfItsOwn({ clients }: RecordedCredential): boolean {
   return clients !== undefined && clients.length > 0 && clients.every((source) => clientsOfTheRuntimesOwn.has(source));
 }
 
@@ -51,8 +51,18 @@ function gatewayIssuesOf({ provider, credential }: Credentialled): readonly Sche
     : [];
 }
 
-function additionIssuesOf(added: Credentialled): readonly Schema.FilterIssue[] {
-  return [...clientIssuesOf(added), ...gatewayIssuesOf(added)];
+interface WithItsWays extends Credentialled {
+  readonly ways?: readonly RecordedCredential[];
+}
+
+function waysIssuesOf({ provider, ways }: WithItsWays): readonly Schema.FilterIssue[] {
+  return provider !== null && ways !== undefined
+    ? [{ path: ['ways'], issue: "Expected no ways: a provider's entry holds the ways of a connection made from it" }]
+    : [];
+}
+
+function additionIssuesOf(added: WithItsWays): readonly Schema.FilterIssue[] {
+  return [...clientIssuesOf(added), ...gatewayIssuesOf(added), ...waysIssuesOf(added)];
 }
 
 const startedFields = {
@@ -97,11 +107,23 @@ export const ConnectionEventSchema = Schema.Union([
       placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)),
       entry: ConnectionEntrySchema,
       document: Schema.optionalKey(ConnectionDocumentSchema),
-      credential: CredentialSchema,
+      credential: RecordedCredentialSchema,
+      ways: Schema.optionalKey(Schema.Array(RecordedCredentialSchema)),
+      account_type: Schema.optionalKey(AccountTypeSchema),
       says: Schema.Record(Schema.String, Schema.String),
       events: Schema.optionalKey(RecordedEventsSchema),
       added_by: RecordedCallerSchema,
     }).check(Schema.makeFilter(additionIssuesOf)),
+    ActedContextSchema,
+  ),
+  factOf(
+    'connection_way_chosen',
+    Schema.Struct({
+      ...ofTheConnection,
+      credential: RecordedCredentialSchema,
+      account_type: Schema.optionalKey(AccountTypeSchema),
+      says: Schema.Record(Schema.String, Schema.String),
+    }),
     ActedContextSchema,
   ),
   factOf(
@@ -167,6 +189,20 @@ export const ConnectionEventSchema = Schema.Union([
     Schema.Struct({ ...ofTheConnection, which: SigningSecretsRemovedSchema }),
     ActedContextSchema,
   ),
+  factOf(
+    'connection_account_type_set',
+    Schema.Struct({ ...ofTheConnection, account_type: AccountTypeSchema }),
+    ActedContextSchema,
+  ),
+  factOf(
+    'connection_identified',
+    Schema.Struct({
+      ...ofTheConnection,
+      connected_at: Schema.String,
+      user: Schema.Struct({ id: Schema.String, name: Schema.optionalKey(Schema.String) }),
+    }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
@@ -174,6 +210,8 @@ export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
 export type ConnectionEvent = Decided<RecordedConnectionEvent>;
 
 export type ConnectionAdded = Extract<RecordedConnectionEvent, { readonly type: 'connection_added' }>;
+
+export type WayChosen = Extract<RecordedConnectionEvent, { readonly type: 'connection_way_chosen' }>;
 
 export type LinkIssued = Extract<RecordedConnectionEvent, { readonly type: 'connection_link_issued' }>;
 
@@ -192,6 +230,8 @@ export type AppCredentialRefused = Extract<
 
 export type PlaybooksSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_playbooks_set' }>;
 
+export type AccountTypeSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_account_type_set' }>;
+
 export type SigningSecretSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_signing_secret_set' }>;
 
 export type SigningSecretRemoved = Extract<
@@ -200,6 +240,10 @@ export type SigningSecretRemoved = Extract<
 >;
 
 export type SigningSecretsRemoved = typeof SigningSecretsRemovedSchema.Type;
+
+export type ConnectionIdentified = Extract<RecordedConnectionEvent, { readonly type: 'connection_identified' }>;
+
+export type IdentifiedUser = ConnectionIdentified['data']['user'];
 
 export type OfItsSealedValues = SigningSecretSet | SigningSecretRemoved | AppCredentialRefused;
 

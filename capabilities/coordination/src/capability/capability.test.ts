@@ -31,6 +31,7 @@ describe('a run whose call is cancelled while its workflow starts', () => {
   it('waits for the start and records the run waiting for the workflow it started', async () => {
     const workflow = makeWorkflowAdapter({
       runs: heldWhileStarting,
+      queued: { queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }) },
       check: testExpressionCheck,
       connectionEvents: connectionsReporting({}),
       mostDurationMs: 2_592_000_000,
@@ -84,6 +85,7 @@ describe('the values the workflow guide names', () => {
   it('are those of the longest run a document is checked against when it is saved', async () => {
     const workflow = makeWorkflowAdapter({
       runs: { start: () => Effect.die('A workflow started') },
+      queued: { queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }) },
       check: testExpressionCheck,
       connectionEvents: connectionsReporting({}),
       mostDurationMs: 3 * hour,

@@ -1,9 +1,10 @@
 import type { RecordedCaller } from '@on.auto/operations';
-import type { RecordedEvents } from '@on.auto/providers';
+import type { AccountType, RecordedEvents } from '@on.auto/providers';
 import type { ClientSource } from '@on.auto/tool-servers';
 
+import type { RecordedCredential } from './acting-fields.ts';
 import type { ConnectionDocument, ConnectionEntry, ConnectionType } from './connection-entry.ts';
-import type { SigningSecretsRemoved } from './connection-events.ts';
+import type { IdentifiedUser, SigningSecretsRemoved } from './connection-events.ts';
 import type { Account, BrokenKind } from './connection.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
@@ -18,6 +19,8 @@ export interface ConnectionAddition {
   readonly entry: ConnectionEntry;
   readonly document?: ConnectionDocument;
   readonly credential: Credential;
+  readonly ways?: readonly RecordedCredential[];
+  readonly account_type?: AccountType;
   readonly says: Readonly<Record<string, string>>;
   readonly events?: RecordedEvents;
   readonly added_by: RecordedCaller;
@@ -48,6 +51,13 @@ export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly algorithm?: string;
   readonly client_id?: string;
   readonly app_secret_ids?: Readonly<Record<string, string>>;
+}
+
+export interface WayChoice extends LinkUse {
+  readonly type: 'choose_way';
+  readonly credential: RecordedCredential;
+  readonly says: Readonly<Record<string, string>>;
+  readonly account_type?: AccountType;
 }
 
 export interface ClientGiving extends LinkUse {
@@ -83,6 +93,12 @@ export interface PlaybooksSetting {
   readonly playbooks: readonly string[] | null;
 }
 
+export interface AccountTypeSetting {
+  readonly type: 'set_account_type';
+  readonly connection: string;
+  readonly account_type: AccountType;
+}
+
 export interface ConnectionRemoval {
   readonly type: 'remove';
   readonly connection: string;
@@ -102,6 +118,13 @@ export interface AppCredentialRefusal {
   readonly connected_at: string;
   readonly name: string;
   readonly reason: string;
+}
+
+export interface ConnectionIdentification {
+  readonly type: 'identify';
+  readonly connection: string;
+  readonly connected_at: string;
+  readonly user: IdentifiedUser;
 }
 
 export interface ConnectionReconnection {
@@ -140,15 +163,20 @@ export type ConnectionCommandData =
   | SigningSecretRemoval
   | ConnectionApproval
   | CredentialGiving
+  | WayChoice
   | ClientGiving
   | ConsentStart
   | ConsentFinish
   | ConnectionRemoval
   | PlaybooksSetting
+  | AccountTypeSetting
   | ConnectionBreaking
   | AppCredentialRefusal
+  | ConnectionIdentification
   | ConnectionReconnection
   | ConnectionReplacement;
+
+export type CommandDecidedApart = AppCredentialRefusal | ConnectionIdentification | AccountTypeSetting | WayChoice;
 
 export interface CommandMetadata {
   readonly by: string;

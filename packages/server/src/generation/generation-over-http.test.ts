@@ -1,7 +1,6 @@
 import { assets } from '@on.auto/generation';
 import { askedHandle, filmedBytes, onePixelPng, shippedWithAFilm, spokenBytes } from '@on.auto/generation/testing';
 import { projectedTableOf } from '@on.auto/operations';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -15,8 +14,13 @@ import {
 } from '../testing/servers/generation-server.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
-import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { runIdIn, settledAsSwept, workflowSource } from '../testing/servers/workflow-server.ts';
+import {
+  steppedServerClock,
+  testServersStartAt,
+  type SteppedServerClock,
+} from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const picture = [
   '---',
@@ -168,13 +172,15 @@ const decodeHandle = Schema.decodeUnknownSync(
 
 interface Filming {
   readonly server: ReasoningServer;
-  readonly clock: MovedClock;
+  readonly clock: SteppedServerClock;
+  readonly startedAt: number;
   readonly workflow: string;
   readonly generation: () => Promise<string>;
 }
 
 async function filmed(gateway: GatewayOnTheLoopback, environment: Readonly<Record<string, string>> = {}) {
-  const clock = movedClock(Date.now());
+  const startedAt = testServersStartAt;
+  const clock = steppedServerClock(startedAt);
   const server = await servingReasoning([], { MODEL_GATEWAYS: gateway.gateways, ...environment }, undefined, {
     clock,
     shippedFilesOver: shippedWithAFilm,
@@ -189,25 +195,25 @@ async function filmed(gateway: GatewayOnTheLoopback, environment: Readonly<Recor
   });
   const started = await server.call('POST', `${alpha}/definitions/workflow/filming/run`, { body: { input: {} } });
   const generation = async () => {
-    const [run] = await until(
+    const [run] = await whenHeld(
       async () =>
         decodeRunsGenerationWorkflows((await server.call('GET', `${alpha}/runs?type=generation&name=flight`)).body)
           .runs,
       (runs) => runs.length > 0,
     );
     const id = String(run?.run_id);
-    await until(
+    await whenHeld(
       async () => decodeHandle((await server.call('GET', `${alpha}/runs/${id}`)).body).record?.handle,
       (handle) => handle !== undefined,
     );
     return id;
   };
-  const madeGenerationWorkflows: Filming = { server, clock, workflow: runIdIn(started.body), generation };
+  const madeGenerationWorkflows: Filming = { server, clock, startedAt, workflow: runIdIn(started.body), generation };
   return madeGenerationWorkflows;
 }
 
 function polledIn(gateway: GatewayOnTheLoopback, polls: number): Promise<unknown> {
-  return until(
+  return whenHeld(
     () => Promise.resolve(gateway.asked().filter(({ path }) => path === `/v1/videos/${askedHandle}`).length),
     (asked) => asked >= polls,
   );
@@ -344,13 +350,13 @@ describe('an asset past its time', () => {
     const run = runOf((await made(first, { product: 'a teapot' }, '019a4f2e-5c1b-7d3a-8e6f-000000000003')).body);
     await first.stop();
     await onTheLedgerIn(ledger.fileName, (connection) =>
-      connection.write(everyRowSet(projectedTableOf(assets), { expires_at: Date.now() - 1000 })),
+      connection.write(everyRowSet(projectedTableOf(assets), { expires_at: testServersStartAt - 1000 })),
     );
 
     const second = await servingGeneration(gateway, ledger);
     onTestFinished(second.stop);
     const { pathname, search } = new URL(run.output.address);
-    const feed = await until(
+    const feed = await whenHeld(
       async () => eventsOf((await second.call('GET', `${alpha}/events?type=asset_expired`)).body),
       holdsAnExpiry,
     );
@@ -386,7 +392,7 @@ describe('the example of the generation function format, through the server', ()
     });
     const ran = await server.call('POST', `${productPictureAt}/run`, { body: { input: { product: 'a teapot' } } });
     const run = await server.call('GET', `${alpha}/runs/${runIdIn(ran.body)}`);
-    const definition = await until(
+    const definition = await whenHeld(
       async () => (await server.call('GET', productPictureAt)).body,
       (body) => JSON.stringify(body).includes('"folded":1'),
     );
@@ -405,17 +411,17 @@ describe('the example of the generation function format, through the server', ()
 describe('a workflow step that runs a generation function whose video finishes later', () => {
   it('waits while the provider makes the video, as a step that waits on an interaction does, and goes on with the asset once it is kept', async () => {
     const gateway = await gatewayOnTheLoopback();
-    const { server, clock, workflow, generation } = await filmed(gateway);
+    const { server, clock, startedAt, workflow, generation } = await filmed(gateway);
     const run = await generation();
     const waiting = [
       (await server.call('GET', `${alpha}/runs/${workflow}`)).body,
       (await server.call('GET', `${alpha}/runs/${run}`)).body,
     ];
 
-    clock.moveTo(Date.now() + 6000);
+    clock.moveTo(startedAt + 120_000);
     await polledIn(gateway, 1);
-    clock.moveTo(Date.now() + 60_000);
-    const ended = (await settledRun(server, `${alpha}/runs/${workflow}`)).body;
+    clock.moveTo(startedAt + 240_000);
+    const ended = (await settledAsSwept(server, clock, `${alpha}/runs/${workflow}`)).body;
 
     expect(waiting).toMatchObject([{ status: 'started' }, { status: 'started', record: { handle: askedHandle } }]);
     expect(ended).toMatchObject({
@@ -438,13 +444,13 @@ describe('a workflow step that runs a generation function whose video finishes l
 describe('a workflow step that runs a generation function whose video is not made in time', () => {
   it('ends the step unavailable once the video is not made within the time a run waits for it', async () => {
     const gateway = await gatewayOnTheLoopback([{ id: askedHandle, status: 'in_progress', progress: 1 }]);
-    const { server, clock, workflow, generation } = await filmed(gateway, { GENERATION_WAIT_MINUTES: '1' });
+    const { server, clock, startedAt, workflow, generation } = await filmed(gateway, { GENERATION_WAIT_MINUTES: '1' });
     const run = await generation();
 
-    clock.moveTo(Date.now() + 6000);
+    clock.moveTo(startedAt + 30_000);
     await polledIn(gateway, 1);
-    clock.moveTo(Date.now() + 120_000);
-    const ended = (await settledRun(server, `${alpha}/runs/${workflow}`)).body;
+    clock.moveTo(startedAt + 150_000);
+    const ended = (await settledAsSwept(server, clock, `${alpha}/runs/${workflow}`)).body;
 
     expect(ended).toMatchObject({ status: 'rejected', rejection: { reason: 'unavailable' } });
     expect((await server.call('GET', `${alpha}/runs/${run}`)).body).toMatchObject({

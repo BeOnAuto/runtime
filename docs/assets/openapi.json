@@ -1722,7 +1722,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its playbooks set, its signing secret set or removed, or one of its app credentials refused"
+                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its way chosen, its playbooks or its account type set, its signing secret set or removed, or one of its app credentials refused"
                           },
                           {
                             "type": "object",
@@ -5769,6 +5769,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -6115,6 +6146,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -6213,10 +6246,15 @@
                       "items": {
                         "$ref": "#/$defs/ListedConnection"
                       }
+                    },
+                    "may_manage": {
+                      "type": "boolean",
+                      "description": "true when this caller may remove the connections of the org. false when it may not."
                     }
                   },
                   "required": [
-                    "connections"
+                    "connections",
+                    "may_manage"
                   ],
                   "additionalProperties": false,
                   "$defs": {
@@ -6472,6 +6510,37 @@
                           ],
                           "additionalProperties": false,
                           "description": "How the server is credentialled, never its value, which the person gives on the page"
+                        },
+                        "permissions": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "application",
+                                "delegated"
+                              ],
+                              "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                        },
+                        "account_type": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "service",
+                                "personal"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
                         },
                         "status": {
                           "type": "string",
@@ -6809,6 +6878,8 @@
                         "placeholders",
                         "entry",
                         "credential",
+                        "permissions",
+                        "account_type",
                         "status",
                         "added_by",
                         "added_at",
@@ -7155,6 +7226,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -7491,6 +7593,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -7833,6 +7937,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -8142,6 +8277,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -8507,6 +8644,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -8853,6 +9021,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -9233,6 +9403,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -9542,6 +9743,722 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "asked_scopes",
+                    "granted_scope",
+                    "granted_scopes",
+                    "credential_ends_with",
+                    "broken",
+                    "signing_secret",
+                    "account",
+                    "app_credentials"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A tool server the org added, shared by its playbooks"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/account-type": {
+      "put": {
+        "operationId": "set_connection_account_type",
+        "summary": "Set connection account type",
+        "description": "Sets the kind of account a connection acts as at its service. service means an account the company made for automations. personal means the account of the person who connected it. Only this mark changes. The connection keeps its credential and everything else. Setting the type the connection already has records nothing. A removed connection is refused as conflict, and so is a connection that acts as the app or sends no credential. A type the connection's way does not take is refused as invalid_input.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/set_connection_account_type/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "account_type": {
+                    "type": "string",
+                    "enum": [
+                      "service",
+                      "personal"
+                    ],
+                    "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it."
+                  }
+                },
+                "required": [
+                  "account_type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/set_connection_account_type/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
+                        },
+                        "pkce": {
+                          "type": "string",
+                          "enum": [
+                            "none"
+                          ],
+                          "description": "For authorization, none where the server, its endpoints written out, takes no PKCE challenge, so a registered client that authenticates redeems the code without a verifier"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "auto",
+                            "metadata_document",
+                            "dynamic",
+                            "own",
+                            "gateway"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
+                    },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
+                    },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server refused the credential it holds, answering 401 or a code its provider names for a refused credential, credential_wanted when its server answered so to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -9884,7 +10801,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next. asked_by names the client the link was asked through, where the call that gave it named one. For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read. A token that is unknown, used up, expired or replaced is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next. asked_by names the client the link was asked through, where the call that gave it named one. For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read. For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them. A token that is unknown, used up, expired or replaced is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -10173,6 +11090,37 @@
                       ],
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
                     },
                     "status": {
                       "type": "string",
@@ -10628,6 +11576,59 @@
                         }
                       ],
                       "description": "For an HTTP API given its OpenAPI document whole, the tools that document offers that its entry allows, by name, read from the document the runtime keeps for the connection, so the page lists them before the person approves; never the text of the document. Null where that document cannot be read, missing or not the one the connection was added with, so nothing the connection could call is known. Left out for every other connection"
+                    },
+                    "ways": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "reference",
+                              "secret",
+                              "client_credentials",
+                              "authorization"
+                            ],
+                            "description": "The kind of the way, which choose_way takes as credential.kind."
+                          },
+                          "permissions": {
+                            "type": "string",
+                            "enum": [
+                              "application",
+                              "delegated"
+                            ],
+                            "description": "application when a connection made this way acts as the app. delegated when it acts as an account at the service. Left out when the way sends no credential."
+                          },
+                          "account_types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "service",
+                                "personal"
+                              ]
+                            },
+                            "description": "The kinds of account a connection made this way may act as. service is an account the company made for automations. personal is the account of the person who connects. Left out when the way acts as the app or sends no credential."
+                          },
+                          "offered": {
+                            "type": "boolean",
+                            "description": "Whether a person may connect the server this way here."
+                          },
+                          "because": {
+                            "type": "string",
+                            "description": "Why the way is not offered here."
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "offered"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A way a server given by hand offers"
+                      },
+                      "description": "For a server given by hand, the ways it offers, as its own metadata named them when the connection was added, including the way the connection uses now. choose_way takes one of them. Left out for a connection made from a provider, whose ways list_providers lists."
                     }
                   },
                   "required": [
@@ -10638,6 +11639,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -11025,6 +12028,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -11334,6 +12368,758 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "asked_scopes",
+                    "granted_scope",
+                    "granted_scopes",
+                    "credential_ends_with",
+                    "broken",
+                    "signing_secret",
+                    "account",
+                    "app_credentials"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A tool server the org added, shared by its playbooks"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/way": {
+      "put": {
+        "operationId": "choose_way",
+        "summary": "Choose way",
+        "description": "Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, and the account type where that way acts as an account. The connection keeps its id, its name, its playbooks and its link. A sign-in started and the organization's own OAuth client given for the way it had before are dropped. When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes. Choosing the way the connection already has changes only its account type, where one is given, and otherwise records nothing. A way the connection's provider or server does not offer is refused as invalid_input, and so is an account type the way does not take. A connection that is connected or broken is refused as conflict. A way the operator's rules do not allow is refused as forbidden. On a runtime that signs people in, only the person who added the connection may choose.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/choose_way/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "The token of the link add_connection or reconnect_connection gave"
+                  },
+                  "credential": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "none",
+                          "reference",
+                          "secret",
+                          "client_credentials",
+                          "authorization"
+                        ],
+                        "description": "The kind of the way, as the list of ways names it."
+                      },
+                      "permissions": {
+                        "type": "string",
+                        "enum": [
+                          "application",
+                          "delegated"
+                        ],
+                        "description": "application or delegated, as the list of ways names it. client_credentials always means application. Left out, every other kind that sends a credential means delegated."
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false,
+                    "description": "The way to connect. For a connection made from a provider, one of the ways list_providers lists for it. For a server given by hand, one of the ways read_link lists in ways."
+                  },
+                  "account_type": {
+                    "type": "string",
+                    "enum": [
+                      "service",
+                      "personal"
+                    ],
+                    "description": "service when the connection will act as an account the company made for automations. personal when it will act as the account of the person who connects it. Left out when another way is chosen, it is personal if the way takes personal accounts, and otherwise the type the way takes. Left out for the way the connection already has, the type stays as it is."
+                  }
+                },
+                "required": [
+                  "token",
+                  "credential"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/choose_way/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
+                    },
+                    "events": {
+                      "type": "object",
+                      "description": "What add_connection was given as events for this connection, unchanged. It says how the service sends webhooks when someone replies. The field is absent when add_connection was given none."
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
+                        },
+                        "pkce": {
+                          "type": "string",
+                          "enum": [
+                            "none"
+                          ],
+                          "description": "For authorization, none where the server, its endpoints written out, takes no PKCE challenge, so a registered client that authenticates redeems the code without a verifier"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "auto",
+                            "metadata_document",
+                            "dynamic",
+                            "own",
+                            "gateway"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
+                    },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
+                    },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server refused the credential it holds, answering 401 or a code its provider names for a refused credential, credential_wanted when its server answered so to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "app_credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Its name, as its provider's entry names it"
+                          },
+                          "refused": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "detail": {
+                                    "type": "string",
+                                    "description": "Why, in the runtime's words, which say what mends it"
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "description": "When the service refused it, in ISO 8601 UTC"
+                                  }
+                                },
+                                "required": [
+                                  "detail",
+                                  "at"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Why and since when the service refused it, until the credential is given again; else null"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "refused"
+                        ],
+                        "additionalProperties": false,
+                        "description": "An app credential the person gave beside the key, never the value"
+                      },
+                      "description": "The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -11752,6 +13538,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -12068,6 +13885,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -12450,6 +14269,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -12763,6 +14613,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -13341,6 +15193,37 @@
                       "additionalProperties": false,
                       "description": "How the server is credentialled, never its value, which the person gives on the page"
                     },
+                    "permissions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "application",
+                            "delegated"
+                          ],
+                          "description": "For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "application when the connection acts as the app. delegated when it acts as an account at the service. null when it sends no credential."
+                    },
+                    "account_type": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "personal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "service when the connection acts as an account the company made for automations. personal when it acts as the account of the person who connected it. null when it acts as the app or sends no credential."
+                    },
                     "status": {
                       "type": "string",
                       "enum": [
@@ -13650,6 +15533,8 @@
                     "placeholders",
                     "entry",
                     "credential",
+                    "permissions",
+                    "account_type",
                     "status",
                     "added_by",
                     "added_at",
@@ -13717,7 +15602,7 @@
       "get": {
         "operationId": "list_providers",
         "summary": "List providers",
-        "description": "Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes. Use it to show a person what they can connect; add_connection connects one by its name. `may_add` says whether this caller may add a connection, and `refusal` why not. `return_address` is the redirect URI the organization's own OAuth client registers at a provider before a person connects under it.",
+        "description": "Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes. Use it to show a person what they can connect; add_connection connects one by its name. `may_add` says whether this caller may add a connection, and `refusal` why not. `may_connect` says whether this caller may also approve the connection it adds. `return_address` is the redirect URI the organization's own OAuth client registers at a provider before a person connects under it.",
         "tags": [
           "providers"
         ],
@@ -13746,6 +15631,10 @@
                       "type": "boolean",
                       "description": "Whether this caller may add a connection here"
                     },
+                    "may_connect": {
+                      "type": "boolean",
+                      "description": "true when this caller may also approve a connection it adds here. false when it may not."
+                    },
                     "refusal": {
                       "anyOf": [
                         {
@@ -13765,6 +15654,7 @@
                   "required": [
                     "providers",
                     "may_add",
+                    "may_connect",
                     "refusal",
                     "return_address"
                   ],
@@ -13835,7 +15725,18 @@
                                   "application",
                                   "delegated"
                                 ],
-                                "description": "For authorization, whether a connection made this way acts as the app, application, or as the person who connects, delegated; delegated where it is left out"
+                                "description": "application when a connection made this way acts as the app. delegated when it acts as an account at the service. Left out when the way sends no credential."
+                              },
+                              "account_types": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service",
+                                    "personal"
+                                  ]
+                                },
+                                "description": "The kinds of account a connection made this way may act as. service is an account the company made for automations. personal is the account of the person who connects. Left out when the way acts as the app or sends no credential."
                               },
                               "oauth_client": {
                                 "type": "string",
@@ -13928,9 +15829,13 @@
                                 "type": "string",
                                 "description": "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds"
                               },
+                              "key_page": {
+                                "type": "string",
+                                "description": "The https page where a person makes the key or the client. Given for a secret or client_credentials way whose entry names one."
+                              },
                               "key_page_title": {
                                 "type": "string",
-                                "description": "For secret, the label of the button that opens the key page, where the entry gives one; left out otherwise"
+                                "description": "For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise"
                               },
                               "steps": {
                                 "type": "object",
@@ -13991,7 +15896,7 @@
                                   }
                                 },
                                 "additionalProperties": false,
-                                "description": "For secret, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected"
+                                "description": "For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected"
                               },
                               "app_credentials": {
                                 "type": "array",
@@ -16460,6 +18365,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -17091,7 +19019,7 @@
       "get": {
         "operationId": "get_definition",
         "summary": "Get definition",
-        "description": "Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
+        "description": "Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own, and how many of its runs are queued to start. A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
         "tags": [
           "definitions"
         ],
@@ -17467,6 +19395,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -18046,6 +19997,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -18665,6 +20639,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -19328,6 +21325,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -19875,6 +21895,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -20422,6 +22465,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -20969,6 +23035,29 @@
                     },
                     "standing": {
                       "type": "object",
+                      "properties": {
+                        "queued": {
+                          "type": "integer",
+                          "description": "How many of its runs are queued to start"
+                        },
+                        "next_queued_start": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        }
+                      },
+                      "allOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {}
+                        }
+                      ],
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
@@ -21361,7 +23450,8 @@
                                 "dataset_not_ready",
                                 "generation_timed_out",
                                 "meter_unavailable",
-                                "content_unavailable"
+                                "content_unavailable",
+                                "busy"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may, and content_unavailable for something the playbook keeps in its stored content that could not be read just now, so trying again shortly may work"
                             },
@@ -21720,6 +23810,7 @@
                             "generation_timed_out",
                             "meter_unavailable",
                             "content_unavailable",
+                            "busy",
                             "taken",
                             "retired",
                             "paused",
@@ -22058,7 +24149,8 @@
                                 "dataset_not_ready",
                                 "generation_timed_out",
                                 "meter_unavailable",
-                                "content_unavailable"
+                                "content_unavailable",
+                                "busy"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may, and content_unavailable for something the playbook keeps in its stored content that could not be read just now, so trying again shortly may work"
                             },
@@ -22394,6 +24486,7 @@
                             "generation_timed_out",
                             "meter_unavailable",
                             "content_unavailable",
+                            "busy",
                             "taken",
                             "retired",
                             "paused",
@@ -22747,7 +24840,8 @@
                                 "dataset_not_ready",
                                 "generation_timed_out",
                                 "meter_unavailable",
-                                "content_unavailable"
+                                "content_unavailable",
+                                "busy"
                               ],
                               "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may, and content_unavailable for something the playbook keeps in its stored content that could not be read just now, so trying again shortly may work"
                             },
@@ -23064,6 +25158,7 @@
                             "generation_timed_out",
                             "meter_unavailable",
                             "content_unavailable",
+                            "busy",
                             "taken",
                             "retired",
                             "paused",
@@ -23452,6 +25547,7 @@
                             "generation_timed_out",
                             "meter_unavailable",
                             "content_unavailable",
+                            "busy",
                             "taken",
                             "retired",
                             "paused",
@@ -23641,6 +25737,7 @@
                                 "generation_timed_out",
                                 "meter_unavailable",
                                 "content_unavailable",
+                                "busy",
                                 "taken",
                                 "retired",
                                 "paused",
@@ -24550,7 +26647,7 @@
       "post": {
         "operationId": "move_definitions",
         "summary": "Move definitions",
-        "description": "Moves functions and workflows from this playbook to another playbook of the org and returns them: each keeps its versions, its runs and its page, and from then on it is read, run and changed in the other playbook under the same name. Use move_definitions when the person asks to move a function or a workflow to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. Nothing moves while one of them has a run that has not ended, or while the other playbook has a definition of the same type and name, even a retired one.",
+        "description": "Moves functions, workflows and goals from this playbook to another playbook of the org: each keeps its versions, runs, page and results, and is from then on read, run, judged and changed there under the same name. Use move_definitions when the person asks to move a function, a workflow or a goal to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. `goals` lists goals by id; list in `definitions` every workflow that serves one of them, since a goal moves with its workflows. Nothing moves while one of them has a run that has not ended, or while the other playbook has one of the same type and name, even a retired one.",
         "tags": [
           "definitions"
         ],
@@ -24575,7 +26672,7 @@
                   "to": {
                     "type": "string",
                     "pattern": "^[a-z][a-z0-9-]{2,47}$",
-                    "description": "The id of the playbook to move the definitions to"
+                    "description": "The id of the playbook to move them to"
                   },
                   "definitions": {
                     "type": "array",
@@ -24609,7 +26706,16 @@
                     },
                     "minItems": 1,
                     "maxItems": 64,
-                    "description": "The definitions to move, each by its `type` and `name`, with everything each one uses"
+                    "description": "The definitions to move, each by its `type` and `name`, with everything each one uses; leave it out only to move goals that no workflow serves"
+                  },
+                  "goals": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "maxItems": 8,
+                    "description": "The ids of the goals to move; each keeps its id, its results and the person's yes"
                   },
                   "force": {
                     "type": "boolean",
@@ -24617,8 +26723,7 @@
                   }
                 },
                 "required": [
-                  "to",
-                  "definitions"
+                  "to"
                 ]
               }
             }
@@ -24639,6 +26744,13 @@
                       "items": {
                         "$ref": "#/$defs/Definition"
                       }
+                    },
+                    "goals": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The ids of the goals that moved"
                     }
                   },
                   "required": [
@@ -24958,6 +27070,29 @@
                         },
                         "standing": {
                           "type": "object",
+                          "properties": {
+                            "queued": {
+                              "type": "integer",
+                              "description": "How many of its runs are queued to start"
+                            },
+                            "next_queued_start": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                            }
+                          },
+                          "allOf": [
+                            {
+                              "type": "object",
+                              "additionalProperties": {}
+                            }
+                          ],
                           "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                         },
                         "page": {
@@ -32333,6 +34468,206 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/{playbook}/definitions/workflow/{workflow}/queued-starts": {
+      "get": {
+        "operationId": "list_queued_starts",
+        "summary": "List queued starts",
+        "description": "Lists the runs of a workflow that are queued to start, in the order they come due. Use it to tell the person what is still queued and when the next one can start. A workflow starts only so many runs a minute for the events that match its trigger, and queues the rest for a later minute. Each queued run has the event it starts for, `due`, the earliest time it can start, and `attempts`, how many times it tried to start and failed. When many are queued, the later ones start a minute or more after their `due`. A queued run is refused and never starts if its workflow is paused when it comes due, so say so to the person when the workflow is paused. `get_definition` says how many are queued. `cursor` is the next_cursor of the page before.",
+        "tags": [
+          "definitions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "workflow",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The workflow's name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "The most items to answer with, from 1 to 100; 20 when left out"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The next_cursor of the page before, to read on after it"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_queued_starts/output",
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "paused",
+                        "retired"
+                      ],
+                      "description": "The workflow's status: active; paused, when it starts no runs until it is resumed; or retired, until it is restored"
+                    },
+                    "queued_starts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/QueuedStart"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean",
+                      "description": "Whether more remains to read after this page"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "queued_starts",
+                    "has_more",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "QueuedStart": {
+                      "type": "object",
+                      "properties": {
+                        "run_id": {
+                          "type": "string",
+                          "description": "The id the run has once it starts"
+                        },
+                        "event": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the event, unique among the events of its source"
+                            },
+                            "type": {
+                              "type": "string",
+                              "description": "What happened"
+                            },
+                            "source": {
+                              "type": "string",
+                              "description": "Where the event comes from, a URI reference"
+                            },
+                            "subject": {
+                              "type": "string",
+                              "description": "What the event is about, within its source"
+                            },
+                            "time": {
+                              "type": "string",
+                              "description": "When it happened, in RFC 3339"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "type",
+                            "source",
+                            "time"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The event it starts for: its `id`, `type`, `source`, `subject` and `time`"
+                        },
+                        "due": {
+                          "type": "string",
+                          "description": "The earliest time it can start, in ISO 8601 UTC"
+                        },
+                        "attempts": {
+                          "type": "integer",
+                          "description": "How many times it tried to start and failed"
+                        }
+                      },
+                      "required": [
+                        "run_id",
+                        "event",
+                        "due",
+                        "attempts"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A run of the workflow that is queued to start"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/playbooks/{playbook}/runs/{run_id}/events": {
       "post": {
         "operationId": "send_run_event",
@@ -32728,7 +35063,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/cursor_not_held"
+            "description": "https://on.auto/problems/<reason>, or the type of a kind that has one of its own: https://on.auto/problems/tools_unfinished, https://on.auto/problems/busy, https://on.auto/problems/tools_called, https://on.auto/problems/effect_unknown, https://on.auto/problems/credits_exhausted, https://on.auto/problems/license_required, https://on.auto/problems/license_invalid, https://on.auto/problems/account_closed, https://on.auto/problems/cursor_not_held"
           },
           "title": {
             "type": "string",
@@ -32955,6 +35290,7 @@
               "generation_timed_out",
               "meter_unavailable",
               "content_unavailable",
+              "busy",
               "requested",
               "deadline",
               "overrun",
@@ -33034,6 +35370,10 @@
               "not_activated"
             ],
             "description": "Why a self-hosted runtime that holds a key is limited to the free rate, as GET /license says it: credits or cap on credits_exhausted, the state of its license on license_invalid"
+          },
+          "retry_after": {
+            "type": "integer",
+            "description": "On a problem of the kind busy, the seconds to wait before trying the same request again, which Retry-After also gives over HTTP. It is 1 after the runtime’s first busy refusal in a row, doubles with each one after it up to 8, and goes back to 1 once the runtime answers in time"
           }
         },
         "required": [

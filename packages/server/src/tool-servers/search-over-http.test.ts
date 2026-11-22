@@ -1,7 +1,7 @@
 import { listedTools, plainTextIn, problemIn, withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { offeredByTheServer } from '../testing/servers/connected-servers.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -20,9 +20,15 @@ interface Serving {
   readonly others: FakeMcpServer;
 }
 
-async function fakeServer(): Promise<FakeMcpServer> {
+type Closing = (close: () => Promise<void>) => void;
+
+const closedAfterTheCase: Closing = (close) => {
+  closing.push(close);
+};
+
+async function fakeServer(closedBy: Closing): Promise<FakeMcpServer> {
   const fake = await serveFakeMcp({ bearer: apiKey });
-  closing.push(fake.close);
+  closedBy(fake.close);
   return fake;
 }
 
@@ -30,9 +36,9 @@ function remote(fake: FakeMcpServer, changes: Readonly<Record<string, unknown>>)
   return { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, ...changes };
 }
 
-async function serving(): Promise<Serving> {
-  const graph = await fakeServer();
-  const others = await fakeServer();
+async function serving(closedBy: Closing = closedAfterTheCase): Promise<Serving> {
+  const graph = await fakeServer(closedBy);
+  const others = await fakeServer(closedBy);
   const gone = await serveFakeMcp();
   await gone.close();
   const server = await servingReasoning([], {
@@ -49,10 +55,29 @@ async function serving(): Promise<Serving> {
       wiki: { url: gone.url, org: 'acme', playbooks: ['alpha'], record_content: false },
     }),
   });
-  closing.push(server.stop);
+  closedBy(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return { server, graph, others };
 }
+
+const closingShared: (() => Promise<void>)[] = [];
+
+let shared: Promise<Serving> | undefined;
+
+/**
+ * The server the cases that only search share: none of them changes a playbook or a server, or counts what a tool
+ * server was asked. A case that retires its playbook, or asserts that no tool server was asked, has one of its own.
+ */
+function sharedServing(): Promise<Serving> {
+  shared ??= serving((close) => {
+    closingShared.push(close);
+  });
+  return shared;
+}
+
+afterAll(async () => {
+  await Promise.all(closingShared.map((close) => close()));
+});
 
 const graphOfAlpha = { name: 'graph', type: 'mcp', record_content: true, provider: null, tool_count: 2 };
 
@@ -105,7 +130,7 @@ describe('search over HTTP', () => {
   });
 
   it('finds tools by the terms of its query string, and keeps those that only read', async () => {
-    const { server } = await serving();
+    const { server } = await sharedServing();
 
     const byTerms = await server.call(
       'GET',
@@ -121,7 +146,7 @@ describe('search over HTTP', () => {
   });
 
   it('shows no header value and no secret of a server', async () => {
-    const { server, graph } = await serving();
+    const { server, graph } = await sharedServing();
 
     const { body } = await server.call('GET', `${alpha}/tool-servers/search`);
     const text = JSON.stringify(body);
@@ -171,7 +196,7 @@ describe('search over HTTP, asked for one server', () => {
 
 describe('search over MCP', () => {
   it('is a read-only tool of the playbook that finds the same, led by plain words', async () => {
-    const { server } = await serving();
+    const { server } = await sharedServing();
 
     const { tools, found } = await onPlaybook(server, 'alpha', async (session) => ({
       tools: await session.listTools(),
@@ -191,7 +216,7 @@ describe('search over MCP', () => {
   });
 
   it('answers a playbook the org does not have as not_found', async () => {
-    const { server } = await serving();
+    const { server } = await sharedServing();
 
     const missing = await onPlaybook(server, 'nowhere', (session) => session.callTool('search', {}));
 
@@ -210,7 +235,7 @@ const salesInTheOrg = { name: 'sales', type: 'mcp', playbooks: ['sales'] };
 
 describe('search of the org over HTTP', () => {
   it('searches every server of the org with the playbooks it serves, or those that serve the playbook asked for', async () => {
-    const { server } = await serving();
+    const { server } = await sharedServing();
 
     const found = await server.call('GET', '/v1/orgs/acme/tool-servers/search');
     const forAlpha = await server.call('GET', '/v1/orgs/acme/tool-servers/search?playbook=alpha');
@@ -222,7 +247,7 @@ describe('search of the org over HTTP', () => {
 
 describe('search on the org endpoint, without a playbook and with one', () => {
   it('answers for the org and for the playbook', async () => {
-    const { server } = await serving();
+    const { server } = await sharedServing();
 
     const { inOrg, inAlpha } = await withMcpSession(
       'current revision',

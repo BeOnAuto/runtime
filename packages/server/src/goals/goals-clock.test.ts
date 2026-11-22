@@ -9,7 +9,7 @@ import {
 } from '../testing/goals/assessed-runs.ts';
 import { assessmentRowsOfGoals } from '../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const day = 86_400_000;
 const hour = 3_600_000;
@@ -56,7 +56,7 @@ const ofGoal = (rows: Rows, goal: string, opens?: unknown) =>
   (rows.get(goal) ?? []).filter((row) => opens === undefined || row['window_opens'] === opens);
 
 function rowsHolding(assessed: Assessing, goals: readonly string[], holds: (rows: Rows) => boolean): Promise<Rows> {
-  return until(() => assessmentRowsOfGoals(assessed, goals), holds);
+  return whenHeld(() => assessmentRowsOfGoals(assessed, goals), holds);
 }
 
 const traceAHolding = (assessed: Assessing, holds: (rows: Rows) => boolean) =>
@@ -215,7 +215,7 @@ describe('an after window opened by the scheduled run that measures in it, on a 
       expect(await savedWorkflow(assessed.server, 'release', releasing(readAt, split))).toBe(201);
 
       assessed.ranAMinuteOn();
-      await until(
+      await whenHeld(
         () => succeededRunsOf(assessed, 'release'),
         (runs) => runs > 0,
       );
@@ -267,7 +267,7 @@ describe('a daily goal on a Node server whose only contribution is paused', () =
     );
     const midnight = Math.floor(assessed.clock.now() / day) * day + day;
     assessed.clock.moveTo(midnight + 1000);
-    const quiet = await until(
+    const quiet = await whenHeld(
       () => clockRowOf(assessed),
       (row) => row?.['opens_at'] === midnight + day,
     );

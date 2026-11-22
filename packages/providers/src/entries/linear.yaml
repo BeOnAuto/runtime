@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.linear.app/mcp
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://mcp.linear.app
     scope: read write
     says:

@@ -2,20 +2,24 @@ import type { WorkflowEngine } from '@on.auto/workflow-engine';
 import { Effect, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { systemClock } from '../loop/host-clock.ts';
 import { hostWakeUp, type NextWake } from '../loop/host-wake-up.ts';
-import { aSQLiteFile } from '../testing/host-files.ts';
-import { hostedOn } from '../testing/host-runs.ts';
+import { aLedgerInMemory } from '../testing/host-files.ts';
+import { hostedOn, hostedStartsAt } from '../testing/host-runs.ts';
 import { signals } from '../testing/signals.ts';
-import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
+import { fewSweeps, steppedBy, steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import { type Chore, choreWork } from './due-chores.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce, type DueWork } from './due-work.ts';
 import { fakeDueWork, type FakeDueWork } from './fake-due-work.ts';
 import { rowWaitBounds, rowWaits } from './row-waits.ts';
 
-function rowsDueBy(count: number, dueAt: number, { callsOut }: { readonly callsOut: boolean }): FakeDueWork {
-  const rows = fakeDueWork(1);
+function rowsDueBy(
+  clock: SteppedClock,
+  count: number,
+  dueAt: number,
+  { callsOut }: { readonly callsOut: boolean },
+): FakeDueWork {
+  const rows = fakeDueWork(clock);
   for (const key of keysOf(count, 'row')) {
     rows.add(key, dueAt);
     if (!callsOut) {
@@ -82,9 +86,10 @@ function wakeUpWith(dueWork: DueWork, clock: SteppedClock): (now: number) => Pro
 describe('the due rows of a projection, in the loop of the host', () => {
   it('are performed before the timers of the same wake-up, at most 256 a wake-up and 16 at once, the rest at once after', async () => {
     const now = Date.now();
-    const rows = rowsDueBy(300, now - 1000, { callsOut: false });
+    const clock = steppedClock(now);
+    const rows = rowsDueBy(clock, 300, now - 1000, { callsOut: false });
     rows.hold();
-    const looping = await dueLooping(rows, steppedClock(now));
+    const looping = await dueLooping(rows, clock);
 
     await looping.armTimer(now - 1000);
     rows.release();
@@ -96,12 +101,13 @@ describe('the due rows of a projection, in the loop of the host', () => {
 
   it('that call out are handed out as many a wake-up as are performed at once, the rest as places free, holding no timer', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     for (const key of keysOf(40, 'row')) {
       rows.add(key, now - 1000);
     }
     rows.hold();
-    const looping = await dueLooping(rows, steppedClock(now));
+    const looping = await dueLooping(rows, clock);
 
     await looping.armTimer(now - 1000);
     const firedWhileHeld = [...(await rows.when(looping.order, (order) => order.length === 1))];
@@ -115,9 +121,9 @@ describe('the due rows of a projection, in the loop of the host', () => {
 
   it('wake the loop when the next of them is due', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
-    rows.add('later', now + 90_000);
     const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
+    rows.add('later', now + 90_000);
 
     await dueLooping(rows, clock);
     clock.step(90_000);
@@ -131,7 +137,7 @@ describe('due rows whose perform never ends, as a delivery through a tool that n
   it('hold no timer, of the wake-up that hands them out or of the wake-ups after, 16 of them at once', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(clock);
     for (const key of Array.from({ length: 20 }, (_, index) => `hanging-${index}`)) {
       rows.add(key, now - 1000);
       rows.hanging(key);
@@ -154,7 +160,7 @@ describe('a due row that calls out nowhere and whose perform never ends', () => 
   it('holds the timers of the wake-up that hands it out a second at most, and those of the wake-ups after not at all', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(clock);
     rows.add('expiry', now - 1000);
     rows.local('expiry');
     rows.hanging('expiry');
@@ -180,13 +186,13 @@ describe('due rows in flight', () => {
     'are read once a sweep for each lane while %i of them hang, however their work reports its next due time',
     async (count) => {
       const now = Date.now();
-      const rows = fakeDueWork(0, { reportsRowsInFlight: true });
+      const clock = steppedClock(now);
+      const rows = fakeDueWork(clock, 0, { reportsRowsInFlight: true });
       for (const key of Array.from({ length: count }, (_, index) => `hanging-${index}`)) {
         rows.add(key, now - 1000);
         rows.hanging(key);
       }
 
-      const clock = steppedClock(now);
       await dueLooping(rows, clock, 1000);
       await rows.when(rows.attempts, (made) => made.length === duePerformedAtOnce);
       await aSecondLater(clock, rows, 1);
@@ -199,24 +205,39 @@ describe('due rows in flight', () => {
   );
 
   it('wake the loop when one of them ends, to hand out the rows behind it', async () => {
+    const performMs = 50;
     const now = Date.now();
-    const rows = fakeDueWork(50);
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock, performMs);
     for (const key of Array.from({ length: dueInOneWakeUp + 20 }, (_, index) => `row-${index}`)) {
       rows.add(key, now - 1000);
     }
 
-    await dueLooping(rows);
-    const performed = await rows.when(rows.performed, (done) => done.length === dueInOneWakeUp + 20);
+    await dueLooping(rows, clock);
+    const performed = await steppedBy(clock, performMs).until(
+      rows.performed,
+      (done) => done.length === dueInOneWakeUp + 20,
+      batchesStepped(dueInOneWakeUp + 20),
+    );
 
     expect(performed).toHaveLength(dueInOneWakeUp + 20);
   });
 });
 
+/**
+ * One step for each batch of rows performed at once, and no more: the host comes to rest only once the next batch
+ * sleeps, so no step is spent on a rest that came early. A loop that waited out `dueAwaitedMs` for each batch, rather
+ * than waking as a row ends, would take twenty steps a batch.
+ */
+function batchesStepped(rows: number) {
+  return { atMost: Math.ceil(rows / duePerformedAtOnce) };
+}
+
 describe('a due row that calls out nowhere, while deliveries hang', () => {
   it('is performed at once, beside the 16 that hang, not behind them', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(clock);
     for (const key of Array.from({ length: 20 }, (_, index) => `delivery-${index}`)) {
       rows.add(key, now - 1000);
       rows.hanging(key);
@@ -235,14 +256,14 @@ describe('a due row that calls out nowhere, while deliveries hang', () => {
 describe('a due row that cannot be performed', () => {
   it('is tried again after a wait that doubles, without holding the rows due after it', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     rows.add('stuck', now);
     rows.failing('stuck');
     rows.add('next', now + 1500);
     rows.local('stuck');
     rows.local('next');
 
-    const clock = steppedClock(now);
     const looping = await dueLooping(rows, clock);
     await rows.when(rows.attempts, (made) => made.length === 1);
     const steppedUntilTried = async (gapMs: number, made: number) => {
@@ -272,11 +293,12 @@ describe('a due row that cannot be performed', () => {
 
 describe('due rows that cannot be read', () => {
   it('are reported, and performed once the reads come back', async () => {
-    const rows = rowsDueBy(1, Date.now(), { callsOut: true });
+    const clock = steppedClock(Date.now());
+    const rows = rowsDueBy(clock, 1, clock.now(), { callsOut: true });
     rows.failReads(2);
 
-    const looping = await dueLooping(rows, systemClock, 20);
-    const performed = await rows.when(rows.performed, (done) => done.length > 0);
+    const looping = await dueLooping(rows, clock, 20);
+    const performed = await steppedBy(clock, 20).until(rows.performed, (done) => done.length > 0, fewSweeps);
 
     expect([performed.length, new Set(looping.troubles())]).toEqual([
       1,
@@ -290,7 +312,7 @@ describe('due rows that cannot be read', () => {
   it('whose next due time could not be read are answered a retry a minute after the read when nothing else is due, so a host woken only at the times it answers performs the next at its time', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(clock);
     rows.add('later', now + fiveMinutes);
     rows.local('later');
     const wakeUp = wakeUpWith(nextDueFailingFirst(rows.work('host'), 1), clock);
@@ -307,7 +329,8 @@ describe('due rows that cannot be read', () => {
 
   it('keep the wait of a row that could not be performed, though the next due time of its work could not be read', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     rows.add('stuck', now);
     rows.local('stuck');
     rows.failing('stuck');
@@ -319,7 +342,7 @@ describe('due rows that cannot be read', () => {
   it('due already, which could not be read though their next due time was, are answered a retry a minute after the read, so a host woken only at the times it answers performs them then', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = rowsDueBy(1, now - 1000, { callsOut: false });
+    const rows = rowsDueBy(clock, 1, now - 1000, { callsOut: false });
     rows.failReads(1);
     const wakeUp = wakeUpWith(rows.work('host'), clock);
 
@@ -334,7 +357,7 @@ describe('due rows that cannot be read', () => {
   it('that a lane had room for at the wake before are answered a retry, not at once, so the host is not woken again and again while the read fails', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = rowsDueBy(dueInOneWakeUp + 44, now - 1000, { callsOut: false });
+    const rows = rowsDueBy(clock, dueInOneWakeUp + 44, now - 1000, { callsOut: false });
     const wakeUp = wakeUpWith(rows.work('host'), clock);
 
     const behind = await wakeUp(now);
@@ -403,16 +426,17 @@ describe('a chore the wake-up of the host performs', () => {
 
 describe('the due rows of a projection, across hosts of one database', () => {
   it('are performed by the host that holds the lease alone, and by the next once it stops', async () => {
-    const database = { store: 'sqlite', file: aSQLiteFile() } as const;
-    const rows = fakeDueWork();
-    const first = await hostedOn(database, { sweepEveryMs: 50, holder: 'first', dueWork: [rows.work('first')] });
-    await hostedOn(database, { sweepEveryMs: 50, holder: 'second', dueWork: [rows.work('second')] });
+    const database = await aLedgerInMemory();
+    const clock = steppedClock(hostedStartsAt);
+    const rows = fakeDueWork(clock);
+    const first = await hostedOn(database, { clock, sweepEveryMs: 50, holder: 'first', dueWork: [rows.work('first')] });
+    await hostedOn(database, { clock, sweepEveryMs: 50, holder: 'second', dueWork: [rows.work('second')] });
 
-    rows.add('before', Date.now());
-    await rows.when(rows.performed, (performed) => performed.length === 1);
+    rows.add('before', clock.now());
+    await first.sweeps.until(rows.performed, (performed) => performed.length === 1, fewSweeps);
     await first.host.stop();
-    rows.add('after', Date.now());
-    await rows.when(rows.performed, (performed) => performed.length === 2);
+    rows.add('after', clock.now());
+    await first.sweeps.until(rows.performed, (performed) => performed.length === 2, fewSweeps);
 
     expect(rows.performed().map(({ key, by }) => [key, by])).toEqual([
       ['before', 'first'],

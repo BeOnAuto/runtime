@@ -46,6 +46,7 @@ placeholders:
     required: false
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://lwa.amazon.com
     authorization_endpoint: https://{sign_in_host}/ap/oa
     token_endpoint: https://{token_host}/auth/o2/token

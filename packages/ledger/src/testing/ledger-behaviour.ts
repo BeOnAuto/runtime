@@ -17,6 +17,17 @@ export function ledgerBehaviour(entry: LedgerEntry): void {
   recordedBehaviour(
     () => aLedger(entry),
     (names) => aLedgerKeepingNames(entry, names),
+    ...[entry.everyRecordASecondEarlier]
+      .filter((statement): statement is string => typeof statement === 'string')
+      .map((statement) => async () => {
+        const database = await entry.aDatabase();
+        return {
+          ledger: await aLedger(entry, database),
+          recordedASecondEarlier: async () => {
+            await entry.queried(database, statement);
+          },
+        };
+      }),
   );
   recordedKeysBehaviour(entry);
   projectionTableBehaviour(entry);

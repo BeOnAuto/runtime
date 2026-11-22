@@ -7,6 +7,7 @@ url: https://mcp.stripe.com
 handles_money: true
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://access.stripe.com/mcp
     scope: mcp
     says:

@@ -23,6 +23,7 @@ import type {
   CredentialGiving,
   SigningSecretRemoval,
   SigningSecretSetting,
+  WayChoice,
 } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDeciderOf } from '../registry/registry-decider.ts';
 import { findConnection } from '../registry/registry-lookup.ts';
@@ -94,7 +95,19 @@ export const actedNow = Effect.gen(function* () {
 });
 
 export function additionOf(
-  { name, type, provider, placeholders, entry, document, credential, says = {}, events }: DescribedAddition,
+  {
+    name,
+    type,
+    provider,
+    placeholders,
+    entry,
+    document,
+    credential,
+    ways,
+    account_type: accountType,
+    says = {},
+    events,
+  }: DescribedAddition,
   link: OpenLink,
   addedBy: RecordedCaller,
 ): ConnectionAddition {
@@ -108,6 +121,8 @@ export function additionOf(
     entry,
     ...(document === undefined ? {} : { document }),
     credential,
+    ...(ways === undefined ? {} : { ways }),
+    ...(accountType === undefined ? {} : { account_type: accountType }),
     says,
     ...(events === undefined ? {} : { events }),
     added_by: addedBy,
@@ -127,6 +142,7 @@ export const recordInRegistry = Effect.fnUntraced(function* (named: Named, data:
 
 type Replacing =
   | CredentialGiving
+  | WayChoice
   | ClientGiving
   | ConsentStart
   | ConsentFinish

@@ -120,6 +120,7 @@ const served: Readonly<Record<string, Hints>> = {
   get_run: [true, false, true, false],
   cancel_run: [false, true, true, false],
   list_runs: [true, false, true, false],
+  list_queued_starts: [true, false, true, false],
   list_playbook_events: [true, false, true, false],
   get_event: [true, false, true, false],
   publish_event: [false, true, false, false],
@@ -190,8 +191,8 @@ describe('served tools', () => {
   });
 
   describe('the descriptions of the tools of /mcp', () => {
-    it('are forty-two, each under 800 characters, in three to eight sentences', () => {
-      expect(tools).toHaveLength(42);
+    it('are forty-three, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(43);
       expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
       expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
     });
@@ -289,17 +290,18 @@ describe('served tools with goals', () => {
   });
 
   describe('the tools of /mcp on a server that keeps goals', () => {
-    it('stay forty-four, each under 800 characters, in three to eight sentences', () => {
-      expect(tools).toHaveLength(44);
+    it('stay forty-five, each under 800 characters, in three to eight sentences', () => {
+      expect(tools).toHaveLength(45);
       expect(tools.filter((tool) => isOutsideItsBounds(tool)).map(({ name }) => name)).toEqual([]);
     });
 
-    it('take the whole list of goals as an optional string of at most 16384 characters in create_playbook and update_playbook, and the goals agreed as a list in agree_playbook_goals', () => {
+    it('take the whole list of goals as an optional string of at most 16384 characters in create_playbook and update_playbook, and the goals moved and agreed as lists in move_definitions and agree_playbook_goals', () => {
       const takers = tools.filter((tool) => goalsArgumentOf(tool)?.['type'] === 'string');
 
       expect(tools.filter((tool) => goalsArgumentOf(tool) !== undefined).map(({ name }) => name)).toEqual([
         'create_playbook',
         'update_playbook',
+        'move_definitions',
         'agree_playbook_goals',
       ]);
       expect(takers.map(({ name }) => name)).toEqual(['create_playbook', 'update_playbook']);

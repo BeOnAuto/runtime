@@ -5,7 +5,7 @@ import { emmettEventStore, type RiddenAppends } from '../emmett/emmett-event-sto
 import { listenersOf, type AppendListeners, type LedgerStore } from '../event-store.ts';
 import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { dataAsJsonText } from './json-text.ts';
-import { migrationLockTaken, postgresqlLayoutKept } from './postgresql-layout.ts';
+import { migrationLockTakenWithin, postgresqlLayoutKept, type MigrationLockTaken } from './postgresql-layout.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
 import { postgresqlProjectionsOf, postgresqlSizesAfter } from './postgresql-projections.ts';
 import { postgresqlReadsOn } from './postgresql-reads.ts';
@@ -29,6 +29,7 @@ export type StoreKept = Pick<
   | 'runIds'
   | 'tableMadeAgain'
   | 'pageFailed'
+  | 'migrationLockWaiting'
 >;
 
 const eventsInOneBoundedAppend = 64;
@@ -84,12 +85,13 @@ function multiStreamAppendsOn(
 
 interface Migrating extends Opened {
   readonly store: { readonly migrate: () => Promise<void> };
+  readonly lockTaken: MigrationLockTaken;
 }
 
 function migrationOf(migrating: () => Migrating, kept: StoreKept): () => Promise<void> {
-  const { pool, projections, store } = migrating();
+  const { pool, projections, store, lockTaken } = migrating();
   return async () => {
-    await postgresqlLayoutKept(pool, projections.named, kept);
+    await postgresqlLayoutKept(pool, projections.named, kept, lockTaken);
     await store.migrate();
     await projections.caughtUpOn(pool);
   };
@@ -104,6 +106,7 @@ export function postgresqlStoreOn(
 ): LedgerStore & RiddenAppends {
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
+  const lockTaken = migrationLockTakenWithin(kept.migrationLockWaiting);
   const query: Query = async (text, values) =>
     (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
   const store = emmettEventStore(
@@ -113,7 +116,7 @@ export function postgresqlStoreOn(
       schema: { autoMigration: 'None' },
       projections: [...projections.registrations],
       hooks: {
-        onBeforeSchemaCreated: migrationLockTaken,
+        onBeforeSchemaCreated: lockTaken,
         onAfterSchemaCreated: projections.afterTheSchema,
         onBeforeCommit: projections.scrubs.riders.beforeCommit,
       },
@@ -136,7 +139,7 @@ export function postgresqlStoreOn(
     ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query, projections.catchingUp),
     ...projections.holdsOn(pool, formattedFor(query)),
-    migrate: migrationOf(() => ({ pool, projections, store }), kept),
+    migrate: migrationOf(() => ({ pool, projections, store, lockTaken }), kept),
     catchUpSlice: () => projections.caughtUpOn(pool),
     catchUpState: () => projections.catchingUp.state(),
     close: async () => {

@@ -3,13 +3,17 @@ import { DatabaseSync } from 'node:sqlite';
 import type { GoalsPorts } from '@on.auto/goals';
 import type { Ledger, ProjectedRow } from '@on.auto/operations';
 import type { FilterSandbox } from '@on.auto/workflow-engine';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Effect, Schema } from 'effect';
 
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 import type { ReasoningServer } from '../servers/reasoning-server.ts';
 import { servingReasoning } from '../servers/reasoning-server.ts';
-import { until } from '../waiting/until.ts';
+import {
+  fewSweeps,
+  steppedServerClock,
+  testServersStartAt,
+  type SteppedServerClock,
+} from '../waiting/stepped-server-clock.ts';
 import { goalIdentityIn } from './goal-identities.ts';
 
 interface GoalsWatch {
@@ -144,7 +148,7 @@ function goalsWatch(): GoalsWatch {
 
 export interface WatchedServer {
   readonly server: ReasoningServer;
-  readonly clock: MovedClock;
+  readonly clock: SteppedServerClock;
   readonly watch: GoalsWatch;
   readonly assessmentRows: (goal?: string) => Promise<readonly ProjectedRow[]>;
   readonly goalOf: (name: string) => Promise<string>;
@@ -156,11 +160,11 @@ const asTheyAre: GoalsPortsTurned = (ports) => ports;
 
 export async function servedWatched(
   ledger: TemporaryLedger,
-  startsAt = Date.now(),
+  startsAt = testServersStartAt,
   turned: GoalsPortsTurned = asTheyAre,
 ): Promise<WatchedServer> {
   const watch = goalsWatch();
-  const clock = movedClock(startsAt);
+  const clock = steppedServerClock(startsAt);
   const composed = Promise.withResolvers<Ledger['Service']>();
   const server = await servingReasoning([], {}, undefined, {
     ledger,
@@ -195,22 +199,13 @@ export async function servedWatched(
 
 const aMinuteAndASecond = 61_000;
 
-const pollsBeforeMovingAgain = 40;
-
+/** The value once it holds, the clock moved on a minute at a time while the server is at rest and it does not. */
 export function movingUntil<A>(
   watched: Pick<WatchedServer, 'clock'>,
   read: () => A | Promise<A>,
   holds: (value: A) => boolean,
 ): Promise<A> {
-  const polls = { since: pollsBeforeMovingAgain };
-  return until(() => {
-    if (polls.since >= pollsBeforeMovingAgain) {
-      watched.clock.moveTo(watched.clock.now() + aMinuteAndASecond);
-      polls.since = 0;
-    }
-    polls.since += 1;
-    return read();
-  }, holds);
+  return watched.clock.steppedEvery(aMinuteAndASecond).until(read, holds, fewSweeps);
 }
 
 export function rowsHolding(

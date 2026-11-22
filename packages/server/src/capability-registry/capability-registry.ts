@@ -36,6 +36,7 @@ export interface HeldRegistry {
 interface RegistryWiring extends ToolAccessWiring, ServedConnections {
   readonly modelAccessOf: ModelAccessOf;
   readonly telemetry: NonNullable<ToolAccessWiring['telemetry']> & { readonly models: ModelTelemetry | undefined };
+  readonly documents: ServedProcesses['documents'] | undefined;
 }
 
 function capabilityRegistryOf(
@@ -43,7 +44,7 @@ function capabilityRegistryOf(
   settings: Settings,
   wiring: RegistryWiring,
 ): Effect.Effect<CapabilityRegistry, never, Scope.Scope> {
-  const processes = processesServedBy(settings);
+  const processes = processesServedBy(settings, wiring.documents);
   return Effect.all({
     models: composedOnFirstUse(
       ComposedModels,

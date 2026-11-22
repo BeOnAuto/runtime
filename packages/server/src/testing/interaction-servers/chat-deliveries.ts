@@ -3,12 +3,15 @@ import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { alpha } from '../servers/reasoning-server.ts';
+import { receiptsTold } from '../waiting/told-fakes.ts';
 import type { InteractionServer } from './interaction-server.ts';
 
 export const chatKey = 'chat-api-key-5a1c9e27';
 
 export async function chatServer(echoes?: string): Promise<FakeMcpServer> {
-  const chat = await serveFakeMcp({ bearer: chatKey, chat: true, ...(echoes === undefined ? {} : { echoes }) });
+  const chat = receiptsTold(
+    await serveFakeMcp({ bearer: chatKey, chat: true, ...(echoes === undefined ? {} : { echoes }) }),
+  );
   onTestFinished(chat.close);
   return chat;
 }

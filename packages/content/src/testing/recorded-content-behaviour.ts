@@ -34,7 +34,6 @@ function keptWhole(entry: ContentEntry): void {
   const most = entry.mostBytesKeptWhole ?? Number.POSITIVE_INFINITY;
   it.each(sizesKeptWhole.filter(([, bytes]) => bytes <= most))(
     'keeps %s put as a stream whole, answers its digest, its size and its media type, and streams them back in pieces of at most 1 MiB',
-    { timeout: 120_000 },
     async (_size, bytes) => {
       const store = await entry.aStore();
       const { sha256, content } = await generated(bytes);

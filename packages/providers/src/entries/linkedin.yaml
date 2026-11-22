@@ -10,6 +10,7 @@ headers:
 request_id: x-li-uuid
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://www.linkedin.com/oauth
     authorization_endpoint: https://www.linkedin.com/oauth/v2/authorization
     token_endpoint: https://www.linkedin.com/oauth/v2/accessToken

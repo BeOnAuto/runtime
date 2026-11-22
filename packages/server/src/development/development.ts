@@ -137,7 +137,8 @@ export async function runDevelopment(host: DevelopmentProcess, setup: Developmen
     start: setup.startChild,
     restarting: restartingAs(host, setup),
   };
-  const changes = watchSources(
+  const { watchSourcesOf = watchSources } = setup;
+  const changes = watchSourcesOf(
     sourcesOf(setup.sourceDirectories, [...setup.envFiles, watchedConfigFile(settings, setup)]),
   );
   const output = announcingReadiness(host, run);

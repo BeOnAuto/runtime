@@ -1,8 +1,8 @@
 import { openApiPath } from '@on.auto/api';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { testComposition } from '../servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 
 export async function servedDocumentText(): Promise<string> {
@@ -16,7 +16,7 @@ export async function servedDocumentText(): Promise<string> {
         LEDGER_FILE: ledger.fileName,
         ...noConsentThroughAuto,
       },
-      compositionRoot,
+      testComposition(),
     );
     try {
       return await (await fetch(`http://127.0.0.1:${server.port}${openApiPath}`)).text();

@@ -3,9 +3,10 @@ import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { firstRoundRetryMs } from '../loop/failed-rounds.ts';
-import { systemClock, type HostClock } from '../loop/host-clock.ts';
+import type { HostClock } from '../loop/host-clock.ts';
 import type { Sweep } from '../sweeps/org-sweeps.ts';
 import { signals, type Signals } from '../testing/signals.ts';
+import { fewSweeps, steppedBy, steppedClock, type SteppedClock, type SteppedSweeps } from '../testing/stepped-clock.ts';
 import { startFollower } from './follower-loop.ts';
 import type { Upkeep } from './follower-wake-up.ts';
 import type { PassEnd } from './record-steps.ts';
@@ -22,6 +23,8 @@ interface Watched {
   readonly log: () => readonly string[];
   readonly asked: () => readonly number[];
   readonly when: Signals['when'];
+  /** Steps the clock of a follower given no start a sweep at a time, from its rest. */
+  readonly swept: SteppedSweeps;
 }
 
 interface Following {
@@ -44,7 +47,10 @@ interface Paced {
   readonly passed: (milliseconds: number) => void;
 }
 
-function pacedFrom(startsAt: number | undefined, seen: Signals): Paced {
+/** The stepped clock a follower given no start sleeps on, stepped by the test from its rest. */
+const steppedFrom = Date.parse('2026-10-05T09:00:00.000Z');
+
+function pacedFrom(startsAt: number | undefined, seen: Signals, steps: SteppedClock): Paced {
   const asked: number[] = [];
   const time = { now: startsAt ?? 0 };
   const recorded = (milliseconds: number): void => {
@@ -59,18 +65,18 @@ function pacedFrom(startsAt: number | undefined, seen: Signals): Paced {
         return milliseconds > 0 ? Effect.never : Effect.void;
       }),
   };
-  const system: HostClock = {
-    now: systemClock.now,
+  const ticking: HostClock = {
+    now: steps.now,
     sleep: (milliseconds) =>
       Effect.andThen(
         Effect.sync(() => {
           recorded(milliseconds);
         }),
-        systemClock.sleep(milliseconds),
+        steps.sleep(milliseconds),
       ),
   };
   return {
-    pace: startsAt === undefined ? system : stepped,
+    pace: startsAt === undefined ? ticking : stepped,
     asked: () => asked,
     passed: (milliseconds) => {
       time.now += milliseconds;
@@ -135,6 +141,11 @@ function passesLogging(
   };
 }
 
+/** The follower's clock and pace: the pace as its clock, or a clock whose time stands still naming the pace. */
+function pacedOn(pace: HostClock): Pick<Parameters<typeof startFollower>[0], 'clock' | 'pace'> {
+  return { clock: pace, pace };
+}
+
 function followerWith(following: Following = {}): Watched {
   const log: string[] = [];
   const seen = signals();
@@ -146,7 +157,8 @@ function followerWith(following: Following = {}): Watched {
   const appended = streamSignalOf();
   const passEnd = inTurn<PassEnd | 'fails'>(following.passEnds ?? [], 'caught_up');
   const sweep = inTurn(following.sweeps ?? [], nothingToSweep);
-  const { pace, asked, passed } = pacedFrom(following.startsAt, seen);
+  const steps = steppedClock(steppedFrom);
+  const { pace, asked, passed } = pacedFrom(following.startsAt, seen, steps);
   const sweptAfter = (): Sweep => {
     passed(following.sweepTakesMs ?? 0);
     return sweep();
@@ -168,13 +180,28 @@ function followerWith(following: Following = {}): Watched {
     upkeep: upkeepOf(following, logged),
     appended,
     ...nothingHeldAndRoundsAMinuteApart,
-    clock: pace,
-    pace,
+    ...pacedOn(pace),
     sweepEveryMs: following.sweepEveryMs ?? anHour,
     trouble: (what) => logged(what),
+    context: steps.watching(),
   });
   onTestFinished(() => follower.stop());
-  return { raise: appended.raise, log: () => log, asked, when: seen.when };
+  return {
+    raise: appended.raise,
+    log: () => log,
+    asked,
+    when: seen.when,
+    swept: steppedBy(steps, following.sweepEveryMs ?? anHour),
+  };
+}
+
+/** The log once it is that long, the clock stepped a sweep at a time from the follower's rest. */
+function logSweptTo(watched: Watched, length: number) {
+  return watched.swept.until(
+    (): readonly string[] => [...watched.log()],
+    (log) => log.length >= length,
+    fewSweeps,
+  );
 }
 
 function logReaching(watched: Watched, length: number) {
@@ -228,7 +255,7 @@ describe('the follower of the playbooks, when a read fails', () => {
   it('says a read that failed at its start or while it waits is trouble, and reads again at the next sweep', async () => {
     const watched = followerWith({ sweepEveryMs: 20, startsFailing: 1, schedulesFailing: 1 });
 
-    const log = await logReaching(watched, 7);
+    const log = await logSweptTo(watched, 7);
 
     expect(log.slice(0, 7)).toEqual([
       'anchored',
@@ -244,7 +271,7 @@ describe('the follower of the playbooks, when a read fails', () => {
   it('says a sweep that failed is trouble, and sweeps again at the next interval', async () => {
     const watched = followerWith({ sweepEveryMs: 20, sweepsFailing: 1 });
 
-    const log = await logReaching(watched, 4);
+    const log = await logSweptTo(watched, 4);
 
     expect(log.slice(0, 4)).toEqual(['anchored', 'start', failedRound, 'sweep']);
   });

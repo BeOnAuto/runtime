@@ -5,7 +5,6 @@ import { anthropicModels, jsonResponse, recordingFetch, vercelGatewayModels } fr
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRootWith } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import type { RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
@@ -16,6 +15,7 @@ import {
   type ReasoningServer,
   servingReasoning,
 } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 
 const environment = {
   ANTHROPIC_API_KEY: 'sk-ant-SECRET-key-0001',
@@ -129,12 +129,14 @@ function servingCounted(composing: () => void): Promise<RunningServer> {
   onTestFinished(ledger.remove);
   return startServer(
     { ...loopbackSettingsOver(ledger), ANTHROPIC_API_KEY: 'sk-ant-test-key' },
-    compositionRootWith((settings) =>
-      Effect.suspend(() => {
-        composing();
-        return makeModelAccess(settings, { fetch: listingNothing });
-      }),
-    ),
+    testComposition({
+      goals: false,
+      modelAccessOf: (settings) =>
+        Effect.suspend(() => {
+          composing();
+          return makeModelAccess(settings, { fetch: listingNothing });
+        }),
+    }),
   );
 }
 

@@ -3,14 +3,19 @@ import { localDeveloper } from '@on.auto/identity/testing';
 import { statement } from '@on.auto/ledger';
 import { answers, jsonResult, type ScriptedReply, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledRun,
+  whenSwept,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
 
 const verdict = [
   '---',
@@ -412,29 +417,6 @@ describe('workflows over http', () => {
     });
   });
 
-  describe('a nested definition that rejects its input, over HTTP', () => {
-    it('is an error the workflow catches with try, and recovers from', async () => {
-      await serving();
-
-      const runId = await ran('recovering', {});
-
-      expect(await settledRun(server, `${alpha}/runs/${runId}`)).toMatchObject({
-        body: { status: 'succeeded', output: { recovered: true } },
-      });
-      expect(server.modelCalls()).toBe(0);
-    });
-
-    it('settles the workflow rejected when nothing catches it', async () => {
-      await serving();
-
-      const runId = await ran('careless', {});
-
-      expect(await settledRun(server, `${alpha}/runs/${runId}`)).toMatchObject({
-        body: { status: 'rejected', rejection: { reason: 'invalid_input' } },
-      });
-    });
-  });
-
   describe('the history of a workflow run, over HTTP', () => {
     it('shows each input the run took, with the steps that moved and how they ended', async () => {
       await serving(answers(jsonResult({ approve: false })));
@@ -475,6 +457,35 @@ describe('workflows over http', () => {
           },
         },
       ]);
+    });
+  });
+});
+
+describe('workflows over http, on one server', () => {
+  describe('a nested definition that rejects its input, over HTTP', () => {
+    beforeAll(async () => {
+      await serving();
+    });
+
+    afterAll(async () => {
+      await server.stop();
+    });
+
+    it('is an error the workflow catches with try, and recovers from', async () => {
+      const runId = await ran('recovering', {});
+
+      expect(await settledRun(server, `${alpha}/runs/${runId}`)).toMatchObject({
+        body: { status: 'succeeded', output: { recovered: true } },
+      });
+      expect(server.modelCalls()).toBe(0);
+    });
+
+    it('settles the workflow rejected when nothing catches it', async () => {
+      const runId = await ran('careless', {});
+
+      expect(await settledRun(server, `${alpha}/runs/${runId}`)).toMatchObject({
+        body: { status: 'rejected', rejection: { reason: 'invalid_input' } },
+      });
     });
   });
 });
@@ -547,14 +558,16 @@ describe('nested runs', () => {
 });
 
 describe('task references over http', () => {
-  afterEach(async () => {
+  beforeAll(async () => {
+    await servingTheNested();
+  });
+
+  afterAll(async () => {
     await server.stop();
   });
 
   describe('the reference of a task that starts a run, over HTTP', () => {
     it('is saved at 256 bytes, and the workflow runs to its end with the run it starts', async () => {
-      await servingTheNested();
-
       const created = await saved(taskOfReferenceBytes(256));
       const started = await server.call('POST', `${alpha}/definitions/workflow/nesting/run`, { body: { input: {} } });
       const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
@@ -564,7 +577,6 @@ describe('task references over http', () => {
     });
 
     it('is refused at save at its pointer one byte past that, and for a name holding U+0000', async () => {
-      await servingTheNested();
       const long = taskOfReferenceBytes(257);
       const tooLong: unknown = expect.stringContaining(
         `at /do/0/${long}: The reference of this task, /do/0/${long.slice(0, 114)}…, takes 257 bytes, more than the 256 a reference may take, since a run the task starts carries it; shorten its name or the names above it`,
@@ -635,7 +647,8 @@ describe('run log streams', () => {
       const startedByAPerson = await startedInTurn(Object.keys(workflows).filter((name) => name !== 'reacting'));
       const startedByACallAndByAnEvent = 2;
 
-      const messages = await until(
+      const messages = await whenSwept(
+        server,
         firstMessagesOfTheOrg,
         holdsTheLogsOf(startedByAPerson.length + startedByACallAndByAnEvent),
       );

@@ -8,7 +8,6 @@ import { unreachableDatabase } from '@on.auto/ledger/testing';
 import { authLayout } from '@on.auto/openid-connect/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { ledgerRefusalIn } from '../database/ledger-refusals.ts';
 import { aFakePostgreSQL } from '../testing/databases/fake-postgresql.ts';
 import { aCertificateOfTheLoopback, type LoopbackCertificate } from '../testing/databases/loopback-certificate.ts';
@@ -30,6 +29,7 @@ import {
 } from '../testing/records/a-ledger-of-another-version.ts';
 import { onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { startServer } from './lifecycle.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
@@ -61,7 +61,7 @@ describe('a ledger in PostgreSQL that cannot be reached', () => {
 
     const failure = await startServer(
       { HOST: '127.0.0.1', PORT: '0', DATABASE_URL: url, SECRETS_KEY: secretsKey },
-      compositionRoot,
+      testComposition(),
     ).catch((error: unknown) => error);
 
     expect(failure).toMatchObject({ name: 'StartupError' });
@@ -203,7 +203,10 @@ describe('a ledger file that holds what an earlier version of Auto Runtime recor
     await aLedgerHoldingAPredictionRejectedAt(current.fileName, 'dataset_not_ready');
 
     const said = await saidAtStart({ LEDGER_FILE: earlier.fileName });
-    const started = await startServer({ HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: current.fileName }, compositionRoot);
+    const started = await startServer(
+      { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: current.fileName },
+      testComposition(),
+    );
     await started.stop();
 
     expect(said.exitCode).toBe(1);

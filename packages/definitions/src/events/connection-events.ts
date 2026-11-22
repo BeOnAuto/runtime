@@ -19,6 +19,7 @@ export interface ReportedEvent {
   readonly subject?: string;
   readonly data: Readonly<Record<string, Schema.Json>>;
   readonly automatic?: boolean;
+  readonly actor?: string;
 }
 
 export interface ConnectionPublication {
@@ -42,6 +43,7 @@ export function connectionPublicationOf(
   connection: string,
   { type, id, time, subject, data, automatic }: ReportedEvent,
   at: string,
+  own = false,
 ): ConnectionPublication | undefined {
   const event = {
     specversion: '1.0',
@@ -52,6 +54,7 @@ export function connectionPublicationOf(
     ...(subject === undefined ? {} : { subject }),
     data,
     ...(automatic === true ? { automatic } : {}),
+    ...(own ? { own } : {}),
   };
   const filled: readonly FilledAttribute[] = time === undefined ? ['time'] : [];
   return Option.getOrUndefined(

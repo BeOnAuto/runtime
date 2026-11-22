@@ -19,11 +19,19 @@ export const connections = {
     Effect.succeed(connection === 'everywhere' || granted.has(`${playbook}/${connection}`)),
 };
 
-export const started = storedTypesByStatus(composedFactsOf(movingCapabilities).onRuns).started;
+export function startedOf(capabilities: Parameters<typeof composedFactsOf>[0]): readonly string[] {
+  return storedTypesByStatus(composedFactsOf(capabilities).onRuns).started;
+}
+
+export const started = startedOf(movingCapabilities);
 
 export const operations = definitionOperationsFor(movingCapabilities);
 
-export const moveDefinitions = defineMoveDefinitions(movingCapabilities, { goals: false, started, connections });
+export const moveDefinitions = defineMoveDefinitions(movingCapabilities, {
+  kept: { goals: false, messages: false },
+  started,
+  connections,
+});
 
 export const toAlpha = toPlaybook('acme', 'alpha');
 

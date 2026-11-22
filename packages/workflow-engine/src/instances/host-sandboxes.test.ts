@@ -1,6 +1,8 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { decidedOnce } from '../pool-testing/decided-once.ts';
+import { evaluatedAt } from '../pool-testing/evaluation-workers.ts';
 import { sourcesUnderTest } from '../pool-testing/test-pools.ts';
 import { argumentTextOf } from '../programs/argument-texts.ts';
 import type { Evaluation } from '../programs/program-run.ts';
@@ -58,4 +60,37 @@ describe.each(sourcesUnderTest)('the answers of the sandbox on the $name source 
       'unfit: The answer holds NaN at $, which JSON cannot carry',
     ]);
   });
+});
+
+/** A clock that moves on a tenth of a second each time it is read, counting its reads. */
+function tickingClock(): { readonly read: () => number; readonly reads: () => number } {
+  const ticking = { at: 0, reads: 0 };
+  return {
+    read: () => {
+      ticking.reads += 1;
+      ticking.at += 100;
+      return ticking.at;
+    },
+    reads: () => ticking.reads,
+  };
+}
+
+const runningForever = "do:\n  - churn: { set: { churned: '${ (() => { for (;;) {} })() }' } }";
+
+const runtimeError: unknown = expect.stringMatching(/\/errors\/runtime$/u);
+
+describe.each(sourcesUnderTest)('the patience of a decision on the $name source', ({ source }) => {
+  it.each([300, 1000])(
+    'ends the expressions of an input that outlast a patience of %i ms as a runtime error, once the clock its machine reads has passed it',
+    async (patience) => {
+      const clock = tickingClock();
+      const machine = machineSandboxOf(source, clock.read);
+      await Effect.runPromise(machine.reserve);
+
+      const ended = decidedOnce(machine, runningForever, evaluatedAt, patience);
+
+      expect(ended.outcome).toMatchObject({ kind: 'raised', error: { type: runtimeError, status: 500 } });
+      expect(clock.reads()).toBe(patience / 100 + 2);
+    },
+  );
 });

@@ -13,7 +13,7 @@ import {
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { createdWithGoals, goalsText, plainGoalId } from '../testing/settings/goals-kept.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const aMinuteAndASecond = 61_000;
 
@@ -52,8 +52,17 @@ const condition = '$data.n >= 0';
 
 const lists = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth'];
 
+const thingsOnAList = 3;
+
+const assessmentsOfARun = lists.length * thingsOnAList;
+
 const thingsOf = (list: number) =>
-  JSON.stringify(Array.from({ length: 100 }, (_, index) => ({ id: `thing-${String(list * 100 + index)}`, n: 1 })));
+  JSON.stringify(
+    Array.from({ length: thingsOnAList }, (_, index) => ({
+      id: `thing-${String(list * thingsOnAList + index)}`,
+      n: 1,
+    })),
+  );
 
 const fanningOut = [
   'contributes:',
@@ -112,7 +121,8 @@ function deliveredForEveryRun(watched: WatchedServer, delivered: () => number): 
         delivered: delivered(),
       };
     },
-    (runs) => JSON.stringify([runs.settled, runs.delivered]) === JSON.stringify([runs.all, 800 * runs.all]),
+    (runs) =>
+      JSON.stringify([runs.settled, runs.delivered]) === JSON.stringify([runs.all, assessmentsOfARun * runs.all]),
   );
 }
 
@@ -167,7 +177,7 @@ describe('the assessor on a Node server', () => {
       source: { workflow: 'tally', version: 2, entry: 0 },
     });
     expect(ofType(goalFactsIn(ledger), 'goal_observation_refused').length).toBeGreaterThan(0);
-  }, 240_000);
+  });
 });
 
 describe('the assessor on a Node server', () => {
@@ -181,7 +191,7 @@ describe('the assessor on a Node server', () => {
 
     await ranOnce(watched, 'tally');
     await ranOnce(watched, 'tally');
-    await until(
+    await whenHeld(
       () => watched.watch.asked.length,
       (asked) => asked >= 2,
     );
@@ -193,7 +203,7 @@ describe('the assessor on a Node server', () => {
 });
 
 describe('the assessor on a Node server', () => {
-  it('reads and evaluates a run that touches 800 assessments once, across the passes its 800 deliveries take', async () => {
+  it('reads and evaluates a run that touches many assessments once each, through the deliveries they take', async () => {
     const ledger = aLedger();
     const watched = await servedWatched(ledger);
     await createdWithGoals(watched.server, { goals: `${goalsText}${manyText}` });
@@ -214,17 +224,23 @@ describe('the assessor on a Node server', () => {
     expect(runs.settled).toBeGreaterThan(0);
     expect(
       ['goal_assessment_opened', 'goal_observed', 'goal_assessed'].map((type) => ofType(facts, type).length),
-    ).toEqual([800, 800, 800]);
-    expect([watched.watch.sessions(), watched.watch.evaluations()]).toEqual([runs.settled, 800 * runs.settled]);
+    ).toEqual([assessmentsOfARun, assessmentsOfARun, assessmentsOfARun]);
+    expect([watched.watch.sessions(), watched.watch.evaluations()]).toEqual([
+      runs.settled,
+      assessmentsOfARun * runs.settled,
+    ]);
     expect(askedLike(asked, /^load .*definitions\/workflow$/u)).toHaveLength(1);
     expect(askedLike(asked, /^load .*goals\/goal$/u)).toHaveLength(goalsHeld * runs.settled);
     expect(askedLike(asked, /^(chain|content|recorded)/u).length).toBeLessThanOrEqual(2 * runs.settled);
-    expect([executed.length, new Set(executed).size]).toEqual([800 * runs.settled + failed, 800]);
-    expect(passes).toBeGreaterThanOrEqual(8 * runs.settled);
+    expect([executed.length, new Set(executed).size]).toEqual([
+      assessmentsOfARun * runs.settled + failed,
+      assessmentsOfARun,
+    ]);
+    expect(passes).toBeGreaterThanOrEqual(runs.settled);
     expect(askedLike(asked, /^(load|execute|rows|count)/u).length).toBe(
       1 + goalsHeld * runs.settled + executed.length + passes,
     );
-  }, 240_000);
+  });
 });
 
 describe('the assessor on a Node server', () => {
@@ -258,5 +274,5 @@ describe('the assessor on a Node server', () => {
 
     expect(goalFactsIn(ledger)).toEqual(held);
     expect(ofType(held, 'goal_observation_refused').length).toBeGreaterThan(0);
-  }, 240_000);
+  });
 });

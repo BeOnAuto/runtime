@@ -249,6 +249,7 @@ describe('an ending that names its kind', () => {
 
     const unfinished = await sending('tools_unfinished');
     const failing = await sending('tool_server_failed');
+    const busy = await sending('busy');
 
     expect(unfinished).toMatchObject({
       status: 503,
@@ -260,7 +261,8 @@ describe('an ending that names its kind', () => {
       },
     });
     expect(failing).toMatchObject({ status: 503, body: { kind: 'tool_server_failed', because: 'unreachable' } });
-    expect([unfinished.headers.get('retry-after'), failing.headers.get('retry-after')]).toEqual([null, '5']);
+    expect(busy).toMatchObject({ status: 503, body: { kind: 'busy', retry_after: 4 } });
+    expect([unfinished, failing, busy].map(({ headers }) => headers.get('retry-after'))).toEqual([null, '5', '4']);
   });
 });
 

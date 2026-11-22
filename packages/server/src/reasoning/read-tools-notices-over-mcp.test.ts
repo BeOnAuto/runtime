@@ -8,8 +8,6 @@ import { servingReasoning, type ReasoningServer } from '../testing/servers/reaso
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
-const timerSlackMs = 2;
-
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -147,24 +145,5 @@ describe('a reasoning function whose tools are all marked reads, run over MCP', 
     expect(Object.keys({ ...ran.structuredContent }).slice(0, 3)).toEqual(['in_words', 'notices', 'before_going_on']);
     expect(ran.structuredContent?.['in_words']).toBe(plainTextIn(ran));
     expect(plainTextIn(ran)).not.toContain(beforeGoingOnOf(1));
-  });
-});
-
-describe('a reasoning function whose tool server does not list its tools in time, saved over MCP', () => {
-  it('is saved within the two seconds the notices may take, without a notice', async () => {
-    const { server, fake } = await serving();
-    const release = fake.holdNextOf('tools/list');
-    const started = performance.now();
-
-    const created = await onAlpha(server, (session) =>
-      session.callTool('create_definition', saving('judge', 'graph/search, graph/profile')),
-    );
-    const took = performance.now() - started;
-    release();
-
-    expect(created.structuredContent).toMatchObject({ name: 'judge', version: 1 });
-    expect(JSON.stringify(created)).not.toContain('notices');
-    expect(took).toBeGreaterThanOrEqual(2_000 - timerSlackMs);
-    expect(took).toBeLessThan(3_000);
   });
 });

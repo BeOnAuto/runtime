@@ -1,12 +1,15 @@
 import { listedTools, type McpSession, problemIn, toolNamesIn, withMcpSession } from '@on.auto/api/testing';
+import { statement } from '@on.auto/ledger';
 import { answers, jsonResult, type ScriptedReply } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
-import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { onTheLedgerIn } from '../testing/records/ledger-file.ts';
+import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { toolsInsideAPlaybook as playbookTools } from '../testing/servers/served-tool-names.ts';
 import { servingWorkflows, settledOverMcp, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const verdict = [
   '---',
@@ -115,6 +118,30 @@ const closing = workflowSource(
   "schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - total: { set: { month: '${ $data[0].data.month }' } }\n",
 );
 
+function queuedClosing(definitionKey: string) {
+  return {
+    org: 'acme',
+    playbook: 'alpha',
+    definitionKey,
+    workflow: 'close-the-month',
+    version: 1,
+    runId: 'run-1',
+    input: [
+      {
+        specversion: '1.0',
+        id: 'event-1',
+        source: '/ledger',
+        type: 'com.acme.ledger.closed',
+        time: '2026-10-01T09:00:00Z',
+        data: { month: 'september' },
+      },
+    ],
+    depth: 1,
+    cause: 'record-1',
+    trigger: { kind: 'event', reference: '/schedule/on' },
+  };
+}
+
 const ListedRuns = Schema.Struct({
   runs: Schema.Array(
     Schema.Struct({ status: Schema.String, started_by: Schema.Struct({ id: Schema.String, name: Schema.String }) }),
@@ -140,7 +167,7 @@ async function onAlphaReactions<T>(use: (session: McpSession) => Promise<T>): Pr
 }
 
 function endedRuns(session: McpSession): Promise<typeof ListedRuns.Type> {
-  return until(
+  return whenHeld(
     async () =>
       runsIn((await session.callTool('list_runs', { type: 'workflow', name: 'close-the-month' })).structuredContent),
     (listed) => listed.runs.some(({ status }) => status !== 'started'),
@@ -270,6 +297,52 @@ do:
 describe('reactions over mcp', () => {
   afterEach(async () => {
     await server.stop();
+  });
+
+  describe('the starts of a workflow queued for a later minute, over MCP', () => {
+    it('are listed without what their event carries, and get_definition counts them', async () => {
+      const ledger = temporaryLedger();
+      onTestFinished(ledger.remove);
+      server = await servingReasoning([], {}, undefined, { ledger });
+      const due = Date.parse('2100-01-01T00:00:00.000Z');
+      await withMcpSession('current revision', { url: `${server.origin}/orgs/acme/mcp`, headers: {} }, (session) =>
+        session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }),
+      );
+      const seen = await onAlphaOf(server, async (session) => {
+        const created = await session.callTool('create_definition', {
+          type: 'workflow',
+          name: 'close-the-month',
+          source: closing,
+        });
+        const definitionKey = `definition/acme/${String(created.structuredContent?.['definition_id'])}/`;
+        await onTheLedgerIn(ledger.fileName, (connection) =>
+          connection.write(statement`INSERT INTO workflow_reaction_backlog (definition_key, run_id, start, due)
+            VALUES (${definitionKey}, 'run-1', ${JSON.stringify(queuedClosing(definitionKey))}, ${due})`),
+        );
+        return {
+          listed: await session.callTool('list_queued_starts', { workflow: 'close-the-month' }),
+          read: await session.callTool('get_definition', { type: 'workflow', name: 'close-the-month' }),
+        };
+      });
+
+      expect(seen.listed.structuredContent).toMatchObject({
+        status: 'active',
+        queued_starts: [
+          {
+            run_id: 'run-1',
+            event: { id: 'event-1', type: 'com.acme.ledger.closed', source: '/ledger', time: '2026-10-01T09:00:00Z' },
+            due: '2100-01-01T00:00:00.000Z',
+            attempts: 0,
+          },
+        ],
+        has_more: false,
+        next_cursor: null,
+      });
+      expect(JSON.stringify(seen.listed)).not.toContain('september');
+      expect(seen.read.structuredContent).toMatchObject({
+        standing: { queued: 1, next_queued_start: '2100-01-01T00:00:00.000Z' },
+      });
+    });
   });
 
   describe('a workflow whose trigger is an event, over MCP', () => {

@@ -4,9 +4,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import type { EncodedEvent, LedgerStore } from '../index.ts';
 import { at } from '../multi-stream/multi-stream-cases.ts';
-import { plainPoolsOn, postgresqlEventStore } from '../postgresql/postgresql-ledger.ts';
+import { postgresqlEventStore } from '../postgresql/postgresql-ledger.ts';
 import { postgresqlConnected, postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
-import { until } from '../testing/until.ts';
+import { aStatementGate, type StatementGate } from '../testing/statement-gate.ts';
 import type { DefinitionNames } from './definition-names.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -37,9 +37,9 @@ function claim(definition: string, name: string): EncodedEvent {
   return { type: 'claimed', data: { definition, name } };
 }
 
-async function aStoreOn(database: string): Promise<LedgerStore> {
+async function aStoreOn(database: string, gate: StatementGate): Promise<LedgerStore> {
   const store = postgresqlEventStore({
-    pools: plainPoolsOn(database),
+    pools: gate.pools(database),
     reportLostConnection: Function.constVoid,
     definitionNames: sharingOneStream,
   });
@@ -48,40 +48,44 @@ async function aStoreOn(database: string): Promise<LedgerStore> {
   return store;
 }
 
-function lockOf(name: string): string {
-  return `hashtextextended('definition_names_1:${alpha}reasoning/${name}', 0)`;
-}
+const locksInTheirOrder = [
+  ['definition a', 'definition/acme/a/'],
+  ['definition b', 'definition/acme/b/'],
+  ['name x', `${alpha}reasoning/x`],
+  ['name y', `${alpha}reasoning/y`],
+] as const;
 
-async function untilOneWaitsOnALock(database: string): Promise<void> {
-  const watching = await postgresqlConnected(database);
-  await until(
-    async () => {
-      const { rows } = await watching.query(
-        "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()",
-      );
-      return Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ waiting: Schema.Number })]))(rows)[0].waiting;
-    },
-    (waiting) => waiting > 0,
+async function heldNow(database: string): Promise<readonly boolean[]> {
+  const probing = await postgresqlConnected(database);
+  const { rows } = await probing.query<{ readonly free: boolean }>(
+    `SELECT pg_try_advisory_lock(hashtextextended(lock, 0)) AS free
+      FROM unnest($1::text[]) WITH ORDINALITY AS locks (lock, place) ORDER BY place`,
+    [locksInTheirOrder.map(([, key]) => `definition_names_1:${key}`)],
   );
+  await probing.query('SELECT pg_advisory_unlock_all()');
+  return rows.map(({ free }) => !free);
 }
 
 describe.skipIf(skipped)(`The names of definitions on PostgreSQL${notice}`, () => {
-  it('locks every definition of an append and then every name it claims, each in their order, whatever the order of its facts', async () => {
-    const database = await aDatabase();
-    const store = await aStoreOn(database);
-    const holding = await postgresqlConnected(database);
-    await holding.query('BEGIN');
-    await holding.query(`SELECT pg_advisory_xact_lock(${lockOf('y')})`);
+  it.each(locksInTheirOrder.map(([lock, key], index) => [lock, key, index] as const))(
+    'locks every definition of an append and then every name it claims, each in their order, whatever the order of its facts: when it asks for %s, it holds every lock before it and none after',
+    async (_lock, key, index) => {
+      const database = await aDatabase();
+      const gate = aStatementGate();
+      const store = await aStoreOn(database, gate);
+      const asking = gate.stopBefore(`definition_names_1:${key}`);
 
-    const appending = store
-      .append('playbook/acme/alpha/definitions/reasoning', [claim('b', 'y'), claim('a', 'x')], at(0))
-      .then(() => null);
-    await untilOneWaitsOnALock(database);
-    const probing = await postgresqlConnected(database);
-    const { rows } = await probing.query(`SELECT pg_try_advisory_lock(${lockOf('x')}) AS free`);
-    await holding.query('ROLLBACK');
-    await appending;
+      const appending = store.append(
+        'playbook/acme/alpha/definitions/reasoning',
+        [claim('b', 'y'), claim('a', 'x')],
+        at(0),
+      );
+      await asking.reached;
+      const held = await heldNow(database);
+      asking.go();
+      await appending;
 
-    expect(rows).toEqual([{ free: false }]);
-  });
+      expect(held).toEqual(locksInTheirOrder.map((_, before) => before < index));
+    },
+  );
 });

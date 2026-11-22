@@ -1,13 +1,12 @@
 import { testSigners } from '@on.auto/meter/testing';
 import { onTestFinished } from 'vitest';
 
-import { compositionRootWith } from '../../composition/composition-root.ts';
-import { loggedModelAccess } from '../../composition/served-reasoning.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { localControlOf, restartMarkIn } from '../../local-runtime/local-control.ts';
 import { runsInFlight } from '../../local-runtime/runs-in-flight.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { loopbackSettingsOver } from '../servers/reasoning-server.ts';
+import { testComposition } from '../servers/test-compositions.ts';
 import { accountsServed, type Accounts } from './licensed-server.ts';
 
 export interface ControlledServer {
@@ -36,7 +35,7 @@ export async function controlledLicensedServer(home: string): Promise<Controlled
   const ledger = temporaryLedger();
   onTestFinished(ledger.remove);
   const accounts = await accountsServed();
-  const composition = compositionRootWith(loggedModelAccess, { signers: testSigners });
+  const composition = testComposition({ goals: false, signers: testSigners });
   const settings = { ...loopbackSettingsOver(ledger), ACCOUNTS_ORIGIN: accounts.origin };
   const server = await startServer(settings, { ...composition, localServingIn: startedInATerminal(home).servingIn });
   onTestFinished(() => server.stop());

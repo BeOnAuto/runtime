@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 
+import { OrgIdSchema } from '@on.auto/operations';
 import { internalTermsIn } from '@on.auto/operations/testing';
+import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -41,28 +43,43 @@ const servedOnAPlaybook = `${opening} ${whatThisServerIsFor} This connection act
 const terminology = readFileSync(new URL('../../../../docs/concepts/terminology.md', import.meta.url), 'utf8');
 
 const callers = [
-  [
-    'a signed-in person',
-    signedInAda,
-    'acme',
-    'This connection acts as Ada Lovelace (person:user_2ada) in the org acme.',
-  ],
-  ['a key', buildBot, 'acme', 'This connection acts as the key build-bot in the org acme.'],
-  [
-    'the local developer, in the org it acts in',
-    localDeveloper,
-    'globex',
-    'This connection acts as ada (local) in the org globex.',
-  ],
+  ['a signed-in person', signedInAda, 'acme'],
+  ['a key', buildBot, 'acme'],
+  ['the local developer, in the org it acts in', localDeveloper, 'globex'],
 ] as const;
+
+const orgName = 'Initech';
+
+function sentenceNamingTheCaller(words: string): string {
+  expect([words.startsWith(`${onMcp} `), words.endsWith(` ${closing}`)]).toEqual([true, true]);
+  return words.slice(onMcp.length + 1, -closing.length - 1);
+}
 
 describe('the instructions a connection is served', () => {
   it.each(callers)(
-    'say, for %s, whom it acts as, by name and id, and in which org, just before their last sentence',
-    (_case, caller, org, actingAs) => {
-      expect(instructionsActingAs({ caller, org }, 'own org', withConnections(ownOrg))).toBe(
-        `${onMcp} ${actingAs} ${closing}`,
+    'name, for %s, the caller by name and id and the organization by its id, in one sentence just before their last',
+    (_case, caller, org) => {
+      const sentence = sentenceNamingTheCaller(
+        instructionsActingAs({ caller, org }, 'own org', withConnections(ownOrg)),
       );
+
+      expect([caller.name, caller.id, org].filter((named) => !sentence.includes(named))).toEqual([]);
+      expect(sentence.split('. ')).toHaveLength(1);
+    },
+  );
+
+  it.each(callers)(
+    'name, for %s, the organization by the name its caller gives it, in place of its id',
+    (_case, caller, org) => {
+      const sentence = sentenceNamingTheCaller(
+        instructionsActingAs({ caller, org, orgName }, 'own org', withConnections(ownOrg)),
+      );
+
+      expect([sentence.includes(orgName), sentence.includes(org), sentence.includes(caller.id)]).toEqual([
+        true,
+        false,
+        true,
+      ]);
     },
   );
 
@@ -73,6 +90,57 @@ describe('the instructions a connection is served', () => {
     expect(words.startsWith(`${opening} `)).toBe(true);
     expect(opening.length).toBe(239);
   });
+});
+
+const everyCharacterOfAnOrgId = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+
+const namingsOfTheOrg = [
+  ['with no name for the org', {}],
+  ['with a name for the org', { orgName }],
+] as const;
+
+const callersOfTheOrg = callers.flatMap(([who, caller, org]) =>
+  namingsOfTheOrg.map(([naming, named]) => [`${who}, ${naming}`, caller, org, named] as const),
+);
+
+describe('the address of a playbook endpoint in the instructions of the org endpoint', () => {
+  const tools = withConnections(orgEndpoint);
+  const [untilTheCaller = ''] = instructionsFor('org', tools).split(` ${closing}`);
+
+  it.each(callersOfTheOrg)(
+    'carries, for %s, the id of the caller’s org in place of {org}, and keeps every other word, ending with the closing',
+    (_case, caller, org, named) => {
+      const words = instructionsActingAs({ caller, org, ...named }, 'org', tools);
+
+      expect(words.startsWith(`${untilTheCaller.replace('{org}', org)} `)).toBe(true);
+      expect(words.endsWith(` ${closing}`)).toBe(true);
+      expect(words).not.toContain('{org}');
+      expect(words).toContain('{playbook}');
+    },
+  );
+
+  it('writes an id that holds every character an id may hold as it is, since a path takes each of them as it is', () => {
+    const words = instructionsActingAs({ caller: signedInAda, org: everyCharacterOfAnOrgId }, 'org', tools);
+
+    expect(Schema.is(OrgIdSchema)(everyCharacterOfAnOrgId)).toBe(true);
+    expect(encodeURIComponent(everyCharacterOfAnOrgId)).toBe(everyCharacterOfAnOrgId);
+    expect(words).toContain(`/orgs/${everyCharacterOfAnOrgId}/playbooks/{playbook}/mcp`);
+  });
+
+  it.each([
+    ['playbook', playbookEndpoint],
+    ['own org', withConnections(ownOrg)],
+    ['directory', withConnections(ownOrg)],
+  ] as const)(
+    'leaves the instructions of the %s endpoint as they are, bar the sentence that names the caller',
+    (endpoint, served) => {
+      const [until = ''] = instructionsFor(endpoint, served).split(` ${closing}`);
+
+      const words = instructionsActingAs({ caller: signedInAda, org: 'acme', orgName }, endpoint, served);
+
+      expect([words.startsWith(`${until} `), words.endsWith(` ${closing}`)]).toEqual([true, true]);
+    },
+  );
 });
 
 describe('the instructions of each endpoint, for a key that may call every tool', () => {

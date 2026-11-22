@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.notion.com/mcp
 credentials:
   - kind: authorization
+    account_types: [service, personal]
     issuer: https://mcp.notion.com
     scope: default
     says:

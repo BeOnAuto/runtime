@@ -3,6 +3,7 @@ import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import type { StartedRuntime } from '../background-start/started-runtimes.ts';
+import { aStartedRuntimeThatIgnoresSigterm } from '../testing/processes/stubborn-runtime.ts';
 import { stoppedRuntime } from './runtime-stop.ts';
 
 const bounds = { stopWithinMs: 9100, killWithinMs: 2000, pingTries: 3 };
@@ -124,5 +125,35 @@ describe('stopping a runtime the relay started, which ended on its own meanwhile
       }),
     ).resolves.toBe(true);
     expect([stopping.signals(), logged]).toEqual([[], []]);
+  });
+});
+
+describe('stopping a real process the relay started in the background, which does not end on SIGTERM', () => {
+  /*
+   * The one case on a real process: signals reach it, SIGTERM does not end it, and SIGKILL does once the stop bound
+   * passed on the test clock. Nothing waits on time: the process says it was sent SIGTERM, and its exit ends the wait.
+   */
+  it('sends it SIGTERM, then SIGKILL once the stop bound passed, and it ends', async () => {
+    const stubborn = await aStartedRuntimeThatIgnoresSigterm();
+    const { started } = stubborn;
+    const logged: string[] = [];
+
+    const outcome = await Effect.runPromise(
+      Effect.gen(function* () {
+        const stopping = yield* Effect.forkChild(
+          stoppedRuntime(started, bounds, (line) => {
+            logged.push(line);
+          }),
+        );
+        yield* Effect.promise(stubborn.askedToStop);
+        const endedBeforeTheBound = started.endedAt();
+        yield* TestClock.adjust(bounds.stopWithinMs);
+        return { endedBeforeTheBound, stopped: yield* Fiber.join(stopping) };
+      }).pipe(Effect.provide(TestClock.layer())),
+    );
+
+    expect(outcome).toEqual({ endedBeforeTheBound: undefined, stopped: true });
+    expect(started.endedAt()).toBeDefined();
+    expect(logged).toHaveLength(2);
   });
 });

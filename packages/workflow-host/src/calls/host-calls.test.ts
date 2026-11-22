@@ -5,7 +5,7 @@ import { Deferred, Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { databaseTracking } from '../views-testing/database-tracking.ts';
 import { cancelledCall } from './call-cancels.ts';
 import { callRowOf } from './call-rows.ts';
@@ -31,7 +31,7 @@ function startedAfterItsFirstRead(database: HostDatabase): HostDatabase {
 
 describe('the cancel of a call no row of which was read', () => {
   it('cancels by its state the row a start recorded between its read and its tombstone, and answers no close of a run that is not closed', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const interrupted: string[] = [];
 
     const receipt = await Effect.runPromise(
@@ -86,7 +86,7 @@ function failingOnce(database: HostDatabase): HostDatabase {
 
 describe('the first resume of an executor', () => {
   it('answers each waiting call whose run has ended, and reads the waiting calls again at the next when it could not', async () => {
-    const database = failingOnce(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const database = failingOnce(await openedOn(await aLedgerInMemory()));
     const troubles: string[] = [];
     const answered: CallAnsweredResult[] = [];
     const ended: { result?: CallAnsweredResult } = {};
@@ -222,7 +222,7 @@ function oneOpenCallOn(counts: HeldCounts, answered: (result: CallAnsweredResult
 
 describe('the open calls of runs of one tree that start at the same moment', () => {
   it('are counted and recorded one run after another, so only as many begin as the bound allows', async () => {
-    const counts = countsHeldAtAGate(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const counts = countsHeldAtAGate(await openedOn(await aLedgerInMemory()));
     const { database } = counts;
     const answered: CallAnsweredResult[] = [];
     const executor = oneOpenCallOn(counts, (result) => {

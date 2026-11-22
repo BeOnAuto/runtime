@@ -270,5 +270,5 @@ describe('a goal renamed on a server that keeps goals', () => {
     expect(judged?.assessments.closed.latest.map(({ id }) => id)).toEqual(
       opened?.assessments.in_flight.map(({ id }) => id),
     );
-  }, 60_000);
+  });
 });

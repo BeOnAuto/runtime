@@ -6,7 +6,9 @@ import {
   notAnsweredInTime,
   problems,
   quickCalls,
+  callEndsOnceItSleeps,
   quickOpening,
+  openingEndsOnceListed,
   reads,
   refusingTheArguments,
   sentNothing,
@@ -56,7 +58,7 @@ export const beforeSending: Rows = [
   [
     'a listing of the tools that does not answer in time',
     {
-      server: { timing: quickOpening },
+      server: { timing: quickOpening, toldBounds: openingEndsOnceListed },
       before: (server) => {
         server.fake.holdNextOf('tools/list');
       },
@@ -73,6 +75,7 @@ export const beforeSending: Rows = [
       before: (server) => {
         server.fake.annotateTool('thread', mayChange);
       },
+      alone: true,
     },
     {
       status: 503,
@@ -102,7 +105,7 @@ export const afterSending: Rows = [
   ],
   [
     'a call that took longer than a call may',
-    { server: { timing: quickCalls }, document: calling('sleep', ['    ms: 5000']) },
+    { server: { timing: quickCalls, toldBounds: callEndsOnceItSleeps }, document: calling('sleep', ['    ms: 5000']) },
     unfinished('server_failed', notAnsweredInTime),
   ],
 ];

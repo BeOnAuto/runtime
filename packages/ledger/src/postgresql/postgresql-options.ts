@@ -5,6 +5,7 @@ import type { DefinitionNames } from '../definition-names/definition-names.ts';
 import type { AppendListeners } from '../event-store.ts';
 import type { LayoutStep } from '../layout/layout-steps.ts';
 import type { FactSchemaRead } from '../layout/ledger-facts-refused.ts';
+import type { LockWaiting } from './postgresql-run-outcomes.ts';
 
 export interface PoolBounds {
   readonly max: number;
@@ -29,4 +30,5 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly runIds?: RunIds;
   readonly tableMadeAgain?: (table: string) => void;
   readonly pageFailed?: (position: string) => void;
+  readonly migrationLockWaiting?: LockWaiting;
 }

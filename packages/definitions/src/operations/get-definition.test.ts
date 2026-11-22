@@ -80,6 +80,57 @@ describe('get_definition rejecting', () => {
   });
 });
 
+const plainRead = {
+  type: 'probe',
+  name: 'plain',
+  definition_id: 'id-of-plain',
+  version: 1,
+  media_type: 'text/plain',
+  created_at: firstMoment,
+  created_by: { id: 'acme-admin', name: 'acme-admin' },
+  updated_at: firstMoment,
+  source: 'text',
+};
+
+function queuedStanding(queued: number): Readonly<Record<string, unknown>> {
+  return { queued, next_queued_start: queued === 0 ? null : '2026-10-01T09:01:00.000Z' };
+}
+
+function wordsRead(status: string, standing?: Readonly<Record<string, unknown>>): string | undefined {
+  return getDefinition.registration.plainLanguage?.outcome(
+    { ...plainRead, status, ...(standing === undefined ? {} : { standing }) },
+    { type: 'probe', name: 'plain' },
+  );
+}
+
+function refusalOf(queued: number): string | undefined {
+  return wordsRead('paused', queuedStanding(queued))?.split('; ').at(-1);
+}
+
+describe('the words get_definition answers for a definition whose standing has runs queued', () => {
+  it('add how many, in use or paused, and nothing when none is queued, for another standing, or once it is retired', () => {
+    const added = [
+      wordsRead('active', queuedStanding(2)),
+      wordsRead('active', queuedStanding(1)),
+      wordsRead('paused', queuedStanding(2)),
+      wordsRead('paused', queuedStanding(1)),
+    ];
+
+    expect(new Set([...added, wordsRead('active'), wordsRead('paused')]).size).toBe(6);
+    expect([
+      wordsRead('active', queuedStanding(0)),
+      wordsRead('active', { dataset: { rows: 3 } }),
+      wordsRead('retired', queuedStanding(2)),
+    ]).toEqual([wordsRead('active'), wordsRead('active'), wordsRead('retired')]);
+  });
+
+  it('say what happens to the runs of a paused workflow one way for one run queued and another for several', () => {
+    expect([refusalOf(1), refusalOf(2)]).not.toContain(undefined);
+    expect(refusalOf(3)).toBe(refusalOf(2));
+    expect(refusalOf(1)).not.toBe(refusalOf(2));
+  });
+});
+
 function sampleOf(greeting: string): string {
   return JSON.stringify({ greeting, input: {} });
 }

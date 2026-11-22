@@ -2,28 +2,12 @@ import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import {
-  alpha,
-  at,
-  generated,
-  json,
-  octets,
-  present,
-  readBack,
-  refusalOf,
-  resultOf,
-} from '../testing/content-samples.ts';
+import { alpha, at, generated, json, octets, present, readBack, resultOf } from '../testing/content-samples.ts';
 import { keptTextOf } from '../testing/kept-text.ts';
 import { type HeldIn, memoryContentHeads, memoryContentStore } from '../testing/memory-content.ts';
-import {
-  aStepFailedAtItsPause,
-  defectOf,
-  longEnoughForAPutToSettle,
-  pausableStore,
-  settledWithin,
-} from '../testing/paused-store.ts';
+import { aStepFailedAtItsPause, defectOf, onATestClock, pausableStore, settledYet } from '../testing/paused-store.ts';
 import { sha256Of } from './content-digest.ts';
-import { erasureDeletesWithinMs, keptOutside, removalLastsMs, removalWaitMs } from './kept-outside.ts';
+import { erasureDeletesWithinMs, keptOutside, removalLastsMs, removalPollMs, removalWaitMs } from './kept-outside.ts';
 import type { ContentHeads, ContentStore } from './recorded-content.ts';
 import { type ContentToKeep, textToKeep } from './streamed-content.ts';
 
@@ -119,11 +103,14 @@ function putWhileRemoved(): void {
 
       const removal = resultOf(removedKeptBefore(alpha, large.sha256, Date.now()));
       await deleting.reached;
-      const put = resultOf(content.put(alpha, { ...large.content(), ...expectedOf(large.sha256) }));
-      const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
+      const clock = onATestClock();
+      const put = clock.run(content.put(alpha, { ...large.content(), ...expectedOf(large.sha256) }));
+      const settledBefore = await settledYet(put);
       deleting.release();
+      const removed = await removal;
+      await clock.advance(removalPollMs);
 
-      expect([settledBefore, await removal, await put]).toEqual([
+      expect([settledBefore, removed, await put]).toEqual([
         false,
         'removed',
         { sha256: large.sha256, bytes: 2_500_000, mediaType: octets },
@@ -137,30 +124,29 @@ function putWhileRemoved(): void {
 }
 
 function refusedOnceItWaited(): void {
-  it(
-    'refuses as unavailable a put that waits longer than the removal may take to delete, keeping nothing of it',
-    { timeout: 20_000 },
-    async () => {
-      const { content, removedKeptBefore, paused } = outsideOf();
-      await at(keptAt, content.put(alpha, textToKeep(note, json)));
-      const deleting = paused.pausedDelete();
-      const removal = resultOf(removedKeptBefore(alpha, noteDigest, Date.now()));
-      await deleting.reached;
+  it('refuses as unavailable a put that waits longer than the removal may take to delete, keeping nothing of it', async () => {
+    const { content, removedKeptBefore, paused } = outsideOf();
+    await at(keptAt, content.put(alpha, textToKeep(note, json)));
+    const deleting = paused.pausedDelete();
+    const removal = resultOf(removedKeptBefore(alpha, noteDigest, Date.now()));
+    await deleting.reached;
 
-      const begun = Date.now();
-      const refused = await refusalOf(content.put(alpha, textToKeep(note, json)));
-      const waited = Date.now() - begun;
-      deleting.release();
+    const clock = onATestClock();
+    const refusing = clock.run(Effect.flip(content.put(alpha, textToKeep(note, json))));
+    await clock.advance(removalWaitMs - removalPollMs);
+    const beforeTheWaitRanOut = await settledYet(refusing);
+    await clock.advance(removalPollMs);
+    const refused = await refusing;
+    deleting.release();
 
-      expect(refused).toMatchObject({
-        _tag: 'content_refused',
-        because: 'unavailable',
-      });
-      expect(waited).toBeGreaterThanOrEqual(removalWaitMs);
-      expect(await removal).toBe('removed');
-      expect(await resultOf(content.get(alpha, noteDigest))).toBeUndefined();
-    },
-  );
+    expect(beforeTheWaitRanOut).toBe(false);
+    expect(refused).toMatchObject({
+      _tag: 'content_refused',
+      because: 'unavailable',
+    });
+    expect(await removal).toBe('removed');
+    expect(await resultOf(content.get(alpha, noteDigest))).toBeUndefined();
+  });
 }
 
 function stoppedRemovalsFinished(): void {
@@ -223,11 +209,14 @@ function headlessRemoved(): void {
     const removal = resultOf(removedKeptBefore(alpha, noteDigest, keptAt));
     await deleting.reached;
     const readWhileRemoved = (await present(content.get(alpha, noteDigest))).mediaType;
-    const put = resultOf(content.put(alpha, textToKeep(note, 'text/plain')));
-    const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
+    const clock = onATestClock();
+    const put = clock.run(content.put(alpha, textToKeep(note, 'text/plain')));
+    const settledBefore = await settledYet(put);
     deleting.release();
+    const removed = await removal;
+    await clock.advance(removalPollMs);
 
-    expect([readWhileRemoved, settledBefore, await removal, (await put).mediaType]).toEqual([
+    expect([readWhileRemoved, settledBefore, removed, (await put).mediaType]).toEqual([
       json,
       false,
       'removed',

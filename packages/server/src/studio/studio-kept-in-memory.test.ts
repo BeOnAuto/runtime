@@ -7,7 +7,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { fakeStudioHost, studioPage } from '../testing/studios/fake-studio-host.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 import { markerName } from './kept-answers.ts';
 import { studioFolderName } from './served-studio.ts';
 
@@ -39,7 +39,7 @@ describe('a runtime whose folder for Studio holds a file it did not write', () =
 
     const response = await fetch(`http://127.0.0.1:${await child.port}/studio/`);
     const page = await response.text();
-    await until(
+    await whenHeld(
       () => child.output().stderr,
       (stderr) => stderr.includes('kept in memory alone'),
     );

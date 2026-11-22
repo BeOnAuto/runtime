@@ -4,7 +4,7 @@ import { packageDigest } from '@on.auto/definitions/portable';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { alpha, aMomentApart, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { savedSourceOf, servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
 const goals = [
@@ -83,8 +83,10 @@ async function withAPlaybook<A>(serving: typeof servingReasoning, act: (server: 
   }
 }
 
-async function aPlaybookWithItsMethod({ call }: ReasoningServer): Promise<void> {
-  await call('PUT', alpha, { body: { page } });
+async function aPlaybookWithItsMethod(server: ReasoningServer): Promise<void> {
+  const call = aMomentApart(server);
+  // The page is checked as it is saved; a check that fails says so here, not as a page missing from the export.
+  expect(await call('PUT', alpha, { body: { page } })).toMatchObject({ status: 200 });
   await call('POST', `${alpha}/definitions/reasoning`, { body: answer });
   await call('POST', `${alpha}/definitions/reasoning`, { body: brief });
   await call('POST', `${alpha}/definitions/computation`, { body: pace });

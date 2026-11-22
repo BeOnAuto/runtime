@@ -13,7 +13,7 @@ import {
 import { keysOfOne } from '../keys/recorded-keys.ts';
 import { signalOf, type StreamSignal } from '../signal/append-signal.ts';
 
-const lookEveryMs = 1000;
+export const lookEveryMs = 1000;
 
 const messagesInOneLook = 1000;
 
@@ -111,13 +111,24 @@ function unwatched(watch: Watch): void {
   watch.changed({ watching: undefined, through: undefined });
 }
 
+function earliestAmong(points: readonly (RecordedPoint | undefined)[]): RecordedPoint | undefined {
+  const given = points.filter((point): point is RecordedPoint => point !== undefined);
+  return given.reduce<RecordedPoint | undefined>((earliest, point) => earliestOf(earliest, point), given[0]);
+}
+
+async function readFrom(watch: Watch, from: RecordedPoint | undefined): Promise<LatestAppends> {
+  try {
+    return await watch.readAppended(from, messagesInOneLook);
+  } catch (failure) {
+    watch.changed({ earliest: earliestAmong([watch.state().earliest, from]) });
+    throw failure;
+  }
+}
+
 async function lookedOnce(watch: Watch): Promise<void> {
   const { through, earliest } = watch.state();
   watch.changed({ earliest: undefined, again: false });
-  const read = await watch.readAppended(
-    earliest === undefined ? through : earliestOf(through, earliest),
-    messagesInOneLook,
-  );
+  const read = await readFrom(watch, earliest === undefined ? through : earliestOf(through, earliest));
   settled(
     watch,
     [...watch.state().waiters].filter((waiter) => wokenBy(read, waiter)),

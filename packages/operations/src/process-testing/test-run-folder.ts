@@ -2,7 +2,7 @@ import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { endedWhileItRuns, type RunningProcess } from './process-endings.ts';
+import { endedWhileItRuns, realPidEnding, type PidEnding, type RunningProcess } from './process-endings.ts';
 
 export type RunningIn = (entry: string) => readonly RunningProcess[];
 
@@ -26,25 +26,28 @@ function leftWords(left: readonly string[], ended: readonly RunningInAnEntry[]):
   ].join(' ');
 }
 
-async function checkedAndEnded(folder: string, runningIn: RunningIn): Promise<void> {
+async function checkedAndEnded(folder: string, runningIn: RunningIn, ending: PidEnding): Promise<void> {
   const left = readdirSync(folder).toSorted();
   const ended = left.flatMap((entry) =>
     runningIn(join(folder, entry)).map((running): RunningInAnEntry => ({ entry, running })),
   );
-  await Promise.all(ended.map(({ running }) => endedWhileItRuns(running)));
+  await Promise.all(ended.map(({ running }) => endedWhileItRuns(running, ending)));
   if (left.length > 0) {
     throw new Error(leftWords(left, ended));
   }
 }
 
-export function aFolderOfTheTestRun(runningIn: RunningIn = nothingRuns): (run: TestRun) => TestRunTeardown {
+export function aFolderOfTheTestRun(
+  runningIn: RunningIn = nothingRuns,
+  ending: PidEnding = realPidEnding,
+): (run: TestRun) => TestRunTeardown {
   return ({ name }) => {
     const madeIn = tmpdir();
     const folder = mkdtempSync(join(madeIn, `auto-runtime-test-run-${name}-`));
     process.env['TMPDIR'] = folder;
     return async () => {
       try {
-        await checkedAndEnded(folder, runningIn);
+        await checkedAndEnded(folder, runningIn, ending);
       } finally {
         rmSync(folder, { recursive: true, force: true });
         process.env['TMPDIR'] = madeIn;

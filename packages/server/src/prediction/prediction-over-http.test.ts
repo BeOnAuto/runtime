@@ -7,8 +7,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledRun,
+  steppedServerClock,
+  testServersStartAt,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 import { dailyVisits, publishedVisits, savedVisits, visitsOf, visitsToday } from './published-visits.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -18,7 +25,9 @@ const question = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
 const aCheckpoint: unknown = expect.any(String);
 
 async function serving(environment: Readonly<Record<string, string>> = {}): Promise<ReasoningServer> {
-  const serverPrediction = await servingReasoning([], environment);
+  const serverPrediction = await servingReasoning([], environment, undefined, {
+    clock: steppedServerClock(),
+  });
   closing.push(serverPrediction.stop);
   await serverPrediction.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return serverPrediction;
@@ -55,7 +64,7 @@ interface OrderPlaced {
 }
 
 function orderPlaced(weeksAgo: number): OrderPlaced {
-  const placedAt = new Date(Date.now() - weeksAgo * week).toISOString();
+  const placedAt = new Date(testServersStartAt - weeksAgo * week).toISOString();
   return {
     id: randomUUID(),
     source: '/shop',
@@ -133,7 +142,7 @@ const closeAndForecast = workflowSource(
 );
 
 function mondayWeeksAgo(ago: number): string {
-  const now = Date.now();
+  const now = testServersStartAt;
   const daysSinceMonday = (new Date(now).getUTCDay() + 6) % 7;
   const monday = Math.floor(now / day) * day - daysSinceMonday * day;
   return new Date(monday - ago * weekForecastAfterRecord).toISOString().slice(0, 10);
@@ -163,7 +172,7 @@ async function recorded(serverForecastAfterRecord: ReasoningServer, ago: number)
 }
 
 async function servingWeeks(): Promise<ReasoningServer> {
-  const serverForecastAfterRecord = await servingWorkflows([]);
+  const serverForecastAfterRecord = await servingWorkflows([], {}, undefined, steppedServerClock());
   closing.push(serverForecastAfterRecord.stop);
   await serverForecastAfterRecord.call('POST', '/v1/orgs/acme/playbooks', {
     body: { playbook: 'alpha', name: 'Alpha' },
@@ -175,7 +184,7 @@ async function servingWeeks(): Promise<ReasoningServer> {
     (before: Promise<void>, ago) => before.then(() => recorded(serverForecastAfterRecord, ago)),
     Promise.resolve(),
   );
-  await until(async () => {
+  await whenHeld(async () => {
     const { body } = await serverForecastAfterRecord.call('GET', `${alpha}/definitions/prediction/weekly-revenue`);
     expect(body).toMatchObject({ standing: { dataset: { phase: 'live', events_folded: weeksBefore } } });
   });
@@ -321,14 +330,14 @@ describe('documented page', () => {
 
   describe('the page of the prediction format that keeps the forecasts, through the server', () => {
     it('saves beside the result of the example, and draws the forecast of the next week beside the orders observed', async () => {
-      server = await servingReasoning([]);
+      server = await servingReasoning([], {}, undefined, { clock: steppedServerClock() });
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       const saved = await server.call('POST', `${alpha}/definitions/prediction`, {
         body: { name: 'weekly-orders', source: withKeptForecasts, diagram: 'none' },
       });
       const events = Array.from({ length: 12 }, (_, at) => orderPlaced(12 - at));
       await Promise.all(events.map((event) => server.call('POST', `${alpha}/events`, { body: { event } })));
-      await until(async () => {
+      await whenHeld(async () => {
         const { body } = await server.call('GET', `${alpha}/definitions/prediction/weekly-orders`);
         expect(body).toMatchObject({ standing: { dataset: { phase: 'live', events_folded: events.length } } });
       });
@@ -336,7 +345,7 @@ describe('documented page', () => {
       const askedDocumentedPage = await server.call('POST', `${alpha}/definitions/prediction/weekly-orders/run`, {
         body: { input: { series: 'north' } },
       });
-      const definition = await until(
+      const definition = await whenHeld(
         async () => (await server.call('GET', `${alpha}/definitions/prediction/weekly-orders`)).body,
         (body) => JSON.stringify(body).includes('"folded":1'),
       );
@@ -356,7 +365,7 @@ describe('forecast after a record', () => {
   });
 
   describe('a workflow that records a week and forecasts from it in the next step, in a playbook that keeps a page', () => {
-    it('forecasts from the week it just recorded every time, without asking again', { timeout: 120_000 }, async () => {
+    it('forecasts from the week it just recorded every time, without asking again', async () => {
       const serverForecastAfterRecord = await servingWeeks();
       const revenues = Array.from({ length: forecasts }, (_, at) => 50_000 + at);
 
@@ -379,7 +388,7 @@ describe('forecast after a record', () => {
       const renamed = await serverRenamed.call('PUT', `${alpha}/definitions/computation/record-week`, {
         body: { new_name: 'record-a-week' },
       });
-      const savedAgain = await until(async () => {
+      const savedAgain = await whenHeld(async () => {
         const { body } = await serverRenamed.call('GET', `${alpha}/definitions/prediction/weekly-revenue`);
         expect(body).toMatchObject({
           version: 2,
@@ -408,7 +417,7 @@ describe('prediction over mcp', () => {
 
   describe('the plain words for a question to a prediction function over MCP', () => {
     it('say each predicted number in digits with its unit after it, the coverage of its ranges and the method, and name no internal term', async () => {
-      server = await servingReasoning([]);
+      server = await servingReasoning([], {}, undefined, { clock: steppedServerClock() });
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       const visits = visitsToday();
       await savedVisits(server);

@@ -15,8 +15,7 @@ import { brief, interactionServerOn, servingInteractions } from '../testing/inte
 import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { runIdIn } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { runIdIn, whenSwept } from '../testing/servers/workflow-server.ts';
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
 
@@ -25,7 +24,8 @@ const aNumber: unknown = expect.any(Number);
 const scrubbedBrief: unknown = expect.stringMatching(/^Please review the brief for \[redacted\] x{5000}\.$/u);
 
 function endedFacts(server: Awaited<ReturnType<typeof servingInteractions>>, runId: string) {
-  return until(
+  return whenSwept(
+    server,
     () => deliveryHistoryOf(server, runId),
     (facts) => facts.some(({ type }) => type !== 'delivery_started'),
   );
@@ -195,7 +195,8 @@ describe('a tool its operator disallowed after a request asked through it', () =
       LEDGER_FILE: ledger.fileName,
     });
     const runId = await first.ask('approve-brief');
-    const unreached = await until(
+    const unreached = await whenSwept(
+      first,
       () => deliveryHistoryOf(first, runId),
       (seen) => seen.length >= 2,
     );
@@ -207,7 +208,8 @@ describe('a tool its operator disallowed after a request asked through it', () =
       ...chatEnvironment(chat.url, { allowed: ['echo'] }),
       LEDGER_FILE: ledger.fileName,
     });
-    const facts = await until(
+    const facts = await whenSwept(
+      second,
       () => deliveryHistoryOf(second, runId),
       (seen) => seen.length >= 4,
     );
@@ -263,7 +265,8 @@ describe('a delivery through a tool this playbook may not use, over HTTP', () =>
     const server = await servingInteractions(chatDelivery, chatEnvironment(chat.url));
     const runId = await server.ask('approve-brief');
 
-    const facts = await until(
+    const facts = await whenSwept(
+      server,
       () => deliveryHistoryOf(server, runId),
       (seen) => seen.length >= 2,
     );
@@ -291,10 +294,12 @@ describe('the arguments of a delivery, typed as written, over HTTP', () => {
     await server.call('POST', `${alpha}/definitions/interaction/approve-limit/run`, {
       body: { input: { owner: 'ada', limit: 20 } },
     });
-    const [received] = await until(
-      () => Promise.resolve(chat.received()),
-      (calls) => calls.length > 0,
+    await whenSwept(
+      server,
+      () => chat.received(),
+      (received) => received.length > 0,
     );
+    const [received] = chat.received();
 
     expect(received?.arguments).toEqual({
       count: 3,

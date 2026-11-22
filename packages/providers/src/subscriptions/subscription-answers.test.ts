@@ -2,11 +2,12 @@ import { inspect } from 'node:util';
 
 import { capturedLogs, recordingTracer } from '@on.auto/operations/testing';
 import type { CalledOnce, RequestedOnce } from '@on.auto/tool-servers';
-import { Cause, Effect, Exit, Redacted, Result, type Schema } from 'effect';
+import { Cause, Effect, Exit, Redacted, Result, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { intoAQueue, ofEachSubscription } from '../testing/event-destinations.ts';
+import { IdentitySchema } from '../events/event-calls.ts';
+import { intoAQueue, ofEachSubscription, whoItActsAs } from '../testing/event-destinations.ts';
 import {
   aService,
   aServiceAnsweringRequests,
@@ -24,6 +25,7 @@ import {
   place,
   rateLimited,
   refusedByTheTool,
+  requestedWith,
   serverFailedAs,
   serverFailureAs,
   type FakeService,
@@ -177,6 +179,64 @@ describe('what a call answers, read by the pointers its entry declares', () => {
     expect(await unsubscribedByRequestOn({ kind: 'answered', outcome: 'result' })).toEqual(Result.void);
     expect(await unsubscribedOn(answeredNothing)).toEqual(Result.void);
     expect(await renewedOn(answeredNothing)).toEqual(Result.succeed({}));
+  });
+});
+
+const whoAmI = Schema.decodeUnknownSync(IdentitySchema)({
+  tool: 'whoami',
+  with: { fields: 'uid,nick' },
+  identified: { id: '/self/uid', name: '/self/nick' },
+});
+
+function identifiedThrough(service: FakeService, identity = whoAmI) {
+  return onTheClock(subscriptionCallsOf(service.ports).identify({ identity, place }));
+}
+
+describe('the account a connection acts as, as the call that asks it answers', () => {
+  it('is asked through the connection’s tool with its arguments as written, in the playbook’s name, its id as text or a whole number and its name where given', async () => {
+    const service = aService([answeredWith({ self: { uid: 7, nick: 'sam' } }), answeredWith({ self: { uid: 'u-7' } })]);
+
+    expect([await identifiedThrough(service), await identifiedThrough(service)]).toEqual([
+      Result.succeed({ id: '7', name: 'sam' }),
+      Result.succeed({ id: 'u-7' }),
+    ]);
+    expect(service.sent()).toMatchObject([
+      {
+        tool: {
+          org: 'acme',
+          playbook: 'alpha',
+          reference: { server: 'tracker', tool: 'whoami' },
+          input: { fields: 'uid,nick' },
+        },
+      },
+      { tool: { input: { fields: 'uid,nick' } } },
+    ]);
+  });
+
+  it('is asked through a request to the address written out whole, with the connection’s own credential', async () => {
+    const service = aServiceAnsweringRequests([requestedWith({ member: { key: 'member-7', handle: 'sam' } })]);
+    const identity = Schema.decodeUnknownSync(IdentitySchema)(whoItActsAs);
+
+    expect(await identifiedThrough(service, identity)).toEqual(Result.succeed({ id: 'member-7', name: 'sam' }));
+    expect(service.sent()).toEqual([
+      { request: { org: 'acme', playbook: 'alpha', server: 'tracker', method: 'GET', url: whoItActsAs.url } },
+    ]);
+  });
+
+  it('is unreadable where the answer names no account at the declared pointer, and fails as the call is refused', async () => {
+    const malformed: readonly Schema.Json[] = [
+      {},
+      { self: { uid: '' } },
+      { self: { uid: 1.5 } },
+      { self: { uid: {} } },
+    ];
+    const answered = await Promise.all(malformed.map((answer) => identifiedThrough(aService([answeredWith(answer)]))));
+
+    expect(answered).toEqual(malformed.map(() => unreadable));
+    expect(await identifiedThrough(aService([answeredNothing]))).toEqual(unreadable);
+    expect(await identifiedThrough(aService([serverFailedAs('unreachable')]))).toEqual(
+      Result.fail(expect.objectContaining({ kind: 'unreachable', because: 'unreachable' })),
+    );
   });
 });
 

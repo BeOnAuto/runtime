@@ -23,6 +23,12 @@ const publicMethod = 'none';
 
 const methodsOfAuthentication = ['client_secret_basic', 'client_secret_post', 'private_key_jwt', publicMethod];
 
+const grantsListed = ['client_credentials', 'authorization_code', 'refresh_token'];
+
+function grantTypesOf({ grantTypes = grantsListed }: ClientRegistration) {
+  return grantTypes === null ? {} : { grant_types_supported: grantTypes };
+}
+
 function openIdFields(origin: string) {
   return {
     jwks_uri: `${origin}/jwks`,
@@ -65,7 +71,7 @@ function metadataOf(origin: string, registration: ClientRegistration) {
     revocation_endpoint: `${at}/revoke`,
     ...(registration.dynamicRegistration === true ? { registration_endpoint: `${at}/register` } : {}),
     response_types_supported: ['code'],
-    grant_types_supported: ['client_credentials', 'authorization_code', 'refresh_token'],
+    ...grantTypesOf(registration),
     ...(registration.takesNoChallenge === true
       ? {}
       : { code_challenge_methods_supported: registration.challengeMethods ?? ['S256'] }),

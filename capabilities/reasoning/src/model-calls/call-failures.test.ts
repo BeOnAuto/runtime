@@ -1,5 +1,5 @@
 import { Effect, Exit, Fiber } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { openAiResponse } from '../provider-testing/provider-replies.ts';
 import {
@@ -26,10 +26,14 @@ async function openAiFailure(respond: Responder) {
   return { failure, requests: recording.requests() };
 }
 
-function limitedOnce(_: unknown, attempt: number): Response {
-  return attempt === 1
-    ? jsonResponse({ error: { message: 'slow down' } }, 429, { 'retry-after-ms': '1' })
-    : jsonResponse(openAiResponse('Hello'));
+function limitedOnce(limited: () => void) {
+  return (_: unknown, attempt: number): Response => {
+    if (attempt > 1) {
+      return jsonResponse(openAiResponse('Hello'));
+    }
+    limited();
+    return jsonResponse({ error: { message: 'slow down' } }, 429, { 'retry-after-ms': '1500' });
+  };
 }
 
 function abortedRequest(): Promise<Response> {
@@ -109,13 +113,22 @@ describe('retries', () => {
   });
 
   it('retries a limited call after the delay the provider asks for', async () => {
-    const recording = recordingFetch(limitedOnce);
+    const limited = Promise.withResolvers<void>();
+    const recording = recordingFetch(limitedOnce(limited.resolve));
     const access = await accessFor({ OPENAI_API_KEY: apiKey }, { fetch: recording.fetch });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
 
-    const result = await succeeded(access, textRequest('openai/gpt-5', { retries: 'adapter' }));
+    const answering = succeeded(access, textRequest('openai/gpt-5', { retries: 'adapter' }));
+    await limited.promise;
+    const askedBeforeTheDelay = recording.requests().length;
+    await vi.advanceTimersByTimeAsync(1500);
+    const result = await answering;
 
     expect(result.text).toBe('Hello');
-    expect(recording.requests()).toHaveLength(2);
+    expect([askedBeforeTheDelay, recording.requests().length]).toEqual([1, 2]);
   });
 });
 

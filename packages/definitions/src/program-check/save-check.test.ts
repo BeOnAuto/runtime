@@ -2,12 +2,12 @@ import { InvalidInput, Unavailable } from '@on.auto/operations';
 import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import type { CheckJob, CheckOutcome, ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { threadPool } from '@on.auto/workflow-engine/thread-pool';
-import { Effect, Exit, type Schema } from 'effect';
+import { Cause, Effect, Exit, type Schema } from 'effect';
 import ts from 'typescript6';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { keptLibOnDisk, measuredPoolSettings } from '../testing/read-on-disk.ts';
-import { checkingWithin } from '../testing/time/patient-checks.ts';
+import { checkingWithin, checkingWithoutADeadline, checksAwaitedAtMostMs } from '../testing/time/patient-checks.ts';
 import { fewerAssignments, mostAssignmentsInAFunction } from './assignment-bound.ts';
 import * as checkWorkerModule from './check-worker.ts';
 import { checkerOf } from './checking.ts';
@@ -17,7 +17,7 @@ import { strippedExpression, strippedModule } from './type-stripping.ts';
 
 const pool = threadPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
-const patient = checkingWithin(pool);
+const patient = checkingWithoutADeadline(pool);
 
 const job: CheckJob = {
   module: { place: 'computation', source: 'export default function (input: Input): Output {\n  return input.redy;\n}' },
@@ -34,8 +34,51 @@ function answering(outcome: CheckOutcome): ProgramPool {
   return { ...pool, check: () => Promise.resolve(outcome) };
 }
 
+function scriptedPool(answers: readonly ('busy' | 'memory' | 'checked')[]): ProgramPool {
+  const left = [...answers];
+  const next = (): CheckOutcome => {
+    const answer = left.shift() ?? 'checked';
+    return answer === 'checked'
+      ? { ran: 'checked', issues: [], milliseconds: 1 }
+      : { ran: 'stopped', because: answer, milliseconds: 1 };
+  };
+  return { ...pool, check: () => Promise.resolve(next()) };
+}
+
+function refusalOf(scripted: ProgramPool): Effect.Effect<unknown> {
+  return checkedAtSave(scripted, job).pipe(
+    Effect.map((): unknown => 'saved'),
+    Effect.catchTag('unavailable', (refused: Pick<Unavailable, 'kind' | 'retry_after'>) =>
+      Effect.succeed<unknown>(refused.kind === 'busy' ? refused.retry_after : 'unavailable'),
+    ),
+    Effect.orElseSucceed((): unknown => 'refused'),
+  );
+}
+
+function takingMs(takesMs: number, asked: (deadlineMs: number) => void): ProgramPool {
+  return {
+    ...pool,
+    check: (request) => {
+      asked(request.deadlineMs);
+      return Promise.resolve<CheckOutcome>(
+        takesMs > request.deadlineMs
+          ? { ran: 'stopped', because: 'deadline', milliseconds: request.deadlineMs }
+          : { ran: 'checked', issues: [], milliseconds: takesMs },
+      );
+    },
+  };
+}
+
 function checked(on: ProgramPool, deadlineMs?: number) {
   return Effect.runPromiseExit(checkedAtSave(on, job, deadlineMs));
+}
+
+async function endingOf(on: ProgramPool, deadlineMs: number): Promise<string> {
+  const exit = await checked(on, deadlineMs);
+  if (Exit.isSuccess(exit)) {
+    return 'answered';
+  }
+  return Cause.squash(exit.cause) instanceof InvalidInput ? 'refused as invalid input' : 'otherwise';
 }
 
 const check = checkerOf(sandboxLibFrom(keptLibOnDisk));
@@ -147,19 +190,76 @@ describe('save check', () => {
 
     it('is unavailable, with what stopped it, when the pool stops the check', async () => {
       const stopped = await Promise.all(
-        (['busy', 'memory', 'cancelled', 'closing'] as const).map((because) =>
+        (['memory', 'cancelled', 'closing'] as const).map((because) =>
           checked(answering({ ran: 'stopped', because, milliseconds: 1 })),
         ),
       );
 
       expect(stopped).toEqual(
         [
-          'No checker was ready in time for this save, since this server checks one document at a time with one checker; try again',
           'The check of the document took more memory than its worker may use, and was stopped; try again',
           'The save was stopped before its check ended',
           'The server is stopping',
         ].map((detail) => Exit.fail(new Unavailable({ detail }))),
       );
+    });
+
+    it.each([
+      { answers: ['busy'], refused: [1] },
+      { answers: ['busy', 'busy', 'busy', 'busy', 'busy'], refused: [1, 2, 4, 8, 8] },
+      { answers: ['busy', 'busy', 'checked', 'busy'], refused: [1, 2, 'saved', 1] },
+      { answers: ['busy', 'memory', 'busy'], refused: [1, 'unavailable', 1] },
+    ] as const)(
+      'is refused as busy, with a wait that doubles on each refusal in a row, when no checker is ready: $answers',
+      async ({ answers, refused }) => {
+        const scripted = scriptedPool(answers);
+        expect(await Effect.runPromise(Effect.forEach(answers, () => refusalOf(scripted)))).toEqual(refused);
+      },
+    );
+
+    it.each([
+      [1, 2],
+      [2000, 2001],
+      [30_000, 30_001],
+    ])(
+      'is refused as invalid input, with the deadline it was given, when it would take longer than its %i ms, and answered when it takes them',
+      async (deadlineMs, longerMs) => {
+        const asked: number[] = [];
+        const record = (handed: number) => {
+          asked.push(handed);
+        };
+
+        const endings = await Promise.all([
+          endingOf(takingMs(longerMs, record), deadlineMs),
+          endingOf(takingMs(deadlineMs, record), deadlineMs),
+        ]);
+
+        expect(endings).toEqual(['refused as invalid input', 'answered']);
+        expect(asked).toEqual([deadlineMs, deadlineMs]);
+      },
+    );
+
+    it('allows a save 2 s of the pool’s clock, and a test’s patient check 30 s or no deadline at all', async () => {
+      const handed: number[] = [];
+      const recording: ProgramPool = {
+        ...pool,
+        check: (request) => {
+          handed.push(request.deadlineMs);
+          return Promise.resolve<CheckOutcome>({ ran: 'checked', issues: [], milliseconds: 1 });
+        },
+      };
+
+      await Promise.all([
+        checked(recording),
+        checked(checkingWithin(recording)),
+        checked(checkingWithoutADeadline(recording)),
+      ]);
+
+      expect([checkDeadlineMs, checksAwaitedAtMostMs, handed]).toEqual([
+        2000,
+        30_000,
+        [2000, 30_000, Number.POSITIVE_INFINITY],
+      ]);
     });
 
     it.each(brokenWhen)('breaks down when the pool answers %j', async (outcome, defect) => {

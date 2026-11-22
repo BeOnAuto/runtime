@@ -1,4 +1,4 @@
-import { tracker } from '@on.auto/providers/testing';
+import { ledgers, tracker } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { waysListedOf } from '../testing/listed-ways.ts';
@@ -16,5 +16,13 @@ describe('a provider whose way is a key, as the page lists it', () => {
     expect(undeclared).toMatchObject({ kind: 'secret' });
     expect(undeclared).not.toHaveProperty('key_page_title');
     expect(undeclared).not.toHaveProperty('steps');
+  });
+
+  it('gives the page, the words that open it and the steps of a way of client credentials where its entry gives them', async () => {
+    const [client] = ledgers.credentials;
+    const keyPage = 'https://app.ledgers.example.com/clients';
+    const [declared] = await waysListedOf({ ...ledgers, credentials: [{ ...client, key_page: keyPage, ...words }] });
+
+    expect(declared).toMatchObject({ kind: 'client_credentials', key_page: keyPage, ...words });
   });
 });

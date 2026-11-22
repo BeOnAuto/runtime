@@ -1,9 +1,6 @@
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { parseEnv } from 'node:util';
 
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   type ApiKey,
@@ -114,22 +111,13 @@ describe('readApiKeys', () => {
     expect(String(error)).toContain(mention);
   });
 
-  it('reads an unquoted compact JSON line from an env file unchanged', () => {
-    const directory = mkdtempSync(join(tmpdir(), 'api-keys-'));
-    onTestFinished(() => {
-      rmSync(directory, { recursive: true, force: true });
-    });
+  it('reads an unquoted compact JSON line from an env file unchanged, as the parser of --env-file reads it', () => {
     const line = JSON.stringify([entry, everything]);
-    writeFileSync(join(directory, 'keys.env'), `API_KEYS=${line}\n`);
 
-    const { stdout } = spawnSync(
-      process.execPath,
-      [`--env-file=${join(directory, 'keys.env')}`, '--eval', 'process.stdout.write(String(process.env.API_KEYS))'],
-      { encoding: 'utf8', env: {} },
-    );
+    const { API_KEYS: read = '' } = parseEnv(`API_KEYS=${line}\n`);
 
-    expect(stdout).toBe(line);
-    expect(readApiKeys({ API_KEYS: stdout })).toEqual([entry, everything]);
+    expect(read).toBe(line);
+    expect(readApiKeys({ API_KEYS: read })).toEqual([entry, everything]);
   });
 });
 

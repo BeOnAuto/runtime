@@ -7,7 +7,7 @@ import type { ProgramPool, ProgramRequest } from '../jobs/pool-contract.ts';
 import type { Job } from '../jobs/pool-job.ts';
 import { testPoolSettings } from '../pool-testing/test-pools.ts';
 import { runMemoryBytes, workerStackBytes } from '../programs/sandbox-bounds.ts';
-import { poolSlots } from './pool-slots.ts';
+import { armedUntil, poolSlots } from './pool-slots.ts';
 import type { StartThread, Thread, ThreadHooks } from './pool-threads.ts';
 import { poolWorkers } from './pool-workers.ts';
 import { programPool } from './program-pool.ts';
@@ -102,6 +102,45 @@ function jobOf(key: string): Job<string, string> {
 
 const unbounded = { until: Number.POSITIVE_INFINITY };
 
+describe('the deadline of a wait of the pool', () => {
+  it.each([1, 20, 2000, 30_000])(
+    'falls due at %i ms on the clock, and not a millisecond sooner',
+    async (deadlineMs) => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+      onTestFinished(() => {
+        vi.useRealTimers();
+      });
+      const due = { yet: false };
+      armedUntil(performance.now() + deadlineMs, () => {
+        due.yet = true;
+      });
+
+      await vi.advanceTimersByTimeAsync(deadlineMs - 1);
+      const beforeIt = due.yet;
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect([beforeIt, due.yet]).toEqual([false, true]);
+    },
+  );
+
+  it('arms no timer and never falls due where there is no deadline', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const due = { yet: false };
+    const disarm = armedUntil(Number.POSITIVE_INFINITY, () => {
+      due.yet = true;
+    });
+
+    const timers = vi.getTimerCount();
+    await vi.advanceTimersByTimeAsync(2_147_483_647);
+    disarm();
+
+    expect([timers, due.yet]).toEqual([0, false]);
+  });
+});
+
 describe('the slots of a pool', () => {
   it('admit as many runs at once as the pool has slots, and the next waiting run as one ends, in turn', async () => {
     const slots = poolSlots(1);
@@ -127,7 +166,6 @@ describe('the slots of a pool', () => {
     });
     const slots = poolSlots(1);
     await slots.admit(inMs(1000));
-    const started = performance.now();
     const settled: string[] = [];
     const turnedAway = slots.admit(inMs(20)).then((admission) => settled.push(admission));
 
@@ -137,7 +175,6 @@ describe('the slots of a pool', () => {
     await turnedAway;
 
     expect([whileWaiting, settled]).toEqual([[], ['busy']]);
-    expect(performance.now() - started).toBe(20);
   });
 
   it('turn away a run no sooner than its deadline, though its timer fires before it', async () => {

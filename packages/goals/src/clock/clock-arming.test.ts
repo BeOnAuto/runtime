@@ -22,7 +22,7 @@ async function reportingSince(workflows: readonly string[]): Promise<ClockHarnes
   const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
   await Promise.all(workflows.map((workflow) => harness.book.workflowSaved(workflow, 1, checking)));
   await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-  await harness.until('2026-11-09T23:00:00.000Z');
+  await harness.steppedTo('2026-11-09T23:00:00.000Z');
   return harness;
 }
 
@@ -47,7 +47,7 @@ describe('the clock of a calendar goal nothing reports', () => {
   it('is due at each opening and opens nothing', async () => {
     const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
     await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-    await harness.until('2026-11-11T01:00:00.000Z');
+    await harness.steppedTo('2026-11-11T01:00:00.000Z');
 
     expect(harness.wakes.map(({ at }) => new Date(at).toISOString())).toEqual([
       '2026-11-09T00:00:00.000Z',
@@ -67,7 +67,7 @@ describe('a late clock, read against when the playbook’s workflows were last s
       at: '2026-11-10T10:00:00.000Z',
       data: { content: { source: 'document: check', details: { contributes: checking } } },
     });
-    await harness.until('2026-11-11T01:00:00.000Z');
+    await harness.steppedTo('2026-11-11T01:00:00.000Z');
 
     expect(await openedWindowsOf(harness)).toEqual([day('09'), day('11')]);
   });
@@ -75,7 +75,7 @@ describe('a late clock, read against when the playbook’s workflows were last s
   it('keeps shut the window a workflow was resumed in', async () => {
     const harness = await reportingSince(['check']);
     await workflowChangedAt(harness, { workflow: 'check', type: 'definition_resumed', at: '2026-11-10T10:00:00.000Z' });
-    await harness.until('2026-11-10T11:00:00.000Z');
+    await harness.steppedTo('2026-11-10T11:00:00.000Z');
 
     expect(await openedWindowsOf(harness)).toEqual([day('09')]);
   });
@@ -90,7 +90,7 @@ describe('a late clock, against workflows paused, retired or of another playbook
       at: '2026-11-10T08:00:00.000Z',
       data: { paused_by: owner },
     });
-    await harness.until('2026-11-10T09:00:00.000Z');
+    await harness.steppedTo('2026-11-10T09:00:00.000Z');
 
     expect(await openedWindowsOf(harness)).toEqual([day('09'), day('10')]);
   });
@@ -108,7 +108,7 @@ describe('a late clock, against workflows paused, retired or of another playbook
       type: 'definition_retired',
       at: '2026-11-10T10:05:00.000Z',
     });
-    await harness.until('2026-11-10T11:00:00.000Z');
+    await harness.steppedTo('2026-11-10T11:00:00.000Z');
 
     expect(await openedWindowsOf(harness)).toEqual([day('09')]);
   });
@@ -122,7 +122,7 @@ describe('a late clock, against workflows paused, retired or of another playbook
       { content: { source: 'document: elsewhere' }, created_by: owner, playbook: 'beta' },
       { at: '2026-11-10T10:00:00.000Z', definitionType: 'workflow', definitionName: 'elsewhere', definitionVersion: 1 },
     );
-    await harness.until('2026-11-10T11:00:00.000Z');
+    await harness.steppedTo('2026-11-10T11:00:00.000Z');
 
     expect(await openedWindowsOf(harness)).toEqual([day('09'), day('10')]);
   });

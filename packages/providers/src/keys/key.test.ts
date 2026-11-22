@@ -110,9 +110,12 @@ describe('the fields that say how a key is made', () => {
       ['/credentials/0/pattern', expect.stringContaining(`Expected no pattern: ${takenByConsent}`)],
     ]);
     expect(
-      problemsOf({ ...ledgers, credentials: [{ ...ledgers.credentials[0], key_page: 'https://a.example' }] }),
+      problemsOf({ ...ledgers, credentials: [{ ...ledgers.credentials[0], instructions: 'Make a client.' }] }),
     ).toEqual([
-      ['/credentials/0/key_page', 'Expected no key_page: a client_credentials way takes issuer, scope, and says'],
+      [
+        '/credentials/0/instructions',
+        'Expected no instructions: a client_credentials way takes issuer, scope, says, key_page, key_page_title, and steps',
+      ],
     ]);
   });
 });

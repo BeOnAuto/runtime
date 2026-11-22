@@ -71,7 +71,7 @@ export function problemResponse(problem: Problem, headers: Readonly<Record<strin
     headers: {
       'content-type': problemMediaType,
       'cache-control': 'no-store',
-      ...(isWorthRetrying(problem) ? { 'retry-after': retryAfterSeconds } : {}),
+      ...(isWorthRetrying(problem) ? { 'retry-after': String(problem.retry_after ?? retryAfterSeconds) } : {}),
       ...headers,
     },
   });

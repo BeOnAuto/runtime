@@ -52,6 +52,7 @@ describe('the prediction capability made from the ports the runtime hands a capa
       capability.standing({
         org: 'acme',
         playbook: 'alpha',
+        definition: '0199a3c4-7d2e-7c1a-9b3f-00000000f0ca',
         name: 'weekly-orders',
         version: 1,
         status: 'active',

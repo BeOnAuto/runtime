@@ -1,7 +1,7 @@
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
-import type { HostClock } from '@on.auto/workflow-host';
 import { Schema } from 'effect';
 
+import type { SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import type { TestResponse } from './http-client.ts';
 import { alpha, type ReasoningServer } from './reasoning-server.ts';
 import { servingWorkflows, workflowSource } from './workflow-server.ts';
@@ -56,7 +56,7 @@ async function definedInTurn(server: ReasoningServer, entries: readonly (readonl
 export async function servingCalls(
   replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
-  clock?: HostClock,
+  clock?: SteppedServerClock,
 ): Promise<ReasoningServer> {
   const server = await servingWorkflows(replies, environment, undefined, clock);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });

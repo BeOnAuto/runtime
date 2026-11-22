@@ -10,7 +10,7 @@ import {
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
 import { Schema } from 'effect';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { studioHostHomeOf, welcomeLinking } from '../testing/studios/welcome.ts';
@@ -46,6 +46,7 @@ const readerToolsInsideAPlaybook = [
   'dry_run',
   'list_interactions',
   'get_asset',
+  'list_queued_starts',
 ];
 
 const commentTools = ['list_comments', 'resolve_comment'];
@@ -89,7 +90,7 @@ const apiKeys = JSON.stringify([
 
 let server: ReasoningServer;
 
-beforeEach(async () => {
+beforeAll(async () => {
   server = await servingReasoning([], { API_KEYS: apiKeys });
   await server.call('POST', '/v1/orgs/acme/playbooks', {
     key: acmeAdmin.key,
@@ -101,7 +102,7 @@ beforeEach(async () => {
   });
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await server.stop();
 });
 
@@ -226,15 +227,14 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
       'get_guide',
     ]);
     expect(commands.filter((name) => wordsIn(outcome.instructions).has(name))).toEqual([]);
-    expect(outcome.instructions).toContain(
-      "The org is the caller's own: list_playbooks shows its playbooks. This connection acts as the key acme-playbook-reader in the org acme.",
-    );
+    expect(outcome.instructions).toContain("The org is the caller's own: list_playbooks shows its playbooks.");
+    expect(outcome.instructions).toContain('acme-playbook-reader');
     expect(outcome.listed.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the forty-two tools and the playbooks of its org', async () => {
+  it('lists the forty-three tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -245,7 +245,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(42);
+    expect(outcome.tools).toBe(43);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

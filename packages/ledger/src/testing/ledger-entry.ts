@@ -38,6 +38,7 @@ export interface LedgerEntry {
   readonly storeOn: (database: string) => LedgerStore;
   readonly openedOn: (database: string) => OpenedLedger;
   readonly queried: (database: string, statement: string) => Promise<readonly unknown[]>;
+  readonly everyRecordASecondEarlier?: string;
   readonly executedOn: <A>(database: string, work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;
   readonly layout: LayoutDialect;
   readonly carriedOn: (database: string, carrying: LayoutCarrying) => Promise<void>;

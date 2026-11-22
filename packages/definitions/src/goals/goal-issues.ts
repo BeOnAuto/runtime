@@ -1,3 +1,5 @@
+import { InvalidInput, type Issue } from '@on.auto/operations';
+
 export const goalQuestions = {
   purpose: 'What should this playbook achieve for you, and how will you know it worked?',
   change: 'What change do you want from this?',
@@ -60,4 +62,24 @@ export function personIssue(pointer: string, question: GoalQuestion, about: stri
 
 export function isAskedOfThePerson(issue: GoalIssue): issue is PersonGoalIssue {
   return issue.fixed_by === 'person';
+}
+
+const notReplacingWords = 'These goals cannot replace the goals saved before';
+
+export function notReplacing(issues: readonly Issue[]): InvalidInput {
+  return new InvalidInput({
+    detail: notReplacingWords,
+    issues: issues.map(({ pointer, detail }) => ({ pointer, detail })),
+  });
+}
+
+export function retiredWords(id: string): string {
+  return `The goal ${id} is retired; a yes is recorded only for goals that are not retired`;
+}
+
+export function changedSince(id: string, seen: number, now: number): string {
+  return [
+    `The goal ${id} changed after version ${String(seen)}, and is at version ${String(now)} now.`,
+    'Show the person the goal as it is saved now, and ask again before you record a yes',
+  ].join(' ');
 }

@@ -23,7 +23,7 @@ import {
   liveWith,
   succeeded,
 } from './view-documents.ts';
-import { viewHarness, type ViewHarness } from './view-harness.ts';
+import { viewHarness, viewHarnessOnAWorker, type ViewHarness } from './view-harness.ts';
 
 const raisingWithTheEvent = foldOf(
   'if (event.data.output === "bad") throw new Error(`cannot take ${event.data.output}`);\n  return view + 1;',
@@ -134,7 +134,7 @@ function afterTheStallTests(settingsOf: SettingsOf): void {
 
 function lostPageTests(settingsOf: SettingsOf): void {
   it('keeps what it folded before the event its worker broke on, counting each try there, and then stalls', async () => {
-    const views = await viewHarness(await settingsOf(), { foldWorker: breakingFoldWorker });
+    const views = await viewHarnessOnAWorker(await settingsOf(), { foldWorker: breakingFoldWorker });
     await views.saved('outputs', collecting);
     await views.ranEach('reasoning/runs', [1, 2, breaksTheWorker]);
     views.start({ overtimesBeforeStall: 2, sweepEveryMs: 20 });
@@ -153,7 +153,7 @@ function lostPageTests(settingsOf: SettingsOf): void {
   });
 
   it('keeps every event it folded before the one its worker broke on, when folding up to it ends early', async () => {
-    const views = await viewHarness(await settingsOf(), { foldWorker: breakingFoldWorker });
+    const views = await viewHarnessOnAWorker(await settingsOf(), { foldWorker: breakingFoldWorker });
     await views.saved('outputs', collecting);
     await views.ranEach('reasoning/runs', [1, 2, breaksTheWorker]);
     const pool = secondFoldWithBudget(views.pool, 0);

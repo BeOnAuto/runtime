@@ -19,6 +19,7 @@ export const runtimeAttributeTypes: ReadonlyMap<string, RuntimeAttributeType> = 
   ['triggerkind', 'text'],
   ['triggerreference', 'text'],
   ['automatic', 'boolean'],
+  ['own', 'boolean'],
 ]);
 
 export function attributeTypeOf(name: string): RuntimeAttributeType {

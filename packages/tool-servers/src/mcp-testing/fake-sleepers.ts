@@ -1,5 +1,3 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { arrivals } from '../testing/arrivals.ts';
 
 export type Sleep = (ms: number, signal: Readonly<AbortSignal>) => Promise<void>;
@@ -10,16 +8,21 @@ export interface Sleepers {
   readonly waited: (count: number) => Promise<void>;
 }
 
-export const realSleep: Sleep = async (ms, signal) => {
-  await setTimeout(ms, undefined, { signal });
-};
-
+/**
+ * The sleep of every fake MCP server, in process, on a socket or over stdio: it ends when a test wakes it with `fire`,
+ * or at once with the reason its call is cancelled for, never after a time. A fake over stdio is never woken, so its
+ * sleep ends when the call is cancelled, or with the process when its input ends or it is killed.
+ */
 export function manualSleepers(): Sleepers {
   const asleep = new Set<() => void>();
   const arrived = arrivals();
   return {
     sleep: (_ms, signal) => {
       const woken = Promise.withResolvers<void>();
+      if (signal.aborted) {
+        woken.reject(signal.reason);
+        return woken.promise;
+      }
       const wake = () => {
         asleep.delete(wake);
         woken.resolve();

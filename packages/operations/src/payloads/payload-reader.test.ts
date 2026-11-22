@@ -88,6 +88,44 @@ describe('a payload read back from the content of its playbook', () => {
   });
 });
 
+const utf8 = new TextEncoder();
+
+/** The bytes of a text cut in pieces of a size, as a store may stream them, a character's bytes split across two. */
+function piecesOf(text: string, size: number): readonly Uint8Array[] {
+  const bytes = utf8.encode(text);
+  return Array.from({ length: Math.ceil(bytes.byteLength / size) }, (_, index) =>
+    bytes.slice(index * size, (index + 1) * size),
+  );
+}
+
+/** A text kept, and a store that streams its bytes in the pieces it answers, which the test can overwrite after. */
+function streamedIn(text: string, size: number) {
+  const kept = keptFor(text);
+  const pieces = piecesOf(text, size);
+  const content = answering({ stream: ReadableStream.from(pieces), bytes: kept.bytes, mediaType: kept.mediaType });
+  return { kept, pieces, content };
+}
+
+describe('a payload its store streams in pieces', () => {
+  it.each([
+    ['one byte a character', 'a'],
+    ['three bytes a character, split across pieces', '漢'],
+  ])(
+    'is decoded once, from all its pieces put together, into a text of its own that no piece shares, %s',
+    async (_shape, letter) => {
+      const text = `0:${letter.repeat(1000)}`;
+      const { kept, pieces, content } = streamedIn(text, 64);
+
+      const read = await Effect.runPromise(readerOver(content).text(digestedOf(kept)));
+      for (const piece of pieces) {
+        piece.fill(0);
+      }
+
+      expect(read).toBe(text);
+    },
+  );
+});
+
 describe('a set of payloads read back at once', () => {
   it('is read each digest once, six at a time or as many as its reader is given, as texts by digest', async () => {
     const kept = Array.from({ length: 10 }, (_, index) => keptFor(String(index).repeat(2100)));

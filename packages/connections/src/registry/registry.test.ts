@@ -14,6 +14,7 @@ import { AccountSchema } from './connection.ts';
 import { type Credential, CredentialSchema } from './credential.ts';
 import { connectionsFoldOf, registryDeciderOf } from './registry-decider.ts';
 import { evolveRegistry, initialRegistry, newestFirst, type Registry } from './registry.ts';
+import { factsAsTheyAct } from './what-connections-act-as.ts';
 
 const registryDecider = registryDeciderOf(providerListOf());
 
@@ -194,8 +195,9 @@ const jottingsAdded = factOfFactsAsNamed({
   context: { at: '2026-11-01T09:00:00.000Z', by: 'person:ada' },
 });
 
-function foldedAsRecorded(facts: readonly RecordedConnectionEvent[]): Registry {
-  return facts.reduce((registry, fact) => evolveRegistry(registry, fact), initialRegistry);
+function foldedAsRecorded(facts: readonly RecordedConnectionEvent[], providers = providerListOf()): Registry {
+  const asTheyAct = factsAsTheyAct(providers);
+  return facts.reduce((registry, fact) => evolveRegistry(registry, asTheyAct(fact)), initialRegistry);
 }
 
 function foldedWith(providers: ProviderList, facts: readonly RecordedConnectionEvent[]): Registry {
@@ -309,7 +311,8 @@ describe('an added connection, as the stream folds it', () => {
         provider: null,
         placeholders: null,
         entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' } },
-        credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+        credential: { kind: 'secret', name: 'Authorization', in: 'header', permissions: 'delegated' },
+        account_type: 'personal',
         status: 'pending',
         added_by: { id: 'person:ada', name: 'Ada Lovelace' },
         added_at: '2026-10-15T14:00:00.000Z',
@@ -344,6 +347,33 @@ describe('an added connection, as the stream folds it', () => {
       link: undefined,
       secretId: 'secret-1',
     });
+  });
+});
+
+function identifiedAt(connectedAt: string, id = '7001'): ConnectionEvent {
+  return {
+    type: 'connection_identified',
+    data: { connection: '0199-crm', connected_at: connectedAt, user: { id, name: 'sam' } },
+  };
+}
+
+describe('the account a connection acts as, as the stream folds it', () => {
+  it('is kept beside the connection for its connecting, and the record a read answers is the same with or without it', () => {
+    const identified = crmAfter(approval, connection, identifiedAt(later.at));
+
+    expect(identified?.identified).toEqual({ id: '7001', name: 'sam' });
+    expect(identified?.connection).toEqual(crmAfter(approval, connection)?.connection);
+  });
+
+  it('is cleared by a new connecting, and an answer of an earlier connecting changes nothing', () => {
+    const anHourBefore = '2026-10-15T13:05:00.000Z';
+
+    expect([
+      crmAfter(approval, connection, identifiedAt(later.at), connection)?.identified,
+      crmAfter(approval, connection, identifiedAt(anHourBefore))?.identified,
+      crmAfter(approval, connection, identifiedAt(later.at), identifiedAt(anHourBefore, '9'))?.identified,
+      crmAfter(identifiedAt(later.at))?.identified,
+    ]).toEqual([undefined, undefined, { id: '7001', name: 'sam' }, undefined]);
   });
 });
 
@@ -449,8 +479,8 @@ describe('a connection of client credentials whose client id is given on the pag
     };
 
     expect([credentialAfter(billing), credentialAfter(billing, connectedWithItsClient)]).toEqual([
-      { kind: 'client_credentials', issuer },
-      { kind: 'client_credentials', issuer, client_id: 'acme' },
+      { kind: 'client_credentials', issuer, permissions: 'application' },
+      { kind: 'client_credentials', issuer, client_id: 'acme', permissions: 'application' },
     ]);
   });
 });
@@ -686,14 +716,14 @@ describe('the connections of an org, folded where no provider declares another n
     ];
 
     expect(lists.map((providers) => histories.map((facts) => foldedWith(providers, facts)))).toEqual(
-      lists.map(() => histories.map((facts) => foldedAsRecorded(facts))),
+      lists.map((providers) => histories.map((facts) => foldedAsRecorded(facts, providers))),
     );
   });
 });
 
 describe('a connection added under a name its provider declares as another of its names', () => {
   it('is folded under the provider’s name now, its document beside the entries the provider’s now, all else as recorded', () => {
-    const asRecorded = connectionIn(foldedAsRecorded([jottingsAdded]), 'connection-of-jottings');
+    const asRecorded = connectionIn(foldedAsRecorded([jottingsAdded], providerListOf(notes)), 'connection-of-jottings');
 
     expect(connectionIn(foldedWith(providerListOf(notes), [jottingsAdded]), 'connection-of-jottings')).toEqual({
       ...asRecorded,
@@ -712,8 +742,14 @@ describe('a connection added under a name its provider declares as another of it
     const filesNow = connectionIn(foldedWith(renamed, [ofFiles]), 'connection-1');
     const messagesNow = connectionIn(foldedWith(renamed, [ofMessages]), 'connection-1');
 
-    expect(filesNow).toEqual({ ...connectionIn(foldedAsRecorded([ofFiles]), 'connection-1'), provider: 'drive' });
-    expect(messagesNow).toEqual({ ...connectionIn(foldedAsRecorded([ofMessages]), 'connection-1'), provider: 'relay' });
+    expect(filesNow).toEqual({
+      ...connectionIn(foldedAsRecorded([ofFiles], renamed), 'connection-1'),
+      provider: 'drive',
+    });
+    expect(messagesNow).toEqual({
+      ...connectionIn(foldedAsRecorded([ofMessages], renamed), 'connection-1'),
+      provider: 'relay',
+    });
     expect([filesNow?.name, filesNow?.entry, messagesNow?.name, messagesNow?.entry]).toEqual([
       'files',
       { url: 'https://mcp.files.example.com/mcp' },

@@ -16,6 +16,7 @@ import { localOrg } from './local-org.ts';
 export interface Principal {
   readonly own: CallerIdentity;
   readonly callerIn: (org: string) => CallerIdentity | undefined;
+  readonly orgName?: string;
 }
 
 export interface Refusal {
@@ -28,6 +29,7 @@ export interface VerifiedPerson {
   readonly subject: string;
   readonly name: string;
   readonly org: string;
+  readonly orgName?: string;
   readonly permissions: readonly Permission[];
   readonly client?: CallingClient;
 }
@@ -57,17 +59,26 @@ export function localDeveloperOf(account: LocalAccount = userInfo): Principal {
   return { own: developerIn(localOrg), callerIn: developerIn };
 }
 
-function principalOfCaller(caller: CallerIdentity): Principal {
-  return { own: caller, callerIn: (asked) => (asked === caller.org ? caller : undefined) };
+function principalOfCaller(caller: CallerIdentity, orgName?: string): Principal {
+  const callerIn = (asked: string) => (asked === caller.org ? caller : undefined);
+  return { own: caller, callerIn, ...(orgName === undefined ? {} : { orgName }) };
 }
 
 export function principalOf({ id, org, permissions, playbooks }: ApiKey): Principal {
   return principalOfCaller({ id, name: id, org, permissions, playbooks });
 }
 
-export function signedInPersonOf({ subject, name, org, permissions, client }: VerifiedPerson): Principal {
+export function signedInPersonOf({ subject, name, org, orgName, permissions, client }: VerifiedPerson): Principal {
   const id = `${signedInPersonPrefix}${subject}`;
-  return principalOfCaller({ id, name, org, permissions, playbooks: '*', ...(client === undefined ? {} : { client }) });
+  const caller: CallerIdentity = {
+    id,
+    name,
+    org,
+    permissions,
+    playbooks: '*',
+    ...(client === undefined ? {} : { client }),
+  };
+  return principalOfCaller(caller, orgName);
 }
 
 export function isSignedInPerson({ id }: Pick<CallerIdentity, 'id'>): boolean {

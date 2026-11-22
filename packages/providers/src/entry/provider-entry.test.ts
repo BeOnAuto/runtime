@@ -123,7 +123,7 @@ describe('the ways of an entry', () => {
       ['/credentials/1/issuer', 'Expected no issuer: a none way takes no other field but its description'],
     ]);
     expect(problemsOf({ ...ledgers, credentials: [{ kind: 'client_credentials', in: 'header' }] })).toEqual([
-      ['/credentials/0/in', 'Expected no in: a client_credentials way takes issuer, scope, and says'],
+      ['/credentials/0/in', expect.stringMatching(/^Expected no in: a client_credentials way takes /u)],
       ['/credentials/0/issuer', 'Expected issuer, which a client_credentials way takes'],
     ]);
   });
@@ -132,7 +132,7 @@ describe('the ways of an entry', () => {
     const [consent] = drive.credentials;
     const readingAlone = { ...consent, scope: 'files.read', says: { 'files.read': 'Read the files of the account.' } };
     const kindTwice =
-      'Expected a kind no earlier way has, since a provider takes one way of each kind, and an authorization way names in more what a later consent may add';
+      'Expected a kind and permissions no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, and an authorization way names in more what a later consent may add';
 
     expect(problemsOf({ ...tracker, credentials: [] })).toMatchObject([['/credentials', expect.any(String)]]);
     expect(problemsOf({ ...tracker, credentials: [{ kind: 'none' }, { kind: 'none', description: 'Again' }] })).toEqual(

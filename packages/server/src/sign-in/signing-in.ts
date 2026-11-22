@@ -4,11 +4,11 @@ import { defaultStudioOrigin, studioClientOf } from '@on.auto/identity';
 import { browserAt, type Asking, type Browser, type FakeProviderOptions } from '@on.auto/openid-connect/testing';
 import { onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { fieldOfEachFactIn, rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition, type TestComposition } from '../testing/servers/test-compositions.ts';
 import { providerOverHttps } from './issuer-over-https.ts';
 
 export const subject = 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4';
@@ -52,17 +52,18 @@ function environmentOf(provider: FakeProvider, port: number, registersItself: bo
 
 export const claimOfTheDefault = 'tenant';
 
-function optionsOf(provider: FakeProvider, byDefault: boolean): typeof compositionRoot {
+function optionsOf(provider: FakeProvider, byDefault: boolean): TestComposition {
+  const composition = testComposition();
   return byDefault
     ? {
-        ...compositionRoot,
+        ...composition,
         defaultIdentityProvider: {
           issuer: provider.issuer,
           scopes: ['openid', 'profile', 'email'],
           requiredClaim: { claim: claimOfTheDefault },
         },
       }
-    : compositionRoot;
+    : composition;
 }
 
 function byDefaultIn(environment: Environment, byDefault: boolean): Environment {
@@ -119,7 +120,7 @@ export async function startOf(options: FakeProviderOptions, registersItself: boo
     ledger.remove();
   });
   const environment = { ...environmentOf(provider, port, registersItself), LEDGER_FILE: ledger.fileName };
-  return startServer(environment, compositionRoot).catch((failure: unknown) => failure);
+  return startServer(environment, testComposition()).catch((failure: unknown) => failure);
 }
 
 export function locationOf(answer: Readonly<Response>): string {

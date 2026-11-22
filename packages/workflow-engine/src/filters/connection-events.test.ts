@@ -101,18 +101,71 @@ describe('an event of any other source, matched by the same filters', () => {
   });
 });
 
-function refusedAt(automatic: Json): readonly string[] {
-  const reading = literalFilterOf({ with: { type, automatic } }, '/schedule/on/one');
+const itsOwn: JsonObject = { ...reported, id: 'item-9', own: true };
+
+const itsOwnApp: JsonObject = { ...reported, id: 'item-10', automatic: true, own: true };
+
+const ofTheTracker = { type, source: `${connectionSourcePrefix}tracker` };
+
+const asking: readonly JsonObject[] = [
+  ofTheTracker,
+  { ...ofTheTracker, automatic: true },
+  { ...ofTheTracker, own: true },
+  { ...ofTheTracker, automatic: true, own: true },
+  { type, own: true },
+];
+
+const placedAsking = asking.map((attributes, index) => ({ reference: `/schedule/on/any/${index}`, attributes }));
+
+describe('an event the connection’s own account caused, matched by the filters of triggers, listeners and pages', () => {
+  it('is taken only by a filter that names its source and writes own: true, and one an app made only where it also writes automatic: true', async () => {
+    const testing = filterTestingOf(placedAsking, sandbox);
+    const tested = [await testing.verdictsOf(itsOwn, now), await testing.verdictsOf(itsOwnApp, now)];
+    await testing.close();
+    const expected = [
+      [false, false, true, false, false],
+      [false, false, false, true, false],
+    ];
+
+    expect([
+      await filterVerdictsOf(placedAsking, itsOwn, sandbox, now),
+      await filterVerdictsOf(placedAsking, itsOwnApp, sandbox, now),
+    ]).toEqual(expected);
+    expect(tested).toEqual(expected);
+    expect(
+      [itsOwn, itsOwnApp].map((event) =>
+        asking.map((attributes) => hasAttributes(event, attributes, Function.constTrue)),
+      ),
+    ).toEqual(expected);
+  });
+
+  it('is judged by that rule only under a connection’s source, an event of any other source by its attributes as before', () => {
+    expect(
+      [itsOwn, { ...itsOwn, source: '/ledger/eu' }].map((event) =>
+        asking.map((attributes) => filterMayTake(attributes, event)),
+      ),
+    ).toEqual([
+      [false, false, true, true, false],
+      [true, true, true, true, true],
+    ]);
+  });
+});
+
+function refusedAt(attributes: JsonObject): readonly string[] {
+  const reading = literalFilterOf({ with: { type, ...attributes } }, '/schedule/on/one');
   return 'rejections' in reading ? reading.rejections.map(({ pointer }) => pointer) : [];
 }
 
-describe('a trigger’s filter that asks for what an app did', () => {
-  it('writes automatic as the boolean the runtime types it as, and is refused for it written any other way', () => {
-    expect([true, false, 'true', 1].map((automatic) => refusedAt(automatic))).toEqual([
-      [],
-      [],
-      ['/schedule/on/one/with/automatic'],
-      ['/schedule/on/one/with/automatic'],
-    ]);
-  });
+describe('a trigger’s filter that asks for what an app or the connection’s own account did', () => {
+  it.each(['automatic', 'own'])(
+    'writes %s as the boolean the runtime types it as, and is refused for it written any other way',
+    (mark) => {
+      expect([true, false, 'true', 1].map((value: Json) => refusedAt({ [mark]: value }))).toEqual([
+        [],
+        [],
+        [`/schedule/on/one/with/${mark}`],
+        [`/schedule/on/one/with/${mark}`],
+      ]);
+    },
+  );
 });

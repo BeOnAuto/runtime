@@ -37,7 +37,7 @@ const mayAddNotes = defineQuery('playbook', {
   route: { method: 'GET', path: '/notes/addable' },
   inputSchema: Schema.Record(Schema.String, Schema.Never),
   outputSchema: Schema.Struct({ may: Schema.Boolean }),
-  reasons: [],
+  reasons: ['unavailable'],
   handle: Effect.fnUntraced(function* () {
     const { org, playbook } = yield* PlaybookContext;
     return { may: yield* mayCall({ operation: addNote.registration, caller: yield* Caller, org, playbook }) };

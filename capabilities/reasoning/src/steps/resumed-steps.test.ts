@@ -1,7 +1,8 @@
 import { textOfContent } from '@on.auto/content';
 import { memoryRecordedContent } from '@on.auto/content/testing';
 import type { RecordedCall } from '@on.auto/definitions';
-import { Effect, Exit, Option, Schema } from 'effect';
+import { Deferred, Effect, Exit, Fiber, Option, Schema } from 'effect';
+import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { RateLimited } from '../failure/rate-limited.ts';
@@ -40,6 +41,26 @@ async function firstAttempt(options: StepsOptions): Promise<Attempts> {
   const startedAt = new Date().toISOString();
   const first = stepsOf({ ...options, before: { startedAt, modelCallsBefore: 0, calls: [] } });
   await Effect.runPromise(Effect.exit(first.stepping));
+  return { first, calls: first.journal.calls(), startedAt };
+}
+
+async function givenUpAtItsBound(runBoundMs: number): Promise<Attempts> {
+  const startedAt = new Date().toISOString();
+  const called = Deferred.makeUnsafe<true>();
+  const first = stepsOf({
+    tools: [search],
+    replies: [() => Effect.andThen(Deferred.succeed(called, true), Effect.never)],
+    bounds: { ...defaultBounds, runBoundMs },
+    before: { startedAt, modelCallsBefore: 0, calls: [] },
+  });
+  const boundPassed = Effect.gen(function* () {
+    yield* TestClock.setTime(Date.parse(startedAt));
+    const stepping = yield* Effect.forkChild(Effect.exit(first.stepping));
+    yield* Deferred.await(called);
+    yield* TestClock.adjust(`${runBoundMs} millis`);
+    yield* Fiber.join(stepping);
+  });
+  await Effect.runPromise(Effect.provide(boundPassed, TestClock.layer()));
   return { first, calls: first.journal.calls(), startedAt };
 }
 
@@ -215,15 +236,12 @@ describe('a run that goes on from facts that ended it', () => {
   });
 
   it('ends at its bound when its model call was given up there', async () => {
-    const attempts = await firstAttempt({
-      tools: [search],
-      replies: [() => Effect.never],
-      bounds: { ...defaultBounds, runBoundMs: 10 },
-    });
+    const attempts = await givenUpAtItsBound(10);
     const again = resumed(attempts, attempts.calls, {
       bounds: { ...defaultBounds, runBoundMs: 600_000 },
     });
 
+    expect(typesOf(attempts.calls).at(-1)).toBe('model_call_failed');
     expect(await Effect.runPromise(again.stepping)).toMatchObject({
       ending: {
         type: 'stopped',
@@ -231,6 +249,7 @@ describe('a run that goes on from facts that ended it', () => {
         detail: anyWords,
       },
     });
+    expect(again.requests()).toEqual([]);
   });
 });
 

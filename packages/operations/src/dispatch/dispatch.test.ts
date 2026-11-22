@@ -134,18 +134,21 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 describe('a settled call', () => {
   it('is the outcome of a call that finishes', async () => {
-    const { dispatcher, run, settleWithin } = harness();
+    const { dispatcher, run } = harness();
     const quick = dispatcher.dispatchToPlaybook(linger.registration, toAlpha(acmeAdmin, { milliseconds: 0 }));
 
-    expect(await settleWithin(10_000, quick)).toEqual({ status: 'succeeded', output: { lingered: 0 } });
+    expect(await run(settle(quick, new AbortController().signal))).toEqual({
+      status: 'succeeded',
+      output: { lingered: 0 },
+    });
     expect(await run(settle(quick))).toEqual({ status: 'succeeded', output: { lingered: 0 } });
   });
 
   it('is cancelled when the signal aborts the call, and nothing is reported', async () => {
-    const { dispatcher, reported, settleWithin } = harness();
+    const { dispatcher, reported, settleAbortedWhileItRuns } = harness();
     const slow = dispatcher.dispatchToPlaybook(linger.registration, toAlpha(acmeAdmin, { milliseconds: 60_000 }));
 
-    expect({ settled: await settleWithin(20, slow), reported: reported() }).toEqual({
+    expect({ settled: await settleAbortedWhileItRuns(slow), reported: reported() }).toEqual({
       settled: { status: 'cancelled' },
       reported: [],
     });
@@ -179,10 +182,10 @@ describe('a settled call', () => {
 
 describe('a call whose signal aborts it', () => {
   it('is cancelled, and a defect the call raises after that is still reported as an incident', async () => {
-    const { dispatcher, reported, settleWithin } = harness();
+    const { dispatcher, reported, settleAbortedWhileItRuns } = harness();
     const breaking = dispatcher.dispatchToPlaybook(breakOnceLeft.registration, toAlpha(acmeAdmin));
 
-    expect(await settleWithin(20, breaking)).toEqual({ status: 'cancelled' });
+    expect(await settleAbortedWhileItRuns(breaking)).toEqual({ status: 'cancelled' });
     expect(reported()).toEqual([
       {
         id: reported()[0]?.id,

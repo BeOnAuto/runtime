@@ -1,9 +1,10 @@
 import { Effect, Semaphore } from 'effect';
 
-import { background } from '../calls/background.ts';
+import { background, takingTurns } from '../calls/background.ts';
 import type { Trouble } from '../calls/host-executor.ts';
 import { earliestOf, failedNextDueRead, laterThan, nextDueRead, type NextDueRead } from '../loop/failed-rounds.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
+import { sleepOr, type HostClock } from '../loop/host-clock.ts';
 import { rowWaits, type RowWaits } from './row-waits.ts';
 
 export interface DueItem {
@@ -31,7 +32,7 @@ interface WorkPerformer extends Omit<DuePerformer, 'wakeAt'> {
 export interface DueParts {
   readonly trouble: Trouble;
   readonly now: () => number;
-  readonly sleep: (milliseconds: number) => Effect.Effect<void>;
+  readonly clock: HostClock;
   readonly wake: () => void;
   readonly context?: HostContext;
 }
@@ -65,8 +66,8 @@ function itemPerformer(work: DueWork, waits: RowWaits, { trouble, now }: DuePart
     });
 }
 
-function awaitedAtMost(handedOut: Effect.Effect<void>, { sleep }: DueParts): Effect.Effect<void> {
-  return Effect.interruptible(Effect.raceFirst(handedOut, sleep(dueAwaitedMs)));
+function awaitedAtMost(handedOut: Effect.Effect<void>, { clock }: DueParts): Effect.Effect<void> {
+  return Effect.interruptible(sleepOr(clock, dueAwaitedMs, handedOut));
 }
 
 function waitedUntil(waits: RowWaits, now: number): number | null {
@@ -89,11 +90,12 @@ interface LaneParts {
   readonly finished: Effect.Effect<void>;
   readonly mostInFlight: number;
   readonly context: HostContext;
+  readonly queued: HostClock['queued'];
 }
 
-function laneOf({ performed, finished, mostInFlight, context }: LaneParts): Lane {
+function laneOf({ performed, finished, mostInFlight, context, queued }: LaneParts): Lane {
   const running = background(context);
-  const atOnce = Semaphore.makeUnsafe(duePerformedAtOnce);
+  const inTurn = takingTurns(Semaphore.makeUnsafe(duePerformedAtOnce), queued);
   const backlog = { more: false };
   return {
     has: running.has,
@@ -103,7 +105,7 @@ function laneOf({ performed, finished, mostInFlight, context }: LaneParts): Lane
       const given = ready.slice(0, Math.max(0, mostInFlight - running.size()));
       backlog.more = ready.length > given.length;
       for (const item of given) {
-        running.run(item.key, atOnce.withPermit(performed(item)).pipe(Effect.ensuring(finished)));
+        running.run(item.key, inTurn(performed(item)).pipe(Effect.ensuring(finished)));
       }
       return given.map(({ key }) => key);
     },
@@ -158,13 +160,10 @@ function workPerformer(work: DueWork, parts: DueParts): WorkPerformer {
   const finished = Effect.sync(() => {
     parts.wake();
   });
-  const outbound = laneOf({
-    performed: performedItem,
-    finished,
-    mostInFlight: duePerformedAtOnce,
-    context: parts.context,
-  });
-  const local = laneOf({ performed: performedItem, finished, mostInFlight: dueInOneWakeUp, context: parts.context });
+  const laneOfAtMost = (mostInFlight: number) =>
+    laneOf({ performed: performedItem, finished, mostInFlight, context: parts.context, queued: parts.clock.queued });
+  const outbound = laneOfAtMost(duePerformedAtOnce);
+  const local = laneOfAtMost(dueInOneWakeUp);
   const lanes = [outbound, local];
   const handedOut = (items: readonly DueItem[], now: number): readonly string[] => {
     const ready = [...new Map(items.map((item) => [item.key, item])).values()].filter(

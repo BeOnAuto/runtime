@@ -69,6 +69,16 @@ describe('the facts of a goal', () => {
           data: { from: goal.id, to: 'leads-per-week', renamed_by: { id: ofThePerson.by, name: 'Ada' } },
           context: ofTheGoalByThePerson,
         },
+        {
+          type: 'goal_moved',
+          data: {
+            from: 'growth',
+            to: 'sales',
+            moved_by: { id: 'person:user_2ada', name: 'Ada Lovelace' },
+            position: 2,
+          },
+          context: ofTheGoalByThePerson,
+        },
       ],
     },
   });

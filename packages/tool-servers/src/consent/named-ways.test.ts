@@ -67,6 +67,7 @@ describe('the way of consent a server given by hand names', () => {
       issuer: fake.origin,
       clients: ['dynamic'],
       scope: 'files.read files.write',
+      takesClientCredentials: true,
     });
     expect(fake.heard().map(({ path }) => path)).not.toContain('/register');
   });
@@ -125,9 +126,9 @@ describe('the protected resource metadata of a server given by hand', () => {
       await named(askedAt(issuing), { fetch: offHttps.fetch }),
       await named(askedAt(issuing), { fetch: bare.fetch }),
     ]).toEqual([
-      { issuer: describing.origin, clients: ['dynamic'], scope: 'files.read' },
-      { issuer: issuing.origin, clients: ['dynamic'], scope: 'files.read' },
-      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined },
+      { issuer: describing.origin, clients: ['dynamic'], scope: 'files.read', takesClientCredentials: true },
+      { issuer: issuing.origin, clients: ['dynamic'], scope: 'files.read', takesClientCredentials: true },
+      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined, takesClientCredentials: true },
     ]);
     expect(offTheLoopbackOf(offHttps)).toEqual([]);
   });
@@ -147,9 +148,9 @@ describe('the protected resource metadata of a server given by hand', () => {
       await named(askedAt(issuing), { fetch: pointedAtNothing.fetch }),
       await named(askedAt(issuing), { fetch: pointedAtAnError.fetch }),
     ]).toEqual([
-      { issuer: hidden.origin, clients: ['dynamic'], scope: undefined },
-      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined },
-      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined },
+      { issuer: hidden.origin, clients: ['dynamic'], scope: undefined, takesClientCredentials: true },
+      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined, takesClientCredentials: true },
+      { issuer: issuing.origin, clients: ['dynamic'], scope: undefined, takesClientCredentials: true },
     ]);
   });
 });
@@ -174,11 +175,12 @@ describe('a server given by hand whose ping is answered otherwise than with a 2x
     const fake = await served({ dynamicRegistration: true });
     const unallowed = pingAnsweredWith(fake.url, 405);
     const forbidden = pingAnsweredWith(fake.url, 403);
+    const way = { issuer: fake.origin, clients: ['dynamic'], scope: undefined, takesClientCredentials: true };
 
     expect([
       await named(askedAt(fake), { fetch: unallowed.fetch }),
       await named(askedAt(fake), { fetch: forbidden.fetch }),
-    ]).toEqual(Array.from({ length: 2 }, () => ({ issuer: fake.origin, clients: ['dynamic'], scope: undefined })));
+    ]).toEqual([way, way]);
   });
 });
 

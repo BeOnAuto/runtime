@@ -4,13 +4,14 @@ import { onTestFinished, vi } from 'vitest';
 import { mostFilterMs } from '../dsl/evaluation.ts';
 import type { FilterSandbox } from '../filters/filter-verdicts.ts';
 import { readyFlag } from '../jobs/evaluation-messages.ts';
-import { answerGraceMs, poolEvaluationsOf, type FlagWait } from '../program-pool/evaluation-thread.ts';
+import { answerGraceMs, atomicWait, poolEvaluationsOf, type FlagWait } from '../program-pool/evaluation-thread.ts';
 import type { MachineSandbox } from '../programs/reserved-instances.ts';
 import { moduleOfSource } from './source-modules.ts';
 import { testPoolSettings } from './test-pools.ts';
 import { nextThreadStarted } from './threads-alive.ts';
 
 export { answerGraceMs } from '../program-pool/evaluation-thread.ts';
+export { readyFlag } from '../jobs/evaluation-messages.ts';
 
 type Flag = 'answer' | 'ready';
 
@@ -19,8 +20,16 @@ export interface Waits {
   readonly waited: readonly (readonly [Flag, number])[];
 }
 
-/** Waits on the flags of an evaluation worker as Atomics.wait does, but for the first wait on the flag named, which runs out at once. */
-export function runningOutOnce(flag: Flag): Waits {
+/** How long a scripted wait gives a worker to notify a flag, a bound of the test that a passing run never reaches. */
+const notifiedWithinMs = 10_000;
+
+/**
+ * Runs out at once on the first wait on the flag named, and otherwise waits on the worker's notify of the flag. The
+ * waiting thread is the test's own, which no test timeout can reach while it is blocked, so a worker that never
+ * notifies fails the case at the test's own bound, saying which notify it awaited, rather than answering by the
+ * evaluation's deadline.
+ */
+export function runningOutOnce(flag: Flag, boundMs = notifiedWithinMs): Waits {
   const waited: (readonly [Flag, number])[] = [];
   const state = { outOfTime: false };
   return {
@@ -32,7 +41,11 @@ export function runningOutOnce(flag: Flag): Waits {
         state.outOfTime = true;
         return 'timed-out';
       }
-      return Atomics.wait(flags, index, value, timeoutMs);
+      const notified = atomicWait(flags, index, value, boundMs);
+      if (notified === 'timed-out') {
+        throw new Error(`The evaluation worker never notified its ${named} flag within the test's ${boundMs} ms`);
+      }
+      return notified;
     },
   };
 }
@@ -102,6 +115,37 @@ export const announcingEvaluations = moduleOfSource(
   ].join('\n'),
 );
 
+/** A filter the worker of `silentOnAFilter` never answers a test of, as a worker stuck in native work never does. */
+export const silentFilter = {
+  reference: '/silent',
+  attributes: { type: 'com.acme.closed', data: '${ $data.region == "silent" }' },
+};
+
+/**
+ * An evaluation worker that announces each request as `announcingEvaluations` does, and leaves unanswered every test
+ * of a filter whose source names `silent`: the pool sees no answer, as from a worker stuck in work no checkpoint
+ * interrupts, while the thread does nothing, so its deadline alone ends it.
+ */
+export const silentOnAFilter = moduleOfSource(
+  [
+    "import { BroadcastChannel, MessageChannel, workerData } from 'node:worker_threads';",
+    `import { serveEvaluations } from '${evaluationLoop}';`,
+    `const asked = new BroadcastChannel(${JSON.stringify(asked)});`,
+    'asked.unref();',
+    'const { port1, port2 } = new MessageChannel();',
+    'const silent = new Set();',
+    "port1.on('message', (answer) => { workerData.port.postMessage(answer); });",
+    "workerData.port.on('message', (request) => {",
+    '  const sources = request.sources ?? [];',
+    "  for (const [at, source] of sources.entries()) { if (request.kind === 'prepare' && source.includes('silent')) { silent.add(`${request.unit} ${at}`); } }",
+    '  asked.postMessage({ kind: request.kind, unit: request.unit ?? 0, test: request.test ?? 0, sources });',
+    "  if (request.kind === 'test' && silent.has(`${request.unit} ${request.test}`)) { return; }",
+    '  port1.postMessage(request);',
+    '});',
+    'serveEvaluations({ ...workerData, port: port2 });',
+  ].join('\n'),
+);
+
 const roundsOfLoadingWork = 3_000_000;
 
 export const loadingAfterItsWork = moduleOfSource(
@@ -139,22 +183,23 @@ export async function replacementOf<Answer>(
   deadlineMs: number,
   work: () => Promise<Answer>,
 ): Promise<Replacement<Answer>> {
-  const started = performance.now();
-  const replacedAfterMs: number[] = [];
+  const replaced = { times: 0 };
   const replacing = nextThreadStarted().then((thread) => {
-    replacedAfterMs.push(performance.now() - started);
+    replaced.times += 1;
     return thread;
   });
   const asking = testAskedOn(fragment);
   const working = work();
   await asking;
-  await vi.advanceTimersByTimeAsync(deadlineMs + answerGraceMs + 1);
-  const byTheDeadline = [...replacedAfterMs];
+  await vi.advanceTimersByTimeAsync(deadlineMs);
+  const beforeTheDeadline = replaced.times;
+  await vi.advanceTimersByTimeAsync(answerGraceMs + 1);
+  const byTheDeadline = replaced.times;
   const answer = await working;
   await replacing;
   return {
     answer,
-    replacedByTheDeadline: byTheDeadline.length > 0,
-    replacedBeforeTheDeadline: byTheDeadline.some((afterMs) => afterMs <= deadlineMs),
+    replacedByTheDeadline: byTheDeadline > 0,
+    replacedBeforeTheDeadline: beforeTheDeadline > 0,
   };
 }

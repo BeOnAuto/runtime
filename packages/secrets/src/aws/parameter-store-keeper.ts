@@ -31,6 +31,7 @@ export interface ParameterStoreKeeperOptions {
   readonly endpoint?: string | undefined;
   readonly waits?: AwsWaits | undefined;
   readonly requestHandlerOf?: (() => NonNullable<SSMClientConfig['requestHandler']>) | undefined;
+  readonly retryStrategyOf?: (() => NonNullable<SSMClientConfig['retryStrategy']>) | undefined;
 }
 
 const mostStandardBytes = 4096;
@@ -77,21 +78,23 @@ async function unlessGone<A>(asked: Promise<A>): Promise<A | undefined> {
   }
 }
 
-function ssmClientOf({
+export function ssmClientConfigOf({
   region,
   proxy,
   credentials,
   endpoint,
   waits = awsWaits,
   requestHandlerOf,
-}: ParameterStoreKeeperOptions): SSMClient {
-  return new SSMClient({
+  retryStrategyOf,
+}: ParameterStoreKeeperOptions): SSMClientConfig {
+  return {
     requestHandler: requestHandlerOf === undefined ? requestHandlerWithin(proxy, waits) : requestHandlerOf(),
     retryMode: loadConfig(pacedUnlessToldOtherwise),
     credentials,
     region,
     ...(endpoint === undefined ? {} : { endpoint }),
-  });
+    ...(retryStrategyOf === undefined ? {} : { retryStrategy: retryStrategyOf() }),
+  };
 }
 
 function unavailableTo(act: string, parameter: string): (failure: unknown) => KeeperUnavailable {
@@ -120,7 +123,7 @@ interface ParameterRequests {
 }
 
 function requestsOf(options: ParameterStoreKeeperOptions): ParameterRequests {
-  const client = ssmClientOf(options);
+  const client = new SSMClient(ssmClientConfigOf(options));
   return {
     written: async (name, value, abortSignal) => {
       const asked = { Name: name, Value: Redacted.value(value), Type: ParameterType.SECURE_STRING, Overwrite: true };

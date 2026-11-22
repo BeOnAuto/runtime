@@ -1,5 +1,3 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { Layer } from 'effect';
 
 import { release } from '../composition/release.ts';
@@ -8,14 +6,16 @@ import { outboundTelemetry } from './outbound-telemetry.ts';
 import { recordedEventsOf } from './recorded-events.ts';
 import { requestTracing } from './request-tracing.ts';
 import type { TelemetrySettings } from './telemetry-settings.ts';
+import { shippedBound, shutdownOf, type ShutdownBound } from './telemetry-shutdown.ts';
 import { signalsOf } from './telemetry-signals.ts';
 import { noTelemetry, type Telemetry } from './telemetry.ts';
 
 export { noTelemetry, type Telemetry } from './telemetry.ts';
 
-export const longestShutdownMs = 1000;
-
-export function startTelemetry(settings: TelemetrySettings | undefined): Telemetry {
+export function startTelemetry(
+  settings: TelemetrySettings | undefined,
+  bound: ShutdownBound = shippedBound,
+): Telemetry {
   if (settings === undefined) {
     return noTelemetry;
   }
@@ -26,15 +26,6 @@ export function startTelemetry(settings: TelemetrySettings | undefined): Telemet
     requests: requestTracing(),
     appended: recordedEventsOf(settings.content),
     ...outboundTelemetry(settings.content),
-    shutdown: async () => {
-      stopInstrumentations();
-      await Promise.race([
-        Promise.allSettled(signals.map(({ flushed }) => flushed())),
-        setTimeout(longestShutdownMs, undefined, { ref: false }),
-      ]);
-      for (const { released } of signals) {
-        released();
-      }
-    },
+    shutdown: shutdownOf(signals, stopInstrumentations, bound),
   };
 }

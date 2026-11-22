@@ -65,6 +65,7 @@ const onSQLite: LedgerEntry = {
   storeOn: (fileName) => openedOn(fileName).store,
   openedOn,
   queried,
+  everyRecordASecondEarlier: "UPDATE emt_messages SET created = datetime(created, '-1 second')",
   executedOn,
   layout: sqliteLayout,
   carriedOn,

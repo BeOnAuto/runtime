@@ -182,6 +182,7 @@ async function workflowsCalled(session: McpSession): Promise<Called> {
     ['run_definition', started],
     ['get_run', await session.callTool('get_run', inSales({ run_id: runId }))],
     ['send_run_event', await session.callTool('send_run_event', inSales({ run_id: runId, event }))],
+    ['list_queued_starts', await session.callTool('list_queued_starts', inSales({ workflow: 'approval' }))],
     ...(await cancelCalled(session, inSales, workflow)),
     ...(await standingsCalled(session, inSales, workflow)),
   ];

@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +6,7 @@ import { AuthLayoutRefused } from '@on.auto/openid-connect';
 import { Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { ranToItsEnd } from '../testing/processes/awaited-children.ts';
 import { ledgerOfAnotherVersion } from './ledger-of-another-version.ts';
 import { signInStoreRefusalExplained } from './sign-in-store-of-a-newer-version.ts';
 
@@ -134,7 +134,7 @@ describe('the command that deletes a ledger file of an earlier version', () => {
     );
   });
 
-  it('deletes in sh exactly the ledger file and the two beside it, on a path with a space, a quote and a $', () => {
+  it('deletes in sh exactly the ledger file and the two beside it, on a path with a space, a quote and a $', async () => {
     const top = mkdtempSync(join(tmpdir(), 'auto-runtime-ledger-'));
     onTestFinished(() => {
       rmSync(top, { recursive: true, force: true });
@@ -145,7 +145,7 @@ describe('the command that deletes a ledger file of an earlier version', () => {
       writeFileSync(join(folder, name), name);
     }
 
-    execFileSync('/bin/sh', ['-c', String(refusedFileAt(join(folder, 'ledger.db')).remedy.command)]);
+    await ranToItsEnd('/bin/sh', ['-c', String(refusedFileAt(join(folder, 'ledger.db')).remedy.command)]);
 
     expect(readdirSync(folder).toSorted()).toEqual(['ledger.db-journal', 'secrets.key']);
   });

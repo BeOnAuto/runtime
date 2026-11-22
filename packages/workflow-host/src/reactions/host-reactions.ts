@@ -7,7 +7,6 @@ import { followerWakeUpOf, type FollowerWork } from '../follower/follower-wake-u
 import { orgRecordsOf } from '../follower/org-records.ts';
 import type { HostParts } from '../host/host-parts.ts';
 import type { HostReports } from '../host/host-reports.ts';
-import { systemClock } from '../loop/host-clock.ts';
 import type { HostWakeUp, WakeSignal } from '../loop/host-wake-up.ts';
 
 export type FollowerConsumers = FollowerAssembly['consumers'];
@@ -56,5 +55,5 @@ export function followerWakeUp(following: FollowingParts, signal: WakeSignal): H
 }
 
 export function startFollowing(following: FollowingParts): Follower {
-  return startFollower({ ...followerWorkOf(following), pace: systemClock });
+  return startFollower(followerWorkOf(following));
 }

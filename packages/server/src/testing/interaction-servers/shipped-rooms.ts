@@ -21,6 +21,7 @@ const reportingPosts = {
       data: { type: 'object', properties: { text: { type: 'string' } } },
     },
   ],
+  identity: { tool: 'who_am_i', identified: { id: '/me/id' } },
   destinations: [
     {
       ...signedOverTheBody,
@@ -31,6 +32,7 @@ const reportingPosts = {
           id: ['$request.body#/room', '$request.body#/id'],
           subject: '$request.body#/room',
           data: { text: '$request.body#/text' },
+          actor: '$request.body#/by',
           topic: '{{ subject }}',
         },
       ],
@@ -78,7 +80,8 @@ function savedListening(ledger: Ledger['Service'], org: string): Promise<void> {
 
 /**
  * A server whose playbook alpha keeps a workflow listening for the posts in the room of its requests, through a rooms
- * connection whose entry ships with the runtime and declares, as data, the event a delivery of a post is.
+ * connection whose entry ships with the runtime and declares, as data, the event a delivery of a post is, who posted it,
+ * and the tool that answers which account the connection acts as.
  */
 export async function servedListeningInTheRoom(
   roomsUrl: string,

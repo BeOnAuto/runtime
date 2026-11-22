@@ -1,10 +1,10 @@
-import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import type { RuntimeControl } from '@on.auto/api';
 import { describe, expect, it } from 'vitest';
 
+import { aGoneProcess } from '../testing/processes/awaited-children.ts';
 import { homeOfTheTest } from '../testing/processes/runtime-command.ts';
 import {
   localControlOf,
@@ -227,10 +227,6 @@ function markFileIn(home: string): string {
   return join(home, '.auto-runtime', 'restart-mark.json');
 }
 
-function goneProcess(): number {
-  return spawnSync(process.execPath, ['-e', '']).pid;
-}
-
 describe('the mark a runtime leaves while it restarts', () => {
   it('says a restart is under way on its port while the process that left it runs, within the restart wait', () => {
     const home = homeOfTheTest(homePrefix);
@@ -253,7 +249,7 @@ describe('the mark a runtime leaves while it restarts', () => {
 
   it('is stale once its process is gone, or once it is older than the restart wait', () => {
     const home = homeOfTheTest(homePrefix);
-    restartMarkIn(home).leave(goneProcess(), port);
+    restartMarkIn(home).leave(aGoneProcess(), port);
     const gone = restartMarkIn(home).isUnderWay(port);
     restartMarkIn(home, () => Date.now() - restartWaitMs - 1).leave(process.pid, port);
 

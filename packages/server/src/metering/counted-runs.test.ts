@@ -2,8 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { nestedRunId } from '@on.auto/definitions';
 import { answers, textResult } from '@on.auto/reasoning/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
-import { Effect, Schema } from 'effect';
+import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { accountsServed, installation, licensedServedBy } from '../testing/accounts/licensed-server.ts';
@@ -12,7 +11,8 @@ import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, noNetwork, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { tallied, talliedTimes, tallyCreated } from '../testing/servers/tally-server.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { fewSweeps, heldAnswerOn, steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize acme.'].join('\n');
 
@@ -100,13 +100,14 @@ describe('a workflow of a licensed runtime and the reasoning run it called, resu
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
     const licensed = { AUTO_RUNTIME_LICENSE_KEY: accounts.key };
-    const first = await licensedServedBy(accounts, licensed, { ledger }, [() => Effect.never]);
+    const clock = steppedServerClock();
+    const first = await licensedServedBy(accounts, licensed, { ledger, clock }, [() => heldAnswerOn(clock)]);
     await first.call('POST', `${alpha}/definitions/reasoning`, {
       body: { name: 'summary', source: summary, diagram: 'none' },
     });
     await first.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
     const started = await first.call('POST', `${alpha}/definitions/workflow/asking/run`, { body: { input: {} } });
-    await until(
+    await whenHeld(
       () => first.modelCalls(),
       (calls) => calls === 1,
     );
@@ -129,7 +130,7 @@ describe('a workflow of a licensed runtime and the reasoning run it called, resu
     ]);
     expect(accounts.account.reports().at(-1)).toEqual({ actions: 2, licensed: 2 });
     expect(accounts.account.chargedThrough(installation)).toBe(2);
-  }, 60_000);
+  });
 });
 
 describe('a runtime whose ledger lost or garbled the history of runs it ran', () => {
@@ -151,28 +152,26 @@ describe('a runtime whose ledger lost or garbled the history of runs it ran', ()
       state: 'unregistered',
       free_runs: { used: 3, of: 100 },
     });
-  }, 60_000);
+  });
 });
 
 describe('a trigger of a runtime nobody registered, after its 100 free runs and the 15 of the day', () => {
   it('starts no run, and its refusal is recorded as a refused reaction that names the license', async () => {
-    const clock = movedClock(Date.now());
+    const clock = steppedServerClock();
     const server = await servingWorkflows([], {}, undefined, clock);
     onTestFinished(() => server.stop());
     await tallyCreated(server);
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'close-the-month', source: closing } });
     await talliedTimes(server, 115);
-    const refusals = await until(
-      async () => {
-        await closed(server);
-        clock.moveTo(clock.now() + aMinuteAndASecond);
-        return server.call('GET', `${alpha}/events?type=reaction_refused`);
-      },
+    await closed(server);
+    const refusals = await clock.steppedEvery(aMinuteAndASecond).until(
+      () => server.call('GET', `${alpha}/events?type=reaction_refused`),
       (response) => JSON.stringify(response.body).includes('reaction_refused'),
+      fewSweeps,
     );
     const runs = await server.call('GET', `${alpha}/runs?type=workflow&name=close-the-month`);
 
     expect(JSON.stringify(refusals.body)).toContain('license');
     expect(runs.body).toMatchObject({ runs: [] });
-  }, 120_000);
+  });
 });

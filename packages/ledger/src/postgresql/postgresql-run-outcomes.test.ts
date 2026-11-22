@@ -1,7 +1,7 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { pgFormatter } from '@event-driven-io/dumbo/pg';
 import { runTallies, type RunFact } from '@on.auto/operations/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { contentTableNames } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
@@ -237,11 +237,19 @@ const lockTried = `SELECT pg_try_advisory_xact_lock(${emmettsMigrationLock}) AS 
 
 describe('the wait of a server that starts for the migration lock of the ledger on PostgreSQL', () => {
   it('takes the lock the migrator takes, in the migration, trying again every 100 ms until it is free', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const held = aLockHeldWhile((tries) => tries < 2);
 
-    await migrationLockTakenWithin()({ execute: held.execute });
+    const taking = migrationLockTakenWithin()({ execute: held.execute });
+    await vi.advanceTimersByTimeAsync(99);
+    const triedBefore = held.tries().length;
+    await vi.advanceTimersByTimeAsync(1);
+    await taking;
 
-    expect(held.tries()).toEqual([lockTried, lockTried]);
+    expect([triedBefore, held.tries()]).toEqual([1, [lockTried, lockTried]]);
   });
 
   it('waits past the 10 s the migrator itself waits, while another server fills the ledger, and goes on once it is done', async () => {

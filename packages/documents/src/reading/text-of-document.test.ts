@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { describe, expect, it } from 'vitest';
 
-import { pdfOfPages, wordDocumentOf } from '../testing/written-documents.ts';
+import { pdfOfPages, wordDocumentOf, wordDocumentRepeating } from '../testing/written-documents.ts';
 import { documentBounds, documentTooLarge } from './document-bounds.ts';
 import type { DocumentText } from './document-text.ts';
 import { textOfDocument } from './text-of-document.ts';
@@ -185,6 +185,14 @@ describe('the text of a Word document', () => {
     expect({ read, fetched }).toEqual({
       read: { read: true, text: 'Supplier terms\n\nPayment & delivery <within 30 days>', mediaType: wordType },
       fetched: 0,
+    });
+  });
+
+  it('is each paragraph a document repeats, as many times as it holds it', async () => {
+    expect(await bytesOf(wordType, wordDocumentRepeating('Net 30', 3))).toEqual({
+      read: true,
+      text: 'Net 30\n\nNet 30\n\nNet 30',
+      mediaType: wordType,
     });
   });
 

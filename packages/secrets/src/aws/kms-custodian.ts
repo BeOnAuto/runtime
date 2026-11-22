@@ -27,6 +27,7 @@ export interface KmsCustodianOptions {
   readonly endpoint?: string | undefined;
   readonly waits?: AwsWaits | undefined;
   readonly requestHandlerOf?: (() => NonNullable<KMSClientConfig['requestHandler']>) | undefined;
+  readonly retryStrategyOf?: (() => NonNullable<KMSClientConfig['retryStrategy']>) | undefined;
 }
 
 export const encryptionContext: Readonly<Record<string, string>> = { 'on.auto/runtime': 'secret data key' };
@@ -71,20 +72,22 @@ function aliasFailureOf(alias: string, failure: unknown): KeepingFailure {
       });
 }
 
-function kmsClientOf({
+export function kmsClientConfigOf({
   region,
   proxy,
   credentials,
   endpoint,
   waits = awsWaits,
   requestHandlerOf,
-}: KmsCustodianOptions): KMSClient {
-  return new KMSClient({
+  retryStrategyOf,
+}: KmsCustodianOptions): KMSClientConfig {
+  return {
     requestHandler: requestHandlerOf === undefined ? requestHandlerWithin(proxy, waits) : requestHandlerOf(),
     credentials,
     region,
     ...(endpoint === undefined ? {} : { endpoint }),
-  });
+    ...(retryStrategyOf === undefined ? {} : { retryStrategy: retryStrategyOf() }),
+  };
 }
 
 interface KmsRequests {
@@ -104,7 +107,7 @@ interface KmsRequests {
 const decodeDescribed = Schema.decodeUnknownSync(Schema.Struct({ KeyMetadata: Schema.Struct({ Arn: Schema.String }) }));
 
 function requestsOf(options: KmsCustodianOptions): KmsRequests {
-  const client = kmsClientOf(options);
+  const client = new KMSClient(kmsClientConfigOf(options));
   return {
     encrypted: async (keyArn, dataKey, abortSignal) => {
       const { CiphertextBlob } = await client.send(

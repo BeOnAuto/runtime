@@ -12,6 +12,7 @@ import { JsonPointer, Result } from 'effect';
 import { opensSockets, type ConnectionServices } from '../operations/connection-services.ts';
 import { offeredAppCredentialsOf, type OfferedAppCredential } from '../providers/provider-listing.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
+import { wayOfTheConnection } from '../registry/what-connections-act-as.ts';
 import { appCredentialOutOfItsFormat, refused } from './given-fields.ts';
 
 export interface GivenAppCredential {
@@ -33,7 +34,7 @@ export function wayOf(
   { providers }: Pick<ConnectionServices, 'providers'>,
 ): WayOfTheConnection | undefined {
   const found = providerFoundBy(providers, provider);
-  const way = found?.entry.credentials.find(({ kind }) => kind === credential.kind);
+  const way = wayOfTheConnection({ provider, credential }, providers);
   return found === undefined || way === undefined ? undefined : { provider: found, way };
 }
 

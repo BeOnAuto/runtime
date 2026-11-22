@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { manualSleepers, realSleep } from './fake-sleepers.ts';
+import { manualSleepers } from './fake-sleepers.ts';
 
-describe('the sleepers of a fake served in process', () => {
+describe('the sleepers of a fake MCP server', () => {
   it('sleep until they are woken, and a sleeper whose call is cancelled wakes to the reason, never later', async () => {
     const sleepers = manualSleepers();
     const cancelling = new AbortController();
@@ -17,13 +17,11 @@ describe('the sleepers of a fake served in process', () => {
     await expect(woken).resolves.toBeUndefined();
     await expect(cancelled).rejects.toBe(reason);
   });
-});
 
-describe('the real sleep, which a fake served on a socket or over stdio keeps', () => {
-  it('ends after the milliseconds it is given, and at once with the reason its call is cancelled for', async () => {
+  it('do not sleep for a call already cancelled, ending at once with its reason', async () => {
+    const sleepers = manualSleepers();
     const reason = new Error('cancelled');
 
-    await expect(realSleep(0, new AbortController().signal)).resolves.toBeUndefined();
-    await expect(realSleep(5000, AbortSignal.abort(reason))).rejects.toMatchObject({ cause: reason });
+    await expect(sleepers.sleep(5000, AbortSignal.abort(reason))).rejects.toBe(reason);
   });
 });

@@ -68,6 +68,7 @@ export function hostEngineOn(
     mostAtOnce: options.mostCallsAtOnce,
     now: clock.now,
     sleep: clock.sleep,
+    queued: clock.queued,
     context: options.context,
     ...waiting,
   });

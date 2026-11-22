@@ -1,12 +1,12 @@
 import { nestedRunId } from '@on.auto/definitions';
 import { textResult } from '@on.auto/reasoning/testing';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Effect } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import { runIdIn } from '../servers/workflow-server.ts';
+import { steppedServerClock, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import { refusingMeter, type MeterRefusal, type RefusingMeter } from './refusing-meter.ts';
 import { defined, untilItsModelWasAsked, waitingAgain, type Wait } from './waiting-workflows.ts';
 
@@ -28,7 +28,7 @@ export const outOfCredits: MeterRefusal = {
 
 interface Serving {
   readonly meter: RefusingMeter;
-  readonly clock: MovedClock;
+  readonly clock: SteppedServerClock;
   readonly ledger: TemporaryLedger;
   readonly modelAnswers?: Promise<void>;
 }
@@ -55,14 +55,14 @@ export function aLedger(): TemporaryLedger {
   return ledger;
 }
 
-export function nineOClock(): MovedClock {
-  return movedClock(Date.parse('2026-10-28T09:00:00.000Z'));
+export function nineOClock(): SteppedServerClock {
+  return steppedServerClock(Date.parse('2026-10-28T09:00:00.000Z'));
 }
 
 export interface Refused {
   readonly server: ReasoningServer;
   readonly meter: RefusingMeter;
-  readonly clock: MovedClock;
+  readonly clock: SteppedServerClock;
   readonly ledger: TemporaryLedger;
   readonly top: string;
   readonly workflow: string;
@@ -100,6 +100,6 @@ export async function refusedAtItsSecondCall(
   };
 }
 
-export function movedOn(clock: MovedClock, milliseconds: number): void {
+export function movedOn(clock: SteppedServerClock, milliseconds: number): void {
   clock.moveTo(clock.now() + milliseconds);
 }

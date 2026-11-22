@@ -153,6 +153,7 @@ const onPostgreSQL: LedgerEntry = {
   storeOn: (database) => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection }),
   openedOn: (database) => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection }),
   queried: postgresqlQueried,
+  everyRecordASecondEarlier: "UPDATE emt_messages SET created = created - interval '1 second'",
   executedOn,
   layout: postgresqlLayout,
   carriedOn,

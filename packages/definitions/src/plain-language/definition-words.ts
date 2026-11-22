@@ -1,4 +1,13 @@
-import { alternatives, asSentence, capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
+import {
+  alternatives,
+  asSentence,
+  capitalized,
+  counted,
+  listed,
+  plainNumber,
+  quoted,
+  type Noun,
+} from '@on.auto/phrasing';
 import { Option, Schema } from 'effect';
 
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';
@@ -92,6 +101,27 @@ export function definitionStanding(
   { type, name, status }: Pick<ListedDefinition, 'type' | 'name' | 'status'>,
 ): string {
   return `${capitalized(words.named(type, name))} ${standingsInWords[status]}`;
+}
+
+function ofItsRunsQueued(queued: number): string {
+  return `${plainNumber(queued)} of its runs ${queued === 1 ? 'is' : 'are'} queued`;
+}
+
+function refusedWhenDue(queued: number): string {
+  return queued === 1 ? 'it' : 'each';
+}
+
+export function queuedRunsInWords(
+  words: DefinitionWords,
+  { type, status, standing }: Pick<Definition, 'type' | 'status' | 'standing'>,
+): string {
+  const queued = standing?.queued ?? 0;
+  if (queued === 0 || status === 'retired') {
+    return '';
+  }
+  return status === 'paused'
+    ? ` ${ofItsRunsQueued(queued)}; ${refusedWhenDue(queued)} is refused when it comes due unless the ${words.nounOf(type).one} is resumed first.`
+    : ` ${ofItsRunsQueued(queued)} to start.`;
 }
 
 function namesOf(definitions: readonly ListedDefinition[]): string {

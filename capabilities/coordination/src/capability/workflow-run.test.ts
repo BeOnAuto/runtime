@@ -40,6 +40,10 @@ afterAll(async () => {
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-3333333333a1';
 
+const retriedId = '0199a3c4-7d2e-7c1a-9b3f-3333333333a4';
+
+const settledId = '0199a3c4-7d2e-7c1a-9b3f-3333333333a5';
+
 function running(name = 'slow-greeting', id = runId) {
   return playbook.call(playbook.runDefinition, {
     type: 'workflow',
@@ -61,7 +65,9 @@ describe('running a workflow definition', () => {
   });
 
   it('answers the run as it stands when the call is retried while the run goes on', async () => {
-    expect(await running()).toMatchObject({ output: { status: 'started' } });
+    await running('slow-greeting', retriedId);
+
+    expect(await running('slow-greeting', retriedId)).toMatchObject({ output: { status: 'started' } });
   });
 
   it('is settled with the output when the run ends, which a retry then answers', async () => {
@@ -70,8 +76,10 @@ describe('running a workflow definition', () => {
       output: { status: 'succeeded', output: { greeting: 'Hello', input: { name: 'Grace' } } },
     };
 
-    expect(await playbook.settled(runId)).toMatchObject(settled);
-    expect(await running()).toMatchObject(settled);
+    await running('slow-greeting', settledId);
+
+    expect(await playbook.settled(settledId)).toMatchObject(settled);
+    expect(await running('slow-greeting', settledId)).toMatchObject(settled);
   });
 });
 

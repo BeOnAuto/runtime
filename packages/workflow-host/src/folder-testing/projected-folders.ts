@@ -7,7 +7,7 @@ import { openWorkflowStore } from '../host/workflow-store.ts';
 import { ledgerConnectedOn, type DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import type { SomeFolder } from '../projector/folder.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
-import { folding, projectorOf, type Projector, type ProjectingOptions, type WhenFolded } from './folding-projector.ts';
+import { projectorOf, type Projector, type ProjectingOptions } from './folding-projector.ts';
 
 export type { ProjectingOptions } from './folding-projector.ts';
 
@@ -18,7 +18,6 @@ export interface ProjectedFolders {
   readonly troubles: () => readonly string[];
   readonly append: (stream: string, events: readonly EncodedEvent[], context: Context) => Promise<void>;
   readonly start: (options?: ProjectingOptions) => void;
-  readonly whenFolded: WhenFolded;
   readonly stop: () => Promise<void>;
   readonly close: () => Promise<void>;
 }
@@ -32,7 +31,6 @@ export async function projectedFolders(
   const ledger = await ledgerConnectedOn(settings);
   const { database } = await openWorkflowStore(ledger.connection, folders);
   const versions = new Map<string, number>();
-  const folded = folding();
   const running: Projector[] = [];
   const stop = async (): Promise<void> => {
     await Promise.all(running.splice(0).map((projector) => projector.stop()));
@@ -49,9 +47,8 @@ export async function projectedFolders(
       appends.raise(stream);
     },
     start: (options) => {
-      running.push(projectorOf({ database, folders, appends, reports: reports.reports, folded }, options));
+      running.push(projectorOf({ database, folders, appends, reports: reports.reports }, options));
     },
-    whenFolded: folded.whenFolded,
     stop,
     close: async () => {
       await stop();

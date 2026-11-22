@@ -8,11 +8,11 @@ import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { homeOfTheTest, type RuntimeCommandRun, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { pingsRecordedInto, startPingOf } from '../testing/records/recorded-pings.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 import { firstStartNotice } from './usage-ping.ts';
 
 async function readyIn(run: RuntimeCommandRun): Promise<void> {
-  await until(run.stdout, (text) => text.includes('Press Ctrl+C to stop.'));
+  await whenHeld(run.stdout, (text) => text.includes('Press Ctrl+C to stop.'));
 }
 
 async function landingPageAt(port: number): Promise<string> {
@@ -59,7 +59,7 @@ describe('the server the image runs', () => {
       ...pings.settings,
     });
     const port = await child.port;
-    await until(pings.urls, (urls) => urls.length === 1);
+    await whenHeld(pings.urls, (urls) => urls.length === 1);
     child.signal('SIGTERM');
     await child.exited;
 

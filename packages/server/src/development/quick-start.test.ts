@@ -7,9 +7,9 @@ import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { tcpPort } from '../lifecycle/http-server.ts';
-import { developmentFiles, startDevelopment, untilListening } from '../testing/processes/development-process.ts';
+import { servedAsPnpmDevServesIt } from '../testing/processes/pnpm-dev-in-process.ts';
 import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const playbook = 'support';
 
@@ -110,9 +110,8 @@ async function stubGateway(): Promise<string> {
 }
 
 async function onPnpmDev<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
-  const development = startDevelopment(developmentFiles(), { environment: { MODEL_GATEWAYS: await stubGateway() } });
-  const port = await untilListening(development);
-  return withMcpSession('current revision', { url: `http://localhost:${port}/mcp`, headers: {} }, use);
+  const server = await servedAsPnpmDevServesIt({ MODEL_GATEWAYS: await stubGateway() });
+  return withMcpSession('current revision', { url: `http://localhost:${server.port}/mcp`, headers: {} }, use);
 }
 
 function structured(result: ToolResult): Readonly<Record<string, unknown>> {
@@ -120,7 +119,7 @@ function structured(result: ToolResult): Readonly<Record<string, unknown>> {
 }
 
 function settled(session: McpSession, runId: unknown): Promise<Readonly<Record<string, unknown>>> {
-  return until(
+  return whenHeld(
     async () => structured(await session.callTool('get_run', { playbook, run_id: runId })),
     (reading) => reading['status'] !== 'started',
   );

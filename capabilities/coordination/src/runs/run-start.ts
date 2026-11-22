@@ -1,6 +1,6 @@
-import type { FinishesLater, RunContext } from '@on.auto/definitions';
+import type { FinishesLater, RunContext, Standing } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
-import type { StartAnswer, WorkflowHost } from '@on.auto/workflow-host';
+import type { QueuedStartReads, StartAnswer, WorkflowHost } from '@on.auto/workflow-host';
 import { Effect, Random, type Schema } from 'effect';
 
 import type { WorkflowDefinitionDocument } from '../document/workflow-document.ts';
@@ -10,6 +10,7 @@ import type { RunAttributes } from './run-attributes.ts';
 
 export interface WorkflowStarts {
   readonly runs: Pick<WorkflowHost, 'start'>;
+  readonly queued: Pick<QueuedStartReads, 'queuedStartsOf'>;
   readonly mostDurationMs: number;
   readonly longestCallMs: number;
 }
@@ -20,6 +21,14 @@ const ranBefore =
 const notNow = 'The workflow cannot start now; try again shortly';
 
 const mostSeed = 2_147_483_647;
+
+export function queuedStandingOf({ queued }: Pick<WorkflowStarts, 'queued'>): Standing {
+  return ({ org, definition }) =>
+    Effect.map(queued.queuedStartsOf({ org, definition }), ({ queued: count, nextDueAt }) => ({
+      queued: count,
+      next_queued_start: nextDueAt === null ? null : new Date(nextDueAt).toISOString(),
+    }));
+}
 
 function finishedLaterOr(answer: StartAnswer): Effect.Effect<FinishesLater, Conflict> {
   return answer === 'settled'

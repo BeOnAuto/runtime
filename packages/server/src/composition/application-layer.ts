@@ -43,7 +43,7 @@ export function applicationLayer(
     dispatcherServicesOver(ledger),
     meterLayerOver(ledger, meter),
     liveAttemptsOver(ledger, holding),
-    payloadsSharedInTheProcess(),
+    payloadsSharedInTheProcess(holding?.clock?.now),
     settledLayersOf(settings),
   );
 }

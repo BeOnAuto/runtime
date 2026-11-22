@@ -1,20 +1,19 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 
 import { providerStatus } from '@on.auto/reasoning';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { stoppedWith } from '../testing/processes/development-endings.ts';
 import {
   developmentFiles,
-  readyNoticesOf,
   startDevelopment,
   untilListening,
   untilWritten,
-  type DevelopmentOptions,
+  type DevelopmentFiles,
 } from '../testing/processes/development-process.ts';
+import { aRunner, servedAsPnpmDevServesIt, type RunnerParts } from '../testing/processes/pnpm-dev-in-process.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { servedStudioHomeOf, welcomeLinking } from '../testing/studios/welcome.ts';
 
@@ -22,20 +21,7 @@ const example = new URL('../../../../.env.example', import.meta.url);
 
 const devEnv = new URL('../../dev.env', import.meta.url);
 
-const exampleConfigFile = fileURLToPath(new URL('../../../../auto-runtime.example.yaml', import.meta.url));
-
-const localModeNotice = '"message":"Local mode is on:';
-
-const closedNotice = '"message":"No request can authenticate:';
-
-async function accessNoticeWith(localEnvFile: string, options: DevelopmentOptions): Promise<string> {
-  const files = developmentFiles('HOST=127.0.0.1\nAPI_KEYS=[]\n');
-  writeFileSync(files.localEnvFile, localEnvFile);
-  const development = startDevelopment(files, options);
-  await untilListening(development);
-  await stoppedWith(development, 'SIGTERM');
-  return [localModeNotice, closedNotice].filter((notice) => development.stderr().includes(notice)).join();
-}
+const exampleConfigFile = join(import.meta.dirname, '../../../../auto-runtime.example.yaml');
 
 function uncommented(text: string): string {
   return text.replaceAll(/^# (?=[A-Z_]+=)/gmu, '');
@@ -43,8 +29,7 @@ function uncommented(text: string): string {
 
 describe('local Studio under pnpm dev', () => {
   it('allows the local Studio origins in local mode while refusing an unrelated browser origin', async () => {
-    const development = startDevelopment(developmentFiles(readFileSync(devEnv, 'utf8')));
-    const port = await untilListening(development);
+    const { port } = await servedAsPnpmDevServesIt();
 
     await Promise.all(
       ['http://localhost:3200', 'http://127.0.0.1:3200'].map(async (origin) => {
@@ -64,7 +49,6 @@ describe('local Studio under pnpm dev', () => {
     expect(refused.status).toBe(403);
     expect(refused.headers.get('access-control-allow-origin')).toBeNull();
     await refused.arrayBuffer();
-    await stoppedWith(development, 'SIGTERM');
   });
 });
 
@@ -75,14 +59,6 @@ describe('the settings files pnpm dev reads', () => {
       apiKeys: undefined,
       signIn: undefined,
     });
-  });
-
-  it('lets .env override dev.env', async () => {
-    await expect(accessNoticeWith('API_KEYS=\n', {})).resolves.toBe(localModeNotice);
-  });
-
-  it('lets a variable set in the shell win over both files', async () => {
-    await expect(accessNoticeWith('API_KEYS=\n', { environment: { API_KEYS: '[]' } })).resolves.toBe(closedNotice);
   });
 
   it('documents the model settings in .env.example and auto-runtime.example.yaml in a form that reads as written', () => {
@@ -105,16 +81,48 @@ describe('the settings files pnpm dev reads', () => {
   });
 });
 
-describe('the configuration file pnpm dev passes', () => {
+/**
+ * The server the runner starts over the files, once it said it listens and the runner was stopped, and what the runner
+ * logged meanwhile. That node reads the env files it is handed in their order, under the variables of the shell, is
+ * node's own; what the runner hands it is the runner's.
+ */
+async function startedOver(files: DevelopmentFiles, shell: RunnerParts['shell'] = {}) {
+  const logged: string[] = [];
+  const written = vi.spyOn(console, 'error').mockImplementation((...lines: readonly unknown[]) => {
+    logged.push(...lines.map(String));
+  });
+  try {
+    const runner = aRunner({ envFiles: [files.envFile, files.localEnvFile], ...files, shell });
+    const server = await runner.child(0);
+    server.says('Auto Runtime listening on port 5555\n');
+    runner.stopped('SIGTERM');
+    expect(await runner.exitCode).toBe(0);
+    return { command: server.command, logged: logged.join('') };
+  } finally {
+    written.mockRestore();
+  }
+}
+
+describe('the settings files the runner of pnpm dev reads', () => {
+  it('are handed to the server dev.env first and .env after it, which node reads in that order under the variables of the shell', async () => {
+    const files = developmentFiles();
+    writeFileSync(files.localEnvFile, 'API_KEYS=\n');
+
+    const { command } = await startedOver(files, { API_KEYS: '[]' });
+
+    expect(command.args.slice(0, 2)).toEqual([`--env-file=${files.envFile}`, `--env-file=${files.localEnvFile}`]);
+    expect(command.environment).toMatchObject({ API_KEYS: '[]' });
+  });
+});
+
+describe('the configuration file the runner of pnpm dev passes', () => {
   it('is auto-runtime.yaml at the root of the repository, when it is there', async () => {
     const files = developmentFiles();
     writeFileSync(files.configFile, 'model_aliases:\n  house/fast: anthropic/claude-haiku-4-5\n');
-    const development = startDevelopment(files);
 
-    await untilListening(development);
-    await stoppedWith(development, 'SIGTERM');
+    const { command } = await startedOver(files);
 
-    expect(development.stderr()).toContain(`"message":"Settings read from the configuration file`);
+    expect(command.environment).toMatchObject({ CONFIG_FILE: files.configFile });
   });
 
   it('is the one CONFIG_FILE names instead, which the ready notice reads too', async () => {
@@ -123,16 +131,18 @@ describe('the configuration file pnpm dev passes', () => {
     writeFileSync(files.configFile, 'model_aliases:\n  house/fast: anthropic/claude-haiku-4-5\n');
     writeFileSync(named, 'model_gateways:\n  - name: relay\n    base_url: https://relay.example.com/v1\n');
     writeFileSync(files.localEnvFile, `CONFIG_FILE=${named}\n`);
-    const development = startDevelopment(files);
 
-    await untilWritten(development.stderr, /Auto Runtime is ready/u);
-    await stoppedWith(development, 'SIGTERM');
+    const { command, logged } = await startedOver(files);
 
-    expect(development.stderr()).toContain(`"message":"Settings read from the configuration file`);
-    expect(readyNoticesOf(development)).toEqual([expect.stringContaining('  models     relay\n')]);
+    expect(command.environment['CONFIG_FILE']).toBeUndefined();
+    expect(logged).toMatch(/models {5}relay/u);
   });
 });
 
+/*
+ * The one process of this file: the runner's entry and the server it starts, each writing its lines to the stderr
+ * they share in the format dev.env names.
+ */
 describe('pnpm dev with LOG_FORMAT=pretty in dev.env', () => {
   it("writes its own lines and the server's as readable lines", async () => {
     const development = startDevelopment(developmentFiles('HOST=127.0.0.1\nLOG_FORMAT=pretty\n'));

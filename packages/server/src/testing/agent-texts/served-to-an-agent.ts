@@ -2,9 +2,9 @@ import { debugPath } from '@on.auto/api';
 import { servedSurfaceAt, type ServedSurface } from '@on.auto/api/testing';
 import { localDeveloper } from '@on.auto/identity/testing';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
-import { startServer } from '../../lifecycle/lifecycle.ts';
-import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { startServerInProcess } from '../../lifecycle/lifecycle.ts';
+import { answeredAt, asSentTo, inProcessOrigin } from '../servers/in-process-origins.ts';
+import { testComposition } from '../servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 
 export interface ServedToAnAgent {
@@ -15,34 +15,26 @@ export interface ServedToAnAgent {
 const firstCallsOnANewOrg = [{ tool: 'list_playbooks', arguments: {} }];
 
 export async function servedByAThrowawayServer(): Promise<ServedToAnAgent> {
-  const ledger = temporaryLedger();
+  const origin = inProcessOrigin();
+  const server = await startServerInProcess(
+    { HOST: '127.0.0.1', PORT: '0', LOG_LEVEL: 'error', LEDGER_FILE: ':memory:', ...noConsentThroughAuto },
+    testComposition(),
+    origin,
+  );
+  const leave = answeredAt(origin, asSentTo(server.fetch));
   try {
-    const server = await startServer(
-      {
-        HOST: '127.0.0.1',
-        PORT: '0',
-        LOG_LEVEL: 'error',
-        LEDGER_FILE: ledger.fileName,
-        ...noConsentThroughAuto,
-      },
-      compositionRoot,
-    );
-    const origin = `http://127.0.0.1:${server.port}`;
-    try {
-      const surface = await servedSurfaceAt({
-        origin,
-        headers: {},
-        org: localDeveloper.org,
-        playbook: 'alpha',
-        actingAs: { caller: localDeveloper, org: localDeveloper.org },
-        firstCalls: firstCallsOnANewOrg,
-        kept: { goals: true },
-      });
-      return { surface, page: await (await fetch(`${origin}${debugPath}`)).text() };
-    } finally {
-      await server.stop();
-    }
+    const surface = await servedSurfaceAt({
+      origin,
+      headers: {},
+      org: localDeveloper.org,
+      playbook: 'alpha',
+      actingAs: { caller: localDeveloper, org: localDeveloper.org },
+      firstCalls: firstCallsOnANewOrg,
+      kept: { goals: true },
+    });
+    return { surface, page: await (await fetch(`${origin}${debugPath}`)).text() };
   } finally {
-    ledger.remove();
+    leave();
+    await server.stop();
   }
 }

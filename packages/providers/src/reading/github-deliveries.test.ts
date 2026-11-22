@@ -178,7 +178,7 @@ describe('the event a delivery GitHub’s webhook sends is', () => {
       readOf('pull_request', { action: 'opened', number: 1348, pull_request: aPullRequest }).event,
       readOf('pull_request', { action: 'closed', number: 1348, pull_request: aClosedPullRequest }),
     ]).toEqual([
-      { event: anIssueOpened },
+      { event: { ...anIssueOpened, actor: '1' } },
       { wake: { subscription: hookId }, event: aCommentAdded },
       expect.objectContaining({ type: 'com.github.pull_request.opened', id: 'PR_kwDOABCDEF5Q7r6s' }),
       { event: aPullRequestClosed },
@@ -217,5 +217,23 @@ describe('the event a delivery GitHub’s webhook sends is', () => {
     ];
 
     expect(passedOver).toEqual([{}, { wake: { subscription: hookId } }, {}, {}, {}]);
+  });
+});
+
+describe('the account that did what a delivery GitHub’s webhook sends reports', () => {
+  it('is the one its sender names, by the id that GitHub answers for the authenticated user too', () => {
+    const comment = { action: 'created', issue: anOpenedIssue, comment: aComment };
+    const github = Result.getOrThrow(providerNamed(shipped, 'github'));
+
+    expect([
+      readOf('issue_comment', { ...comment, sender: theAuthor }).event?.actor,
+      readOf('pull_request', { action: 'closed', pull_request: aClosedPullRequest, sender: theAuthor }).event?.actor,
+      readOf('issue_comment', comment).event?.actor,
+    ]).toEqual(['1', '1', undefined]);
+    expect(github.entry.events?.identity).toEqual({
+      method: 'GET',
+      url: 'https://api.github.com/user',
+      identified: { id: '/id', name: '/login' },
+    });
   });
 });

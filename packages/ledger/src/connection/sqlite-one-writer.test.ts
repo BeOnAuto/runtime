@@ -16,8 +16,6 @@ const head = { bytes: 4, mediaType: 'text/plain' };
 
 const digest = sha256Of('kept');
 
-const longerThanAWriteTakesToReachSQLite = 250;
-
 const waitingForNoLock = { pragmaOptions: { ...modestConnections.pragmaOptions, busy_timeout: 0 } };
 
 interface OnePool {
@@ -39,10 +37,16 @@ async function aLedgerWhoseConnectionsWaitForNoLock(): Promise<OnePool> {
   return { store, pool: options.pool };
 }
 
+interface WhileHeld<A, E> {
+  readonly written: Exit.Exit<A, E>;
+  readonly whileHeld: { readonly read: unknown; readonly settled: boolean };
+}
+
 async function settledOnceTheWriterLetsGo<A, E>(
   pool: TransactionalPool<ReturningExecutor>,
   write: () => Effect.Effect<A, E>,
-): Promise<Exit.Exit<A, E>> {
+  readBehind: () => Promise<unknown>,
+): Promise<WhileHeld<A, E>> {
   const begun = Promise.withResolvers<void>();
   const letGo = Promise.withResolvers<void>();
   const held = inTransactionOf(pool)(async () => {
@@ -50,11 +54,15 @@ async function settledOnceTheWriterLetsGo<A, E>(
     await letGo.promise;
   });
   await begun.promise;
-  const written = Effect.runPromiseExit(write());
-  await Promise.race([written, Effect.runPromise(Effect.sleep(longerThanAWriteTakesToReachSQLite))]);
+  const settling = { settled: false };
+  const written = Effect.runPromiseExit(write()).finally(() => {
+    settling.settled = true;
+  });
+  const read = await readBehind();
+  const whileHeld = { read, settled: settling.settled };
   letGo.resolve();
   await held;
-  return written;
+  return { written: await written, whileHeld };
 }
 
 const holding = { keptBy: 'ledger', held: 'sealed' };
@@ -66,9 +74,16 @@ describe('a write of the content of the ledger on SQLite, while the one writer o
     const { store, pool } = await aLedgerWhoseConnectionsWaitForNoLock();
     const heads = store.externalHeadsWith(store.unlessHeld);
 
-    const kept = await settledOnceTheWriterLetsGo(pool, () => heads.kept(alpha, digest, head, 1000));
+    const kept = await settledOnceTheWriterLetsGo(
+      pool,
+      () => heads.kept(alpha, digest, head, 1000),
+      () => Effect.runPromise(heads.read(alpha, digest)),
+    );
 
-    expect(kept).toEqual(Exit.succeed({ kept: 'new', head }));
+    expect(kept).toEqual({
+      written: Exit.succeed({ kept: 'new', head }),
+      whileHeld: { read: undefined, settled: false },
+    });
   });
 
   it('keeps the time of a head that stands, kept outside the ledger, once the transaction ends', async () => {
@@ -76,20 +91,35 @@ describe('a write of the content of the ledger on SQLite, while the one writer o
     const heads = store.externalHeadsWith(store.unlessHeld);
     await Effect.runPromise(heads.kept(alpha, digest, head, 1000));
 
-    const touched = await settledOnceTheWriterLetsGo(pool, () => heads.touched(alpha, digest, 2000));
+    const touched = await settledOnceTheWriterLetsGo(
+      pool,
+      () => heads.touched(alpha, digest, 2000),
+      () => Effect.runPromise(heads.read(alpha, digest)),
+    );
 
-    expect(touched).toEqual(Exit.succeed({ kept: 'standing', head }));
+    expect(touched).toEqual({
+      written: Exit.succeed({ kept: 'standing', head }),
+      whileHeld: { read: { ...head, keptAt: 1000 }, settled: false },
+    });
     expect(await Effect.runPromise(heads.read(alpha, digest))).toEqual({ ...head, keptAt: 2000 });
   });
+});
 
+describe('a write of a content kept in the ledger on SQLite, while the one writer of its pool is in a transaction', () => {
   it('keeps a content of one chunk in the ledger once the transaction ends', async () => {
     const { store, pool } = await aLedgerWhoseConnectionsWaitForNoLock();
 
-    const put = await settledOnceTheWriterLetsGo(pool, () =>
-      store.content.put(alpha, textToKeep('kept', 'text/plain')),
+    const heads = store.externalHeadsWith(store.unlessHeld);
+    const put = await settledOnceTheWriterLetsGo(
+      pool,
+      () => store.content.put(alpha, textToKeep('kept', 'text/plain')),
+      () => Effect.runPromise(heads.read(alpha, digest)),
     );
 
-    expect(put).toEqual(Exit.succeed({ sha256: digest, bytes: 4, mediaType: 'text/plain' }));
+    expect(put).toEqual({
+      written: Exit.succeed({ sha256: digest, bytes: 4, mediaType: 'text/plain' }),
+      whileHeld: { read: undefined, settled: false },
+    });
   });
 });
 
@@ -100,20 +130,24 @@ describe('a write of the rows of secrets on SQLite, while the one writer of thei
     const ids = ['claimed', 'replaced', 'held again', 'forgotten'];
     await Effect.runPromise(Effect.forEach(ids, (id) => rows.keep(id, holding), { discard: true }));
 
-    const written = await settledOnceTheWriterLetsGo(pool, () =>
-      Effect.all(
-        [
-          Effect.map(rows.claim('claimed', 1, 60_000), ({ claimed }) => claimed),
-          rows.replace('replaced', 1, holdingAgain),
-          rows.reheld({ id: 'held again', version: 1, holding }, holdingAgain),
-          rows.forget('forgotten'),
-        ],
-        { concurrency: 'unbounded' },
-      ),
+    const written = await settledOnceTheWriterLetsGo(
+      pool,
+      () =>
+        Effect.all(
+          [
+            Effect.map(rows.claim('claimed', 1, 60_000), ({ claimed }) => claimed),
+            rows.replace('replaced', 1, holdingAgain),
+            rows.reheld({ id: 'held again', version: 1, holding }, holdingAgain),
+            rows.forget('forgotten'),
+          ],
+          { concurrency: 'unbounded' },
+        ),
+      () => Effect.runPromise(rows.read('forgotten')),
     );
 
-    expect(written).toEqual(
+    expect(written.written).toEqual(
       Exit.succeed([true, { replaced: true, version: 2 }, true, { ...holding, wrappedKey: undefined, kid: undefined }]),
     );
+    expect(written.whileHeld).toMatchObject({ read: { holding }, settled: false });
   });
 });

@@ -1,10 +1,10 @@
 import { INVALID_SPAN_CONTEXT, trace } from '@opentelemetry/api';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { defaultServerOptions } from '../testing/entries/serving-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { metricNamesIn, spansIn } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
@@ -84,7 +84,7 @@ describe('a request that reads a link', () => {
         OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
         OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
       },
-      compositionRoot,
+      testComposition(),
     );
     const token = 'kQ2_x-9fLm3WbP7rTz0aYc5vNd8eHu1oJs4iGq6lXwE';
     const link = `/v1/orgs/local/connections/0199f0e0-0000-7000-8000-000000000000/link`;

@@ -2,9 +2,9 @@ import { once } from 'node:events';
 import { createServer } from 'node:http';
 
 import { sha256Of } from '@on.auto/content';
-import { generated, refusalOf } from '@on.auto/content/testing';
-import { Effect, Function, Schema } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { generated } from '@on.auto/content/testing';
+import { Effect, Function, Schema, Struct } from 'effect';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { objectContentOn } from '../content/object-content.ts';
 import { objectStoreReached } from '../s3/object-store-reached.ts';
@@ -24,6 +24,28 @@ async function aStoreThatNeverAnswers(): Promise<string> {
     await once(server, 'close');
   });
   return `http://127.0.0.1:${String(decodeAddress(server.address()).port)}`;
+}
+
+async function onFakeTime(work: Promise<string>): Promise<{ readonly said: string; readonly ms: number }> {
+  const waited = { ms: 0, said: '' };
+  const settled = work.then(
+    (said) => Object.assign(waited, { said }),
+    (failure: unknown) => Object.assign(waited, { said: String(failure) }),
+  );
+  const stepped = async (): Promise<void> => {
+    if (waited.said !== '') {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    waited.ms += 10;
+    await stepped();
+  };
+  await stepped();
+  await settled;
+  return waited;
 }
 
 const credentials = { accessKeyId: 'access', secretAccessKey: 'secret' };
@@ -78,15 +100,23 @@ describe('the client of an object store that stops answering', () => {
     });
     const location = { bucket: 'content', prefix: '' };
     const objects = objectContentOn(bucketOnS3({ client: () => client, name: location.bucket }), location);
-    const started = performance.now();
+    const content = (await generated(2_500_000)).content();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
 
-    const refused = await refusalOf(objectStoreReached(() => client, location));
-    const read = Effect.runPromise(objects.read(alphaPlace, sha256Of('stalled')));
-    await expect(read).rejects.toThrow('requestTimeout');
-    const put = Effect.runPromise(objects.stage(alphaPlace, (await generated(2_500_000)).content()));
-    await expect(put).rejects.toThrow('requestTimeout');
+    const refused = await onFakeTime(
+      Effect.runPromise(objectStoreReached(() => client, location).pipe(Effect.flip, Effect.map(Struct.get('answer')))),
+    );
+    const read = await onFakeTime(Effect.runPromise(objects.read(alphaPlace, sha256Of('stalled'))).then(() => 'read'));
+    const put = await onFakeTime(Effect.runPromise(objects.stage(alphaPlace, content)).then(() => 'put'));
 
-    expect(refused.answer).toMatch(/^TimeoutError/u);
-    expect(performance.now() - started).toBeLessThan(20_000);
+    expect(refused.said).toMatch(/^TimeoutError/u);
+    expect([read.said, put.said]).toEqual([
+      expect.stringContaining('requestTimeout'),
+      expect.stringContaining('requestTimeout'),
+    ]);
+    expect(Math.max(refused.ms, read.ms, put.ms)).toBeLessThan(storageWaits.requestMs);
   });
 });

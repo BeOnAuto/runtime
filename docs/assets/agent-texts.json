@@ -5,7 +5,7 @@
     "2": "The onboarding path, what an agent reads from its first call to its first saved definition: the answers to the first calls on a new org, and the guides and prompts start, first-playbook, give-tools and get-started.",
     "3": "Every other text listed here: the other guides, recipes and prompts."
   },
-  "placeholders": "{origin} stands for the server's own address. Where a text is received, {org} and {playbook} stand for the ids in the address, and a required argument of a prompt in braces for the words the person gives. The instructions are as the page at /debug shows them: on a real connection they hold one more sentence, just before the last, which names the caller and the org.",
+  "placeholders": "{origin} stands for the server's own address. Where a text is received, {org} and {playbook} stand for the ids in the address, and a required argument of a prompt in braces for the words the person gives. The instructions are as the page at /debug shows them: on a real connection they hold one more sentence, which names the caller and the organization, just before the last sentence or before the one that says to ask questions first.",
   "texts": [
     {
       "sha256": "232c6a2b8ca3185332747babe2042629fe39f044dcddd58d34b0dca1457c2923",
@@ -926,6 +926,14 @@
         },
         {
           "as": "tool list_interactions: argument limit",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool list_queued_starts: argument limit",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -1965,6 +1973,13 @@
           ]
         },
         {
+          "as": "tool list_queued_starts: argument playbook",
+          "on": [
+            "/mcp",
+            "/directory"
+          ]
+        },
+        {
           "as": "tool send_run_event: argument playbook",
           "on": [
             "/mcp",
@@ -2290,7 +2305,7 @@
       ]
     },
     {
-      "sha256": "934348653874296f1cbca799ef2c5146033b8c25718bddb8725eaec43dd84d0b",
+      "sha256": "516a1b9b0705827864633b1ca136c68c5a7741f71b929201331e2ca2a3722a54",
       "tier": 1,
       "received": [
         {
@@ -2303,7 +2318,7 @@
         }
       ],
       "lines": [
-        "Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name."
+        "Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own, and how many of its runs are queued to start. A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name."
       ]
     },
     {
@@ -2875,7 +2890,7 @@
       ]
     },
     {
-      "sha256": "17617e79fd06f7531e1d47cc72178c17ad28d3bbe06ba4e40a6a54d4d53551ed",
+      "sha256": "adfea146ad27921dff269d674175d3fe9b009de6bb1792395912cc3cb77efd98",
       "tier": 1,
       "received": [
         {
@@ -2888,11 +2903,11 @@
         }
       ],
       "lines": [
-        "Moves functions and workflows from this playbook to another playbook of the org and returns them: each keeps its versions, its runs and its page, and from then on it is read, run and changed in the other playbook under the same name. Use move_definitions when the person asks to move a function or a workflow to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. Nothing moves while one of them has a run that has not ended, or while the other playbook has a definition of the same type and name, even a retired one."
+        "Moves functions, workflows and goals from this playbook to another playbook of the org: each keeps its versions, runs, page and results, and is from then on read, run, judged and changed there under the same name. Use move_definitions when the person asks to move a function, a workflow or a goal to another playbook. `definitions` lists each one by `type` and `name`, with everything each one uses and everything left in this playbook that uses one of them; a call that leaves one out moves nothing and says which to add. `goals` lists goals by id; list in `definitions` every workflow that serves one of them, since a goal moves with its workflows. Nothing moves while one of them has a run that has not ended, or while the other playbook has one of the same type and name, even a retired one."
       ]
     },
     {
-      "sha256": "8deb9d057c8ed9042fc1c4a56b9d5bc55872e34352cbd0b4802d998564dfa4a7",
+      "sha256": "8417a3e9d591b9bad3d39a9f5bed4a6d9e47c69b89df9f4972c0504c90b6a337",
       "tier": 1,
       "received": [
         {
@@ -2905,11 +2920,11 @@
         }
       ],
       "lines": [
-        "The id of the playbook to move the definitions to"
+        "The id of the playbook to move them to"
       ]
     },
     {
-      "sha256": "238bed9e39a30a44f21962452254babb13c4edd7cf8edb5cf466dca4adb39703",
+      "sha256": "8a4a9d34375a73e6e78742e06c121b3d0943e1f7ea69c4cffe32f39f3326b1d6",
       "tier": 1,
       "received": [
         {
@@ -2922,7 +2937,24 @@
         }
       ],
       "lines": [
-        "The definitions to move, each by its `type` and `name`, with everything each one uses"
+        "The definitions to move, each by its `type` and `name`, with everything each one uses; leave it out only to move goals that no workflow serves"
+      ]
+    },
+    {
+      "sha256": "812107465c3dc7e81d69d5a709fd2e5bb566043c06201efc868ee28f36f2aec7",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool move_definitions: argument goals",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The ids of the goals to move; each keeps its id, its results and the person's yes"
       ]
     },
     {
@@ -2982,6 +3014,14 @@
       "received": [
         {
           "as": "tool list_playbook_events: argument cursor",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        },
+        {
+          "as": "tool list_queued_starts: argument cursor",
           "on": [
             "/mcp",
             "/orgs/{org}/playbooks/{playbook}/mcp",
@@ -3961,6 +4001,57 @@
       ],
       "lines": [
         "The asset's id, a UUID in any case, kept in lowercase"
+      ]
+    },
+    {
+      "sha256": "61114f28d8819cc34b22c64ebdcb5d8a19bc6394e664132a79a98e283ad40803",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool list_queued_starts: title",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "List queued starts"
+      ]
+    },
+    {
+      "sha256": "d2e03acc06c23cf069c1b442c5a105cbb4c229f946a7af321c5a4e46cfa66d1c",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool list_queued_starts: description",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "Lists the runs of a workflow that are queued to start, in the order they come due. Use it to tell the person what is still queued and when the next one can start. A workflow starts only so many runs a minute for the events that match its trigger, and queues the rest for a later minute. Each queued run has the event it starts for, `due`, the earliest time it can start, and `attempts`, how many times it tried to start and failed. When many are queued, the later ones start a minute or more after their `due`. A queued run is refused and never starts if its workflow is paused when it comes due, so say so to the person when the workflow is paused. `get_definition` says how many are queued. `cursor` is the next_cursor of the page before."
+      ]
+    },
+    {
+      "sha256": "a41da5d50d0b6c93461bdab5de2f23c11ecf41af9bec9a92b6c60ccee6b73893",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool list_queued_starts: argument workflow",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The workflow's name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
       ]
     },
     {
@@ -5921,7 +6012,7 @@
       ]
     },
     {
-      "sha256": "9d915830585224ab26072058c3d89be778276306c854dc985b30bc192cb54c31",
+      "sha256": "f9ee3af0b1cba771e8797533a61c6bb964491656cf7efec809068e5d5d445383",
       "tier": 3,
       "received": [
         {
@@ -6089,6 +6180,10 @@
         "## Renaming a goal",
         "",
         "To change what a goal is called for the person, change its `name` in the list and ask for their yes, as for any change. To change its `id`, call update_playbook with `rename_goal` alone: the `id` it has and the `new_id`. The goal keeps its results and the person's yes, and each workflow that serves it gets a new version that names the new id, so write the new id in `contributes` from then on. A rename is refused while one of those workflows has a run that has not ended. Change an `id` when the person asks for it, or when a move was refused because the other playbook already has a goal of that id.",
+        "",
+        "## Moving a goal to another playbook",
+        "",
+        "When the person asks to move a goal to another playbook, call move_definitions in the playbook that has it: put the goal's id in `goals`, and every workflow that serves it, with everything those workflows use, in `definitions`. list_definitions with `type` workflow shows the goals each workflow serves, in `details.contributes`. If one of them also serves a goal that stays, ask the person first whether that goal moves too or the workflow stops serving it. The goal keeps its id, its results and the person's yes, so do not ask for the yes again; a judging that is open, such as this week's, carries on. After a move, read a playbook's goals again with get_playbook before you send it a goals list: a list that still names a goal that moved away would make a new goal of that id.",
         "",
         "## What a workflow contributes",
         "",
@@ -8323,7 +8418,7 @@
       ]
     },
     {
-      "sha256": "0ff472917f728f94d754112d42a4fc3caa2f7f84431f6c9e10e5e4762cca5cc3",
+      "sha256": "528ba5c24fddeea1d6eb6d42461e8c15afbfb1209a5690b151c5de02d6fb1182",
       "tier": 3,
       "received": [
         {
@@ -8545,7 +8640,7 @@
         "- Its cost is the compiler's, and depends on the server and on how much the types make the compiler work.",
         "- A save allows the check 2 seconds of the server's wall-clock time, counted from a ready checker. A check that does not finish within them leaves the document unsaved, as `invalid_input`: simplify its types or split the program.",
         "- A busy server may also have slowed the check, so a document near the bound may pass when it is saved again later.",
-        "- A save that finds no checker ready is `unavailable`; save it again.",
+        "- A save that finds no checker ready is refused as `busy`, and nothing is saved; save it again after the seconds its `retry_after` gives.",
         "",
         "### The sandbox",
         "",
@@ -8611,7 +8706,7 @@
         "| Bound | Value | When it is reached |",
         "| --- | --- | --- |",
         "| Document | 65,536 bytes in UTF-8, as every definition | Refused when saved |",
-        "| The check at save | 2 seconds | The save is `invalid_input`: simplify the types or split the program, or save it again later; with no checker ready, `unavailable`: save it again |",
+        "| The check at save | 2 seconds | The save is `invalid_input`: simplify the types or split the program, or save it again later; with no checker ready, `busy`: save it again after `retry_after` |",
         "| Assignments | 500 to variables in one function | Refused when saved, `invalid_input` |",
         "| Input | 1 MiB as JSON, as every run, nested at most 512 levels | `invalid_input` |",
         "| Work | About 200 million steps of the program, where a call or a turn of a loop is a step | `conflict`, `unworkable`: give each run a part of the input |",
@@ -9108,7 +9203,7 @@
       ]
     },
     {
-      "sha256": "608a2f3bdd961c1fad388e9a4275ae785caf1c673da4a2c01b282a8744d8347d",
+      "sha256": "77e8912c675d1990c9f22a7388b7e946a097536d76b20381b340229d1d7e1e10",
       "tier": 3,
       "received": [
         {
@@ -9185,7 +9280,7 @@
         "",
         "- A workflow does not start for what its own runs caused, whichever of its triggers started them. That covers a fact about one of its runs, a fact about a run that one of its runs started, and an event that one of its runs emitted.",
         "- A chain of runs started by events stops at a depth of 8. An event published from outside has depth 1. An event or fact about a run has one more than the run. A run that a trigger starts takes the depth of what it matched. A match deeper than 8 starts nothing.",
-        "- A workflow's event trigger starts at most 60 runs of it a minute, across its filters. More wait for a later minute, up to 1,000 of them; one more is refused. The runs of its schedules are not counted.",
+        "- A workflow's event trigger starts at most 60 runs of it a minute, across its filters. More wait for a later minute, up to 1,000 of them; one more is refused. `list_queued_starts` lists the starts that are queued. A queued start is refused if its workflow is paused when it comes due. The runs of its schedules are not counted.",
         "- A schedule trigger has one run at a time. A time that comes due while the schedule's previous run is still running, of this version or an earlier one, is skipped. After the runtime was stopped, only the latest of the times it missed runs.",
         "- An event and a due time in one moment start two runs, and so do a `cron` and an `every` due at the same time.",
         "- A start that the playbook refuses, for example once the playbook is retired, or once the organization's credits or a self-hosted runtime's free runs are spent, is not tried again. An event trigger's start the playbook cannot take at that moment is tried again at each sweep, about twenty times, or for as long as stored content it needs cannot be read; a schedule records such a start as refused and moves on, unless the workflow could not be read from storage: then the schedule tries the start of that time again each minute, under the same `run_id` and with the same `schedule.due`, until its next time comes, and only then records the time as refused, with the kind `content_unavailable`, and runs the next.",
@@ -9197,7 +9292,7 @@
       ]
     },
     {
-      "sha256": "34eee8040fe0a99a284580b6dd906a53491eb585498364377dc47fe6994dce91",
+      "sha256": "e34d275eabc0035ba5d3e94727001b269254aed33679ad6deb3ef1eaee3a172e",
       "tier": 3,
       "received": [
         {
@@ -9276,7 +9371,7 @@
         "| `type` | Required; exactly this type |",
         "| `source` | Optional; exactly this source |",
         "| `subject` | Optional; exactly this subject, such as `workflow/morning-social-content` for the runs of one workflow |",
-        "| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, `true` or `false` for `automatic`, and text for any other |",
+        "| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, `true` or `false` for `automatic` and `own`, and text for any other |",
         "| `data` | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else |",
         "",
         "- An event is taken when it matches any of the filters, and once only, however many it matches.",
@@ -9289,7 +9384,7 @@
       ]
     },
     {
-      "sha256": "07c06c1ddb3aa1c81aaaa83dd905079de858d36480986ffd5fc6ea9d18e98088",
+      "sha256": "98fbd5d9e7d0010e5f722e5c037c2d02da909fbb5294464214bbf321bf694acc",
       "tier": 3,
       "received": [
         {
@@ -10227,7 +10322,7 @@
         "| Names in tags and outputs | 1,000 in each template, as in a reasoning function's | Refused when saved |",
         "| Views | 8 | Refused when saved |",
         "| Filters | 8 | Refused when saved |",
-        "| The check at save | 2 seconds | `invalid_input`; `unavailable` with no checker ready |",
+        "| The check at save | 2 seconds | `invalid_input`; `busy` with no checker ready |",
         "| The views together | 512 KiB as JSON | The views stall at that event, `size` |",
         "| Work and duration of one fold | About 5 million steps and 10 seconds | The views stall at that event |",
         "| Views built at once | Some pages of a playbook; the others wait their turn | The save succeeds; the standing says `waiting` |",

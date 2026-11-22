@@ -3,12 +3,12 @@ import { anthropicMessage, anthropicToolCall, jsonResponse, recordingFetch } fro
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { onTestFinished } from 'vitest';
 
-import { compositionRootWith } from '../../composition/composition-root.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { receivingOtlp, type OtlpReceiver } from '../telemetry/otlp-receiver.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
 import { alpha, loopbackSettingsOver } from './reasoning-server.ts';
+import { testComposition } from './test-compositions.ts';
 
 export interface TracedServer {
   readonly receiver: OtlpReceiver;
@@ -54,7 +54,10 @@ export async function servingTraced(environment: Readonly<Record<string, string>
       OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
       ...environment,
     },
-    compositionRootWith((settings, proxy, telemetry) => makeModelAccess(settings, { proxy, fetch, telemetry })),
+    testComposition({
+      goals: false,
+      modelAccessOf: (settings, proxy, telemetry) => makeModelAccess(settings, { proxy, fetch, telemetry }),
+    }),
   );
   const call = (method: string, path: string, options?: RequestOptions) => request(server.port, method, path, options);
   await call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });

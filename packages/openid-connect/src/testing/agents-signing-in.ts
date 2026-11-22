@@ -151,7 +151,7 @@ export interface Connected {
 }
 
 export async function connectedAt(server: ServedOverHttp): Promise<Connected> {
-  const browser = browserAt(server.at);
+  const browser = browserAt(server);
   const clientId = await registered(browser);
   const code = await allowed(browser, locationOf(await signedInAs(browser, { clientId })));
   return { server, browser, clientId, code, tokens: await exchanged(browser, code, { clientId }) };

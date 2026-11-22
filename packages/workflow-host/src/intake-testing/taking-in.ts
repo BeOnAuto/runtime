@@ -28,6 +28,10 @@ export function servedWithTopics(...topics: readonly string[]): ServedConnection
   return { topicsOf: () => Effect.succeed(topics) };
 }
 
+export function servedActingAs(user: string, ...topics: readonly string[]): ServedConnection {
+  return { ...servedWithTopics(...topics), user };
+}
+
 type Registry = PlaybookRegistry['Service'];
 
 const sandboxModule = await sandboxModuleIn(shippedFilesOnDisk(sandboxShippedRoots()));

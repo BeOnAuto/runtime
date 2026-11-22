@@ -222,6 +222,21 @@ export function reporting(
   return problemsOf({ ...trackerOverASocket, events: { types, destinations } });
 }
 
+export const whoItActsAs = {
+  method: 'GET',
+  url: 'https://api.tracker.example.com/me',
+  identified: { id: '/member/key', name: '/member/handle' },
+};
+
+export const whoItActsAsThroughATool = { tool: 'whoami', identified: { id: '/self/uid' } };
+
+export function identifying(
+  identity: unknown,
+  destinations: readonly unknown[],
+): readonly (readonly [string, string])[] {
+  return problemsOf({ ...trackerOverASocket, events: { types: postTypes, identity, destinations } });
+}
+
 export const asSlackSends = carrying(answeringItsChallenge, {
   id: '$request.body#/event/ts',
   sender: '$request.body#/event/user',

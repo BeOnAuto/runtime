@@ -27,6 +27,12 @@ const environment = new Map([
 
 const closing: (() => Promise<void>)[] = [];
 
+/** The fake, after a module that holds a port open, so the process keeps running once its input ends. */
+const lingering = () =>
+  stdioSettings([], {
+    args: ['--import', 'data:text/javascript,new MessageChannel().port1.ref()', fakeStdioServerPath()],
+  });
+
 const patientMs = 20_000;
 
 afterEach(async () => {
@@ -267,7 +273,7 @@ describe('a stdio server that does not start or stop', () => {
 
   it('kills a process that does not end when its input does, once it has been patient', async () => {
     const patience = manualTimer();
-    const { link } = linked(stdioSettings(['--linger-ms', '60000']), patientMs, 300, patience.timer);
+    const { link } = linked(lingering(), patientMs, 300, patience.timer);
     const client = await link.take();
     const ended: string[] = [];
     void client.closed.then(() => ended.push('closed'));

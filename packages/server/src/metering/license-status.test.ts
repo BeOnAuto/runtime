@@ -17,6 +17,7 @@ import {
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated } from '../testing/servers/tally-server.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const license = '/v1/orgs/acme/license';
 
@@ -176,18 +177,18 @@ describe('the license of a runtime whose key was rotated', () => {
     await before.stop();
     accounts.account.revoke(accounts.key, 'key_rotated');
     const after = await servedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, { ledger });
-    await expect
-      .poll(async () => (await after.call('GET', license)).body, { timeout: 60_000 })
-      .toMatchObject({
+    await whenHeld(async () => {
+      expect((await after.call('GET', license)).body).toMatchObject({
         state: 'limited',
         limited_because: 'key_rotated',
       });
+    });
 
     expect(JSON.stringify((await after.call('GET', license)).body)).toContain(
       "This runtime's license key was replaced, so it's limited to the free rate of 15 runs a UTC day and 75 a UTC month.",
     );
     expect((await tallied(after)).status).toBe(200);
-  }, 60_000);
+  });
 });
 
 describe('the license an offline installation holds', () => {

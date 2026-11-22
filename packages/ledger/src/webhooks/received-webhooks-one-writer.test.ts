@@ -9,8 +9,6 @@ import { modestConnections } from '../sqlite.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import { receivedWebhooksOn, type WebhookReceipt } from './received-webhooks.ts';
 
-const longerThanAWriteTakesToReachSQLite = 250;
-
 const waitingForNoLock = { pragmaOptions: { ...modestConnections.pragmaOptions, busy_timeout: 0 } };
 
 const tenMinutes = 600_000;
@@ -31,17 +29,23 @@ async function aPoolWhoseConnectionsWaitForNoLock(): Promise<TransactionalPool<R
 
 interface ATransactionBetween {
   readonly execute: ReturningExecutor;
+  readonly heldAndAskedAgain: Promise<void>;
   readonly letGo: () => Promise<void>;
 }
 
 function aTransactionBeginningAfterTheFirstWrite(pool: TransactionalPool<ReturningExecutor>): ATransactionBetween {
   const begun = Promise.withResolvers<void>();
   const letGo = Promise.withResolvers<void>();
+  const askedAgain = Promise.withResolvers<void>();
   const transaction: { held?: Promise<void> } = {};
   return {
+    heldAndAskedAgain: askedAgain.promise,
     execute: {
       query: (sql) => pool.execute.query(sql),
       command: async (sql) => {
+        if (transaction.held !== undefined) {
+          askedAgain.resolve();
+        }
         const answered = await pool.execute.command(sql);
         transaction.held ??= inTransactionOf(pool)(async () => {
           begun.resolve();
@@ -68,8 +72,15 @@ describe('a take of the webhooks received on SQLite, while the one writer of the
     const between = aTransactionBeginningAfterTheFirstWrite(pool);
     const received = receivedWebhooksOn(between.execute, () => Promise.resolve());
 
-    const taking = Effect.runPromiseExit(received.taken(receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1')));
-    await Promise.race([taking, Effect.runPromise(Effect.sleep(longerThanAWriteTakesToReachSQLite))]);
+    const settling = { settled: false };
+    const taking = Effect.runPromiseExit(received.taken(receiptOf('msg_2Lh9KRb1t3', 'onboarding/run-1'))).finally(
+      () => {
+        settling.settled = true;
+      },
+    );
+    await between.heldAndAskedAgain;
+    const keptWhileHeld = (await pool.execute.query(SQL`SELECT webhook_id FROM webhooks_received`)).rows;
+    const settledWhileHeld = settling.settled;
     await between.letGo();
     const taken = await taking;
     const takenAgain = await Effect.runPromise(
@@ -86,6 +97,7 @@ describe('a take of the webhooks received on SQLite, while the one writer of the
       SQL`SELECT webhook_id, taken_for FROM webhooks_received ORDER BY webhook_id`,
     );
 
+    expect([keptWhileHeld, settledWhileHeld]).toEqual([[], false]);
     expect(taken).toEqual(Exit.succeed('onboarding/run-1'));
     expect(takenAgain).toEqual(['onboarding/run-1', 'onboarding/run-1', 'onboarding/run-2']);
     expect(rows).toEqual([

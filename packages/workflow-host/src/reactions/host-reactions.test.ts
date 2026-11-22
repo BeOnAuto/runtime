@@ -17,7 +17,7 @@ import {
   type WakeSignal,
 } from '../index.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
-import { type HostClock, systemClock } from '../loop/host-clock.ts';
+import type { HostClock } from '../loop/host-clock.ts';
 import { subscribed } from '../reaction-testing/event-subscriptions.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
 import {
@@ -30,8 +30,9 @@ import {
   recorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { recordedReactions } from '../reaction-testing/recorded-reactions.ts';
-import { aSQLiteFile, connectedOn, onSQLite, openedOn } from '../testing/host-files.ts';
-import { recordedOptionsOf } from '../testing/host-runs.ts';
+import { aLedgerInMemory, connectedOn, onSQLite, openedOn } from '../testing/host-files.ts';
+import { recordedOptionsOf, hostedStartsAt } from '../testing/host-runs.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 import { type MeasuredReads, readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { reactionConsumersOf } from './reaction-consumers.ts';
 import { type ReactionStart, type StartReaction, StartRefused } from './reaction-options.ts';
@@ -267,11 +268,11 @@ async function wokenUntil<A>(woken: () => Promise<A>, holds: (value: A) => boole
 
 describe('the follower of a host composed by a clock of its own', () => {
   it('starts a workflow its trigger matches when it is woken, over parts opened alone, with no loop and no claim', async () => {
-    const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+    const store = await openWorkflowStore(await connectedOn(await aLedgerInMemory()), []);
     const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
     const { options, troubles } = recordedOptionsOf();
     const reactions = recordedReactions();
-    const parts = openHostParts(store, { ...options, clock: systemClock }, Function.constVoid);
+    const parts = openHostParts(store, { ...options, clock: steppedClock(hostedStartsAt) }, Function.constVoid);
     const raised = { times: 0 };
     const follower = followerWakeUp(
       { database: store.database, parts, reactions: reactions.options, reports: options.reports, placeAtOpen },
@@ -336,10 +337,10 @@ function handedTo(note: (name: string) => void, name: string) {
 
 describe('the consumers a shell gives the follower', () => {
   it('hands one the events of its types, and one that reads records each record of its types, by the record’s type', async () => {
-    const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+    const store = await openWorkflowStore(await connectedOn(await aLedgerInMemory()), []);
     const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
     const { options } = recordedOptionsOf();
-    const parts = openHostParts(store, { ...options, clock: systemClock }, Function.constVoid);
+    const parts = openHostParts(store, { ...options, clock: steppedClock(hostedStartsAt) }, Function.constVoid);
     let names: readonly string[] = [];
     const seen = (name: string) => {
       names = [...names, name];
@@ -419,7 +420,7 @@ describe('a start that waited for a later minute', () => {
 
   it('is made after a burst and then silence, by a host whose alarm rings only at a signal or when its wake-up answers it is next due', async () => {
     const alarm = oneAlarmFrom(minute + 1000);
-    const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+    const store = await openWorkflowStore(await connectedOn(await aLedgerInMemory()), []);
     const { through: placeAtOpen } = await store.database.store.readAppended(undefined, 0);
     const { options } = recordedOptionsOf({ sweepEveryMs });
     const reactions = recordedReactions();
@@ -586,7 +587,7 @@ describe('the refusals recorded on the stream of a workflow', () => {
 
 describe('the workflow a run began, as the starts of an event trigger learn it', () => {
   it('is the definition the run is filed under, read without a fact of the run or the output of 100 KiB its end holds', async () => {
-    const measured = readingMeasured(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const measured = readingMeasured(await openedOn(await aLedgerInMemory()));
     const stream = `${definitionKeyNamed('close')}runs/r-close`;
     const output = { text: 'x'.repeat(100 * 1024) };
     await recorded(measured.database.store, stream, { type: 'run_started', data: started }, ofTheRun);

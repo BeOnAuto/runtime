@@ -1,12 +1,13 @@
 import { alternatives, articled, listed } from '@on.auto/phrasing';
-import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
+import { WayClientSourceSchema, WayPkceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
+import { AccountTypesSchema, accountTypeIssuesOf, isTheWayAsked } from './account-types.ts';
+import { consentEndpoints, consentIssuesOf } from './consent-fields.ts';
 import { endingIssuesOf } from './ending-codes.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
-import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, notScopes, wordsIssuesOf } from './scope-groups.ts';
-import { wayAddresses, type WayAddress } from './templates.ts';
+import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
@@ -28,6 +29,7 @@ export const wayFields = {
   ending_codes: Schema.Array(NamedSchema).check(Schema.isMinLength(1), Schema.isMaxLength(16)),
   gateway: GatewaySchema,
   permissions: PermissionsSchema,
+  account_types: AccountTypesSchema,
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -68,6 +70,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   ),
   gateway: Schema.optionalKey(wayFields.gateway),
   permissions: Schema.optionalKey(wayFields.permissions),
+  account_types: Schema.optionalKey(wayFields.account_types),
   ...keyWayFields,
   description: Schema.optionalKey(NamedSchema),
 });
@@ -80,12 +83,6 @@ interface TakenFields {
   readonly required: readonly Field[];
   readonly optional: readonly Field[];
 }
-
-type ConsentEndpoint = Exclude<WayAddress, 'issuer'>;
-
-export const consentEndpoints: readonly ConsentEndpoint[] = wayAddresses.filter(
-  (field): field is ConsentEndpoint => field !== 'issuer',
-);
 
 const everyField: readonly Field[] = [
   'in',
@@ -103,6 +100,7 @@ const everyField: readonly Field[] = [
   'ending_codes',
   'gateway',
   'permissions',
+  'account_types',
   ...keyFieldNames,
   'key_page_title',
   'steps',
@@ -113,9 +111,19 @@ const everyField: readonly Field[] = [
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   secret: {
     required: ['in', 'name', 'instructions', 'key_page'],
-    optional: ['key_page_title', 'steps', 'scheme', 'example', 'pattern', 'app_credentials', 'test'],
+    optional: [
+      'key_page_title',
+      'steps',
+      'scheme',
+      'example',
+      'pattern',
+      'app_credentials',
+      'test',
+      'permissions',
+      'account_types',
+    ],
   },
-  client_credentials: { required: ['issuer'], optional: ['scope', 'says'] },
+  client_credentials: { required: ['issuer'], optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps'] },
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
@@ -131,13 +139,14 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'ending_codes',
       'gateway',
       'permissions',
+      'account_types',
     ],
   },
 };
 
 const fieldsThroughAGateway: TakenFields = {
   required: ['issuer', 'gateway', 'in', 'name'],
-  optional: ['scope', 'says', 'permissions'],
+  optional: ['scope', 'says', 'permissions', 'account_types'],
 };
 
 function fieldsTakenBy(way: CredentialWayFields): TakenFields {
@@ -148,33 +157,12 @@ function wayInWords(way: CredentialWayFields): string {
   return way.kind === 'authorization' && way.gateway !== undefined ? wayThroughAGateway : articled(`${way.kind} way`);
 }
 
-const parametersTheRequestSets: ReadonlySet<string> = new Set([
-  'response_type',
-  'response_mode',
-  'client_id',
-  'redirect_uri',
-  'code_challenge',
-  'code_challenge_method',
-  'state',
-  'scope',
-  'resource',
-  'request',
-  'request_uri',
-]);
-
 interface WayIssue {
   readonly path: readonly string[];
   readonly issue: string;
 }
 
 type EntryIssue = Schema.FilterIssue;
-
-export interface ConsentFields extends Partial<Readonly<Record<ConsentEndpoint, string>>> {
-  readonly scope?: string;
-  readonly parameters?: Readonly<Record<string, string>>;
-  readonly pkce?: string;
-  readonly clients?: readonly string[];
-}
 
 function takenInWords({ required, optional }: TakenFields): string {
   const taken = [...required, ...optional];
@@ -195,81 +183,6 @@ function presenceIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
   });
 }
 
-function scopeIssuesOf({ scope }: ConsentFields): readonly WayIssue[] {
-  return scope === undefined || isScope(scope) ? [] : [{ path: ['scope'], issue: notScopes }];
-}
-
-function parameterIssuesOf({ parameters = {} }: ConsentFields): readonly WayIssue[] {
-  return Object.keys(parameters)
-    .filter((name) => parametersTheRequestSets.has(name))
-    .map((name) => ({
-      path: ['parameters', name],
-      issue: `Expected no ${name}, which the runtime sets in every authorization request itself`,
-    }));
-}
-
-const endpointsGivenTogether: readonly ConsentEndpoint[] = ['authorization_endpoint', 'token_endpoint'];
-
-function endpointIssuesOf(fields: ConsentFields): readonly WayIssue[] {
-  const given = consentEndpoints.filter((endpoint) => fields[endpoint] !== undefined);
-  return given.length === 0
-    ? []
-    : endpointsGivenTogether
-        .filter((endpoint) => fields[endpoint] === undefined)
-        .map((endpoint) => ({
-          path: [endpoint],
-          issue: `Expected ${endpoint} beside ${listed(given)}, since a way gives its authorization and token endpoints together`,
-        }));
-}
-
-const runtimeOrder: readonly string[] = wayClientSources;
-
-function isInTheRuntimesOrder(clients: readonly string[]): boolean {
-  const places = clients.map((source) => runtimeOrder.indexOf(source));
-  return places.join() === [...new Set(places)].toSorted((one, other) => one - other).join();
-}
-
-function clientIssuesOf({ clients }: ConsentFields): readonly WayIssue[] {
-  if (clients === undefined) {
-    return [];
-  }
-  return clients.length === 0 || !isInTheRuntimesOrder(clients)
-    ? [
-        {
-          path: ['clients'],
-          issue: `Expected at least one client source, each once, in the order the runtime takes them: ${listed(wayClientSources)}`,
-        },
-      ]
-    : [];
-}
-
-const confidentialSources: readonly string[] = ['registered'];
-
-function pkceIssueOf(fields: ConsentFields): string | undefined {
-  if (endpointsGivenTogether.some((endpoint) => fields[endpoint] === undefined)) {
-    return `Expected pkce only beside ${listed(endpointsGivenTogether)}, since the metadata of a server the runtime discovers says the challenges it takes`;
-  }
-  const { clients = confidentialSources } = fields;
-  return clients.every((source) => confidentialSources.includes(source))
-    ? undefined
-    : 'Expected pkce only on a way whose clients are registered alone, confidential clients whose secret binds the code to the client, since nothing but a challenge binds the code of a public client';
-}
-
-function pkceIssuesOf(fields: ConsentFields): readonly WayIssue[] {
-  const issue = fields.pkce === undefined ? undefined : pkceIssueOf(fields);
-  return issue === undefined ? [] : [{ path: ['pkce'], issue }];
-}
-
-export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
-  return [
-    ...scopeIssuesOf(fields),
-    ...parameterIssuesOf(fields),
-    ...endpointIssuesOf(fields),
-    ...pkceIssuesOf(fields),
-    ...clientIssuesOf(fields),
-  ];
-}
-
 function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialWayFields): readonly WayIssue[] {
   return oauthClient === undefined || clients === undefined
     ? []
@@ -283,7 +196,12 @@ function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialW
 }
 
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
-  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says), ...keyWayIssuesOf(way)];
+  const issues = [
+    ...presenceIssuesOf(way),
+    ...wordsIssuesOf(way.scope, way.says),
+    ...keyWayIssuesOf(way),
+    ...accountTypeIssuesOf(way),
+  ];
   return way.kind === 'authorization'
     ? [
         ...issues,
@@ -298,3 +216,14 @@ function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));
 
 export type CredentialWay = typeof CredentialWaySchema.Type;
+
+const oneWayOfEachKind =
+  'Expected a kind and permissions no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, and an authorization way names in more what a later consent may add';
+
+export function repeatedWayIssuesOf(credentials: readonly CredentialWay[]): readonly EntryIssue[] {
+  return credentials.flatMap((way, index): readonly EntryIssue[] =>
+    credentials.findIndex((earlier) => isTheWayAsked(earlier, way)) === index
+      ? []
+      : [{ path: ['credentials', index, 'kind'], issue: oneWayOfEachKind }],
+  );
+}

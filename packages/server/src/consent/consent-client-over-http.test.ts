@@ -8,7 +8,7 @@ import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { publicUrl } from '../sign-in/signing-in.ts';
 import { secretsKey } from '../testing/records/kept-credentials.ts';
 import { connectedByConsent, consentStartedBy, servedStudioReturn } from '../testing/servers/consents-over-http.ts';
-import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { servingReasoning, type ReasoningServer, documentsReadInProcess } from '../testing/servers/reasoning-server.ts';
 
 const runtimeAddress = publicUrl;
 
@@ -150,7 +150,9 @@ async function servedForAudiences(): Promise<{ readonly api: FakeApiServer; read
   const { port, returnAddress } = await servedStudioReturn();
   const api = await serveFakeApi({ client: consentRegistration({ redirectUris: [returnAddress] }) });
   onTestFinished(api.close);
-  const served = await servingReasoning([], { PORT: String(port), ...sealing, ...audiencesServedBy(api) });
+  const served = await servingReasoning([], { PORT: String(port), ...sealing, ...audiencesServedBy(api) }, undefined, {
+    documents: documentsReadInProcess,
+  });
   onTestFinished(served.stop);
   await served.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return { api, served };

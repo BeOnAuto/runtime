@@ -1,4 +1,5 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -99,7 +100,7 @@ const rejected: Readonly<Record<string, Rejection>> = {
 
 const fixtureDirectory = fileURLToPath(new URL('../../node_modules/.cache/capability-rules/', import.meta.url));
 
-function compiledErrors(): readonly string[] {
+async function compiledErrors(): Promise<readonly string[]> {
   rmSync(fixtureDirectory, { recursive: true, force: true });
   mkdirSync(fixtureDirectory, { recursive: true });
   for (const [file, source] of Object.entries(accepted)) {
@@ -113,18 +114,23 @@ function compiledErrors(): readonly string[] {
     JSON.stringify({ extends: '../../../../../tsconfig.base.json', include: ['*.ts'] }),
   );
   const compiler = fileURLToPath(new URL('bin/tsc', import.meta.resolve('typescript/package.json')));
-  const { stdout } = spawnSync(process.execPath, [compiler, '--pretty', 'false'], {
+  const child = spawn(process.execPath, [compiler, '--pretty', 'false'], {
     cwd: fixtureDirectory,
-    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore'],
   });
+  let stdout = '';
+  child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+    stdout += chunk;
+  });
+  await once(child, 'close');
   return stdout.split(/\n(?=\S)/u).filter((error) => error.includes('error TS'));
 }
 
 describe('the compiler', () => {
   let errors: readonly string[] = [];
 
-  beforeAll(() => {
-    errors = compiledErrors();
+  beforeAll(async () => {
+    errors = await compiledErrors();
   });
 
   it('accepts every capability that keeps the rules and rejects every one that breaks them', () => {

@@ -17,8 +17,12 @@ export interface PollEnd {
   readonly progress: number | null;
 }
 
+/**
+ * A wait in whole milliseconds, between the least and the most: the times of the due rows are kept as integers. It is
+ * rounded up, so no poll comes sooner than the progress asks; the bounds are whole, so rounding keeps it within them.
+ */
 function withinTheWaits(wait: number): number {
-  return Math.min(Math.max(wait, pollWaits.leastMs), pollWaits.mostMs);
+  return Math.ceil(Math.min(Math.max(wait, pollWaits.leastMs), pollWaits.mostMs));
 }
 
 export function waitAfterPoll({ polls, deferredAt, now, progress }: PollEnd): number {

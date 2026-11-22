@@ -1,10 +1,20 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { SdkErrorCode } from '@modelcontextprotocol/client';
 import { describe, expect, it } from 'vitest';
 
 import { manualTimer, recordingTimer } from '../testing/index.ts';
-import { longestSdkTimeoutMs, pausedFor, raceAgainst, withinBound } from './timers.ts';
+import { pausedFor, raceAgainst, withinBound } from './timers.ts';
+
+function endsWhenGivenUp(signal: Readonly<AbortSignal>): Promise<never> {
+  const given = Promise.withResolvers<never>();
+  signal.addEventListener(
+    'abort',
+    () => {
+      given.reject(signal.reason);
+    },
+    { once: true },
+  );
+  return given.promise;
+}
 
 describe('a wait within a bound', () => {
   it('answers what it waited for when that comes in time, and stops the bound', async () => {
@@ -16,10 +26,10 @@ describe('a wait within a bound', () => {
 
   it('is given up as a request that timed out when the bound runs out first', async () => {
     const bound = manualTimer();
-    const waiting = withinBound(bound.timer, 300, (signal) => setTimeout(longestSdkTimeoutMs, undefined, { signal }));
+    const waiting = withinBound(bound.timer, 300, (signal) => endsWhenGivenUp(signal));
     bound.fire();
 
-    await expect(waiting).rejects.toMatchObject({ cause: { code: SdkErrorCode.RequestTimeout } });
+    await expect(waiting).rejects.toMatchObject({ code: SdkErrorCode.RequestTimeout });
   });
 });
 

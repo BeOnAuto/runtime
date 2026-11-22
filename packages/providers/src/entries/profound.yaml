@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.tryprofound.com/mcp
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://auth.tryprofound.com
     scope: openid offline_access
     says:
@@ -14,6 +15,7 @@ credentials:
     clients: [registered, metadata_document, dynamic]
     description: Sign in to Profound and allow access.
   - kind: secret
+    account_types: [personal]
     in: header
     name: Authorization
     scheme: Bearer

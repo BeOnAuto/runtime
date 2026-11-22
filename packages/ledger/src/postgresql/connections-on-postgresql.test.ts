@@ -1,14 +1,14 @@
-import { Effect, Function, Layer, Logger, Schema } from 'effect';
+import { Effect, Function, Layer, Logger } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { endingOf, sweepsWatched } from '../content/watched-sweeps.ts';
 import { openChoresWith, openLedgerWith } from '../testing/open-ledger.ts';
 import { postgresqlConnected, postgresqlDatabasesOn, postgresqlQueried } from '../testing/postgresql-databases.ts';
+import { aStatementGate, type StatementGate } from '../testing/statement-gate.ts';
 import { tally } from '../testing/tally.ts';
-import { until } from '../testing/until.ts';
 import { lostConnectionLogged, lostConnectionsLoggedWith } from './lost-connections.ts';
 import { plainPoolsOn, postgresqlLedgerLayer, postgresqlLedgerOpened } from './postgresql-ledger.ts';
-import { emmettsMigrationLock } from './postgresql-run-outcomes.ts';
+import { emmettsMigrationLock, longestMigrationLockWaitMs, type LockWaiting } from './postgresql-run-outcomes.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -20,47 +20,47 @@ function otherConnectionsTo(database: string): string {
   return `FROM pg_stat_activity WHERE datname = '${new URL(database).pathname.slice(1)}' AND pid <> pg_backend_pid()`;
 }
 
-function lastLockTryOn(database: string): string {
-  return `SELECT (extract(epoch FROM max(query_start)) * 1000)::float8 AS tried_at ${otherConnectionsTo(database)} AND query LIKE '%pg_try_advisory_xact_lock%'`;
-}
-
-function connectionsTo(database: string): string {
-  return `SELECT count(*)::int AS open ${otherConnectionsTo(database)}`;
-}
-
 function endingConnectionsTo(database: string): string {
   return `SELECT pg_terminate_backend(pid) AS ended ${otherConnectionsTo(database)}`;
 }
 
-const severalTriesOfTheLock = 300;
+const severalTriesOfTheLock = 3;
 
-const decodeLastTry = Schema.decodeUnknownSync(
-  Schema.Tuple([Schema.Struct({ tried_at: Schema.NullOr(Schema.Number) })]),
-);
+interface Tries {
+  readonly waiting: LockWaiting;
+  readonly tried: Promise<number>;
+  readonly letGo: () => void;
+}
 
-async function untilTriedAgainPast(database: string, pastMs: number): Promise<void> {
-  const tries: number[] = [];
-  await until(
-    async () => {
-      const [{ tried_at: triedAt }] = decodeLastTry(await postgresqlQueried(database, lastLockTryOn(database)));
-      tries.push(...(triedAt === null ? [] : [triedAt]));
-      return tries;
+function triesUntilLetGo(tries: number): Tries {
+  const counted = { pauses: 0 };
+  const tried = Promise.withResolvers<number>();
+  const letGo = Promise.withResolvers<void>();
+  return {
+    waiting: {
+      mostWaitMs: longestMigrationLockWaitMs,
+      now: () => 0,
+      pause: () => {
+        counted.pauses += 1;
+        if (counted.pauses < tries) {
+          return Promise.resolve();
+        }
+        tried.resolve(counted.pauses);
+        return letGo.promise;
+      },
     },
-    (triedAt: readonly number[]) => Math.max(...triedAt) - Math.min(...triedAt) > pastMs,
-  );
+    tried: tried.promise,
+    letGo: letGo.resolve,
+  };
 }
 
-async function untilNoneOpen(database: string): Promise<void> {
-  const client = await postgresqlConnected(database);
-  await until(
-    async () => (await client.query<Readonly<Record<string, unknown>>>(connectionsTo(database))).rows,
-    (rows: readonly unknown[]) => JSON.stringify(rows) === JSON.stringify([{ open: 0 }]),
-  );
+function waitingFor(opened: Promise<unknown>): LockWaiting {
+  return { mostWaitMs: longestMigrationLockWaitMs, now: () => 0, pause: () => opened };
 }
 
-function sweptOn(database: string, held?: Promise<void>) {
+function sweptOn(database: string, gate: StatementGate, held?: Promise<void>) {
   return sweepsWatched(
-    () => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection: Function.constVoid }),
+    () => postgresqlLedgerOpened({ pools: gate.pools(database), reportLostConnection: Function.constVoid }),
     held,
   );
 }
@@ -68,10 +68,26 @@ function sweptOn(database: string, held?: Promise<void>) {
 describe.skipIf(skipped)(`A ledger on a PostgreSQL database of its own${notice}`, () => {
   it('builds on a database that another server is migrating at the same moment', async () => {
     const database = await aDatabase();
+    const firstOpened = Promise.withResolvers<void>();
+    const secondOpened = Promise.withResolvers<void>();
 
     const [first, second] = await Promise.all([
-      openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database) })),
-      openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database) })),
+      openLedgerWith(
+        postgresqlLedgerLayer({
+          pools: plainPoolsOn(database),
+          migrationLockWaiting: waitingFor(secondOpened.promise),
+        }),
+      ).finally(() => {
+        firstOpened.resolve();
+      }),
+      openLedgerWith(
+        postgresqlLedgerLayer({
+          pools: plainPoolsOn(database),
+          migrationLockWaiting: waitingFor(firstOpened.promise),
+        }),
+      ).finally(() => {
+        secondOpened.resolve();
+      }),
     ]);
     await Effect.runPromise(first.ledger.execute('org/acme/tallies', tally, [1]));
     const loaded = await Effect.runPromise(second.ledger.load('org/acme/tallies', tally));
@@ -81,26 +97,26 @@ describe.skipIf(skipped)(`A ledger on a PostgreSQL database of its own${notice}`
   });
 
   it('holds one connection once its chore has swept, and closes every connection when the runtime is disposed', async () => {
-    const database = await aDatabase();
-    const watched = sweptOn(database);
+    const gate = aStatementGate();
+    const watched = sweptOn(await aDatabase(), gate);
     const { ledger, sweptAt, dispose } = await openChoresWith(watched.layer);
     await sweptAt(Date.now());
     await watched.finished;
     await Effect.runPromise(ledger.load('org/acme/tallies', tally));
-    const whileOpen = await postgresqlQueried(database, connectionsTo(database));
+    const whileOpen = gate.open();
 
     await dispose();
+    await gate.allClosed();
 
-    expect(whileOpen).toEqual([{ open: 1 }]);
-    await untilNoneOpen(database);
+    expect(whileOpen).toBe(1);
   });
 });
 
 describe.skipIf(skipped)(`A ledger on PostgreSQL whose runtime is disposed while it sweeps${notice}`, () => {
   it('finishes the sweep under way and then closes every connection', async () => {
-    const database = await aDatabase();
+    const gate = aStatementGate();
     const held = Promise.withResolvers<void>();
-    const watched = sweptOn(database, held.promise);
+    const watched = sweptOn(await aDatabase(), gate, held.promise);
     const { sweptAt, dispose } = await openChoresWith(watched.layer);
     const sweeping = endingOf(sweptAt(Date.now()));
     await watched.started;
@@ -109,8 +125,9 @@ describe.skipIf(skipped)(`A ledger on PostgreSQL whose runtime is disposed while
     held.resolve();
     await disposing;
 
+    await gate.allClosed();
+
     expect(await Promise.all([watched.finished, sweeping])).toEqual(['swept', 'ended']);
-    await untilNoneOpen(database);
   });
 });
 
@@ -120,14 +137,18 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database another server is f
     const filling = await postgresqlConnected(database);
     await filling.query('SELECT pg_advisory_lock($1)', [emmettsMigrationLock]);
     const fill = { done: false };
+    const tries = triesUntilLetGo(severalTriesOfTheLock);
 
-    const opening = openLedgerWith(postgresqlLedgerLayer({ pools: plainPoolsOn(database) })).then((opened) => ({
+    const opening = openLedgerWith(
+      postgresqlLedgerLayer({ pools: plainPoolsOn(database), migrationLockWaiting: tries.waiting }),
+    ).then((opened) => ({
       opened,
       afterTheFill: fill.done,
     }));
-    await untilTriedAgainPast(database, severalTriesOfTheLock);
+    await tries.tried;
     fill.done = true;
     await filling.query('SELECT pg_advisory_unlock($1)', [emmettsMigrationLock]);
+    tries.letGo();
     const { opened, afterTheFill } = await opening;
     onTestFinished(opened.dispose);
 
@@ -142,11 +163,25 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database another server is f
 
 async function aLedgerLogging(database: string) {
   const logged: string[] = [];
+  const counts: { readonly count: number; readonly reached: () => void }[] = [];
   const logging = Logger.layer([
     Logger.map(Logger.formatJson, (line: string) => {
       logged.push(line);
+      for (const { count, reached } of counts) {
+        if (logged.length >= count) {
+          reached();
+        }
+      }
     }),
   ]);
+  const loggedAtLeast = (count: number): Promise<void> => {
+    const reached = Promise.withResolvers<void>();
+    counts.push({ count, reached: reached.resolve });
+    if (logged.length >= count) {
+      reached.resolve();
+    }
+    return reached.promise;
+  };
   const context = await Effect.runPromise(Effect.context().pipe(Effect.provide(logging)));
   const watched = sweepsWatched(() =>
     postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection: lostConnectionsLoggedWith(context) }),
@@ -154,21 +189,18 @@ async function aLedgerLogging(database: string) {
   const { ledger, sweptAt, dispose } = await openChoresWith(watched.layer.pipe(Layer.provide(logging)));
   onTestFinished(dispose);
   await sweptAt(Date.now());
-  return { ledger, logged, firstSweep: watched.finished };
+  return { ledger, logged, loggedAtLeast, firstSweep: watched.finished };
 }
 
 describe.skipIf(skipped)(`A ledger whose PostgreSQL database ends its connections${notice}`, () => {
   it('reports each lost connection to the log, and goes on reading and appending on new ones', async () => {
     const database = await aDatabase();
-    const { ledger, logged, firstSweep } = await aLedgerLogging(database);
+    const { ledger, logged, loggedAtLeast, firstSweep } = await aLedgerLogging(database);
     expect(await firstSweep).toBe('swept');
     await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [1]));
 
     const ended = await postgresqlQueried(database, endingConnectionsTo(database));
-    await until(
-      () => logged.length,
-      (count) => count === ended.length,
-    );
+    await loggedAtLeast(ended.length);
 
     expect(await Effect.runPromise(ledger.load('org/acme/tallies', tally))).toEqual({ state: 1, version: 1 });
     expect(await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [2]))).toEqual({

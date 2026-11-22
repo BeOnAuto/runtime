@@ -3,7 +3,6 @@ import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { configuredServer } from '../testing/processes/configured-server.ts';
 import { saidAtStart } from '../testing/processes/in-process-starts.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
@@ -24,12 +23,14 @@ async function startupLine(configText: string, environment: Readonly<Record<stri
 }
 
 describe('a configuration file the server cannot use', () => {
-  it('stops the process when the file is missing, naming it in one line on stderr', async () => {
-    const { child } = configuredServer(undefined, { CONFIG_FILE: '/nonexistent/auto-runtime.yaml' });
+  it('stops the start when the file is missing, naming it in one line', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
 
-    expect(await child.exited).toBe(1);
-    expect(child.output().stdout).toBe('');
-    expect(child.output().stderr).toMatch(
+    const said = await saidAtStart({ LEDGER_FILE: ledger.fileName, CONFIG_FILE: '/nonexistent/auto-runtime.yaml' });
+
+    expect(said.exitCode).toBe(1);
+    expect(said.line).toMatch(
       /^Auto Runtime could not start: ConfigFileInvalid: [^\n]*\/nonexistent\/auto-runtime\.yaml[^\n]*\n$/u,
     );
   });

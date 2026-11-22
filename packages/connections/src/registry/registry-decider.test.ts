@@ -109,6 +109,78 @@ describe('breaking a connection whose credential cannot be read', () => {
   });
 });
 
+const connectedAgain: ConnectionEvent = {
+  type: 'connection_connected',
+  data: { connection: 'crm-id', connected_by: { id: 'person:grace', name: 'Grace Hopper' } },
+};
+
+const anHourLater = { by: 'person:grace', at: '2026-10-15T15:00:00.000Z' };
+
+type Acted = Readonly<typeof acted>;
+
+function identifying(connectedAt: string, id = '7001'): ConnectionCommand {
+  return {
+    type: 'identify',
+    connection: 'crm-id',
+    connected_at: connectedAt,
+    user: { id, name: 'sam' },
+    by: 'runtime',
+    at: '2026-10-15T14:01:00.000Z',
+  };
+}
+
+function identifiedAs(connectedAt: string, id = '7001'): ConnectionEvent {
+  return {
+    type: 'connection_identified',
+    data: { connection: 'crm-id', connected_at: connectedAt, user: { id, name: 'sam' } },
+  };
+}
+
+function decidedAfter(command: ConnectionCommand, ...history: readonly (readonly [ConnectionEvent, Acted])[]) {
+  const registry = history.reduce(
+    (state, [event, context]) => registryDecider.evolve(state, recorded(event, context)),
+    registryDecider.initialState,
+  );
+  return registryDecider.decide(command, registry);
+}
+
+describe('recording the account a connection acts as', () => {
+  it('records the answer once for a connecting, and nothing for a second answer of the same connecting', () => {
+    expect([
+      decided(identifying(acted.at), crmAdded, connected),
+      decided(identifying(acted.at, '9'), crmAdded, connected, identifiedAs(acted.at)),
+    ]).toEqual([Result.succeed([identifiedAs(acted.at)]), Result.succeed([])]);
+  });
+
+  it('records nothing for an answer of an earlier connecting, nor for a connection pending, broken or removed', () => {
+    const broken: ConnectionEvent = {
+      type: 'connection_broken',
+      data: { connection: 'crm-id', kind: 'credential_refused', reason: 'Refused' },
+    };
+    const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'crm-id' } };
+
+    expect([
+      decidedAfter(identifying(acted.at), [crmAdded, acted], [connected, acted], [connectedAgain, anHourLater]),
+      decided(identifying(acted.at), crmAdded),
+      decided(identifying(acted.at), crmAdded, connected, broken),
+      decided(identifying(acted.at), crmAdded, connected, removed),
+    ]).toEqual([Result.succeed([]), Result.succeed([]), Result.succeed([]), Result.succeed([])]);
+  });
+
+  it('records the answer of a new connecting after a reconnect cleared the one before, and refuses an unknown connection', () => {
+    expect(
+      decidedAfter(
+        identifying(anHourLater.at, '9'),
+        [crmAdded, acted],
+        [connected, acted],
+        [identifiedAs(acted.at), acted],
+        [connectedAgain, anHourLater],
+      ),
+    ).toEqual(Result.succeed([identifiedAs(anHourLater.at, '9')]));
+    expect(decided(identifying(acted.at))).toMatchObject(Result.fail({ _tag: 'not_found' }));
+  });
+});
+
 function settingPlaybooks(playbooks: readonly string[] | null): ConnectionCommand {
   return { type: 'set_playbooks', connection: 'crm-id', playbooks, ...acted };
 }

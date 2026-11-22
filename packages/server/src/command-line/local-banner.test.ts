@@ -67,6 +67,10 @@ describe('the notice that the server is ready', () => {
     ]);
   });
 
+  it('says nothing of local mode for a server that takes credentials', () => {
+    expect(readyNoticeOf({ ...ready, mode: 'credentials' }, 1).split('\n')).not.toContain(localModeLine);
+  });
+
   it('links the addresses where the terminal shows colors', () => {
     const notice = readyNoticeOf(ready, 24);
 

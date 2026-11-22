@@ -174,7 +174,7 @@ describe('an order whose email started one workflow that marked it and another t
     expect(stopped.open_count).toBe(1);
     expect(stopped.in_flight[0]).toMatchObject({ id: await juniperOf(watched), verdict: 'open', next: 'priced' });
     expect(stopped.in_flight[0]?.stopped?.reason).toContain(gaveUp);
-  }, 120_000);
+  });
 });
 
 describe('a ledger whose release passed the run that gave up without stopping the order', () => {
@@ -208,5 +208,5 @@ describe('a ledger whose release passed the run that gave up without stopping th
     expect(unstopped).toMatchObject({ open_count: 1, stopped_count: 0 });
     expect(stopped.in_flight[0]?.id).toBe(await juniperOf(after));
     expect(stopped.in_flight[0]?.stopped?.reason).toContain(gaveUp);
-  }, 120_000);
+  });
 });

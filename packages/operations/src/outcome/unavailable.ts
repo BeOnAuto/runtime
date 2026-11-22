@@ -13,12 +13,14 @@ export const UnavailableKindSchema = Schema.Literals([
   'generation_timed_out',
   'meter_unavailable',
   'content_unavailable',
+  'busy',
 ]);
 
 export type UnavailableKind = typeof UnavailableKindSchema.Type;
 
 export class Unavailable extends Data.TaggedError('unavailable')<{
   readonly detail: string;
+  readonly retry_after?: number;
   readonly kind?: UnavailableKind;
   readonly because?: RejectionBecause;
   readonly record?: Schema.JsonObject;

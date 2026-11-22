@@ -5,7 +5,8 @@ import { Effect, Result, type Layer } from 'effect';
 import { expect, it } from 'vitest';
 
 import type { GenerationWait } from '../waiting/generation-wait.ts';
-import { generationsWaiting, generationsWaitingName } from '../waiting/waiting-rows.ts';
+import { waitAfterPoll } from '../waiting/poll-cadence.ts';
+import { generationsWaiting, generationsWaitingName, waitingRowFrom } from '../waiting/waiting-rows.ts';
 
 export type WaitingLedgerOn = (projections: readonly (typeof generationsWaiting)[]) => Promise<Layer.Layer<Ledger>>;
 
@@ -96,7 +97,61 @@ const rowOfOne = Effect.flatMap(Effect.service(Ledger), (ledger) =>
   }),
 );
 
+const advancedAt = (cadence: { readonly next: number; readonly progress: number }) =>
+  Effect.flatMap(Effect.service(Ledger), (ledger) =>
+    ledger.advanceRow(generationsWaitingName, flightOfAlpha, 'one', {
+      set: {
+        polls: 1,
+        progress: cadence.progress,
+        next_poll_at: cadence.next,
+        poll_due_at: cadence.next,
+        ending_due_at: deferredAt + 600_000,
+      },
+      when: [{ column: 'open', equals: true }],
+    }),
+  );
+
+const dueRowsRead = Effect.gen(function* () {
+  const ledger = yield* Effect.service(Ledger);
+  const rows = yield* ledger.readDueRows(generationsWaitingName, {
+    column: 'poll_due_at',
+    through: deferredAt + 3_600_000,
+    limit: 10,
+  });
+  return playbookRowsOf(generationsWaitingName, rows).map(({ row }) => waitingRowFrom(row).next_poll_at);
+});
+
+function readAfterAnAwkwardPoll(ledgerOn: WaitingLedgerOn): void {
+  it.each([
+    [40, 7001],
+    [40, 6667],
+    [30, 5001],
+  ])(
+    'reads the due rows after a poll at progress %i, %i ms after the deferral, whose wait does not divide into whole milliseconds',
+    async (progress, elapsed) => {
+      const layer = await ledgerOn([generationsWaiting]);
+      const now = deferredAt + elapsed;
+      const program = Effect.gen(function* () {
+        yield* placed;
+        yield* recorded(flightOfAlpha, 'one', {
+          type: 'run_deferred',
+          data: { record: waitOf('video_1', deferredAt + 600_000) },
+        });
+        const next = now + waitAfterPoll({ polls: 1, deferredAt, now, progress });
+        yield* advancedAt({ next, progress });
+        return { next, read: yield* dueRowsRead };
+      });
+
+      const { next, read } = await Effect.runPromise(Effect.provide(program, layer));
+
+      expect(read).toEqual([next]);
+    },
+  );
+}
+
 export function waitingOnStoresSuite(ledgerOn: WaitingLedgerOn): void {
+  readAfterAnAwkwardPoll(ledgerOn);
+
   it('keeps the generations each playbook waits for, due to be asked and to end across playbooks, advanced only while the deferral that made the row stands open', async () => {
     const layer = await ledgerOn([generationsWaiting]);
     const program = Effect.gen(function* () {

@@ -7,7 +7,6 @@ import type { DatabaseTokenRequest } from '@on.auto/outbound/aws';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import type { PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
 import { aFakePostgreSQL } from '../testing/databases/fake-postgresql.ts';
@@ -20,6 +19,7 @@ import {
 import { catalogOfTheLedgerIn, type CatalogRows } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { loopbackSettingsOver } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { databasePoolsOf, type DatabaseTokenSignerOf, signerLoadedWithTheFirstTokenBy } from './database-pools.ts';
 
@@ -254,7 +254,7 @@ describe('the layout of the database the server opens', () => {
   it('is the layout of every table and index the ledger, the workflow host and the folders of its projector make, pinned in database-layout.json under the number of the ledger, and of those of the sign-in, whose names begin with its prefix, pinned in auth-layout.json under the number of its store', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
-    const server = await startServer(loopbackSettingsOver(ledger), compositionRoot);
+    const server = await startServer(loopbackSettingsOver(ledger), testComposition());
     await server.stop();
 
     const catalog = await catalogOfTheLedgerIn(ledger.fileName);

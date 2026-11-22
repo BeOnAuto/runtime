@@ -3,7 +3,7 @@ import { lookupDocument } from '@on.auto/lookup/testing';
 import { fakeStdioServerPath } from '@on.auto/tool-servers/served-fakes';
 import { describe, expect, it } from 'vitest';
 
-import { mayChange } from '../testing/interaction-servers/call-endings.ts';
+import { mayChange, sleepsUntilWoken, wokenOnceAsleep } from '../testing/interaction-servers/call-endings.ts';
 import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import {
   askingASystem,
@@ -14,7 +14,6 @@ import {
 } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { settledRun } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
 
 const measured = { NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'] ?? '' };
 
@@ -70,7 +69,7 @@ describe('a run that calls a tool that acts whose session or process is gone', (
 });
 
 async function sleeping(): Promise<SystemServer> {
-  const server = await askingASystem({ hints: { sleep: mayChange }, over: 'http' });
+  const server = await askingASystem({ hints: { sleep: mayChange }, toldBounds: sleepsUntilWoken, over: 'http' });
   await server.define('sleeping', calling('sleep', ['    ms: 1000']));
   return server;
 }
@@ -85,10 +84,7 @@ async function leftOnceCalled(server: SystemServer, url: string, { headers, body
   const gone: Promise<unknown> = fetch(url, { method: 'POST', headers, body, signal: leaving.signal }).catch(
     (error: unknown) => error,
   );
-  await until(
-    () => Promise.resolve(server.fake.received().length),
-    (received) => received === 1,
-  );
+  await server.fake.once(() => server.fake.received().length === 1);
   leaving.abort();
   return gone;
 }
@@ -103,6 +99,7 @@ describe('a run that calls a tool that acts while its call is in flight, over HT
 
     const cancelling = await server.call('POST', `${alpha}/runs/${systemRunId}/cancel`, { body: { reason: 'Stop' } });
     const answering = await server.call('POST', `${alpha}/runs/${systemRunId}/answer`, { body: { answer: {} } });
+    await wokenOnceAsleep(server.fake);
     const ended = await settledRun(server, `${alpha}/runs/${systemRunId}`);
     const listed = await server.call('GET', `${alpha}/interactions`);
 
@@ -129,12 +126,11 @@ describe('a run that calls a tool that acts while its call is in flight, over MC
       },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: call }),
     });
+    await wokenOnceAsleep(server.fake);
 
     const ended = await settledRun(server, `${alpha}/runs/${systemRunId}`);
-    const sessionsEnded = await until(
-      () => Promise.resolve(server.fake.endedSessions()),
-      (count) => count === 2,
-    );
+    await server.fake.once(() => server.fake.endedSessions() === 2);
+    const sessionsEnded = server.fake.endedSessions();
 
     expect(ended.body).toMatchObject({ status: 'succeeded', output: 'Slept.' });
     expect((await server.history(systemRunId)).map(({ type }) => type)).toEqual(callFacts);

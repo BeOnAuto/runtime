@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { DumboError } from '@event-driven-io/dumbo';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import type { ReadonlyAbortContext } from '../client/readonly-options.ts';
 import { settled } from '../testing/clients.ts';
@@ -81,6 +81,28 @@ describe('the queue of the one writer, as it runs its tasks', () => {
   });
 });
 
+describe('the queue of the one writer, as a task waits for it', () => {
+  it('tells of each task that waits for the writer as it begins to wait, and of none that starts at once', async () => {
+    const told: string[] = [];
+    const queue = writerQueue({
+      ...todaysBounds,
+      onWaiting: () => {
+        told.push('a task waits');
+      },
+    });
+    const first = aHeldTask();
+
+    const running = queue.run(first.task);
+    const toldAsTheFirstStarts = [...told];
+    const second = queue.run(() => Promise.resolve('second'));
+    const toldAsTheSecondWaits = [...told];
+    first.letGo();
+
+    expect([await running, await second]).toEqual(['answered', 'second']);
+    expect([toldAsTheFirstStarts, toldAsTheSecondWaits]).toEqual([[], ['a task waits']]);
+  });
+});
+
 describe('the bounds of the queue of the one writer', () => {
   it('refuse a task once as many are waiting as it holds, in today’s words', async () => {
     const queue = writerQueue({ ...todaysBounds, mostWaiting: 2 });
@@ -99,8 +121,14 @@ describe('the bounds of the queue of the one writer', () => {
     const queue = writerQueue({ ...todaysBounds, longestWaitToStart: 20 });
     const first = aHeldTask();
     const running = queue.run(first.task);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
 
-    const refusal = await settled(queue.run(() => Promise.resolve('late')));
+    const late = settled(queue.run(() => Promise.resolve('late')));
+    await vi.advanceTimersByTimeAsync(20);
+    const refusal = await late;
     first.letGo();
 
     expect(refusal).toEqual({ status: 'rejected', reason: new DumboError(notStartedInTime) });
@@ -205,11 +233,19 @@ describe('the queue of the one writer, as its pool closes within a deadline', ()
     const first = aHeldTask();
     const running = queue.run(first.task);
     await first.started;
-    const began = performance.now();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const stopped = { yet: false };
+    const stopping = queue.stop({ closeDeadline: 20 }).then(() => Object.assign(stopped, { yet: true }));
 
-    await queue.stop({ closeDeadline: 20 });
+    await vi.advanceTimersByTimeAsync(19);
+    const beforeTheDeadline = stopped.yet;
+    await vi.advanceTimersByTimeAsync(1);
+    await stopping;
 
-    expect(performance.now() - began).toBeGreaterThanOrEqual(19);
+    expect([beforeTheDeadline, stopped.yet]).toEqual([false, true]);
     first.letGo();
     expect(await running).toBe('answered');
   });

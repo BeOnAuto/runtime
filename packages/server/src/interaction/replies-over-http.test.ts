@@ -15,13 +15,13 @@ import {
   readRecorded,
   readsOf,
   readAndTold,
-  someRead,
   threadReading,
   toldReading,
+  whenRepliesRead,
 } from '../testing/interaction-servers/chat-readings.ts';
 import { servingInteractions } from '../testing/interaction-servers/interaction-server.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenSwept } from '../testing/servers/workflow-server.ts';
 
 const threaded = [...chatDelivery, ...threadReading];
 
@@ -30,12 +30,12 @@ describe('a request whose function reads the replies to its message, over HTTP',
     const chat = await chatServer();
     const server = await servingInteractions(threaded, chatEnvironment(chat.url));
     const runId = await server.ask('approve-brief');
-    const [listed] = await until(() => interactionsOf(server), readingIn(1));
+    const [listed] = await whenSwept(server, () => interactionsOf(server), readingIn(1));
     const [question] = chat.chat.posted();
     chat.chat.reply({ channel: '#approvals-ada', thread: question?.ts, user: 'ada', text: 'Approve, ready to ship' });
 
     const settled = await server.settled(runId);
-    const events = await until(() => playbookEventsOf(server), readRecorded);
+    const events = await whenRepliesRead(server, () => playbookEventsOf(server), readRecorded);
 
     expect(listed).toMatchObject({ conversation: '#approvals-ada/1699.000001', answerer: 'ada', reply_refusals: 0 });
     expect(settled).toMatchObject({ status: 'succeeded', output: { choice: 'approve' }, record: {} });
@@ -75,7 +75,7 @@ describe('a request whose function reads the replies to its message and changed 
     const chat = await chatServer();
     const server = await servingInteractions(threaded, chatEnvironment(chat.url));
     const runId = await server.ask('approve-brief');
-    await until(() => interactionsOf(server), readingIn(1));
+    await whenSwept(server, () => interactionsOf(server), readingIn(1));
     const changed = approvalDocument([...chatDelivery, ...threadReading]).replace('tool: thread_replies', 'tool: echo');
     const updated = await server.call('PUT', `${alpha}/definitions/interaction/approve-brief`, {
       body: { source: changed, diagram: 'none' },
@@ -98,8 +98,12 @@ describe('two functions that read one conversation with one tool, over HTTP', ()
     await server.ask('approve-brief');
     await server.ask('approve-again');
 
-    const listed = await until(() => interactionsOf(server), readingIn(2));
-    const reads = await until(() => readsOf(chat), someRead);
+    const listed = await whenSwept(server, () => interactionsOf(server), readingIn(2));
+    const reads = await whenRepliesRead(
+      server,
+      () => readsOf(chat),
+      (read) => read.length > 0,
+    );
 
     expect(listed.map(({ conversation }) => conversation)).toEqual(['#approvals-ada', '#approvals-ada']);
     expect(reads).toHaveLength(1);
@@ -120,10 +124,10 @@ describe('the secret of the tool server a function reads replies through, over H
       chatEnvironment(chat.url, { record_content: true }),
     );
     const runId = await server.ask('approve-brief');
-    await until(() => interactionsOf(server), readingIn(1));
+    await whenSwept(server, () => interactionsOf(server), readingIn(1));
     chat.chat.reply({ channel: '#approvals-ada', thread: chat.chat.posted()[0]?.ts, user: 'ada', text: 'maybe' });
 
-    const events = await until(() => playbookEventsOf(server), readAndTold);
+    const events = await whenRepliesRead(server, () => playbookEventsOf(server), readAndTold);
     const listing = JSON.stringify((await server.call('GET', `${alpha}/interactions`)).body);
     const history = JSON.stringify((await server.call('GET', `${alpha}/runs/${runId}/history`)).body);
 

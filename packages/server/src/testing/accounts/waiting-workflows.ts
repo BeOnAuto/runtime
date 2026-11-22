@@ -3,7 +3,7 @@ import { Schema } from 'effect';
 import { alpha, type ReasoningServer } from '../servers/reasoning-server.ts';
 import { tallyCreated } from '../servers/tally-server.ts';
 import { workflowSource } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { whenHeld } from '../waiting/until.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize acme.'].join('\n');
 
@@ -49,7 +49,7 @@ export async function waitsOf(server: ReasoningServer, run: string): Promise<rea
 }
 
 export function waitingAgain(server: ReasoningServer, run: string, times: number): Promise<readonly Wait[]> {
-  return until(
+  return whenHeld(
     () => waitsOf(server, run),
     (waits) => waits.length === times,
   );
@@ -67,7 +67,7 @@ export async function defined(server: ReasoningServer): Promise<void> {
 }
 
 export async function untilItsModelWasAsked(server: ReasoningServer): Promise<void> {
-  await until(
+  await whenHeld(
     () => server.modelCalls(),
     (calls) => calls === 1,
   );

@@ -93,7 +93,7 @@ describe('an allocation given through the API', () => {
 
     expect(taken).toMatchObject({ status: 200, body: { installation, credits: 1, spent: 0 } });
     expect(await tallied(after)).toMatchObject({ status: 409, body: { kind: 'credits_exhausted' } });
-  }, 60_000);
+  });
 
   it('refuses an allocation Auto did not sign, one that is no allocation, and a report without a key', async () => {
     const accounts = await accountsServed();

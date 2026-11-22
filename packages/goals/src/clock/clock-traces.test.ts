@@ -33,20 +33,20 @@ interface WeekOfChecks {
 
 async function weekOfChecks(): Promise<WeekOfChecks> {
   const harness = await monitored();
-  await harness.until('2026-11-09T00:00:00.000Z');
+  await harness.steppedTo('2026-11-09T00:00:00.000Z');
   const mondayOpened = await harness.row(assessmentsName, dayOf('2026-11-09'));
   await harness.observed('mon', { failed: 0, all_reported: true }, '2026-11-09T09:00:00.000Z');
-  await harness.until('2026-11-10T01:00:00.000Z');
+  await harness.steppedTo('2026-11-10T01:00:00.000Z');
   const monday = await harness.row(assessmentsName, dayOf('2026-11-09'));
   await harness.observed('tue', { failed: 0, all_reported: false }, '2026-11-10T09:00:00.000Z');
-  await harness.until('2026-11-11T01:00:00.000Z');
+  await harness.steppedTo('2026-11-11T01:00:00.000Z');
   const tuesday = await harness.row(assessmentsName, dayOf('2026-11-10'));
   await harness.observed('wed', { failed: 0, all_reported: true }, '2026-11-11T09:00:00.000Z');
   await harness.observed('alert', { failed: 1, all_reported: false }, '2026-11-11T14:00:00.000Z');
   await harness.observed('wed-again', { failed: 0, all_reported: true }, '2026-11-11T16:00:00.000Z');
-  await harness.until('2026-11-12T01:00:00.000Z');
+  await harness.steppedTo('2026-11-12T01:00:00.000Z');
   await harness.paused('check', '2026-11-12T08:00:00.000Z');
-  await harness.until('2026-11-14T12:00:00.000Z');
+  await harness.steppedTo('2026-11-14T12:00:00.000Z');
   return { harness, mondayOpened, monday, tuesday };
 }
 
@@ -117,7 +117,7 @@ describe('trace E, a playbook that cannot run its check, through the clock', () 
     const harness = await monitored();
 
     await harness.observed('day-1', { failed: 0, all_reported: true }, '2026-11-09T09:00:00.000Z');
-    await harness.until('2026-11-11T01:00:00.000Z');
+    await harness.steppedTo('2026-11-11T01:00:00.000Z');
 
     expect(await harness.row(assessmentsName, dayOf('2026-11-09'))).toMatchObject({ verdict: 'passed' });
     expect(await harness.row(assessmentsName, dayOf('2026-11-10'))).toMatchObject({

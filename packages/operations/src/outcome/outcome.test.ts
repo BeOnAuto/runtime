@@ -8,6 +8,7 @@ import {
   kindsWithTypes,
   problemTypeOf,
   reasonOfKind,
+  resolutionOf,
 } from '../index.ts';
 import { Conflict } from './conflict.ts';
 import { Forbidden } from './forbidden.ts';
@@ -65,14 +66,24 @@ describe('the details of a run that succeeded with an answer a limit shaped', ()
   });
 });
 
+describe('what a refusal says of its resolution', () => {
+  it('keeps the wait a busy refusal gives, beside the other members, and nothing else', () => {
+    expect([
+      resolutionOf({ retry_after: 4 }),
+      resolutionOf(new Unavailable({ detail: 'Later', kind: 'busy', retry_after: 4 })),
+    ]).toEqual([{ retry_after: 4 }, { retry_after: 4 }]);
+  });
+});
+
 describe('the types of problems', () => {
   it('are URIs under https://on.auto/problems/', () => {
     expect(problemTypeOf('unavailable')).toBe('https://on.auto/problems/unavailable');
   });
 
-  it('give tools_unfinished, tools_called, effect_unknown, the meter’s four refusals and cursor_not_held types of their own, and no other kind', () => {
+  it('give tools_unfinished, busy, tools_called, effect_unknown, the meter’s four refusals and cursor_not_held types of their own, and no other kind', () => {
     expect(kindsWithTypes).toEqual([
       'tools_unfinished',
+      'busy',
       'tools_called',
       'effect_unknown',
       'credits_exhausted',
@@ -98,6 +109,7 @@ describe('the types of problems', () => {
   it('keep the reason of each kind with a type of its own', () => {
     expect(kindsWithTypes.map((kind) => reasonOfKind(kind))).toEqual([
       'unavailable',
+      'unavailable',
       'conflict',
       'conflict',
       'conflict',
@@ -116,6 +128,8 @@ describe('a rejection a handler answers again as its own', () => {
       typedRejectionOf(rejected('forbidden', 'Not here')),
       typedRejectionOf(rejected('not_found', 'Nowhere')),
       typedRejectionOf(rejected('unavailable', 'Later')),
+      typedRejectionOf({ ...rejected('unavailable', 'Busy', undefined, 'busy'), retry_after: 2 }),
+      typedRejectionOf(rejected('unavailable', 'Not a kind of it', undefined, 'retired')),
       typedRejectionOf(rejected('conflict', 'Retired', undefined, 'retired')),
       typedRejectionOf(rejected('conflict', 'In the way', undefined, 'permission_denied')),
     ]).toEqual([
@@ -123,6 +137,8 @@ describe('a rejection a handler answers again as its own', () => {
       new Forbidden({ detail: 'Not here' }),
       new NotFound({ detail: 'Nowhere' }),
       new Unavailable({ detail: 'Later' }),
+      new Unavailable({ detail: 'Busy', kind: 'busy', retry_after: 2 }),
+      new Unavailable({ detail: 'Not a kind of it' }),
       new Conflict({ detail: 'Retired', kind: 'retired' }),
       new Conflict({ detail: 'In the way' }),
     ]);

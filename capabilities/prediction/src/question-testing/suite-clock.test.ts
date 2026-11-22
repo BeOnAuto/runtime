@@ -1,4 +1,4 @@
-import { Clock, DateTime, Effect } from 'effect';
+import { Clock, DateTime, Duration, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { clockRunningFrom, startedAt } from './suite-clock.ts';
@@ -6,15 +6,15 @@ import { clockRunningFrom, startedAt } from './suite-clock.ts';
 const nanosecondsInAMillisecond = 1_000_000n;
 
 describe('a clock running from a moment', () => {
-  it('reads the moment it starts from and runs on across a sleep at the pace of the real clock, on a monotonic time that stands still', async () => {
+  it('reads the moment it starts from and runs on at the pace of the real clock, sleeping as the sleep it is handed does, on a monotonic time that stands still', async () => {
     const real = Clock.Clock.defaultValue();
     const before = real.currentTimeMillisUnsafe();
-    const clock = clockRunningFrom(startedAt);
+    const clock = clockRunningFrom(startedAt, () => Effect.void);
     const after = real.currentTimeMillisUnsafe();
     const { slept, first, shifted, last } = await Effect.runPromise(
       Effect.gen(function* () {
         const started = yield* Clock.monotonicTimeNanos;
-        yield* Effect.sleep('5 millis');
+        yield* clock.sleep(Duration.millis(5));
         const ended = yield* Clock.monotonicTimeNanos;
         const firstRead = { millis: real.currentTimeMillisUnsafe(), nanos: real.currentTimeNanosUnsafe() };
         const millis = yield* Clock.currentTimeMillis;

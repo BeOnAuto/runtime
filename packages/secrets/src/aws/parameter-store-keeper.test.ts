@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aClosedPort } from '../fakes/closed-port.ts';
 import { fakeParameterStoreInProcess } from '../fakes/fake-parameter-store.ts';
+import { retriesOnATimer, type RetriesOnATimer } from '../fakes/retries-on-a-timer.ts';
 import { waitedOut } from '../fakes/waited-out.ts';
 import type { Keeper } from '../keepers/keeper.ts';
 import type { Holding } from '../rows/secret-rows.ts';
@@ -25,8 +26,9 @@ function aPrefix(): string {
   return `/auto-runtime/secrets-${crypto.randomUUID()}`;
 }
 
-function keeperOn(prefix: string, endpoint = fake.url, waits?: AwsWaits): Keeper {
+function keeperOn(prefix: string, endpoint = fake.url, waits?: AwsWaits, retries?: RetriesOnATimer): Keeper {
   const reaching = endpoint === fake.url ? { requestHandlerOf: fake.requestHandlerOf } : {};
+  const retrying = retries === undefined ? {} : { retryStrategyOf: retries.retryStrategyOf };
   return parameterStoreKeeper({
     prefix,
     region: 'eu-west-1',
@@ -35,6 +37,7 @@ function keeperOn(prefix: string, endpoint = fake.url, waits?: AwsWaits): Keeper
     endpoint,
     waits,
     ...reaching,
+    ...retrying,
   });
 }
 
@@ -218,12 +221,13 @@ describe('the keeper of values in a Parameter Store that does not answer', () =>
   it('gives up within the waits of 100 ms its client is given, the bound this test is about, where the service stalls, as a keeper that does not answer', async () => {
     const prefix = aPrefix();
     const holding = await held(keeperOn(prefix), 'secret-1', 'pasted-key');
-    const stalling = keeperOn(prefix, fake.url, waitsOf100Ms);
+    const retries = retriesOnATimer();
+    const stalling = keeperOn(prefix, fake.url, waitsOf100Ms, retries);
     fake.tell('stalling', ['GetParameter']);
     onTestFinished(() => {
       fake.tell('answering');
     });
-    const stalled = await failureOf(stalling.reveal(holding));
+    const stalled = await retries.retriedThrough(failureOf(stalling.reveal(holding)));
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable' });
     const opening = `AWS Parameter Store could not read the parameter ${holding.held}: TimeoutError`;
@@ -232,16 +236,19 @@ describe('the keeper of values in a Parameter Store that does not answer', () =>
 
   it('does not answer where the service faults or cannot be reached, as a keeper that does not answer, in the words of each', async () => {
     const prefix = aPrefix();
-    const keeper = keeperOn(prefix);
-    const holding = await held(keeper, 'secret-1', 'pasted-key');
+    const [faults, refusals] = [retriesOnATimer(), retriesOnATimer()];
+    const keeper = keeperOn(prefix, fake.url, undefined, faults);
+    const holding = await held(keeperOn(prefix), 'secret-1', 'pasted-key');
     fake.tell('faulting', ['GetParameter']);
     onTestFinished(() => {
       fake.tell('answering');
     });
 
-    const faulted = await failureOf(keeper.reveal(holding));
-    const unreached = await failureOf(
-      keeperOn(prefix, await aClosedPort()).hold('secret-2', Redacted.make('pasted-key')),
+    const faulted = await faults.retriedThrough(failureOf(keeper.reveal(holding)));
+    const unreached = await refusals.retriedThrough(
+      failureOf(
+        keeperOn(prefix, await aClosedPort(), undefined, refusals).hold('secret-2', Redacted.make('pasted-key')),
+      ),
     );
 
     expect([faulted, unreached]).toMatchObject([{ _tag: 'keeper_unavailable' }, { _tag: 'keeper_unavailable' }]);

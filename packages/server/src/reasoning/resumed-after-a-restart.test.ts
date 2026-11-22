@@ -1,24 +1,40 @@
 import { nestedRunId } from '@on.auto/definitions';
+import { answers, callingTools, type ScriptedReplies, textResult } from '@on.auto/reasoning/testing';
 import { fakeStdioServerPath, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
-import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { shutdownTimeoutMs } from '../lifecycle/shutdown.ts';
-import { gatewayThatHangsAfterATool } from '../testing/processes/tool-gateway.ts';
-import { requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { runIdIn, workflowSource, contributing, givenGoals } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { gatewayThatAsksForATool, requestTo, workflowProcess } from '../testing/processes/workflow-process.ts';
+import { ledgerLeftByAKill } from '../testing/records/ledger-left-by-a-kill.ts';
+import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import {
+  givenGoals,
+  heldAnswerOn,
+  runIdIn,
+  settledAsSwept,
+  steppedServerClock,
+  type SteppedServerClock,
+  whenHeld,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
 
-const ledger = temporaryLedger();
-
-afterAll(() => {
-  ledger.remove();
-});
+/*
+ * Servers in the process over one ledger file of the test: what the first leaves on the file is what the second reads,
+ * as a server started again would. A kill is the ledger the first leaves at that moment (`ledgerLeftByAKill`), so no
+ * finalizer of it reaches the ledger the second reads; a stop is the server's own shutdown.
+ */
+function ledgerOfTheTest(): TemporaryLedger {
+  const ledger = temporaryLedger();
+  onTestFinished(ledger.remove);
+  return ledger;
+}
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
-const summary = ['---', 'model: stub/writer', 'tools: [graph/search]', '---', 'Summarize acme.'].join('\n');
+const summary = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/search]', '---', 'Summarize acme.'].join(
+  '\n',
+);
 
 const summarizing = workflowSource(
   'summarizing',
@@ -31,31 +47,54 @@ const decodeHistory = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
 
-type Starting = (port: number, playbook: string) => Promise<string>;
+function typesIn({ body }: { readonly body: unknown }): readonly string[] {
+  return decodeHistory(body).events.map(({ type }) => type);
+}
 
-const throughAWorkflow: Starting = async (port, playbook) => {
-  await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, {
-    name: 'summarizing',
-    source: contributing(summarizing),
-  });
-  const started = await requestTo(port, 'POST', `/${playbook}/definitions/workflow/summarizing/run`, { input: {} });
+interface Serving {
+  readonly server: ReasoningServer;
+  readonly clock: SteppedServerClock;
+}
+
+/** A server over the ledger, on a stepped clock that starts where the given one stands: time goes on over a restart. */
+async function servedOver(
+  ledger: TemporaryLedger,
+  environment: Readonly<Record<string, string>>,
+  replies: (clock: SteppedServerClock) => readonly ScriptedReplies[],
+  after?: SteppedServerClock,
+): Promise<Serving> {
+  const clock = steppedServerClock(after?.now());
+  const server = await servingReasoning(replies(clock), environment, undefined, { ledger, clock });
+  onTestFinished(server.stop);
+  return { server, clock };
+}
+
+type Starting = (server: ReasoningServer, playbook: string) => Promise<string>;
+
+const throughAWorkflow: Starting = async (server, playbook) => {
+  const path = `/v1/orgs/acme/playbooks/${playbook}`;
+  await server.call('POST', `${path}/definitions/workflow`, { body: { name: 'summarizing', source: summarizing } });
+  const started = await server.call('POST', `${path}/definitions/workflow/summarizing/run`, { body: { input: {} } });
   return runIdIn(started.body);
 };
 
 const reasoningRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const byItself: Starting = (port, playbook) => {
+const byItself: Starting = (server, playbook) => {
   const run = { input: {}, run_id: reasoningRun };
-  void requestTo(port, 'POST', `/${playbook}/definitions/reasoning/summary/run`, run).catch(() => 'gone');
+  void server.call('POST', `/v1/orgs/acme/playbooks/${playbook}/definitions/reasoning/summary/run`, { body: run });
   return Promise.resolve(reasoningRun);
 };
 
+const searchedThenHeld = (clock: SteppedServerClock): readonly ScriptedReplies[] => [
+  callingTools([['graph__search', { query: 'acme' }]], () => heldAnswerOn(clock)),
+];
+
 async function killedWhileItCalledItsModel(playbook: string, recordContent: boolean, starting: Starting) {
-  const gateway = await gatewayThatHangsAfterATool();
+  const ledger = ledgerOfTheTest();
   const graph = await serveFakeMcp({ bearer: apiKey });
   onTestFinished(graph.close);
   const environment = {
-    MODEL_GATEWAYS: gateway.gateways,
     GRAPH_API_KEY: apiKey,
     TOOL_SERVERS: JSON.stringify({
       graph: {
@@ -66,36 +105,36 @@ async function killedWhileItCalledItsModel(playbook: string, recordContent: bool
       },
     }),
   };
-  const first = workflowProcess(ledger.fileName, environment);
-  const port = await first.port;
-  await requestTo(port, 'POST', '', { playbook, name: 'Resuming', goals: givenGoals });
-  await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, {
-    name: 'summary',
-    source: summary,
-    diagram: 'none',
+  const first = await servedOver(ledger, environment, searchedThenHeld);
+  await first.server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook, name: 'Resuming' } });
+  await first.server.call('POST', `/v1/orgs/acme/playbooks/${playbook}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
   });
-  const startedRun = await starting(port, playbook);
-  await gateway.secondHeard;
-  first.signal('SIGKILL');
-  await first.exited;
-  return { gateway, graph, environment, startedRun };
+  const startedRun = await starting(first.server, playbook);
+  await whenHeld(first.server.modelCalls, (calls) => calls === 2);
+  const left = ledgerLeftByAKill(ledger);
+  await first.server.stop();
+  return { left, graph, environment, first, startedRun };
 }
 
 async function startedAgain(playbook: string, recordContent: boolean) {
   const killed = await killedWhileItCalledItsModel(playbook, recordContent, throughAWorkflow);
-  const second = workflowProcess(ledger.fileName, killed.environment);
-  const port = await second.port;
-  const settled = await settledOver(port, `/${playbook}/runs/${killed.startedRun}`);
+  const second = await servedOver(
+    killed.left,
+    killed.environment,
+    () => [answers(textResult('Acme has 2 rows.'))],
+    killed.first.clock,
+  );
+  const path = `/v1/orgs/acme/playbooks/${playbook}/runs`;
+  const settled = await settledAsSwept(second.server, second.clock, `${path}/${killed.startedRun}`);
   const called = nestedRunId(killed.startedRun, '/do/0/summarize', 1);
-  const history = await requestTo(port, 'GET', `/${playbook}/runs/${called}/history`);
-  second.signal('SIGTERM');
-  await second.exited;
-  return { ...killed, settled, history: decodeHistory(history.body).events.map(({ type }) => type) };
+  const history = await second.server.call('GET', `${path}/${called}/history`);
+  return { ...killed, second, settled: settled.body, history: typesIn(history) };
 }
 
 describe('a reasoning run a workflow called, whose server was killed while the run called its model', () => {
   it('goes on from its facts once the workflow resumes, making again only the call that had no answer', async () => {
-    const { settled, history, gateway, graph } = await startedAgain('alpha', true);
+    const { settled, history, graph, first, second } = await startedAgain('alpha', true);
 
     expect(settled).toMatchObject({ status: 'succeeded', output: 'Acme has 2 rows.' });
     expect(history).toEqual([
@@ -111,7 +150,7 @@ describe('a reasoning run a workflow called, whose server was killed while the r
       'run_succeeded',
     ]);
     expect(graph.received()).toHaveLength(1);
-    expect(gateway.bodies()[2]).toBe(gateway.bodies()[1]);
+    expect(second.server.modelRequests()).toEqual([first.server.modelRequests()[1]]);
   });
 
   it('ends, saying the server restarted, when the playbook keeps no content of its calls', async () => {
@@ -128,14 +167,10 @@ describe('a reasoning run a workflow called, whose server was killed while the r
 describe('a reasoning run whose server was killed while the run called its model, asked for again at once', () => {
   it('is refused as still running, since its facts are newer than the longest a call of it may take', async () => {
     const killed = await killedWhileItCalledItsModel('gamma', true, byItself);
-    const second = workflowProcess(ledger.fileName, killed.environment);
-    const port = await second.port;
-    const asked = await requestTo(port, 'POST', '/gamma/definitions/reasoning/summary/run', {
-      input: {},
-      run_id: killed.startedRun,
+    const second = await servedOver(killed.left, killed.environment, () => [], killed.first.clock);
+    const asked = await second.server.call('POST', '/v1/orgs/acme/playbooks/gamma/definitions/reasoning/summary/run', {
+      body: { input: {}, run_id: killed.startedRun },
     });
-    second.signal('SIGTERM');
-    await second.exited;
 
     expect(asked).toMatchObject({
       status: 409,
@@ -150,15 +185,18 @@ const stoppedRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
 
 const historyOf = (port: number) => requestTo(port, 'GET', `/delta/runs/${stoppedRun}/history`);
 
-function typesIn({ body }: { readonly body: unknown }): readonly string[] {
-  return decodeHistory(body).events.map(({ type }) => type);
-}
+const sleepAsked = { name: 'graph__sleep', arguments: '{"ms":60000}' };
 
+/*
+ * The one case on processes of their own: the tool server here is a process the server starts over stdio, and stops
+ * as it shuts down, after the call to it was interrupted; and main, unlike a server in the process, runs its tool
+ * calls on the system's clock.
+ */
 describe('a reasoning run whose server stops while the run calls a tool', () => {
   it('interrupts the call before the tool server is stopped, records no end of it, and leaves the run started at once, for the next server to resume', async () => {
-    const gateway = await gatewayThatHangsAfterATool({ name: 'graph__sleep', arguments: '{"ms":60000}' });
+    const ledger = ledgerOfTheTest();
     const environment = {
-      MODEL_GATEWAYS: gateway.gateways,
+      MODEL_GATEWAYS: await gatewayThatAsksForATool(sleepAsked),
       TOOL_SERVERS: JSON.stringify({
         graph: { command: process.execPath, args: [fakeStdioServerPath()], org: 'acme' },
       }),
@@ -175,14 +213,12 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
       input: {},
       run_id: stoppedRun,
     });
-    await until(
+    await whenHeld(
       () => historyOf(port),
       (history) => typesIn(history).includes('tool_call_started'),
     );
-    const signalled = performance.now();
     first.signal('SIGTERM');
     await first.exited;
-    const stoppedInMs = performance.now() - signalled;
     const second = workflowProcess(ledger.fileName, environment);
     const history = await historyOf(await second.port);
     second.signal('SIGTERM');
@@ -199,6 +235,8 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     expect([undefined, 'attempt_resumed']).toContain(types[4]);
     const stopping: unknown = expect.objectContaining({ detail: 'The server is stopping' });
 
-    expect([await asked, stoppedInMs < shutdownTimeoutMs]).toEqual([{ status: 503, body: stopping }, true]);
+    // Answered at all, the request was ended by the interrupted call: a request still running at the shutdown timeout
+    // is cut off unanswered, as `shutdown.test.ts` proves.
+    expect(await asked).toEqual({ status: 503, body: stopping });
   });
 });

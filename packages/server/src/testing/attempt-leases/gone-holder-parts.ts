@@ -6,6 +6,7 @@ import { Effect, Function, Schema } from 'effect';
 import type { AttemptHolding, ProcessStopping } from '../../attempt-leases/attempt-holding.ts';
 import { attemptsWorkOf } from '../../attempt-leases/attempts-work.ts';
 import { goneHoldersOn, type GoneHolderParts } from '../../attempt-leases/gone-holders.ts';
+import { somethingHappened } from '../waiting/happenings.ts';
 import { runtimeRecording } from './recorded-runtime.ts';
 
 export const run = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
@@ -28,6 +29,8 @@ export interface Given {
   readonly context?: Readonly<Record<string, unknown>>;
   readonly answered?: Outcome;
   readonly notMade?: Effect.Effect<never>;
+  /** The dispatch's answer, given when this ends, where a test holds the attempt while it works. */
+  readonly answeredOnce?: Promise<void>;
   readonly callerNow?: CallerIdentity;
 }
 
@@ -70,14 +73,31 @@ function leasesWritten(store: WorkflowStore, rows: readonly LeaseRow[]) {
   );
 }
 
+function told<A, E>(effect: Effect.Effect<A, E>): Effect.Effect<A, E> {
+  return Effect.ensuring(effect, Effect.sync(somethingHappened));
+}
+
+/** The store, telling the waiting tests of each lease it writes: taken, let go or handed over. */
+function writesTold(store: WorkflowStore): WorkflowStore {
+  const { database } = store;
+  return {
+    ...store,
+    database: {
+      ...database,
+      write: (written) => told(database.write(written)),
+    },
+  };
+}
+
 async function partsGiven(given: Readonly<Given>, holding: AttemptHolding, leaseRows: readonly LeaseRow[] = []) {
-  const { startedBy: by = writer.id, answered = ran, notMade } = given;
+  const { startedBy: by = writer.id, answered = ran, notMade, answeredOnce = Promise.resolve() } = given;
   const definition = { definitionType: 'reasoning', definitionName: 'summary', definitionVersion: 1 };
-  const { runtime, store } = await runtimeRecording({
+  const { runtime, store: recordingStore } = await runtimeRecording({
     definition: { type: definition.definitionType, name: definition.definitionName },
     events: given.events ?? [startedBy(by)],
     context: { runId: run.runId, by, at: new Date(at).toISOString(), ...definition, ...given.context },
   });
+  const store = writesTold(recordingStore);
   await Effect.runPromise(leasesWritten(store, leaseRows));
   const asked: { next: PlaybookRequest[]; refused: PlaybookRequest[] } = { next: [], refused: [] };
   const parts: Omit<GoneHolderParts, 'callers' | 'holding'> = {
@@ -88,12 +108,18 @@ async function partsGiven(given: Readonly<Given>, holding: AttemptHolding, lease
         Effect.andThen(
           Effect.sync(() => {
             asked.next.push(request);
+            somethingHappened();
           }),
-          notMade ?? Effect.succeed(answered),
+          notMade ??
+            Effect.as(
+              Effect.promise(() => answeredOnce),
+              answered,
+            ),
         ),
       refusedAttempt: (request) =>
         Effect.sync(() => {
           asked.refused.push(request);
+          somethingHappened();
           return ran;
         }),
     },

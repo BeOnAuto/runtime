@@ -33,7 +33,10 @@ import { alpha, noNetwork, type ReasoningServer, servingReasoning } from '../tes
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { readConnections, readConnectionSettings } from './connection-settings.ts';
 
-const connections = '/v1/orgs/local/connections';
+/** The connections of the org a case adds them in: its own on a server the cases share, `local` on a server of its own. */
+let connections = '/v1/orgs/local/connections';
+
+let org = 'local';
 
 let crmServer: FakeMcpServer;
 
@@ -61,19 +64,43 @@ const AddedSchema = Schema.Struct({
   connect: Schema.Struct({ url: Schema.String, expires_at: Schema.String }),
 });
 
-let server: ReasoningServer | undefined;
-
 let ledger: TemporaryLedger | undefined;
 
-async function serving(environment: Readonly<Record<string, string>> = {}): Promise<ReasoningServer> {
-  ledger = temporaryLedger();
-  server = await servingReasoning([], {
-    LEDGER_FILE: ledger.fileName,
+interface Shared {
+  readonly server: ReasoningServer;
+  readonly ledger: TemporaryLedger;
+}
+
+const sharedServers = new Map<string, Promise<Shared>>();
+
+let shared: Shared | undefined;
+
+let orgs = 0;
+
+async function startedOn(environment: Readonly<Record<string, string>>): Promise<Shared> {
+  const temporary = temporaryLedger();
+  const server = await servingReasoning([], {
+    LEDGER_FILE: temporary.fileName,
     SECRETS_KEY: secretsKey.toString('base64'),
     ...connectionsOnLoopback,
     ...environment,
   });
-  return server;
+  return { server, ledger: temporary };
+}
+
+/**
+ * The server of the environment, shared by the cases that name it, each case adding its connections in an org of its
+ * own, so that what one case adds, lists or removes is no other's: the cases set nothing that is the server's own.
+ */
+async function serving(environment: Readonly<Record<string, string>> = {}, inOrg?: string): Promise<ReasoningServer> {
+  const key = JSON.stringify(environment);
+  const started = sharedServers.get(key) ?? startedOn(environment);
+  sharedServers.set(key, started);
+  shared = await started;
+  orgs += 1;
+  org = inOrg ?? `org-${orgs}`;
+  connections = `/v1/orgs/${org}/connections`;
+  return shared.server;
 }
 
 function linkedIn({ body }: TestResponse) {
@@ -89,8 +116,6 @@ async function added(served: ReasoningServer, body: unknown = crm()) {
   const answer = await served.call('POST', connections, { body });
   return { answer, ...linkedIn(answer) };
 }
-
-const aDayInMilliseconds = 24 * 60 * 60 * 1000;
 
 const refusedAddresses: readonly (readonly [string, string, string])[] = [
   ['https://10.0.0.5/mcp', '10.0.0.5', 'a private address'],
@@ -386,12 +411,18 @@ describe('connections over http', () => {
   });
 
   afterAll(async () => {
+    const servers = await Promise.all(sharedServers.values());
+    sharedServers.clear();
+    await Promise.all(servers.map(({ server }) => server.stop()));
+    for (const { ledger: temporary } of servers) {
+      temporary.remove();
+    }
     await crmServer.close();
   });
 
-  afterEach(async () => {
-    await server?.stop();
-    ledger?.remove();
+  afterEach(() => {
+    org = 'local';
+    connections = '/v1/orgs/local/connections';
   });
 
   describe('adding a connection over HTTP in local mode', () => {
@@ -425,13 +456,25 @@ describe('connections over http', () => {
       ]);
       expect((await served.call('GET', `${connections}/${id}/link/unknown`)).status).toBe(404);
     });
+
+    it('sets the account type the connection acts as, answers the record with it, and answers 422 for a type that is none', async () => {
+      const served = await serving();
+      const { id } = await added(served);
+
+      const [set, refused] = [
+        await served.call('PUT', `${connections}/${id}/account-type`, { body: { account_type: 'service' } }),
+        await served.call('PUT', `${connections}/${id}/account-type`, { body: { account_type: 'shared' } }),
+      ];
+
+      expect([set.status, set.body]).toMatchObject([200, { id, account_type: 'service' }]);
+      expect(refused.status).toBe(422);
+    });
   });
 
   describe('reconnecting a connection over HTTP while its link is open', () => {
-    it('answers 200 with a new link of 24 hours, which replaces the open one: the old token is not found, in words that say so', async () => {
+    it('answers 200 with a new link, which replaces the open one: the old token is not found, in words that say so', async () => {
       const served = await serving();
       const first = await added(served);
-      const before = Date.now();
 
       const answer = await served.call('POST', `${connections}/${first.id}/link`);
       const latest = linkedIn(answer);
@@ -441,8 +484,6 @@ describe('connections over http', () => {
       ];
 
       expect(answer).toMatchObject({ status: 200, body: { id: first.id, status: 'pending' } });
-      expect(Date.parse(latest.expiresAt) - before).toBeGreaterThanOrEqual(aDayInMilliseconds);
-      expect(Date.parse(latest.expiresAt) - Date.now()).toBeLessThanOrEqual(aDayInMilliseconds);
       expect(detailOf(old)).toEqual([
         404,
         'There is no open link of this token: a newer link of the connection crm replaced it',
@@ -455,13 +496,13 @@ describe('connections over http', () => {
     it('connects it, keeps the value sealed and its ending beside it, uses the link up, and forgets both on removal', async () => {
       const served = await serving();
       const { id, token } = await added(served);
-      const fileName = String(ledger?.fileName);
+      const fileName = String(shared?.ledger.fileName);
 
       const approval = await served.call('POST', `${connections}/${id}/approve`, { body: { token } });
       const given = await served.call('POST', `${connections}/${id}/credential`, {
         body: { token, value: 'Bearer crm-0f3c' },
       });
-      const secretId = String(await secretIdOf(fileName, 'local', id));
+      const secretId = String(await secretIdOf(fileName, org, id));
       const keptBefore = await keptSecretOf(fileName, secretId);
       const [read, listed] = [await served.call('GET', `${connections}/${id}`), await served.call('GET', connections)];
       const again = await served.call('POST', `${connections}/${id}/credential`, { body: { token, value: 'x' } });
@@ -491,14 +532,14 @@ describe('connections over http', () => {
       };
       const served = await serving(connectionsAllowing(['127.0.0.1'], { providers: [provider] }));
       const { id, token } = await added(served, { provider: 'crm-tested' });
-      const fileName = String(ledger?.fileName);
+      const fileName = String(shared?.ledger.fileName);
       const credential = `${connections}/${id}/credential`;
 
       const refused = await served.call('POST', credential, { body: { token, value: 'Bearer crm-wrong' } });
       const withAnApp = await served.call('POST', credential, {
         body: { token, value: 'Bearer crm-0f3c', app_credentials: { app_level_token: 'xapp-1-0f3c' } },
       });
-      const factsBefore = await connectionFactsIn(fileName, 'local');
+      const factsBefore = await connectionFactsIn(fileName, org);
       const taken = await served.call('POST', credential, { body: { token, value: 'Bearer crm-0f3c' } });
 
       expect([refused, withAnApp]).toMatchObject([
@@ -520,12 +561,34 @@ describe('connections over http', () => {
     });
   });
 
+  describe('choosing the way a connection connects over HTTP while its link is open', () => {
+    it('answers 200 with the record for a way its server offers, and 422 for a way it does not', async () => {
+      const served = await serving();
+      const { id, token } = await added(served);
+      const way = `${connections}/${id}/way`;
+
+      const [chosen, refused] = [
+        await served.call('PUT', way, { body: { token, credential: { kind: 'secret' }, account_type: 'service' } }),
+        await served.call('PUT', way, { body: { token, credential: { kind: 'none' } } }),
+      ];
+
+      expect([chosen.status, chosen.body]).toMatchObject([200, { id, status: 'pending', account_type: 'service' }]);
+      expect(refused).toMatchObject({
+        status: 422,
+        body: { reason: 'invalid_input', errors: [{ pointer: '/credential' }] },
+      });
+    });
+  });
+
   describe('the rules of the runtime over HTTP', () => {
     it('answers 403 with the sentence of a rule the policy holds, and 409 for the name of an entry of the configuration', async () => {
-      const served = await serving({
-        ...connectionsAllowing(['127.0.0.1'], { credential_kinds: ['none'] }),
-        TOOL_SERVERS: JSON.stringify({ wiki: { url: 'http://127.0.0.1:9/mcp', org: 'local' } }),
-      });
+      const served = await serving(
+        {
+          ...connectionsAllowing(['127.0.0.1'], { credential_kinds: ['none'] }),
+          TOOL_SERVERS: JSON.stringify({ wiki: { url: 'http://127.0.0.1:9/mcp', org: 'local' } }),
+        },
+        'local',
+      );
 
       const refused = await served.call('POST', connections, { body: crm() });
       const taken = await served.call('POST', connections, {

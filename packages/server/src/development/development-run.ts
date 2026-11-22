@@ -3,6 +3,7 @@ import type { Environment } from '@on.auto/config';
 import type { RestartMark } from '../local-runtime/local-control.ts';
 import type { ChildCommand, RunningChild, StartChild } from './children.ts';
 import type { RunnerLog } from './runner-log.ts';
+import type { SourceChanges, WatchedSource } from './source-changes.ts';
 
 export interface DevelopmentSetup {
   readonly envFiles: readonly string[];
@@ -11,6 +12,8 @@ export interface DevelopmentSetup {
   readonly configFile: string;
   readonly startChild: StartChild;
   readonly restartMark: Pick<RestartMark, 'leave' | 'clear'>;
+  /** What tells the runner a source changed: a watch of the files, unless a test hands it the changes it tells. */
+  readonly watchSourcesOf?: (sources: readonly WatchedSource[]) => SourceChanges;
 }
 
 export interface Restarting {

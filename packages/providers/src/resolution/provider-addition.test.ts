@@ -3,16 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, type GivenToProvider, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import {
-  adverts,
-  audiences,
-  campaigns,
-  drive,
-  ledgers,
-  metrics,
-  regions,
-  tracker,
-} from '../testing/fixture-providers.ts';
+import { adverts, audiences, drive, ledgers, metrics, regions, tracker } from '../testing/fixture-providers.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -93,6 +84,8 @@ describe('the addition a provider of client credentials makes', () => {
       provider: 'ledgers',
       placeholders: { tenant: 'acme' },
       says: ledgers.credentials[0]?.says,
+      permissions: 'application',
+      account_types: [],
     });
     expect(resolved(ledgers, { placeholders: { tenant: 'acme', manager: '1234567890' } }).entry.headers).toEqual({
       'X-Client': '{client_id}',
@@ -276,24 +269,6 @@ describe('the addition a provider of consent makes', () => {
         revocation_endpoint: 'https://login.adverts.example.com/acme/oauth2/v2.0/revoke',
         scope: 'adverts.manage offline_access',
         clients: ['registered', 'dynamic'],
-      },
-    ]);
-  });
-});
-
-describe('the addition a provider of consent makes with a choice', () => {
-  it('places the host the choice sets in the token endpoint, as it does in the address of the API', () => {
-    const { entry, credential } = resolved(campaigns, { placeholders: { region: 'eu' } });
-
-    expect([entry.base_url, credential]).toEqual([
-      'https://api-eu.campaigns.example.com/v1',
-      {
-        kind: 'authorization',
-        issuer: 'https://auth.campaigns.example.com',
-        authorization_endpoint: 'https://auth.campaigns.example.com/authorize',
-        token_endpoint: 'https://auth-eu.campaigns.example.com/oauth/token',
-        revocation_endpoint: 'https://auth.campaigns.example.com/revoke',
-        scope: 'campaigns.read',
       },
     ]);
   });

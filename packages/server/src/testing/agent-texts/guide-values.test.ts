@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { compositionRoot } from '../../composition/composition-root.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { testComposition } from '../servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 
 const guidesNamingValues = ['lookup-function', 'interaction-function', 'computation-function', 'workflow'];
@@ -25,7 +25,7 @@ async function guidesServedWith(settings: Readonly<Record<string, string>>): Pro
         ...noConsentThroughAuto,
         ...settings,
       },
-      compositionRoot,
+      testComposition(),
     );
     try {
       return await Promise.all(

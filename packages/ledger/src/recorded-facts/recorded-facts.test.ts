@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 import { ActedContextSchema, earlierShapeOf, factOf, readingEarlierShapes } from '@on.auto/operations';
 import { Schema } from 'effect';
-import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import {
   entriesOf,
@@ -68,19 +68,29 @@ const releases = aTemporaryFolder(afterAll);
 
 const folder = pathToFileURL(`${releases}/`);
 
+const firstRelease = aTemporaryFolder(afterAll);
+
+const firstReleaseFolder = pathToFileURL(`${firstRelease}/`);
+
+const asItWasRecorded = { schema: TallyAsItWasSchema, releases: { '1.0.0': [countedThen, notedThen] } };
+
+const asTheLaterReleaseRecords = {
+  schema: TallySchema,
+  releases: { '1.0.0': [countedThenAsReadNow, notedThen], '1.1.0': [countedNow] },
+};
+
+beforeAll(async () => {
+  await newestFixtures({ ...asItWasRecorded, folder: firstReleaseFolder }, true);
+  await newestFixtures({ ...asItWasRecorded, folder }, true);
+  await newestFixtures({ ...asTheLaterReleaseRecords, folder }, true);
+});
+
 describe('facts a release records, as it wrote them', () => {
-  recordedFactsBehaviour({ schema: TallyAsItWasSchema, folder, releases: { '1.0.0': [countedThen, notedThen] } }, true);
+  recordedFactsBehaviour({ ...asItWasRecorded, folder: firstReleaseFolder }, true);
 });
 
 describe('the same facts read by a later release, which changed the shape of one and reads the earlier shape', () => {
-  recordedFactsBehaviour(
-    {
-      schema: TallySchema,
-      folder,
-      releases: { '1.0.0': [countedThenAsReadNow, notedThen], '1.1.0': [countedNow] },
-    },
-    true,
-  );
+  recordedFactsBehaviour({ ...asTheLaterReleaseRecords, folder }, true);
 });
 
 describe('the facts of one schema beside the fixtures of another in the same folder', () => {

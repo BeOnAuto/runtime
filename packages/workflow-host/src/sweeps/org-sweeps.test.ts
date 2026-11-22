@@ -11,7 +11,8 @@ import {
   published,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
+import { onASQLiteFile, openedOn } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { orgSweepsOn, orgsInASweep, waitingInASweep, type Sweep } from './org-sweeps.ts';
 
 interface Swept {
@@ -213,15 +214,16 @@ const beta = 'playbook/acme/beta/';
 const closed = eventTrigger({ type: 'com.acme.closed' });
 
 function startsReaching(reacting: ReactingHost, count: number) {
-  return reacting.whenRead(
+  return reacting.sweeps.until(
     () => Promise.resolve(reacting.reactions.starts()),
     (starts) => starts.length >= count,
+    fewSweeps,
   );
 }
 
 describe('the playbooks another process writes to, which raises no signal here', () => {
   it('passes a playbook it followed at its start at the sweep after the playbook was appended to', async () => {
-    const settings = await onSQLite();
+    const settings = await onASQLiteFile();
     const { store } = await openedOn(settings);
     await playbookCreated(store, 'alpha');
     await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] });

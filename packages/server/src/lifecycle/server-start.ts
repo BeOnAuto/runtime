@@ -97,6 +97,27 @@ interface Answering<R> {
   readonly pageStyle: PageStyle;
 }
 
+type Requests = NonNullable<Served['observedRequests']>;
+
+/** The middleware the API runs first: the telemetry's, then what the composition observes, each where it is given. */
+function requestsWatched(
+  traced: Requests | undefined,
+  observed: Requests | undefined,
+): { readonly requests?: Requests } {
+  if (observed === undefined) {
+    return traced === undefined ? {} : { requests: traced };
+  }
+  return {
+    requests:
+      traced === undefined
+        ? observed
+        : (context, next) =>
+            traced(context, async () => {
+              await observed(context, next);
+            }),
+  };
+}
+
 function apiOf<R>(answering: Answering<R>): ApiHandler {
   const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
   const { licenseNotice, routes, callContext } = served;
@@ -113,7 +134,7 @@ function apiOf<R>(answering: Answering<R>): ApiHandler {
     reportIncident: (id, error, requestId, call) => {
       void runtime.run(logIncident({ id, original: error, call }).pipe(Effect.annotateLogs({ requestId })));
     },
-    ...(telemetry.requests === undefined ? {} : { requests: telemetry.requests }),
+    ...requestsWatched(telemetry.requests, served.observedRequests),
     ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
     installId: startPing.installId,
     ...(authenticator.mode === 'local' && licenseNotice !== undefined ? { licenseNotice } : {}),

@@ -4,7 +4,8 @@ import { dailyVisitsWith } from '@on.auto/prediction/testing';
 import { expect } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { testServersStartAt } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const day = 86_400_000;
 
@@ -23,8 +24,9 @@ export interface Visits {
   readonly dayOf: (ago: number) => string;
 }
 
+/** The days of the visits, counted back from the day the test servers' stepped clocks start on. */
 export function visitsToday(): Visits {
-  const today = Math.floor(Date.now() / day);
+  const today = Math.floor(testServersStartAt / day);
   return { today, dayOf: (ago) => new Date((today - ago) * day).toISOString().slice(0, 10) };
 }
 
@@ -58,7 +60,7 @@ export async function publishedVisits(
     events.map((event) => server.call('POST', `${alpha}/events`, { body: { event } })),
   );
   expect(published.map(({ status }) => status)).toEqual(events.map(() => 200));
-  await until(async () => {
+  await whenHeld(async () => {
     const { body } = await server.call('GET', `${alpha}/definitions/prediction/daily-visits`);
     expect(body).toMatchObject({ standing: { dataset: { phase: 'live', events_folded: events.length } } });
   });

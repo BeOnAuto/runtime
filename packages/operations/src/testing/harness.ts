@@ -39,10 +39,7 @@ export interface Harness {
   readonly ledger: MemoryLedger;
   readonly reported: () => readonly ReportedIncident[];
   readonly run: <A>(calls: Effect.Effect<A, never, DispatcherServices>) => Promise<A>;
-  readonly settleWithin: (
-    milliseconds: number,
-    call: Effect.Effect<Outcome, never, DispatcherServices>,
-  ) => Promise<Settled>;
+  readonly settleAbortedWhileItRuns: (call: Effect.Effect<Outcome, never, DispatcherServices>) => Promise<Settled>;
 }
 
 const knownPlaybooks: readonly PlaybookAddress[] = [
@@ -81,7 +78,13 @@ export function harness(options: HarnessOptions = {}): Harness {
     ledger,
     reported: recording.reported,
     run,
-    settleWithin: (milliseconds, call) => run(settle(call, AbortSignal.timeout(milliseconds))),
+    settleAbortedWhileItRuns: (call) => {
+      const aborting = new AbortController();
+      setImmediate(() => {
+        aborting.abort();
+      });
+      return run(settle(call, aborting.signal));
+    },
   };
 }
 

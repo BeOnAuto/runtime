@@ -6,7 +6,7 @@ import { onTestFinished } from 'vitest';
 import { servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
 import { tallyCreated } from '../servers/tally-server.ts';
-import { until } from '../waiting/until.ts';
+import { somethingHappened, whenHeld } from '../waiting/until.ts';
 
 export const installation = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -22,16 +22,21 @@ export interface Accounts {
 
 const aDay = 86_400_000;
 
+/** The accounts, telling the waits once each request has its answer, and counting the reports asked of them. */
 function withItsReportsCounted(account: AccountFake, counted: () => void): AccountFake {
+  const { activate, report, refreshAllocation, reportAllocation } = account.ports;
+  const told = Effect.sync(somethingHappened);
   return {
     ...account,
     ports: {
-      ...account.ports,
+      activate: (key, usage) => Effect.ensuring(activate(key, usage), told),
       report: (key, usage) =>
         Effect.suspend(() => {
           counted();
-          return account.ports.report(key, usage);
+          return Effect.ensuring(report(key, usage), told);
         }),
+      refreshAllocation: (key, allocation) => Effect.ensuring(refreshAllocation(key, allocation), told),
+      reportAllocation: (key, given) => Effect.ensuring(reportAllocation(key, given), told),
     },
   };
 }
@@ -97,7 +102,7 @@ export async function licensedServedBy(
   replies: readonly ScriptedReplies[] = [],
 ): Promise<ReasoningServer> {
   const server = await servedBy(accounts, environment, parts, replies);
-  await until(
+  await whenHeld(
     () => standingOf(server),
     ({ state }) => state === 'licensed',
   );

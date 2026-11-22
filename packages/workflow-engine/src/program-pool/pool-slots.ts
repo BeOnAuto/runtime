@@ -15,7 +15,12 @@ interface Queue {
   readonly leave: (waiter: Waiter) => void;
 }
 
+const noTimer = (): void => {};
+
 export function armedUntil(until: number, due: () => void): () => void {
+  if (until === Number.POSITIVE_INFINITY) {
+    return noTimer;
+  }
   const timer: { id?: ReturnType<typeof setTimeout> } = {};
   const checked = () => {
     const left = until - performance.now();
@@ -25,7 +30,7 @@ export function armedUntil(until: number, due: () => void): () => void {
       due();
     }
   };
-  timer.id = setTimeout(checked, until - performance.now());
+  timer.id = setTimeout(checked, Math.max(0, until - performance.now()));
   return () => {
     clearTimeout(timer.id);
   };

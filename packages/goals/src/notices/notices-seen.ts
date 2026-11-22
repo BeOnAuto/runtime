@@ -1,4 +1,5 @@
-import type { RecordedEvent } from '@on.auto/operations';
+import { GoalEventSchema, goalStream, type RecordedGoalEvent } from '@on.auto/definitions/goals';
+import { streamPrefixOfDefinition, type Fold, type PlaybookAddress, type RecordedEvent } from '@on.auto/operations';
 import { DeliveryFailed, type Consumer, type FollowedRecord } from '@on.auto/workflow-host';
 import { Effect, Function } from 'effect';
 
@@ -35,6 +36,31 @@ export function noticeSeenIn({ stream, context }: RecordedEvent): Seen | undefin
   return change === undefined ? undefined : { definition, assessment, change, run };
 }
 
+function placedAfter(placed: ReadonlySet<string>, fact: RecordedGoalEvent): ReadonlySet<string> {
+  if (fact.type === 'goal_created') {
+    return new Set([...placed, fact.data.playbook]);
+  }
+  return fact.type === 'goal_moved' ? new Set([...placed, fact.data.from, fact.data.to]) : placed;
+}
+
+const playbooksOfTheGoal: Fold<ReadonlySet<string>, RecordedGoalEvent> = {
+  initialState: new Set(),
+  evolve: placedAfter,
+  eventSchema: GoalEventSchema,
+};
+
+function startedWhereTheGoalWas(
+  ledger: NoticeLedger,
+  { org, playbook }: PlaybookAddress,
+  definition: string,
+  recorded: Effect.Effect<void, unknown>,
+): Effect.Effect<void, unknown> {
+  const stream = `${streamPrefixOfDefinition({ org, definition })}${goalStream}`;
+  return Effect.flatMap(ledger.load(stream, playbooksOfTheGoal), ({ state }) =>
+    state.has(playbook) ? recorded : Effect.void,
+  );
+}
+
 interface NoticeDelivery {
   readonly key: string;
   readonly workflow: string;
@@ -52,12 +78,17 @@ function deliveryOf(
     key: record.id,
     workflow: record.context.definitionName ?? noticesSeenName,
     deliver: Effect.suspend(() =>
-      noticeRecorded(ledger, { org: playbook.org, definition: seen.definition }, seen.assessment, {
-        kind: 'seen',
-        change: seen.change,
-        run: seen.run,
-        ...actingOf(playbook, now()),
-      }),
+      startedWhereTheGoalWas(
+        ledger,
+        playbook,
+        seen.definition,
+        noticeRecorded(ledger, { org: playbook.org, definition: seen.definition }, seen.assessment, {
+          kind: 'seen',
+          change: seen.change,
+          run: seen.run,
+          ...actingOf(playbook, now()),
+        }),
+      ),
     ).pipe(
       Effect.mapError(
         () => new DeliveryFailed({ detail: `The start of the notice ${seen.run} could not be recorded now` }),
@@ -78,7 +109,9 @@ function summaryDeliveryOf(
   return {
     key: record.id,
     workflow: record.context.definitionName ?? noticesSeenName,
-    deliver: Effect.suspend(() => summarySeenRecorded(ledger, playbook, seen, now())).pipe(
+    deliver: Effect.suspend(() =>
+      startedWhereTheGoalWas(ledger, playbook, seen.definition, summarySeenRecorded(ledger, playbook, seen, now())),
+    ).pipe(
       Effect.mapError(
         () => new DeliveryFailed({ detail: `The start of the summary ${seen.run} could not be recorded now` }),
       ),

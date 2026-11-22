@@ -188,7 +188,7 @@ describe('a connection whose deliveries name no conversation, with seven convers
 
     expect(woken).toBeGreaterThan(timerAlone);
     expect(woken - timerAlone).toBeLessThanOrEqual(hour / fiveSeconds);
-  }, 60_000);
+  });
 });
 
 describe('a busy conversation, where every message wakes its read', () => {

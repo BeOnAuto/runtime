@@ -1,16 +1,13 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { onTestFinished } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { request, type TestResponse } from '../servers/http-client.ts';
 import { alpha } from '../servers/reasoning-server.ts';
 import { givenGoals } from '../settings/goals-kept.ts';
-import { spawnServer, type SpawnedServer } from './spawned-server.ts';
-
-const mainModule = fileURLToPath(new URL('../../main.ts', import.meta.url));
+import { startedInProcess } from './in-process-starts.ts';
 
 const verdict = [
   '---',
@@ -23,8 +20,11 @@ const verdict = [
 ].join('\n');
 
 export interface ConfiguredServer {
-  readonly child: SpawnedServer;
+  /** The port of the server main starts, in this process, with the configuration file and the environment given. */
+  readonly port: Promise<number>;
   readonly configFile: string;
+  /** Stops the server and answers the lines it logged from its start, one to a line. */
+  readonly stopped: () => Promise<string>;
 }
 
 export function configuredServer(
@@ -39,14 +39,28 @@ export function configuredServer(
   if (configText !== undefined) {
     writeFileSync(configFile, configText);
   }
-  const child = spawnServer(mainModule, {
+  const logged = vi.spyOn(console, 'error');
+  onTestFinished(() => {
+    logged.mockRestore();
+  });
+  const starting = startedInProcess({
     HOST: '127.0.0.1',
     PORT: '0',
     LEDGER_FILE: ledger.fileName,
     ...(configText === undefined ? {} : { CONFIG_FILE: configFile }),
     ...environment,
   });
-  return { child, configFile };
+  return {
+    port: starting.then(({ port }) => port),
+    configFile,
+    stopped: async () => {
+      await (await starting).stop();
+      return logged.mock.calls
+        .flat()
+        .map((line) => `${String(line)}\n`)
+        .join('');
+    },
+  };
 }
 
 export async function rejectedRun(port: number, key?: string): Promise<TestResponse> {
@@ -63,12 +77,6 @@ export async function rejectedRun(port: number, key?: string): Promise<TestRespo
     ...caller,
     body: { input: { expense: 'a dinner' } },
   });
-}
-
-export async function stoppedOutput(child: SpawnedServer): Promise<string> {
-  child.signal('SIGTERM');
-  await child.exited;
-  return child.output().stderr;
 }
 
 export function settingLines(stderr: string): readonly string[] {

@@ -7,8 +7,10 @@ import { type NoticeServer, playbookToldBy, servingGoalNotices } from '../../tes
 import { wokenClock, type WokenClock } from '../../testing/goals/woken-clock.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
+import { isStarted, whenSwept } from '../../testing/servers/workflow-server.ts';
 import { createdWithGoals } from '../../testing/settings/goals-kept.ts';
-import { until } from '../../testing/waiting/until.ts';
+import { fewSweeps, testServersStartAt } from '../../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../../testing/waiting/until.ts';
 import { goalLinksOnNode } from './goal-links.ts';
 
 const GapsSchema = Schema.Struct({
@@ -22,7 +24,7 @@ function assessmentFactsOf(served: NoticeServer, { goal, assessment }: NoticedId
 }
 
 function noticeStartedIn(served: NoticeServer, ids: NoticedIds): Promise<readonly string[]> {
-  return until(
+  return whenHeld(
     () => assessmentFactsOf(served, ids),
     (facts) => facts.includes('goal_notice_started'),
   );
@@ -116,7 +118,7 @@ interface Counted {
 }
 
 async function retiredPlaybook(): Promise<Counted> {
-  const clock = wokenClock(Date.now());
+  const clock = wokenClock(testServersStartAt);
   const counted = { clock: 0 };
   const served = await servingGoalNotices({
     clock,
@@ -165,9 +167,10 @@ describe('a verdict the owner asked to hear of now, on a Node server that keeps 
   it('leads to exactly one delivered notice, with the words of the goal, which a second start does not repeat', async () => {
     const served = await servingGoalNotices();
     await playbookToldBy(served);
-    const ids = await served.assessed('now', Date.now());
+    const ids = await served.assessed('now', served.server.runsOn.now());
 
-    const posted = await until(
+    const posted = await whenSwept(
+      served.server,
       () => served.chat.chat.posted(),
       (messages) => messages.length > 0,
     );
@@ -201,7 +204,7 @@ describe('a verdict told now when the server stops before its notice starts', ()
     onTestFinished(ledger.remove);
     const before = await servingGoalNotices({ ledger, notices: false });
     await playbookToldBy(before);
-    const ids = await before.assessed('now', Date.now());
+    const ids = await before.assessed('now', before.server.runsOn.now());
     const runsBefore = await before.runs();
     await before.server.stop();
     const after = await servingGoalNotices({ ledger });
@@ -218,8 +221,9 @@ describe('a notice through a paused function, on a Node server that keeps goals'
     const served = await servingGoalNotices();
     await playbookToldBy(served);
     const paused = await served.server.call('POST', `${alpha}/definitions/interaction/tell-owner/pause`, { body: {} });
-    const ids = await served.assessed('now', Date.now());
-    const gaps = await until(
+    const ids = await served.assessed('now', served.server.runsOn.now());
+    const gaps = await whenSwept(
+      served.server,
       () => noticeGapsOf(served),
       (kinds) => kinds.length > 0,
     );
@@ -238,21 +242,27 @@ describe('a notice through a paused function, on a Node server that keeps goals'
 
 describe('the summary of a goal on a Node server that keeps goals', () => {
   it('is sent at the time of its schedule as a heartbeat with no lines, once, and its start is recorded', async () => {
-    const clock = wokenClock(Date.now());
+    const clock = wokenClock(testServersStartAt);
     const served = await servingGoalNotices({ clock });
     await summarisingPlaybook(served);
     const identity = await served.goalOf(goal);
-    const friday = nextFridayAfter(Date.now());
+    const friday = nextFridayAfter(clock.now());
     clock.moveTo(friday + 1000);
-    const posted = await until(
+    const posted = await clock.swept.until(
       () => served.chat.chat.posted(),
       (messages) => messages.length > 0,
+      fewSweeps,
     );
-    const facts = await until(
+    const facts = await clock.swept.until(
       () => served.factsOf(identity, summaryStream),
       (types) => types.includes('goal_summary_started'),
+      fewSweeps,
     );
-    const settled = await served.server.settled(summaryRunIdOf(identity, friday));
+    const settled = await clock.swept.until(
+      async () => (await served.server.call('GET', `${alpha}/runs/${summaryRunIdOf(identity, friday)}`)).body,
+      (run) => !isStarted(run),
+      fewSweeps,
+    );
     await clock.quietAt(friday + 2 * 60_000, served.performs);
 
     expect(posted).toMatchObject([{ text: headline }]);
@@ -264,15 +274,16 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
   });
 
   it('is refused through a paused function, sends nothing and shows as a gap', async () => {
-    const clock = wokenClock(Date.now());
+    const clock = wokenClock(testServersStartAt);
     const served = await servingGoalNotices({ clock });
     await summarisingPlaybook(served);
     const paused = await served.server.call('POST', `${alpha}/definitions/interaction/tell-owner/pause`, { body: {} });
-    clock.moveTo(nextFridayAfter(Date.now()) + 1000);
+    clock.moveTo(nextFridayAfter(clock.now()) + 1000);
 
-    const gaps = await until(
+    const gaps = await clock.swept.until(
       () => gapsOf(served),
       (kinds) => kinds.length > 0,
+      fewSweeps,
     );
 
     expect(paused.status).toBe(200);
@@ -286,7 +297,7 @@ describe('the summary of a goal on a Node server that keeps goals', () => {
 describe('a retired playbook on a Node server whose goal has a daily window and an hourly summary', () => {
   it('is performed on only once a day by its clock, notices and summaries, and sends its summary after a restore', async () => {
     const counted = await retiredPlaybook();
-    const nextHour = Math.ceil(Date.now() / hour) * hour;
+    const nextHour = (Math.floor(counted.clock.now() / hour) + 1) * hour;
     const firstMidnight = midnightAfter(nextHour);
     const atTheHour = await settledAt(counted, nextHour + 1000);
     const days = await daysFrom(counted, firstMidnight, 2);
@@ -294,9 +305,10 @@ describe('a retired playbook on a Node server whose goal has a daily window and 
     const restored = await counted.served.server.call('POST', `${alpha}/restore`, { body: {} });
     const resumedAt = firstMidnight + 2 * day;
     counted.clock.moveTo(resumedAt + 1000);
-    const posted = await until(
+    const posted = await counted.clock.swept.until(
       () => counted.served.chat.chat.posted(),
       (messages) => messages.length > 0,
+      fewSweeps,
     );
 
     expect(atTheHour).toBeGreaterThan(0);

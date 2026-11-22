@@ -285,7 +285,7 @@ describe('a connection reconnected', () => {
     const server = await serving();
     const id = await connectedWith(server, aSecretHeader('crm', crm.url), 'Bearer crm-api-key-revoked-0001');
     await executing(server, 'execute');
-
+    server.runsOn.moveTo(server.runsOn.now() + 1);
     const reconnected = await server.call('POST', `${connectionsOfAcme}/${id}/link`);
     const { token } = linkIn(reconnected.body);
     const given = await server.call('POST', `${connectionsOfAcme}/${id}/credential`, {

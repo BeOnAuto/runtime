@@ -56,10 +56,12 @@ describe('a decision point that never answers', () => {
   });
 
   it('leaves a call that is cancelled while it waits cancelled', async () => {
-    const { dispatcher, settleWithin } = harness({ reportOnly: silent });
+    const { dispatcher, settleAbortedWhileItRuns } = harness({ reportOnly: silent });
 
     expect(
-      await settleWithin(50, dispatcher.dispatchToPlaybook(getNote.registration, onAlpha(ada, { name: 'anvil' }))),
+      await settleAbortedWhileItRuns(
+        dispatcher.dispatchToPlaybook(getNote.registration, onAlpha(ada, { name: 'anvil' })),
+      ),
     ).toEqual({ status: 'cancelled' });
   });
 });

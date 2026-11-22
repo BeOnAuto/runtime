@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runKey, startedAt } from '../suite-testing/probe-subjects.ts';
 import { faultyDatabase } from '../testing/faulty-database.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
 import { armedByOf, sqlTimers } from './sql-timers.ts';
 
 const run = { runId: runKey, attributes: {} };
@@ -18,7 +18,7 @@ function timerDue(timerId: string, dueAt: number): ArmTimer {
 describe('the timers of the host', () => {
   it('tell when the next armed timer is due, and when none is', async () => {
     const armed: number[] = [];
-    const table = sqlTimers(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), (dueAt) => {
+    const table = sqlTimers(await openedOn(await aLedgerInMemory()), (dueAt) => {
       armed.push(dueAt);
     });
 
@@ -33,7 +33,7 @@ describe('the timers of the host', () => {
 
 describe('the timers of the host, once armed', () => {
   it('keep the version of the record that armed each timer, and none for a timer a sweep armed again', async () => {
-    const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const database = await openedOn(await aLedgerInMemory());
     const table = sqlTimers(database, Function.constVoid);
     await Effect.runPromise(table.timers.arm(timerDue('1', startedAt), run, armedBy));
     await Effect.runPromise(table.timers.sweep(run, [timerDue('2', startedAt)]));
@@ -50,7 +50,7 @@ describe('the timers of the host, once armed', () => {
   });
 
   it('put off a timer that could not fire, so it is due again later', async () => {
-    const table = sqlTimers(await openedOn({ store: 'sqlite', file: aSQLiteFile() }), Function.constVoid);
+    const table = sqlTimers(await openedOn(await aLedgerInMemory()), Function.constVoid);
     await Effect.runPromise(table.timers.arm(timerDue('1', startedAt), run, armedBy));
 
     await Effect.runPromise(table.postponed({ runKey, timerId: '1' }, startedAt + 50));
@@ -60,7 +60,7 @@ describe('the timers of the host, once armed', () => {
   });
 
   it('fail an arm, a cancel or a sweep they cannot record, to be dispatched again', async () => {
-    const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
+    const database = faultyDatabase(await openedOn(await aLedgerInMemory()));
     const { timers } = sqlTimers(database, Function.constVoid);
     database.failing(true);
 

@@ -37,6 +37,7 @@ const AuthorizationServerSchema = Schema.Struct({
   token_endpoint_auth_methods_supported: Schema.optionalKey(Strings),
   revocation_endpoint_auth_methods_supported: Schema.optionalKey(Strings),
   scopes_supported: Schema.optionalKey(Strings),
+  grant_types_supported: Schema.optionalKey(Strings),
 });
 
 const LibraryMetadataSchema = Schema.Struct({

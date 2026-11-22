@@ -1,10 +1,7 @@
-import { once } from 'node:events';
-import { fileURLToPath } from 'node:url';
-
-import { runTallyRows, spawnForTheTest } from '@on.auto/operations/testing';
-import { Schema } from 'effect';
+import { runTallyRows } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { filledStoreOf, type FilledIn } from '../../filled-stores.ts';
 import { nodeSqliteEventStoreDriver } from '../connection/node-sqlite-event-store-driver.ts';
 import type { CatchUpState, EncodedEvent, LedgerStore } from '../event-store.ts';
 import { at, began, r1, r2, r3, to } from '../multi-stream/multi-stream-cases.ts';
@@ -13,6 +10,7 @@ import { sqliteCatchUp } from '../projection-catch-up/sqlite-catch-up.ts';
 import { executedOn, queried, statementPlanOf } from '../recorded/sqlite-checks.ts';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { ledgerLayer } from '../sqlite.ts';
+import { fillMeasuredOn } from '../testing/measured-fill.ts';
 import { openLedgerWith } from '../testing/open-ledger.ts';
 import { postgresqlDatabasesOn } from '../testing/postgresql-databases.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
@@ -26,53 +24,13 @@ function aDatabase(): Promise<string> {
   return Promise.resolve(fileName);
 }
 
-const filledHeap = fileURLToPath(new URL('../../filled-heap.ts', import.meta.url));
-
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
 const { notice, anEmptyDatabase: aPostgreSQLDatabase } = postgresqlDatabasesOn(server);
 
-const mebibyte = 1024 * 1024;
+const sizes = { facts: 64, factBytes: 1024, mostBytesFilledAtOnce: 8 * 1024 };
 
-const mostBytesFilledAtOnce = 2 * mebibyte;
-
-const facts = 256;
-
-const factBytes = 64 * 1024;
-
-const KeptRows = Schema.Array(Schema.Struct({ key: Schema.String, row: Schema.Record(Schema.String, Schema.Unknown) }));
-
-const Filled = Schema.fromJsonString(
-  Schema.Struct({
-    history: Schema.Number,
-    mostHeld: Schema.Number,
-    mostLoaded: Schema.Number,
-    loaded: Schema.Number,
-    kept: KeptRows,
-    filled: KeptRows,
-  }),
-);
-
-async function filledIn(filledInSettings: object): Promise<typeof Filled.Type> {
-  const child = spawnForTheTest(
-    process.execPath,
-    [
-      '--expose-gc',
-      filledHeap,
-      JSON.stringify(filledInSettings),
-      String(facts),
-      String(factBytes),
-      String(mostBytesFilledAtOnce),
-    ],
-    { stdio: ['ignore', 'pipe', 'inherit'] },
-  );
-  const said = { text: '' };
-  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
-    said.text += chunk;
-  });
-  await once(child, 'exit');
-  return Schema.decodeUnknownSync(Filled)(said.text.trim());
-}
+const nothingMeasured = () => 0;
 
 function aSQLiteFile(): string {
   const { fileName, remove } = temporaryDatabase();
@@ -83,15 +41,15 @@ function aSQLiteFile(): string {
 interface Store {
   readonly store: string;
   readonly skipped: boolean;
-  readonly settings: () => Promise<object>;
+  readonly filledIn: () => Promise<FilledIn>;
 }
 
 const stores: readonly Store[] = [
-  { store: 'SQLite', skipped: false, settings: () => Promise.resolve({ store: 'sqlite', file: aSQLiteFile() }) },
+  { store: 'SQLite', skipped: false, filledIn: () => Promise.resolve({ store: 'sqlite', file: aSQLiteFile() }) },
   {
     store: `PostgreSQL${notice}`,
     skipped: server === '',
-    settings: async () => ({ store: 'postgresql', connectionString: await aPostgreSQLDatabase() }),
+    filledIn: async () => ({ store: 'postgresql', connectionString: await aPostgreSQLDatabase() }),
   },
 ];
 
@@ -173,19 +131,22 @@ describe('The appends to a store on SQLite while its keyed table catches up a sl
 });
 
 describe.each(stores)(
-  'the fill of a projection keyed by its mapping, over a history eight times the most bytes it fills at once, on $store',
-  ({ skipped, settings }) => {
+  'the fill of a projection keyed by its mapping, over a history eight times the most bytes it fills at once, reading no more than those at a time, on $store',
+  ({ skipped, filledIn }) => {
     it.skipIf(skipped)(
-      'holds the facts of one read at a time, and folds every fact into the row the appends kept',
+      'brings back no more than the most bytes it fills at once in any one read, and folds every fact into the row the appends kept',
       async () => {
-        const filled = await filledIn(await settings());
+        const { history, loads, kept, filled } = await fillMeasuredOn(
+          filledStoreOf(await filledIn()),
+          sizes,
+          nothingMeasured,
+        );
 
-        expect(filled.history).toBeGreaterThanOrEqual(8 * mostBytesFilledAtOnce);
-        expect(filled.mostLoaded).toBeLessThanOrEqual(mostBytesFilledAtOnce);
-        expect(filled.loaded).toBeGreaterThanOrEqual(filled.history);
-        expect(filled.mostHeld).toBeLessThan(2 * mostBytesFilledAtOnce);
-        expect(filled.kept).toMatchObject([{ key: 'autumn', row: { note: String(facts - 1) } }]);
-        expect(filled.filled).toEqual(filled.kept);
+        expect(history).toBeGreaterThanOrEqual(8 * sizes.mostBytesFilledAtOnce);
+        expect(Math.max(...loads)).toBeLessThanOrEqual(sizes.mostBytesFilledAtOnce);
+        expect(loads.reduce((sum, load) => sum + load, 0)).toBeGreaterThanOrEqual(history);
+        expect(kept).toMatchObject([{ key: 'autumn', row: { note: String(sizes.facts - 1) } }]);
+        expect(filled).toEqual(kept);
       },
     );
   },

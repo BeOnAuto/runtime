@@ -1,4 +1,11 @@
-import { removalLastsMs, sha256Of, textToKeep, type ContentStore, type ContentToKeep } from '@on.auto/content';
+import {
+  removalLastsMs,
+  removalPollMs,
+  sha256Of,
+  textToKeep,
+  type ContentStore,
+  type ContentToKeep,
+} from '@on.auto/content';
 import {
   aStepFailedAtItsPause,
   at,
@@ -6,11 +13,12 @@ import {
   generated,
   json,
   octets,
+  onATestClock,
   pausableStore,
   present,
   readBack,
   resultOf,
-  settledWithin,
+  settledYet,
 } from '@on.auto/content/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -50,10 +58,13 @@ function putWhileDeleted(entry: InterleavedRemovalEntry): void {
 
       const removal = resultOf(ledger.removeUnheld(alpha, large.sha256));
       await deleting.reached;
-      const put = resultOf(ledger.content.put(alpha, { ...large.content(), ...expectedOf(large.sha256) }));
-      const settledBefore = await settledWithin(put, 300);
+      const clock = onATestClock();
+      const put = clock.run(ledger.content.put(alpha, { ...large.content(), ...expectedOf(large.sha256) }));
+      const settledBefore = await settledYet(put);
       deleting.release();
-      const [removed, putAfter] = [await removal, await put];
+      const removed = await removal;
+      await clock.advance(removalPollMs);
+      const putAfter = await put;
       await noted(ledger, firstNotes, kept(large.sha256));
 
       expect([settledBefore, removed, putAfter]).toEqual([

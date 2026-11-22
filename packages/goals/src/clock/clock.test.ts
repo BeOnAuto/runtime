@@ -81,7 +81,7 @@ describe('a day window in Los Angeles', () => {
   it('is 23 hours on the day the clocks go forward, each window opened at local midnight', async () => {
     const harness = await checked(inLosAngeles, '2026-03-06T12:00:00.000Z');
 
-    await harness.until('2026-03-10T07:00:00.000Z');
+    await harness.steppedTo('2026-03-10T07:00:00.000Z');
 
     expect(await windowsOf(harness)).toEqual([
       '2026-03-07T08:00:00.000Z 2026-03-08T08:00:00.000Z 2026-03-08T09:00:00.000Z',
@@ -94,7 +94,7 @@ describe('a day window in Los Angeles', () => {
   it('is 25 hours on the day the clocks go back', async () => {
     const harness = await checked(inLosAngeles, '2026-10-30T12:00:00.000Z');
 
-    await harness.until('2026-11-02T08:00:00.000Z');
+    await harness.steppedTo('2026-11-02T08:00:00.000Z');
 
     expect(await windowsOf(harness)).toEqual([
       '2026-10-31T07:00:00.000Z 2026-11-01T07:00:00.000Z 2026-11-01T08:00:00.000Z',
@@ -122,11 +122,11 @@ describe('trace C, a weekly cost per lead in Los Angeles, through the clock', ()
     const closing = { cost: 42, final: true, through: '2026-11-02T00:00:00-08:00' };
 
     await harness.observed('wed', progress, '2026-10-28T15:00:00.000Z', 'cost');
-    await harness.until('2026-11-02T08:00:00.000Z');
+    await harness.steppedTo('2026-11-02T08:00:00.000Z');
     await harness.observed('mon', closing, '2026-11-02T15:00:00.000Z', 'cost');
-    await harness.until('2026-11-02T15:59:59.999Z');
+    await harness.steppedTo('2026-11-02T15:59:59.999Z');
     const beforeDue = await harness.row(assessmentsName, week);
-    await harness.until('2026-11-02T16:00:00.000Z');
+    await harness.steppedTo('2026-11-02T16:00:00.000Z');
 
     expect(beforeDue).toMatchObject({ verdict: 'open', judging_due_at: Date.parse('2026-11-02T16:00:00.000Z') });
     expect(await harness.row(assessmentsName, week)).toMatchObject({
@@ -145,7 +145,7 @@ describe('the first save of a goal', () => {
   it('opens no window that started before it, only the next one', async () => {
     const harness = await checked(controls, '2026-11-09T12:00:00.000Z');
 
-    await harness.until('2026-11-10T12:00:00.000Z');
+    await harness.steppedTo('2026-11-10T12:00:00.000Z');
 
     expect(await windowsOf(harness)).toEqual([
       '2026-11-10T00:00:00.000Z 2026-11-11T00:00:00.000Z 2026-11-11T01:00:00.000Z',
@@ -156,7 +156,7 @@ describe('the first save of a goal', () => {
 describe('downtime across several windows', () => {
   it('opens only the current window and settles what fell due meanwhile in one wake', async () => {
     const harness = await checked(controls, '2026-11-08T12:00:00.000Z');
-    await harness.until('2026-11-09T00:00:00.000Z');
+    await harness.steppedTo('2026-11-09T00:00:00.000Z');
     const monday = assessmentIdOf({
       definition: goalIdentityOf('controls-hold'),
       window_start: Date.parse('2026-11-09T00:00:00.000Z'),

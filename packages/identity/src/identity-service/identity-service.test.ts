@@ -33,7 +33,7 @@ describe('a token signed by the identity service', () => {
 
   it.each(signers)('is refused when signed with %s by another key under the same kid', async (signer) => {
     const { identityService } = await signedTokens(fakeIssuer('https://login.example'), atStart);
-    const other = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const other = await signedTokens(fakeIssuer('https://login.example', { keys: 'its own' }), atStart);
 
     expect(await identityService.personOf(await other.token({}, { signer }), '/mcp')).toEqual({
       because: 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED',

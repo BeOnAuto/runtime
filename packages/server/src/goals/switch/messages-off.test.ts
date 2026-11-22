@@ -2,12 +2,17 @@ import { goalsWantedWordsOf } from '@on.auto/playbooks';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { assessing, savedWorkflow, succeededRunsOf, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import {
+  assessing,
+  minuteByMinute,
+  savedWorkflow,
+  succeededRunsOf,
+  type Assessing,
+} from '../../testing/goals/assessed-runs.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha, servingReasoning } from '../../testing/servers/reasoning-server.ts';
 import { workflowSource } from '../../testing/servers/workflow-server.ts';
 import { servingReasoningWithGoals } from '../../testing/settings/goals-kept.ts';
-import { until } from '../../testing/waiting/until.ts';
 
 const minute = 61_000;
 
@@ -68,11 +73,12 @@ async function goalsOf(assessed: Assessing) {
 
 async function failedOnce(assessed: Assessing) {
   expect(await savedWorkflow(assessed.server, 'check', failingCheck)).toBe(201);
-  return until(
-    async (): Promise<Readonly<{ runs: number; read: Awaited<ReturnType<typeof goalsOf>> }>> => {
-      assessed.clock.moveTo(assessed.clock.now() + minute);
-      return { runs: await succeededRunsOf(assessed, 'check'), read: await goalsOf(assessed) };
-    },
+  return minuteByMinute(
+    assessed,
+    async (): Promise<Readonly<{ runs: number; read: Awaited<ReturnType<typeof goalsOf>> }>> => ({
+      runs: await succeededRunsOf(assessed, 'check'),
+      read: await goalsOf(assessed),
+    }),
     ({ runs, read }) => runs > 0 && read.goals[0]?.assessments.current?.verdict === 'failed',
   );
 }
@@ -113,11 +119,10 @@ describe('a Node server that judges goals with messages on', () => {
   it('tries the message the goal asks for, and shows the gap when its function is missing', async () => {
     const assessed = await served(true);
     await failedOnce(assessed);
-    const gaps = await until(
-      async (): Promise<readonly string[]> => {
-        assessed.clock.moveTo(assessed.clock.now() + minute);
-        return (await goalsOf(assessed)).goals.flatMap((goal) => goal.gaps.map(({ kind }) => kind));
-      },
+    const gaps = await minuteByMinute(
+      assessed,
+      async (): Promise<readonly string[]> =>
+        (await goalsOf(assessed)).goals.flatMap((goal) => goal.gaps.map(({ kind }) => kind)),
       (kinds) => kinds.includes('notice_not_started'),
     );
 

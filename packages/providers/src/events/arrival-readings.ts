@@ -1,8 +1,8 @@
-import { isTime } from '@on.auto/definitions/event-time';
 import { valueAt } from '@on.auto/definitions/tool-blocks';
 import { Schema } from 'effect';
 
 import type { Destination } from './destination-fields.ts';
+import { eventTimeOf } from './event-times.ts';
 import {
   messageReferenceOf,
   requestReferenceOf,
@@ -56,6 +56,7 @@ interface ArrivalEvent {
   readonly subject?: string;
   readonly data: Readonly<Record<string, Schema.Json>>;
   readonly automatic?: boolean;
+  readonly actor?: string;
 }
 
 export interface ArrivalReading {
@@ -219,29 +220,6 @@ function matchedIn(arrival: Arrival, mappings: readonly DeclaredEvent[]): Matche
   })[0];
 }
 
-const secondsSinceTheEpoch = /^(?<whole>\d{1,15})(?:\.(?<fraction>\d+))?$/u;
-
-const mostFractionDigits = 9;
-
-function writtenAsATime(seconds: string): string | undefined {
-  const { whole, fraction } = secondsSinceTheEpoch.exec(seconds)?.groups ?? {};
-  const instant = new Date(Number(whole) * 1000);
-  if (Number.isNaN(instant.getTime())) {
-    return undefined;
-  }
-  const fractionWritten = fraction === undefined ? '' : `.${fraction.slice(0, mostFractionDigits)}`;
-  const written = `${instant.toISOString().slice(0, 19)}${fractionWritten}Z`;
-  return isTime(written) ? written : undefined;
-}
-
-function eventTimeIn(arrival: Arrival, expression: string | undefined): string | undefined {
-  const value = declaredValueIn(arrival, expression);
-  if (typeof value === 'string' && isTime(value)) {
-    return value;
-  }
-  return typeof value === 'string' || typeof value === 'number' ? writtenAsATime(String(value)) : undefined;
-}
-
 const isJson = Schema.is(Schema.Json);
 
 function dataIn(arrival: Arrival, data: DeclaredEvent['data'] = {}): Readonly<Record<string, Schema.Json>> {
@@ -251,6 +229,14 @@ function dataIn(arrival: Arrival, data: DeclaredEvent['data'] = {}): Readonly<Re
       return value === null || !isJson(value) ? [] : [[field, value]];
     }),
   );
+}
+
+function actorIn(arrival: Arrival, expression: string | undefined): Pick<ArrivalEvent, 'actor'> {
+  const named = declaredValueIn(arrival, expression);
+  if (typeof named === 'number') {
+    return Number.isSafeInteger(named) ? { actor: String(named) } : {};
+  }
+  return typeof named === 'string' && named !== '' ? { actor: named } : {};
 }
 
 function isItsOwn(arrival: Arrival, own: DeclaredEvent['own']): boolean {
@@ -271,7 +257,7 @@ function eventIn(arrival: Arrival, mappings: Destination['events']): ArrivalEven
   if (applies(arrival, declared.changed) || isItsOwn(arrival, declared.own)) {
     return undefined;
   }
-  const time = eventTimeIn(arrival, declared.time);
+  const time = eventTimeOf(declaredValueIn(arrival, declared.time));
   const subject = textIn(arrival, declared.subject);
   return {
     type: declared.type,
@@ -280,6 +266,7 @@ function eventIn(arrival: Arrival, mappings: Destination['events']): ArrivalEven
     ...(subject === undefined ? {} : { subject }),
     data: dataIn(arrival, declared.data),
     ...(applies(arrival, declared.automatic) ? { automatic: true } : {}),
+    ...actorIn(arrival, declared.actor),
   };
 }
 

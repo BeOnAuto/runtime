@@ -5,7 +5,7 @@ import { onTestFinished } from 'vitest';
 import { alphaIn, noNetwork, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
 import { runIdIn, settledRun, workflowSource } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { whenHeld } from '../waiting/until.ts';
 
 export const brief = { campaign: 'Spring', owner: 'ada' };
 
@@ -50,15 +50,18 @@ function once(stop: () => Promise<void>): () => Promise<void> {
   };
 }
 
+export type Finishing = (stop: () => Promise<void>) => void;
+
 export async function interactionServerOn(
   environment: Readonly<Record<string, string>>,
   parts: ServedParts = {},
   org = 'acme',
+  finishing: Finishing = onTestFinished,
 ): Promise<InteractionServer> {
   const alpha = alphaIn(org);
   const server = await servingReasoning([], environment, noNetwork, parts);
   const stop = once(server.stop);
-  onTestFinished(stop);
+  finishing(stop);
   return {
     ...server,
     stop,
@@ -80,7 +83,7 @@ export async function interactionServerOn(
       return runIdIn(started.body);
     },
     openRequests: async (count) => {
-      const listed = await until(
+      const listed = await whenHeld(
         async () => decodeListed((await server.call('GET', `${alpha}/interactions`)).body).interactions,
         (interactions) => interactions.length >= count,
       );

@@ -103,9 +103,9 @@ function launchedIn(home: string, packageRoot: string): Promise<LaunchedRuntime>
   return answering;
 }
 
-function launchedWithAnExtension(): Promise<LaunchedRuntime> {
+async function launchedWithAnExtension(): Promise<LaunchedRuntime> {
   const home = scratchFolder();
-  npmInstalledIn(home, [words, forecasts]);
+  await npmInstalledIn(home, [words, forecasts]);
   return launchedIn(home, runtimeInstalledIn(join(home, 'node_modules')));
 }
 

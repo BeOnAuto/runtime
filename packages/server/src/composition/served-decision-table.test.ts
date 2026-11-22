@@ -2,6 +2,7 @@ import { operationsIn, type DocumentedOperation } from '@on.auto/api/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { decisionTableOf, type DecisionRow } from '../testing/access/decision-table.ts';
+import { servedDeclarations } from '../testing/access/served-declarations.ts';
 import {
   declarationLineOf,
   declaredIn,
@@ -23,90 +24,6 @@ beforeAll(async () => {
 });
 
 afterAll(() => server.stop());
-
-const declared = [
-  'org/activate_allocation: org:write',
-  'org/activate_license: org:write',
-  'org/add_connection: org:write',
-  'org/approve: org:write',
-  'org/assign_role: org:write (manages permissions)',
-  'org/create_playbook: org:write (names a playbook)',
-  'org/finish: org:write',
-  'org/get_caller: org:read,playbook:read',
-  'org/get_connection: org:read',
-  'org/get_license: org:read,playbook:read',
-  'org/get_playbook: org:read (names a playbook)',
-  'org/get_voice: playbook:read',
-  'org/give_client: org:write',
-  'org/give_credential: org:write',
-  'org/list_activity: org:read,playbook:read (names a playbook)',
-  'org/list_comments: org:read,playbook:read',
-  'org/list_connection_tools: org:read',
-  'org/list_connections: org:read',
-  'org/list_generation_models: org:read',
-  'org/list_models: org:read',
-  'org/list_org_changes: org:read,playbook:read',
-  'org/list_playbooks: org:read,playbook:read',
-  'org/list_providers: org:read',
-  'org/list_role_assignments: org:read',
-  'org/make_comment: org:read,playbook:read',
-  'org/mark_activity_seen: org:read,playbook:read',
-  'org/read_link: org:write',
-  'org/reconnect_connection: org:write',
-  'org/remove_connection: org:write',
-  'org/remove_connection_signing_secret: org:write',
-  'org/reopen_comment: org:read,playbook:read',
-  'org/report_allocation: org:write',
-  'org/resolve_comment: org:read,playbook:read',
-  'org/restore_playbook: org:write (names a playbook)',
-  'org/retire_playbook: org:write (names a playbook)',
-  'org/search: org:read,playbook:read (names a playbook)',
-  'org/set_connection_playbooks: org:write',
-  'org/set_connection_signing_secret: org:write',
-  'org/start: org:write',
-  'org/transcribe: playbook:read',
-  'org/unassign_role: org:write (manages permissions)',
-  'org/update_playbook: org:write (names a playbook)',
-  'playbook/answer_interaction: playbook:write',
-  'playbook/cancel_run: playbook:write',
-  'playbook/create_definition: playbook:write',
-  'playbook/dry_run: playbook:read',
-  'playbook/execute_connection: playbook:write',
-  'playbook/get_asset: playbook:read',
-  'playbook/get_definition: playbook:read',
-  'playbook/get_event: playbook:read',
-  'playbook/get_playbook_analytics: playbook:read',
-  'playbook/get_run: playbook:read',
-  'playbook/get_run_history: playbook:read',
-  'playbook/introspect: playbook:read',
-  'playbook/list_comments: playbook:read',
-  'playbook/list_definitions: playbook:read',
-  'playbook/list_generation_models: playbook:read',
-  'playbook/list_interactions: playbook:read',
-  'playbook/list_playbook_changes: playbook:read',
-  'playbook/list_playbook_events: playbook:read',
-  'playbook/list_runs: playbook:read',
-  'playbook/make_comment: playbook:read',
-  'playbook/make_next_attempt: playbook:write',
-  'playbook/move_definitions: playbook:write',
-  'playbook/pause_definition: playbook:write',
-  'playbook/publish_event: playbook:write',
-  'playbook/query_connection: playbook:write',
-  'playbook/refuse_next_attempt: playbook:write',
-  'playbook/render_page: playbook:read',
-  'playbook/render_playbook_page: playbook:read',
-  'playbook/reopen_comment: playbook:read',
-  'playbook/resolve_comment: playbook:read',
-  'playbook/restore_definition: playbook:write',
-  'playbook/resume_definition: playbook:write',
-  'playbook/retire_definition: playbook:write',
-  'playbook/run_definition: playbook:write',
-  'playbook/search: playbook:read',
-  'playbook/send_run_event: playbook:write',
-  'playbook/start_definition_version: playbook:write',
-  'playbook/update_definition: playbook:write',
-  'playbook/validate: playbook:read',
-];
 
 const whatReadingPermits = [
   'org/get_caller',
@@ -144,6 +61,7 @@ const whatReadingPermits = [
   'playbook/list_interactions',
   'playbook/list_playbook_changes',
   'playbook/list_playbook_events',
+  'playbook/list_queued_starts',
   'playbook/list_runs',
   'playbook/make_comment',
   'playbook/render_page',
@@ -160,6 +78,7 @@ const whatOnlyWritingPermits = [
   'org/add_connection',
   'org/approve',
   'org/assign_role',
+  'org/choose_way',
   'org/create_playbook',
   'org/finish',
   'org/give_client',
@@ -171,6 +90,7 @@ const whatOnlyWritingPermits = [
   'org/report_allocation',
   'org/restore_playbook',
   'org/retire_playbook',
+  'org/set_connection_account_type',
   'org/set_connection_playbooks',
   'org/set_connection_signing_secret',
   'org/start',
@@ -199,9 +119,7 @@ const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted()
 
 const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
 
-const everythingButWhatManagesPermissions = everything.filter(
-  (operation) => !whatManagesPermissions.includes(operation),
-);
+const everythingButWhatManagesPermissions = everything.filter((name) => !whatManagesPermissions.includes(name));
 
 const whatPlaybookAlphaMayDoAsItself = [
   ...everything.filter((operation) => operation.startsWith('playbook/')),
@@ -242,7 +160,7 @@ const pinned = [
 
 describe('every operation the server serves, as its API document declares it', () => {
   it('is permitted by the permissions it declares, any one of them, and names a playbook where it says so, the start of a version the workflow host makes among them', () => {
-    expect(operations.map((operation) => declarationLineOf(operation))).toEqual(declared);
+    expect(operations.map((operation) => declarationLineOf(operation))).toEqual(servedDeclarations);
   });
 
   it('is answered without a permission only for content at its signed address and for the guides, which no decision point is asked about', () => {

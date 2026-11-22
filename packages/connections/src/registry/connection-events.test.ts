@@ -5,14 +5,15 @@ import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { actingAsAnAccount, keptWaysOfAServer, wayChosenAgain } from '../testing/account-type-facts.ts';
 import { heldAppCredentials } from '../testing/app-credential-facts.ts';
-import { givenItsEvents } from '../testing/event-facts.ts';
+import { givenItsEvents, identifiedByTheRuntime } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
 
-function addedWith(provider: string | null, credential: Readonly<Record<string, unknown>>) {
+function addedWith(provider: string | null, credential: Readonly<Record<string, unknown>>, ways?: readonly unknown[]) {
   return {
     type: 'connection_added',
     data: {
@@ -23,6 +24,7 @@ function addedWith(provider: string | null, credential: Readonly<Record<string, 
       placeholders: null,
       entry: { url: 'https://mcp.files.example.com/mcp' },
       credential,
+      ...(ways === undefined ? {} : { ways }),
       says: {},
       added_by: { id: 'person:ada', name: 'Ada Lovelace' },
     },
@@ -33,16 +35,18 @@ function addedWith(provider: string | null, credential: Readonly<Record<string, 
 const issuer = 'https://auth.files.example.com';
 
 describe('the credential a connection of consent given by hand is recorded with', () => {
-  it('holds its clients, each one the runtime makes for itself, where a provider’s way may leave them to their default', () => {
+  it('holds its clients, each one the runtime makes for itself, where a provider’s way may leave them to their default, and ways only beside a server given by hand', () => {
     const outcomes = [
       addedWith(null, { kind: 'authorization', issuer, clients: ['dynamic'] }),
       addedWith(null, { kind: 'authorization', issuer }),
       addedWith(null, { kind: 'authorization', issuer, clients: ['registered', 'dynamic'] }),
       addedWith('files', { kind: 'authorization', issuer }),
       addedWith(null, { kind: 'none' }),
+      addedWith(null, { kind: 'none' }, [{ kind: 'none' }]),
+      addedWith('files', { kind: 'authorization', issuer }, [{ kind: 'authorization', issuer }]),
     ].map((fact: unknown) => Result.isSuccess(decoded(fact)));
 
-    expect(outcomes).toEqual([true, false, false, true, true]);
+    expect(outcomes).toEqual([true, false, false, true, true, true, false]);
   });
 });
 
@@ -274,7 +278,9 @@ describe('the facts of the registry of connections', () => {
       '0.59.0': [...givenItsDocument, ...connectedForItsAccount],
       '0.60.0': throughAGateway,
       '0.67.0': heldAppCredentials,
-      '0.69.0': givenItsEvents,
+      '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
+      '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
+      '0.71.0': keptWaysOfAServer,
     },
   });
 });

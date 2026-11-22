@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { ProgramPoolOf } from '../composition/served-computation.ts';
 import { checkRefusals, documentOf, totalOf } from '../testing/servers/check-refusals.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
+import { patientThreadPool } from '../testing/servers/worker-pools.ts';
 
 const paceOfTwoRows = {
   campaigns: [
@@ -43,11 +43,11 @@ function countingChecks(): { readonly checks: Checks; readonly poolOf: ProgramPo
         stalled = { ran: 'stopped', because, milliseconds: 2000 };
       },
     },
-    poolOf: (settings, handed) => checking(patientWorkerPool(settings, handed)),
+    poolOf: (settings, handed) => checking(patientThreadPool(settings, handed)),
   };
 }
 
-async function serving(programPoolOf: ProgramPoolOf = patientWorkerPool): Promise<ReasoningServer> {
+async function serving(programPoolOf: ProgramPoolOf = patientThreadPool): Promise<ReasoningServer> {
   server = await servingReasoning([], {}, undefined, { programPoolOf });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return server;
@@ -136,22 +136,21 @@ describe('the check at save, over HTTP', () => {
   });
 });
 
+function busy(retryAfter: number) {
+  return {
+    status: 503,
+    body: { reason: 'unavailable', kind: 'busy', type: 'https://on.auto/problems/busy', retry_after: retryAfter },
+  };
+}
+
 describe('a check at save that runs past its deadline, or has no checker ready, over HTTP', () => {
-  it('leaves the document unsaved, invalid when its check runs past its deadline and unavailable when no checker is ready, on a create and an update', async () => {
+  it('leaves the document unsaved, invalid when its check runs past its deadline and busy, with a wait that doubles, when no checker is ready, on a create and an update', async () => {
     const { checks, poolOf } = countingChecks();
     await serving(poolOf);
     await saving('pace', campaignPace);
     checks.stall('deadline');
     const tooLong = await saving('slow', campaignPace);
     checks.stall('busy');
-    const unavailable = {
-      status: 503,
-      body: {
-        reason: 'unavailable',
-        detail:
-          'No checker was ready in time for this save, since this server checks one document at a time with one checker; try again',
-      },
-    };
 
     expect(tooLong).toMatchObject({
       status: 422,
@@ -166,12 +165,12 @@ describe('a check at save that runs past its deadline, or has no checker ready, 
         ],
       },
     });
-    expect(await saving('again', campaignPace)).toMatchObject(unavailable);
+    expect(await saving('again', campaignPace)).toMatchObject(busy(1));
     expect(
       await server.call('PUT', `${alpha}/definitions/computation/pace`, {
         body: { source: `${campaignPace}\n`, diagram: 'none' },
       }),
-    ).toMatchObject(unavailable);
+    ).toMatchObject(busy(2));
     expect(await server.call('GET', `${alpha}/definitions/computation/pace`)).toMatchObject({
       body: { version: 1, source: campaignPace },
     });

@@ -6,6 +6,7 @@ type: openapi
 document: documents/youtube-management.openapi.json
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/youtube.force-ssl
     says:

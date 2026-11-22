@@ -20,9 +20,19 @@ function onMcp<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
   return meetings.onMcp(use);
 }
 
+const meetingsPlaybook = { playbook: 'meetings', name: 'Meetings', description: "Keeps the team's meeting notes" };
+
+/*
+ * The playbooks the episodes reach are made here, so each episode stands alone in any order: "meetings", whose
+ * functions may use the tool servers, and "standups", which no tool server serves.
+ */
 beforeAll(async () => {
   meetings = await servingMeetings([answers(jsonResult({ posted: 'The notes of the standup, to the team channel' }))]);
   ({ surfaces } = meetings);
+  await onMcp(async (session) => {
+    await session.callTool('create_playbook', meetingsPlaybook);
+    await session.callTool('create_playbook', { playbook: 'standups', name: 'Standups' });
+  });
 });
 
 afterAll(async () => {
@@ -36,8 +46,6 @@ function descriptionOf(tool: string): string {
 const PromptSchema = Schema.Struct({
   messages: Schema.Array(Schema.Struct({ content: Schema.Struct({ text: Schema.optionalKey(Schema.String) }) })),
 });
-
-const meetingsPlaybook = { playbook: 'meetings', name: 'Meetings', description: "Keeps the team's meeting notes" };
 
 const posting = [
   '---',
@@ -62,7 +70,9 @@ describe('episode 1: asked "what is a playbook?"', () => {
 
 describe('episode 2: asked to create a playbook for meetings', () => {
   it('finds no rule of an id beyond the argument, and words that say what the playbook is for and what comes next', async () => {
-    const created = await onMcp((session) => session.callTool('create_playbook', meetingsPlaybook));
+    const created = await onMcp((session) =>
+      session.callTool('create_playbook', { ...meetingsPlaybook, playbook: 'team-meetings' }),
+    );
 
     expect(sentencesOf(descriptionOf('create_playbook')).filter((sentence) => /\bid\b/u.test(sentence))).toEqual([
       'An id that is taken or retired is refused.',
@@ -93,17 +103,17 @@ describe('episode 3: asked to use Slack', () => {
 describe('episode 5: quoting the tools to a person who does not code', () => {
   it('finds only the words of the terminology in the instructions and in the words of the results', async () => {
     const words = await onMcp(async (session) => {
-      await session.callTool('create_playbook', { playbook: 'standups', name: 'Standups' });
+      await session.callTool('create_playbook', { playbook: 'retros', name: 'Retros' });
       const results = [
         await session.callTool('create_definition', {
-          playbook: 'standups',
+          playbook: 'retros',
           type: 'reasoning',
           name: 'post-notes',
           source: posting,
           diagram: 'none',
         }),
-        await session.callTool('list_definitions', { playbook: 'standups', type: 'reasoning' }),
-        await session.callTool('list_runs', { playbook: 'standups' }),
+        await session.callTool('list_definitions', { playbook: 'retros', type: 'reasoning' }),
+        await session.callTool('list_runs', { playbook: 'retros' }),
       ];
       return results.map((result) => plainTextIn(result));
     });

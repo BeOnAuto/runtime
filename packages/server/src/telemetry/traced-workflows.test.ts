@@ -5,7 +5,6 @@ import { alpha } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 import { spansIn, type ExportedSpan } from '../testing/telemetry/otlp-exports.ts';
 import { receivingOtlp } from '../testing/telemetry/otlp-receiver.ts';
-import { until } from '../testing/waiting/until.ts';
 
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize: {{ input.text }}'].join('\n');
 
@@ -24,11 +23,7 @@ function linkedTraces(spans: readonly ExportedSpan[], name: string): readonly st
   return spans.filter((span) => span.name === name).flatMap(({ links }) => links.map(({ traceId }) => traceId));
 }
 
-function followedTheRun(spans: readonly ExportedSpan[]): boolean {
-  const request = childOf(spans, runPath);
-  return request !== undefined && linkedTraces(spans, 'follow run_succeeded').includes(request.traceId);
-}
-
+/** The spans of a run, which the server sends as its telemetry stops: they go out on a timer of the system's, not its clock. */
 async function spansOfARun(): Promise<readonly ExportedSpan[]> {
   const receiver = await receivingOtlp();
   onTestFinished(receiver.close);
@@ -43,7 +38,7 @@ async function spansOfARun(): Promise<readonly ExportedSpan[]> {
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
   const started = await server.call('POST', `${alpha}/definitions/workflow/asking/run`, { body: { input: {} } });
   await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
-  await until(() => spansIn(receiver.received()), followedTheRun);
+  await server.clock?.swept.rested();
   await server.stop();
   return spansIn(receiver.received());
 }

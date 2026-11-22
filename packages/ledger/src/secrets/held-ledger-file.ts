@@ -34,6 +34,8 @@ export interface Waits {
 
 export const briefWaits: Waits = { forTheLock: 50 };
 
+export const noWaitForTheLock: Waits = { forTheLock: 0 };
+
 export function connectionOptionsWaiting({ forTheLock, forATurn }: Waits) {
   return {
     pragmaOptions: { ...modestConnections.pragmaOptions, busy_timeout: forTheLock },
@@ -52,18 +54,25 @@ interface ALedgerFile {
   readonly file: SQLiteLedgerFile;
   readonly named: string;
   readonly inside: { work: InsideTheTransaction };
+  readonly theNextWriteWaiting: () => Promise<void>;
 }
 
 export function aLedgerFile({ fileName, inMemory }: APlace, waits: Waits = briefWaits): ALedgerFile {
   const named = fileName();
   const inside = { work: committed };
+  const waiting = { next: Promise.withResolvers<void>() };
+  const aWriteWaits = () => {
+    waiting.next.resolve();
+    waiting.next = Promise.withResolvers<void>();
+  };
   return {
+    theNextWriteWaiting: () => waiting.next.promise,
     file: sqliteLedgerFileOn(
       {
         optionsOf: () => ({
           driver: nodeSqliteEventStoreDriver,
           fileName: named,
-          connectionOptions: connectionOptionsWaiting(waits),
+          connectionOptions: { ...connectionOptionsWaiting(waits), onWaitingForTheWriter: aWriteWaits },
           hooks: { onBeforeCommit: () => inside.work() },
         }),
         inMemory,
@@ -78,6 +87,7 @@ export function aLedgerFile({ fileName, inMemory }: APlace, waits: Waits = brief
 type Appended = (inside: InsideTheTransaction) => Promise<void>;
 
 interface AnOpenLedger {
+  readonly theNextWriteWaiting: () => Promise<void>;
   readonly rows: SecretRows;
   readonly received: Effect.Success<SQLiteLedgerFile['receivedWebhooks']>;
   readonly appended: Appended;
@@ -85,10 +95,11 @@ interface AnOpenLedger {
 }
 
 export async function anOpenLedger(place: APlace, waits: Waits = briefWaits): Promise<AnOpenLedger> {
-  const { file, named, inside } = aLedgerFile(place, waits);
+  const { file, named, inside, theNextWriteWaiting } = aLedgerFile(place, waits);
   const { connection, dispose } = await openConnectionWith(file.ledgerLayer());
   onTestFinished(dispose);
   return {
+    theNextWriteWaiting,
     rows: await Effect.runPromise(file.secretRows),
     received: await Effect.runPromise(file.receivedWebhooks),
     named,

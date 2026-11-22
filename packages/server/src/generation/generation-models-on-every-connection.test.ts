@@ -2,7 +2,7 @@ import { toolNamesIn, withMcpSession, type McpSession } from '@on.auto/api/testi
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
 import { Schema } from 'effect';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
@@ -44,7 +44,8 @@ const namedModelsIn = Schema.decodeUnknownSync(
 
 let server: ReasoningServer;
 
-beforeEach(async () => {
+// The cases only list and read the models the gateway names, so they share one server.
+beforeAll(async () => {
   server = await servingReasoning([], {
     API_KEYS: JSON.stringify([acmeAdmin.entry, acmePlaybookReader.entry, acmeOrgReader.entry, acmeBetaReader.entry]),
     MODEL_GATEWAYS: JSON.stringify([{ name: 'images', base_url: 'http://127.0.0.1:9/v1', api_key: 'never-asked' }]),
@@ -59,7 +60,7 @@ beforeEach(async () => {
   });
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await server.stop();
 });
 

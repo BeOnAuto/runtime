@@ -116,6 +116,7 @@ const readOn = Effect.fnUntraced(function* (capability: Capability, read: ReadOn
   const standing = yield* capability.standing({
     org,
     playbook,
+    definition: stored.definition_id,
     name,
     version: definition.version,
     status: isRetired(definition) ? 'retired' : 'active',

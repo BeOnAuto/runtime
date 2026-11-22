@@ -1,14 +1,12 @@
 import { spawnSync } from 'node:child_process';
-import { once } from 'node:events';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { measuredEnvironment } from './measured-environment.ts';
-import type { RunningProcess } from './process-endings.ts';
-import { spawnForTheTest } from './test-processes.ts';
+import type { PidEnding, RunningProcess } from './process-endings.ts';
 import theFolderOfTheTestRun, { aFolderOfTheTestRun, type RunningIn } from './test-run-folder.ts';
 
 describe('the environment a worker or a process of a test is given', () => {
@@ -71,54 +69,62 @@ describe('the temporary folder of a test run', () => {
   });
 });
 
-const stopsWhenTold = [
-  "process.on('SIGTERM', () => { process.stdout.write('stopped'); process.exit(0); });",
-  'setInterval(() => {}, 1000);',
-  "process.stdout.write('ready ');",
-].join('\n');
-
 interface Probe {
-  readonly ready: Promise<void>;
-  readonly printed: () => string;
-  readonly closed: Promise<readonly unknown[]>;
   readonly runningIn: RunningIn;
+  readonly ending: PidEnding;
   readonly lookedIn: () => readonly (readonly [string, boolean])[];
+  readonly sent: () => readonly string[];
 }
 
+/** A process known by its pid alone that goes on SIGTERM, on a fake signaller and the fake clock. */
 function aProbeRunningIn(home: string): Probe {
-  const child = spawnForTheTest(process.execPath, ['--eval', stopsWhenTold], {
-    stdio: ['ignore', 'pipe', 'inherit'],
-  });
-  const printed = { text: '' };
-  const ready = Promise.withResolvers<void>();
-  child.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
-    printed.text += chunk;
-    ready.resolve();
-  });
-  const running: RunningProcess = {
-    name: 'a probe',
-    pid: Number(child.pid),
-    isStillRunning: () => child.exitCode === null && child.signalCode === null,
-  };
+  const state = { running: true };
+  const sent: string[] = [];
+  const pid = 4242;
+  const running: RunningProcess = { name: 'a probe', pid, isStillRunning: () => state.running };
   const lookedIn: (readonly [string, boolean])[] = [];
   return {
-    ready: ready.promise,
-    printed: () => printed.text,
-    closed: once(child, 'close'),
     runningIn: (entry) => {
       lookedIn.push([basename(entry), existsSync(entry)]);
       return basename(entry) === home ? [running] : [];
     },
+    ending: {
+      signaller: (to, signal) => {
+        sent.push(`${String(signal)} to ${String(to)}`);
+        state.running = false;
+        return true;
+      },
+      timer: {
+        after: (ms, stop) =>
+          new Promise((resolve, reject) => {
+            const timer = setTimeout(resolve, ms);
+            stop.addEventListener('abort', () => {
+              clearTimeout(timer);
+              reject(new Error('stopped'));
+            });
+          }),
+      },
+      lookEveryMs: 50,
+      stoppedWithinMs: 300,
+    },
     lookedIn: () => lookedIn,
+    sent: () => sent,
   };
 }
 
 describe('a process still running in what the tests of a run left in its folder', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('is ended as its teardown looks, before the folder is removed, and named with what it ran in', async () => {
     const probe = aProbeRunningIn('a-home');
-    const teardown = aFolderOfTheTestRun(probe.runningIn)(run);
+    const teardown = aFolderOfTheTestRun(probe.runningIn, probe.ending)(run);
     leftIn(tmpdir(), 'a-home', 'a-folder');
-    await probe.ready;
 
     await expect(teardown()).rejects.toThrow(
       new Error(
@@ -126,9 +132,8 @@ describe('a process still running in what the tests of a run left in its folder'
       ),
     );
 
-    expect(await probe.closed).toEqual([0, null]);
-    expect([probe.printed(), probe.lookedIn()]).toEqual([
-      'ready stopped',
+    expect([probe.sent(), probe.lookedIn()]).toEqual([
+      ['SIGTERM to 4242'],
       [
         ['a-folder', true],
         ['a-home', true],

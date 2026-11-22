@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { now, runId, runKey, startOf } from '../testing/attempt-leases/left-by-dead-processes.ts';
 import { as, endedOn, startedAfter, writer } from '../testing/attempt-leases/servers-after-dead-processes.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { fewSweeps } from '../testing/waiting/stepped-server-clock.ts';
 
 const callStarted: RunEvent = {
   type: 'tool_call_started',
@@ -15,7 +15,7 @@ const diedLongAgo = now - 1;
 
 describe('a run within its call whose process died while it called a tool that may change something', () => {
   it('is ended once the lease of its attempt lapsed, saying whether that call did is not known, and is not run again under its id', async () => {
-    const { server } = await startedAfter(
+    const { server, clock } = await startedAfter(
       {
         type: 'interaction',
         name: 'post',
@@ -25,7 +25,7 @@ describe('a run within its call whose process died while it called a tool that m
       [writer],
     );
 
-    const ended = await endedOn(server, writer);
+    const ended = await endedOn({ server, clock }, writer);
     const again = await server.call('POST', `${alpha}/definitions/interaction/post/run`, {
       body: { input: {}, run_id: runId },
       ...as(writer),
@@ -41,7 +41,7 @@ describe('a run within its call whose process died while it called a tool that m
 
 describe('a run within its call whose process died after it took the lease of its attempt and recorded its start, before it named its token', () => {
   it('is ended as the attempt that holds it, once that lease lapsed, no live lease naming that attempt', async () => {
-    const { server } = await startedAfter(
+    const { server, clock } = await startedAfter(
       {
         type: 'interaction',
         name: 'post',
@@ -51,7 +51,7 @@ describe('a run within its call whose process died after it took the lease of it
       [writer],
     );
 
-    expect((await endedOn(server, writer)).body).toMatchObject({ status: 'failed' });
+    expect((await endedOn({ server, clock }, writer)).body).toMatchObject({ status: 'failed' });
   });
 });
 
@@ -70,7 +70,11 @@ describe('a run whose first attempt died, which a retry under its id took up in 
       [writer],
     );
 
-    const leases = await until(started.leaseNames, (names) => !names.includes(`attempt/${runKey}/process-that-died/1`));
+    const leases = await started.clock.swept.until(
+      started.leaseNames,
+      (names) => !names.includes(`attempt/${runKey}/process-that-died/1`),
+      fewSweeps,
+    );
     const run = await started.server.call('GET', `${alpha}/runs/${runId}`, as(writer));
 
     expect(leases).toEqual([`attempt/${runKey}/process-that-lives/2`]);

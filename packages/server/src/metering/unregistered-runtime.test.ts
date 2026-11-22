@@ -1,14 +1,13 @@
 import { problemIn, withMcpSession } from '@on.auto/api/testing';
-import type { HostClock } from '@on.auto/workflow-host';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { runtimeIdOf } from '../testing/accounts/licensed-server.ts';
 import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { tallied, tallyCreated, talliedTimes } from '../testing/servers/tally-server.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { runIdIn, servingWorkflows, settledAsSwept, workflowSource } from '../testing/servers/workflow-server.ts';
+import type { SteppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { fewSweeps, steppedServerClock, testServersStartAt } from '../testing/waiting/stepped-server-clock.ts';
 
 const studio = 'https://studio.example.com';
 
@@ -43,15 +42,15 @@ function licenseRequiredOf(runtimeId: string) {
   const page = `${studio}/licenses?installation=${runtimeId}`;
   return {
     kind: 'license_required',
-    detail: `This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on ${tomorrowOf(new Date())}. To run more, get a free license key at ${page} and activate it on this runtime.`,
+    detail: `This runtime has used its 100 free runs. Without a license key, it's limited to the free rate of 15 runs a UTC day and 75 a UTC month. It has used all of today's free runs, so it can start runs again at 00:00 UTC on ${tomorrowOf(new Date(testServersStartAt))}. To run more, get a free license key at ${page} and activate it on this runtime.`,
     because: 'free_daily_limit',
     resolve_at: page,
     runtime_id: runtimeId,
-    lifts_at: `${tomorrowOf(new Date())}T00:00:00.000Z`,
+    lifts_at: `${tomorrowOf(new Date(testServersStartAt))}T00:00:00.000Z`,
   };
 }
 
-async function servedWithTally(clock?: HostClock): Promise<ReasoningServer> {
+async function servedWithTally(clock?: SteppedServerClock): Promise<ReasoningServer> {
   const served = await servingWorkflows([], { STUDIO_ORIGIN: studio }, undefined, clock);
   await tallyCreated(served);
   return served;
@@ -72,7 +71,7 @@ describe('a runtime nobody registered, after its 100 free runs and the 15 of the
   beforeAll(async () => {
     server = await servedWithTally();
     admitted = await talliedTimes(server, 115);
-  }, 120_000);
+  });
 
   afterAll(async () => {
     await server.stop();
@@ -117,27 +116,28 @@ describe('a runtime nobody registered, after its 100 free runs and the 15 of the
 });
 
 describe('a workflow of a runtime nobody registered, started at its 114th run of a day', () => {
-  it('has its first call admitted as the 115th, waits at its next for a license, saying where to get a key, and reaches its catch 24 hours on', async () => {
-    const clock = movedClock(Date.now());
+  it('has its first call admitted as the 115th, waits at its next for a license, saying where to get a key, and goes on once the free runs of the next UTC day start', async () => {
+    const clock = steppedServerClock();
     const server = await servedWithTally(clock);
     try {
       await talliedTimes(server, 113);
       await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'edge', source: atTheEdge } });
       const started = await server.call('POST', `${alpha}/definitions/workflow/edge/run`, { body: { input: {} } });
       const run = runIdIn(started.body);
-      const history = await until(
+      const history = await clock.swept.until(
         () => server.call('GET', `${alpha}/runs/${run}/history?limit=100`),
         ({ body }) => JSON.stringify(body).includes('waits for a license'),
+        fewSweeps,
       );
-      clock.moveTo(clock.now() + 24 * 60 * 60_000);
-      const settled = await settledRun(server, `${alpha}/runs/${run}`);
+      clock.moveTo(Date.parse(licenseRequiredOf(await runtimeIdOf(server)).lifts_at));
+      const settled = await settledAsSwept(server, clock, `${alpha}/runs/${run}`);
 
       expect(JSON.stringify(history.body)).toContain(licenseRequiredOf(await runtimeIdOf(server)).resolve_at);
       expect(settled).toMatchObject({
-        body: { status: 'succeeded', output: { kind: 'license_required', status: 409 } },
+        body: { status: 'succeeded', output: { counted: true } },
       });
     } finally {
       await server.stop();
     }
-  }, 120_000);
+  });
 });

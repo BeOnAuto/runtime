@@ -50,6 +50,11 @@ export const GoalEventSchema = Schema.Union([
     Schema.Struct({ from: Schema.String, to: Schema.String, renamed_by: RecordedCallerSchema }),
     GoalContextSchema,
   ),
+  factOf(
+    'goal_moved',
+    Schema.Struct({ from: Schema.String, to: Schema.String, moved_by: RecordedCallerSchema, position: Position }),
+    GoalContextSchema,
+  ),
 ]);
 
 export type RecordedGoalEvent = typeof GoalEventSchema.Type;
@@ -61,4 +66,5 @@ export const goalFactTypes: readonly RecordedGoalEvent['type'][] = [
   'goal_agreed',
   'goal_removed',
   'goal_renamed',
+  'goal_moved',
 ];

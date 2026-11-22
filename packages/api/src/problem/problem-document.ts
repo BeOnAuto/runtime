@@ -93,6 +93,12 @@ export const ProblemSchema = Schema.Struct({
         'Why a self-hosted runtime that holds a key is limited to the free rate, as GET /license says it: credits or cap on credits_exhausted, the state of its license on license_invalid',
     }),
   ),
+  retry_after: Schema.optionalKey(
+    Schema.Int.annotate({
+      description:
+        'On a problem of the kind busy, the seconds to wait before trying the same request again, which Retry-After also gives over HTTP. It is 1 after the runtime’s first busy refusal in a row, doubles with each one after it up to 8, and goes back to 1 once the runtime answers in time',
+    }),
+  ),
 }).annotate({ description: 'A problem document, as RFC 9457 defines it, with the members of this server' });
 
 export type Problem = typeof ProblemSchema.Type;
@@ -101,7 +107,15 @@ export type ProblemIssue = typeof IssueSchema.Type;
 
 export type OptionalProblemMembers = Pick<
   Problem,
-  'instance' | 'errors' | 'kind' | 'because' | 'resolve_at' | 'runtime_id' | 'lifts_at' | 'limited_because'
+  | 'instance'
+  | 'errors'
+  | 'kind'
+  | 'because'
+  | 'resolve_at'
+  | 'runtime_id'
+  | 'lifts_at'
+  | 'limited_because'
+  | 'retry_after'
 >;
 
 const ProblemTypeSchema = Schema.Struct({ status: Schema.Int, title: Schema.String, description: Schema.String });

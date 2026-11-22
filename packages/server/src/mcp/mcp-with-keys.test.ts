@@ -1,14 +1,14 @@
 import { problemIn, toolNamesIn, withMcpSession, type McpConnection } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
 import { allPermissions } from '@on.auto/operations';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { release } from '../composition/release.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from '../testing/servers/composition-without-goals.ts';
 import { withoutStudioLink } from '../testing/servers/http-client.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 
 function playbookIn(answer: unknown): Readonly<Record<string, unknown>> {
   return Object.fromEntries(
@@ -61,26 +61,32 @@ const definitionTools = [
   'list_interactions',
   'get_asset',
   'list_generation_models',
+  'list_queued_starts',
   'send_run_event',
 ];
 
 let ledger: TemporaryLedger;
 let server: RunningServer;
 
-beforeEach(async () => {
-  ledger = temporaryLedger();
-  server = await startServer(
+function startedOn(temporary: TemporaryLedger): Promise<RunningServer> {
+  return startServer(
     {
       HOST: '127.0.0.1',
       PORT: '0',
-      LEDGER_FILE: ledger.fileName,
+      LEDGER_FILE: temporary.fileName,
       API_KEYS: apiKeys,
     },
-    compositionRootWithoutGoals,
+    testComposition({ goals: false }),
   );
+}
+
+// One server for the file: its cases only read, but for the one that creates a playbook, which has a server of its own.
+beforeAll(async () => {
+  ledger = temporaryLedger();
+  server = await startedOn(ledger);
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await server.stop();
   ledger.remove();
 });
@@ -146,6 +152,21 @@ describe('the org endpoint of the server', () => {
 });
 
 describe('the playbook tools of the server', () => {
+  let shared: RunningServer;
+  let own: TemporaryLedger;
+
+  beforeEach(async () => {
+    shared = server;
+    own = temporaryLedger();
+    server = await startedOn(own);
+  });
+
+  afterEach(async () => {
+    await server.stop();
+    own.remove();
+    server = shared;
+  });
+
   it('create, list, update and retire a playbook, listed with every field it was created with', async () => {
     const outcome = await withMcpSession(
       'previous major',

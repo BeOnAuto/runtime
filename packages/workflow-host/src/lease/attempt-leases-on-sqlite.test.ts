@@ -11,17 +11,17 @@ import {
   tokenlessBesideLeaseSuite,
   tokenlessLeaseSuite,
 } from '../suite-testing/tokenless-lease-suite.ts';
-import { onSQLite } from '../testing/host-files.ts';
+import { onASQLiteFile } from '../testing/host-files.ts';
 
 describe('the lease of an attempt on SQLite', () => {
-  attemptLeaseSuite(onSQLite);
-  liveHolderSuite(onSQLite);
-  lapsedLeaseSuite(onSQLite);
-  handedOverLeaseSuite(onSQLite);
-  systemClockLeaseSuite(onSQLite);
+  attemptLeaseSuite(onASQLiteFile);
+  liveHolderSuite(onASQLiteFile);
+  lapsedLeaseSuite(onASQLiteFile);
+  handedOverLeaseSuite(onASQLiteFile);
+  systemClockLeaseSuite(onASQLiteFile);
 });
 
 describe('the lease of an attempt that names no token yet, on SQLite', () => {
-  tokenlessLeaseSuite(onSQLite);
-  tokenlessBesideLeaseSuite(onSQLite);
+  tokenlessLeaseSuite(onASQLiteFile);
+  tokenlessBesideLeaseSuite(onASQLiteFile);
 });

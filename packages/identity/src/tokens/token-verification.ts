@@ -25,6 +25,8 @@ const clientIdClaim = 'client_id';
 
 const clientNameClaim = 'client_name';
 
+const orgNameClaim = 'org_name';
+
 const leewaySeconds = 60;
 
 const accessTokenTypes: ReadonlySet<string> = new Set(['at+jwt', 'application/at+jwt', 'jwt', 'application/jwt']);
@@ -161,6 +163,10 @@ function clientOf(
     : {};
 }
 
+function orgNameOf({ [orgNameClaim]: orgName }: Payload, orgClaimPath: ClaimPath): Pick<VerifiedPerson, 'orgName'> {
+  return orgClaimPath === orgClaimPaths['access token'] && isNamingClaim(orgName) ? { orgName } : {};
+}
+
 function personIn(payload: Payload, form: Form, now: number): string | VerifiedPerson {
   const { iat, sub, [nameClaim]: given } = payload;
   const name = given === undefined ? sub : given;
@@ -181,7 +187,7 @@ function personIn(payload: Payload, form: Form, now: number): string | VerifiedP
   const permissions = permissionsGrantedBy(payload, form);
   return Predicate.isString(permissions)
     ? permissions
-    : { subject: sub, name, org, permissions, ...clientOf(payload, form) };
+    : { subject: sub, name, org, ...orgNameOf(payload, orgClaimPath), permissions, ...clientOf(payload, form) };
 }
 
 async function verified(token: string, keySet: JWTVerifyGetKey, expected: Expected): Promise<string | VerifiedPerson> {

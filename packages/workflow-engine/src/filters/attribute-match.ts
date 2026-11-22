@@ -35,12 +35,16 @@ function namesAsWritten<Test>(attributes: readonly FilterAttribute<Test>[], name
   );
 }
 
+export const connectionMarks: readonly string[] = ['automatic', 'own'];
+
 export function mayTake<Test>(attributes: readonly FilterAttribute<Test>[], event: JsonObject): boolean {
   const source = textField(event, 'source');
   if (source === undefined || !isConnectionSource(source)) {
     return true;
   }
-  const askedFor = field(event, 'automatic') !== true || namesAsWritten(attributes, 'automatic', true);
+  const askedFor = connectionMarks.every(
+    (mark) => field(event, mark) !== true || namesAsWritten(attributes, mark, true),
+  );
   return askedFor && namesAsWritten(attributes, 'source', source);
 }
 

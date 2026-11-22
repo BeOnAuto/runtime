@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { followedThroughTheLatest } from '../waiting-testing/followed-host.ts';
 import { heldFollower } from '../waiting-testing/held-follower.ts';
 import { parkedDeliveriesSuite } from './parked-deliveries-suite.ts';
@@ -21,9 +22,10 @@ export function firstFollowSuite(settings: SettingsOf): void {
     await published(database.store, { id: 'e-after', type: 'com.acme.closed' });
 
     release();
-    await hosted.whenRead(
+    await hosted.sweeps.until(
       () => Promise.resolve(reactions.starts()),
       (starts) => starts.length > 0,
+      fewSweeps,
     );
     await followedThroughTheLatest(database, hosted);
 

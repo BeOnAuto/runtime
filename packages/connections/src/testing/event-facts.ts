@@ -29,3 +29,13 @@ export const givenItsEvents: readonly (typeof ConnectionEventSchema.Type)[] = [
     context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
   },
 ];
+
+const recordedAt = '2026-10-29T10:00:00.000Z';
+
+export const identifiedByTheRuntime: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_identified',
+    data: { connection: 'connection-1', connected_at: recordedAt, user: { id: '7001', name: 'sam' } },
+    context: { at: recordedAt, by: 'runtime' },
+  },
+];

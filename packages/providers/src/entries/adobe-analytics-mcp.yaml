@@ -6,6 +6,7 @@ type: mcp
 url: https://aa-mcp.adobe.io/mcp
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://aa-mcp.adobe.io
     scope: openid AdobeID additional_info.projectedProductContext
     says:

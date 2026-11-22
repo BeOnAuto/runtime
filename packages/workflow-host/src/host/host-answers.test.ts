@@ -47,8 +47,7 @@ import {
   type Woken,
   type WorkflowStore,
 } from '../index.ts';
-import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
-import { skippingClock, systemClock } from '../loop/host-clock.ts';
+import { skippingClock } from '../loop/host-clock.ts';
 import { someFolder } from '../projector/folder.ts';
 import { heldStart, type HeldStart } from '../reaction-testing/held-start.ts';
 import {
@@ -57,18 +56,25 @@ import {
   published,
   runOfTheTestsStarted,
 } from '../reaction-testing/playbook-writes.ts';
+import { reactingStartsAt, steppedMovedClock } from '../reaction-testing/reacting-clock.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
 import { settleAttemptsBeforeBackingOff, settleBackOffMs } from '../settlement/settle-attempts.ts';
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, connectedOn, leaseHoldersOn, onSQLite, openedOn } from '../testing/host-files.ts';
-import { hostedOn, recordedOptionsOf } from '../testing/host-runs.ts';
+import {
+  aLedgerInMemory,
+  connectedOn,
+  leaseHoldersOn,
+  onASQLiteFile,
+  openedOn,
+  type LedgerOn,
+} from '../testing/host-files.ts';
+import { hostedOn, hostedOnItsClock, hostedStartsAt, recordedOptionsOf } from '../testing/host-runs.ts';
 import { signals } from '../testing/signals.ts';
 import { endingsToldOf } from '../testing/span-endings.ts';
-import { steppedClock } from '../testing/stepped-clock.ts';
+import { fewSweeps, steppedBy, steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 import { watchedClock } from '../testing/watched-clock.ts';
-import { databaseTracking } from '../views-testing/database-tracking.ts';
 import { counting } from '../views-testing/view-documents.ts';
-import { viewHarnessOnTheThread } from '../views-testing/view-harness.ts';
+import { viewHarness } from '../views-testing/view-harness.ts';
 import { HostStopped } from './host-gate.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -99,7 +105,7 @@ interface OwnClocked {
 }
 
 async function ownClocked(clock: HostClock): Promise<OwnClocked> {
-  const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
+  const store = await openWorkflowStore(await connectedOn(await aLedgerInMemory()), []);
   const recorded = recordedOptionsOf({ sweepEveryMs: 1000 });
   const armed: number[] = [];
   const parts = openHostParts(store, { ...recorded.options, clock }, (dueAt) => {
@@ -147,17 +153,23 @@ function toldWhenTheFollowerStops(stopped: () => void): StreamSignal {
   };
 }
 
+interface StartingReaction {
+  readonly held: HeldStart;
+  readonly reacting: ReactingHost;
+}
+
 async function startingAReaction(
-  held: HeldStart,
-  settings: DatabaseSettings,
+  settings: LedgerOn,
   appended: StreamSignal = streamAppends,
-): Promise<ReactingHost> {
-  const reacting = await reactingHost({ settings, start: held.start, sweepEveryMs, appended });
+): Promise<StartingReaction> {
+  const clock = steppedMovedClock(reactingStartsAt);
+  const held = heldStart(clock);
+  const reacting = await reactingHost({ settings, clock, start: held.start, sweepEveryMs, appended });
   const trigger = eventTrigger({ type: 'com.acme.closed' });
   await definitionRecorded(reacting.database.store, { name: 'close', version: 1, triggers: [trigger] });
   await published(reacting.database.store, { id: 'e1', type: 'com.acme.closed' });
   await held.begun;
-  return reacting;
+  return { held, reacting };
 }
 
 const playbook = { org: 'acme', playbook: 'alpha' };
@@ -183,14 +195,13 @@ const refusedForCredits: CallResult = {
 
 const waitingForARun = (): Effect.Effect<CallAnswer> => Effect.succeed({ status: 'waiting', child: 'never-started' });
 
-async function partsAnswering(answer: () => Effect.Effect<CallAnswer>) {
-  const clock = steppedClock(Date.now());
-  const store = await openWorkflowStore(await connectedOn({ store: 'sqlite', file: aSQLiteFile() }), []);
-  const tracking = databaseTracking();
-  const recorded = recordedOptionsOf({ answer });
+async function partsAnswering(answer: (clock: SteppedClock) => Effect.Effect<CallAnswer>) {
+  const clock = steppedClock(hostedStartsAt);
+  const store = await openWorkflowStore(await connectedOn(await aLedgerInMemory()), []);
+  const recorded = recordedOptionsOf({ answer: () => answer(clock) });
   const parts = openHostParts(
-    { database: tracking.over(store.database) },
-    { ...recorded.options, clock },
+    { database: store.database },
+    { ...recorded.options, clock, context: clock.watching() },
     Function.constVoid,
   );
   recorded.know(runId);
@@ -201,7 +212,7 @@ async function partsAnswering(answer: () => Effect.Effect<CallAnswer>) {
   const callStates = () =>
     Effect.runPromise(rowsOf(CallState, store.database.read(statement`SELECT state, delivered FROM workflow_calls`)));
   const written = (holds: (calls: readonly (typeof CallState.Type)[]) => boolean) =>
-    tracking.whenRead(callStates, holds);
+    steppedBy(clock, sweepEveryMs).until(callStates, holds, { atMost: 0 });
   const waiting = () => written((calls) => calls.some(({ state }) => state === 'waiting'));
   return { clock, parts, recorded, callStates, written, waiting };
 }
@@ -304,7 +315,7 @@ type ThisContract = TypesOfEachContract[typeof capabilityContract];
 
 describe('the host asked to start a run', () => {
   it('answers that a run it already started is going, and starts nothing again', async () => {
-    const hosted = await hostedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const hosted = await hostedOn(await aLedgerInMemory());
 
     const together = await Effect.runPromise(
       Effect.all([hosted.host.start(run, startOf(listening)), hosted.host.start(run, startOf(listening))], {
@@ -320,7 +331,7 @@ describe('the host asked to start a run', () => {
 
 describe('the host given an event', () => {
   it('answers that an event for a run not started yet waits for the start, and takes an event once', async () => {
-    const hosted = await hostedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const hosted = await hostedOn(await aLedgerInMemory());
 
     const early = await Effect.runPromise(hosted.host.deliver(run, approved));
     const notStartedIsNotStored = await Effect.runPromise(hosted.host.stateOf(run));
@@ -339,10 +350,7 @@ describe('the host given an event', () => {
 
 describe('the host keeping no run loaded', () => {
   it('notes each run it loads from the ledger again, with what the run holds, and not the run it starts', async () => {
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      { cacheBounds: { mostRuns: 0, mostBytes: 0 } },
-    );
+    const hosted = await hostedOn(await aLedgerInMemory(), { cacheBounds: { mostRuns: 0, mostBytes: 0 } });
 
     await Effect.runPromise(hosted.host.start(run, startOf(pausing)));
     const atStart = hosted.notes().length;
@@ -362,7 +370,7 @@ describe('the host keeping no run loaded', () => {
 
 describe('the host reporting to its operator', () => {
   it('reports a run whose run the playbook does not know, once it ends', async () => {
-    const hosted = await hostedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const hosted = await hostedOn(await aLedgerInMemory());
 
     await Effect.runPromise(hosted.host.start(run, startOf(listening)));
     await Effect.runPromise(hosted.host.deliver(run, approved));
@@ -372,10 +380,10 @@ describe('the host reporting to its operator', () => {
   });
 
   it('reports a call that broke down before it could answer', async () => {
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      { answer: () => Effect.die(new Error('The function broke down')), sweepEveryMs: 3_600_000 },
-    );
+    const hosted = await hostedOn(await aLedgerInMemory(), {
+      answer: () => Effect.die(new Error('The function broke down')),
+      sweepEveryMs: 3_600_000,
+    });
 
     await Effect.runPromise(hosted.host.start(run, startOf(notifying)));
     const troubles = await hosted.when(hosted.troubles, (reported) => reported.length > 0);
@@ -386,7 +394,7 @@ describe('the host reporting to its operator', () => {
 
 describe('the host that is stopping', () => {
   it('refuses a start and an event, and stops once', async () => {
-    const hosted = await hostedOn({ store: 'sqlite', file: aSQLiteFile() });
+    const hosted = await hostedOn(await aLedgerInMemory());
 
     await Promise.all([hosted.host.stop(), hosted.host.stop()]);
     const refusals = await Effect.runPromise(
@@ -451,13 +459,10 @@ describe('the requests of runs over the parts of a host a clock of its own wakes
 describe('the host asked to start a run whose settlement is pending', () => {
   it('settles it again at once, and answers settled once it is, whatever a sweep of the host tried meanwhile', async () => {
     const ledger = { down: true };
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      {
-        sweepEveryMs: 3_600_000,
-        ledgerDown: () => ledger.down,
-      },
-    );
+    const hosted = await hostedOn(await aLedgerInMemory(), {
+      sweepEveryMs: 3_600_000,
+      ledgerDown: () => ledger.down,
+    });
     hosted.know(runId);
 
     const first = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
@@ -475,22 +480,21 @@ describe('the host asked to start a run whose settlement is pending', () => {
   it('tries it again at the next sweep after a start found it backing off, rather than a minute later', async () => {
     const attemptOfTheStart = settleAttemptsBeforeBackingOff + 1;
     const attempts = { made: 0 };
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      {
-        sweepEveryMs: 20,
-        ledgerDown: () => {
-          attempts.made += 1;
-          return attempts.made <= attemptOfTheStart;
-        },
+    const hosted = await hostedOn(await aLedgerInMemory(), {
+      sweepEveryMs: 20,
+      ledgerDown: () => {
+        attempts.made += 1;
+        return attempts.made <= attemptOfTheStart;
       },
-    );
+    });
     hosted.know(runId);
 
     await Effect.runPromise(hosted.host.start(run, startOf(ending)));
-    await hosted.when(hosted.notes, (notes) => notes.length > 0);
+    await hosted.sweeps.until(hosted.notes, (notes) => notes.length > 0, {
+      atMost: settleAttemptsBeforeBackingOff + fewSweeps.atMost,
+    });
     const startedAgain = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
-    const settled = await hosted.when(hosted.settlements, (settlements) => settlements.size > 0);
+    const settled = await hosted.sweeps.until(hosted.settlements, (settlements) => settlements.size > 0, fewSweeps);
 
     expect(startedAgain).toBe('going');
     expect([...settled.keys()]).toEqual([runId]);
@@ -502,14 +506,11 @@ describe('the host whose ledger cannot be reached for two minutes', () => {
   it('backs off to once a minute, and settles the run once the ledger is back, with nothing done by hand', async () => {
     const clock = skippingClock(1_790_845_200_000, () => Effect.never);
     const outage = { endsAt: Number.POSITIVE_INFINITY };
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      {
-        clock,
-        sweepEveryMs: 1000,
-        ledgerDown: () => clock.now() < outage.endsAt,
-      },
-    );
+    const hosted = await hostedOnItsClock(await aLedgerInMemory(), {
+      clock,
+      sweepEveryMs: 1000,
+      ledgerDown: () => clock.now() < outage.endsAt,
+    });
     hosted.know(runId);
     outage.endsAt = clock.now() + outageMs;
 
@@ -525,8 +526,7 @@ describe('the host whose ledger cannot be reached for two minutes', () => {
 
 describe('a reaction starting a run while its host stops serving', () => {
   it('starts the run before the host refuses starts, when the host is told to stop', async () => {
-    const held = heldStart();
-    const reacting = await startingAReaction(held, { store: 'sqlite', file: aSQLiteFile() });
+    const { held, reacting } = await startingAReaction(await aLedgerInMemory());
 
     const stopping = reacting.host.stop();
     held.release(reacting.host);
@@ -536,12 +536,13 @@ describe('a reaction starting a run while its host stops serving', () => {
   });
 
   it('starts the run before the host stands by, when another host takes the workflows over', async () => {
-    const held = heldStart();
-    const settings: DatabaseSettings = { store: 'sqlite', file: aSQLiteFile() };
+    const settings = await aLedgerInMemory();
     const standingBy = Promise.withResolvers<void>();
-    const reacting = await startingAReaction(held, settings, toldWhenTheFollowerStops(standingBy.resolve));
+    const { held, reacting } = await startingAReaction(settings, toldWhenTheFollowerStops(standingBy.resolve));
 
-    await hostedOn(settings, { holder: 'ahead', clock: { now: () => Date.now() + anHourMs, sleep: Effect.sleep } });
+    await hostedOn(settings, { holder: 'ahead', clock: steppedClock(reacting.clock.now() + anHourMs) });
+    await reacting.clock.atRest();
+    reacting.clock.step(sweepEveryMs);
     await standingBy.promise;
     held.release(reacting.host);
     const notes = await reacting.when(reacting.notes, (noted) => noted.length > 0);
@@ -553,27 +554,30 @@ describe('a reaction starting a run while its host stops serving', () => {
 
 describe('a host given a store and the settings of its projector', () => {
   it('keeps the views on that store while it serves, and stops keeping them when it stops', async () => {
-    const settings = await onSQLite();
-    const views = await viewHarnessOnTheThread(settings);
+    const settings = await onASQLiteFile();
+    const views = await viewHarness(settings);
     await views.saved('runs', counting);
     await views.ran('reasoning/runs', 1);
     const projector = views.settingsOf();
     const store = await openWorkflowStore(await connectedOn(settings), projector.folders);
 
-    const clock = watchedClock(views.restingOn(systemClock));
-    const hosted = await hostedOn(store, { projector, clock });
-    const kept = await views.folded('runs', ({ folded }) => folded === 1);
+    const hosted = await hostedOn(store, { projector });
+    const kept = await hosted.sweeps.until(
+      () => views.viewOf('runs'),
+      (read) => read?.folded === 1,
+      fewSweeps,
+    );
     await hosted.host.stop();
 
-    expect([kept.phase, kept.view]).toEqual(['live', 1]);
-    expect(clock.sleeping()).toBe(0);
+    expect([kept?.phase, kept?.view]).toEqual(['live', 1]);
+    expect(hosted.clock.asleep()).toBe(0);
     expect(hosted.troubles()).toEqual([]);
   });
 });
 
 describe('a host given the settings of a database and of its projector', () => {
   it('makes the tables of the folders of its projector when it opens its store', async () => {
-    const settings = await onSQLite();
+    const settings = await aLedgerInMemory();
     const folder = tallyFolderOf(1);
 
     const hosted = await hostedOn(settings, {
@@ -608,7 +612,9 @@ describe('a call that waits for a run the shell learns the answer of, though tha
   });
 
   it('takes no answer while it is still running, its wait not yet recorded, and appends nothing', async () => {
-    const { parts, recorded, callStates, written } = await partsAnswering(() => Effect.never);
+    const { parts, recorded, callStates, written } = await partsAnswering((clock) =>
+      Effect.andThen(clock.hold().wait, Effect.never),
+    );
     await written((calls) => calls.length > 0);
 
     const took = await Effect.runPromise(parts.waitingCallAnswered(playbook, calledBy, answeredByTheShell));
@@ -644,7 +650,7 @@ describe('a call that waits for a run, answered by the shell as an admission ref
 describe('a host opened whole', () => {
   it('opens its parts, takes the claim, wakes them by its loop and lets go of the claim when it stops', async () => {
     const clock = steppedClock(Date.now());
-    const settings = await onSQLite();
+    const settings = await aLedgerInMemory();
     const hosted = await hostedOn(settings, { clock, holder: 'whole', sweepEveryMs: 1000 });
     hosted.know(runId);
     const leases = await openedOn(settings);
@@ -669,10 +675,7 @@ describe('the host given the context of its server', () => {
     const recording = recordingTracer();
     const ended = signals();
     const tracer = endingsToldOf(recording.tracer, ended.changed);
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      { context: Context.make(Tracer.Tracer, tracer) },
-    );
+    const hosted = await hostedOn(await aLedgerInMemory(), { context: Context.make(Tracer.Tracer, tracer) });
     hosted.know(runId);
 
     await Effect.runPromise(Effect.withTracer(hosted.host.start(run, startOf(notifying)), tracer));
@@ -710,10 +713,10 @@ describe('the host told to stop just after it admitted a start', () => {
         }),
       ),
     );
-    const hosted = await hostedOn(
-      { store: 'sqlite', file: aSQLiteFile() },
-      { answer: () => answeredOnlyWhenStopped, sweepEveryMs: 3_600_000 },
-    );
+    const hosted = await hostedOn(await aLedgerInMemory(), {
+      answer: () => answeredOnlyWhenStopped,
+      sweepEveryMs: 3_600_000,
+    });
 
     const starting = Effect.runPromise(
       hosted.host.start(runAt('0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a'), startOf(notifying)),

@@ -147,11 +147,11 @@ const consentWays = [
   ['work-iq', forWorkAccounts('fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask')],
 ];
 
-const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description', 'says', 'more']);
+const notOfTheConsent: ReadonlySet<string> = new Set(['kind', 'description', 'says', 'more', 'account_types']);
 
 function fieldsOfConsent(way: CredentialWay): Readonly<Record<string, unknown>> {
   return Object.fromEntries(
-    Object.entries(way).filter(([field]: readonly [string, unknown]) => !kindAndProse.has(field)),
+    Object.entries(way).filter(([field]: readonly [string, unknown]) => !notOfTheConsent.has(field)),
   );
 }
 

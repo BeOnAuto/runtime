@@ -9,7 +9,12 @@ import {
 import type { ToolServer } from '@on.auto/tool-servers';
 import { Effect, Function } from 'effect';
 
-import { loopConnectionsOf, type LoopConnectionsParts } from '../subscriptions/loop-connections.ts';
+import type { KeptConnection } from '../registry/registry.ts';
+import {
+  connectionsServingOf,
+  loopConnectionOf,
+  type LoopConnectionsParts,
+} from '../subscriptions/loop-connections.ts';
 import { arrangedPerSubscription } from '../subscriptions/subscription-deliveries.ts';
 
 type ListServers = (playbook: PlaybookAddress, named: string) => Effect.Effect<readonly ToolServer[]>;
@@ -79,6 +84,7 @@ interface ReportedPlace {
 
 interface ServedConnection {
   readonly topicsOf: (event: ReportedPlace) => Effect.Effect<readonly string[]>;
+  readonly user?: string;
 }
 
 function topicsIn(destination: EventDestination | undefined): ServedConnection['topicsOf'] {
@@ -90,13 +96,19 @@ function topicsIn(destination: EventDestination | undefined): ServedConnection['
         );
 }
 
+function servedAs(providers: ProviderList, kept: KeptConnection): ServedConnection {
+  const { destinations } = loopConnectionOf(providers, kept);
+  const topicsOf = topicsIn(arrangedPerSubscription(destinations));
+  return kept.identified === undefined ? { topicsOf } : { topicsOf, user: kept.identified.id };
+}
+
 export function servedConnectionOf(
   parts: LoopConnectionsParts,
 ): (place: ConnectionPlace) => Effect.Effect<ServedConnection | undefined> {
-  const connectionsOf = loopConnectionsOf(parts);
+  const servingOf = connectionsServingOf(parts);
   return ({ connection, ...playbook }) =>
-    Effect.map(connectionsOf(playbook), (connections) => {
-      const named = connections.find((each) => each.connection === connection);
-      return named === undefined ? undefined : { topicsOf: topicsIn(arrangedPerSubscription(named.destinations)) };
+    Effect.map(servingOf(playbook), (serving) => {
+      const named = serving.find((kept) => kept.connection.name === connection);
+      return named === undefined ? undefined : servedAs(parts.providers, named);
     });
 }

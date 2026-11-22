@@ -1,8 +1,8 @@
 import { Effect, Fiber } from 'effect';
 import { TestClock } from 'effect/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { erasureDeletesWithinMs, removalLastsMs } from '../content/kept-outside.ts';
+import { erasureDeletesWithinMs, removalLastsMs, removalPollMs } from '../content/kept-outside.ts';
 import { textToKeep } from '../content/streamed-content.ts';
 import type { InterleavedErasureEntry } from './content-entry.ts';
 import { alpha, at, generated, json, octets, present, readBack, resultOf } from './content-samples.ts';
@@ -10,9 +10,9 @@ import { aDay, byItsDigest, expiringAt, headOf, keptAt, oneChunk, severalChunks,
 import {
   aStepFailedAtItsPause,
   defectOf,
-  longEnoughForAPutToSettle,
+  onATestClock,
   pausableStore,
-  settledWithin,
+  settledYet,
   type PausedStep,
 } from './paused-store.ts';
 
@@ -43,11 +43,14 @@ function putWhileErased(entry: InterleavedErasureEntry): void {
 
       const erasure = resultOf(keeping.eraseExpired(10));
       await deleting.reached;
-      const put = resultOf(keeping.content.put(alpha, way(content)));
-      const settledBefore = await settledWithin(put, longEnoughForAPutToSettle);
+      const clock = onATestClock();
+      const put = clock.run(keeping.content.put(alpha, way(content)));
+      const settledBefore = await settledYet(put);
       deleting.release();
+      const erased = await erasure;
+      await clock.advance(removalPollMs);
 
-      expect([settledBefore, await erasure, await put]).toEqual([
+      expect([settledBefore, erased, await put]).toEqual([
         false,
         { erased: 1, more: false },
         { sha256: content.sha256, bytes: severalChunks, mediaType: octets },
@@ -116,17 +119,33 @@ function givenUpAfter<A, E>(erasure: Effect.Effect<A, E>, markedAt: number, stal
   );
 }
 
-function heldBack(text: string): { readonly stream: ReadableStream<Uint8Array>; readonly release: () => void } {
+interface HeldBack {
+  readonly stream: ReadableStream<Uint8Array>;
+  readonly read: Promise<void>;
+  readonly release: () => void;
+}
+
+/**
+ * A stream whose bytes come only once the test releases them, which tells the test when the put first asks for its
+ * bytes: it fills no queue ahead of the reads.
+ */
+function heldBack(text: string): HeldBack {
   const released = Promise.withResolvers<void>();
-  const stream = new ReadableStream<Uint8Array>({
-    start: async (controller) => {
-      await released.promise;
-      controller.enqueue(new TextEncoder().encode(text));
-      controller.close();
+  const read = Promise.withResolvers<void>();
+  const stream = new ReadableStream<Uint8Array>(
+    {
+      pull: async (controller) => {
+        read.resolve();
+        await released.promise;
+        controller.enqueue(new TextEncoder().encode(text));
+        controller.close();
+      },
     },
-  });
+    { highWaterMark: 0 },
+  );
   return {
     stream,
+    read: read.promise,
     release: () => {
       released.resolve();
     },
@@ -163,14 +182,12 @@ function staleMarkErased(entry: InterleavedErasureEntry): void {
     const held = heldBack(note);
 
     const put = resultOf(keeping.content.put(alpha, { stream: held.stream, mediaType: json, expected: { sha256 } }));
-    const whileKept = await vi.waitFor(async () => {
-      const head = await headOf(keeping, alpha, sha256);
-      expect(head?.erasedAt).toEqual(expect.any(Number));
-      return head;
-    });
+    await held.read;
+    const whileKept = await headOf(keeping, alpha, sha256);
     held.release();
 
-    expect([whileKept?.expiresAt, await put]).toEqual([
+    expect([whileKept?.erasedAt, whileKept?.expiresAt, await put]).toEqual([
+      expect.any(Number),
       undefined,
       { sha256, bytes: Buffer.byteLength(note), mediaType: json },
     ]);

@@ -22,6 +22,9 @@ export interface CompositionParts {
   readonly startingWork?: WorkflowParts['startingWork'];
   readonly consumersOf?: WorkflowParts['consumersOf'];
   readonly goalsPortsOver?: NonNullable<ServedWiring['goalsPortsOver']>;
+  readonly loadAws?: NonNullable<Parameters<typeof signInAndStoresOpened>[1]['loadAws']>;
+  /** How the documents of answers are read, in the pool of processes unless given. */
+  readonly documents?: NonNullable<Parameters<MadeAtStart['registry']['openedIn']>[2]['documents']>;
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -42,6 +45,8 @@ interface Serving {
   readonly startingWork?: WorkflowParts['startingWork'];
   readonly consumersOf?: WorkflowParts['consumersOf'];
   readonly goalsPortsOver?: ServedWiring['goalsPortsOver'];
+  readonly loadAws?: Parameters<typeof signInAndStoresOpened>[1]['loadAws'];
+  readonly documents?: Parameters<MadeAtStart['registry']['openedIn']>[2]['documents'];
 }
 
 function optionalPartsOf({
@@ -83,11 +88,11 @@ function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], store
 type Serve = Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'];
 
 function registryOpenedFor(
-  { made, settings, wiring, modelAccessOf, telemetry }: Serving,
+  { made, settings, wiring, modelAccessOf, telemetry, documents }: Serving,
   runtime: Parameters<Serve>[0],
   served: Pick<Parameters<MadeAtStart['registry']['openedIn']>[2], 'consent' | 'connections'>,
 ) {
-  return made.registry.openedIn(runtime, settings, { ...wiring, modelAccessOf, telemetry, ...served });
+  return made.registry.openedIn(runtime, settings, { ...wiring, modelAccessOf, telemetry, ...served, documents });
 }
 
 function servedWith(serving: Serving): Serve {

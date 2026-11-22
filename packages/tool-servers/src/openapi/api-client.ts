@@ -99,12 +99,13 @@ interface Reading {
   readonly signal: Readonly<AbortSignal>;
 }
 
-function fileOf(named: string | undefined, { documents = unreadDocuments }: ApiOpening, reading: Reading) {
+/** A file of an answer, read within what the call has left on the client's clock when its reading starts. */
+function fileOf(named: string | undefined, { documents = unreadDocuments, now }: ApiOpening, reading: Reading) {
   const { started, timeoutMs, signal } = reading;
   return {
     named,
     read: (given: Parameters<DocumentReading>[0], textBytes: number) =>
-      documents(given, { deadlineMs: timeoutMs - (performance.now() - started), textBytes, signal }),
+      documents(given, { deadlineMs: timeoutMs - (now() - started), textBytes, signal }),
   };
 }
 
@@ -119,7 +120,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
   const { promise: closed, resolve } = Promise.withResolvers<void>();
   return {
     call: async ({ tool, input, assets = [], meta, signal, timeoutMs }) => {
-      const started = performance.now();
+      const started = opening.now();
       const operation = operations.get(tool);
       if (operation === undefined) {
         return { error: new ArgumentsRefused(`The tool server lists no tool ${tool}`), observed: unobserved };

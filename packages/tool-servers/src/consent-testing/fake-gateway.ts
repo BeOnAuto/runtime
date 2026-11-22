@@ -60,6 +60,9 @@ const keyBytes = 32;
 
 const stateShape = /^[A-Za-z0-9_-]{43}$/u;
 
+/** An S256 challenge: the SHA-256 of a verifier, 43 characters of base64url. */
+const challengeShape = /^[A-Za-z0-9_-]{43}$/u;
+
 const StartBodySchema = Schema.Struct({
   challenge: Schema.String,
   challenge_method: Schema.String,
@@ -170,7 +173,12 @@ function startStoreOf({ account = testAccount, scope }: FakeGatewayOptions, keep
   return {
     started: (origin, body) => {
       const given = Option.getOrUndefined(decodeStart(body));
-      if (given === undefined || given.challenge_method !== 'S256' || !stateShape.test(given.state)) {
+      if (
+        given === undefined ||
+        given.challenge_method !== 'S256' ||
+        !challengeShape.test(given.challenge) ||
+        !stateShape.test(given.state)
+      ) {
         return refused('start', 400);
       }
       const id = madeToken();

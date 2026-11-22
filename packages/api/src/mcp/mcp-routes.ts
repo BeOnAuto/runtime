@@ -2,7 +2,7 @@ import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/ser
 import type { OperationScope } from '@on.auto/operations';
 
 import { admissionAt } from '../authentication/endpoint-admission.ts';
-import { tracedBy } from '../hand-off/caller-hand-off.ts';
+import { actingAsIn, tracedBy } from '../hand-off/caller-hand-off.ts';
 import { EndpointHandOffs, type HandOff } from '../hand-off/endpoint-hand-off.ts';
 import { requestBodyLimit } from '../operations/request-body.ts';
 import type { RegisterRoutes, RouteHandler, Routes } from '../routes.ts';
@@ -34,14 +34,13 @@ function endpoint(handedOff: HandOff, scope: OperationScope, { resource, callCon
   return (c) => {
     const org = String(c.req.param('org'));
     const playbook = scope === 'playbook' ? String(c.req.param('playbook')) : undefined;
-    const admission = admissionAt(c.get('principal').callerIn(org), org, playbook, resource);
+    const principal = c.get('principal');
+    const admission = admissionAt(principal.callerIn(org), org, playbook, resource);
     if ('refused' in admission) {
       return admission.refused;
     }
-    const { caller } = admission;
     const handedOver = {
-      caller,
-      org,
+      ...actingAsIn(principal, admission.caller, org),
       requestId: c.get('requestId'),
       context: callContext(c.req.raw),
       ...tracedBy(c.get('traceParent')),
@@ -53,10 +52,9 @@ function endpoint(handedOff: HandOff, scope: OperationScope, { resource, callCon
 
 function ownOrgEndpoint(handedOff: HandOff, { callContext }: Routes): RouteHandler {
   return (c) => {
-    const { own } = c.get('principal');
+    const principal = c.get('principal');
     return handedOff(c.req.raw, {
-      caller: own,
-      org: own.org,
+      ...actingAsIn(principal, principal.own, principal.own.org),
       requestId: c.get('requestId'),
       context: callContext(c.req.raw),
       ...tracedBy(c.get('traceParent')),

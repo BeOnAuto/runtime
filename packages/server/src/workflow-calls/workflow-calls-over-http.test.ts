@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { ended, runsOf, servingCalls, startedRunOf } from '../testing/servers/workflow-calls.ts';
 import { runIdIn, settledRun } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 let server: ReasoningServer;
 
@@ -32,7 +32,7 @@ describe('a workflow that calls a workflow, over HTTP', () => {
     server = await servingCalls([]);
 
     const started = await startedRunOf(server, 'guarded');
-    const [pending] = await until(
+    const [pending] = await whenHeld(
       () => runsOf(server, 'pending'),
       (runs) => runs.length === 1,
     );
@@ -59,7 +59,7 @@ describe('workflows that call workflows, over HTTP', () => {
     server = await servingCalls([]);
 
     const settled = await settledRunOf('deep');
-    const deep = await until(() => runsOf(server, 'deep'), ended);
+    const deep = await whenHeld(() => runsOf(server, 'deep'), ended);
 
     expect(settled).toMatchObject({ body: { status: 'rejected' } });
     expect(JSON.stringify(settled.body)).toContain('more than the 8 a run may');
@@ -70,7 +70,7 @@ describe('workflows that call workflows, over HTTP', () => {
     server = await servingCalls([], { WORKFLOW_MAX_OPEN_CALLS: '2' });
 
     const settled = await settledRunOf('wide');
-    const pending = await until(() => runsOf(server, 'pending'), ended);
+    const pending = await whenHeld(() => runsOf(server, 'pending'), ended);
 
     expect(JSON.stringify(settled.body)).toContain('already wait for 2 calls');
     expect(pending.map(({ status, rejection }) => [status, rejection?.kind])).toEqual([
@@ -84,7 +84,7 @@ describe('workflows that call workflows, over HTTP', () => {
 
     await startedRunOf(server, 'waiting');
     await startedRunOf(server, 'waiting');
-    const pending = await until(
+    const pending = await whenHeld(
       () => runsOf(server, 'pending'),
       (runs) => runs.length === 2,
     );

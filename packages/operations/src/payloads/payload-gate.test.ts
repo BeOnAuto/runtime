@@ -93,6 +93,27 @@ describe('the gate a process puts before its content store', () => {
   });
 });
 
+describe('the gate a process puts before its content store, handed the time it counts on', () => {
+  it('counts its wait on that time, not on the clock of the fiber that asks', async () => {
+    const time = { now };
+    const gate = payloadGateOf(Effect.sync(() => time.now));
+    const store = countingCalls(['fail', 'answer']);
+
+    const failed = await outcomeAt(now, gate.through(store.call, 'closed'));
+    time.now = now + 499;
+    const closed = await outcomeAt(now + 60_000, gate.through(store.call, 'closed'));
+    time.now = now + 500;
+    const answered = await outcomeAt(now, gate.through(store.call, 'closed'));
+
+    expect([failed, closed, answered]).toEqual([
+      Result.fail(unanswered),
+      Result.fail(new Unavailable({ detail: 'closed' })),
+      Result.succeed('answered'),
+    ]);
+    expect(store.calls()).toBe(2);
+  });
+});
+
 describe('the gate, closed after failures in a row and given to the reads and puts of payloads', () => {
   it('waits twice as long after two failures in a row', async () => {
     const gate = payloadGateOf();

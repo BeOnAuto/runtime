@@ -291,10 +291,10 @@ describe('an event whose triggers cannot be read as they were saved at that mome
 });
 
 describe('the layout the table of the outcomes takes', () => {
-  it('is its own step, 29, which makes nothing, the host making the table empty as it opens', async () => {
+  it('is its own step, 29, and every step of the host takes no statement, the host making the table empty as it opens', async () => {
     const { database } = await anIntake();
 
-    expect(hostLayoutSteps).toEqual([{ layout: 29, statements: [] }]);
-    expect(await outcomesIn(database)).toEqual([]);
+    expect(hostLayoutSteps.flatMap(({ statements }) => statements)).toEqual([]);
+    expect([hostLayoutSteps.map(({ layout }) => layout).includes(29), await outcomesIn(database)]).toEqual([true, []]);
   });
 });

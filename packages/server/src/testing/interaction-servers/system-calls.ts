@@ -8,7 +8,7 @@ import type { TestResponse } from '../servers/http-client.ts';
 import { alpha } from '../servers/reasoning-server.ts';
 import type { LedgerOver, ServedParts } from '../servers/served-parts.ts';
 import { chatKey } from './chat-deliveries.ts';
-import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
+import { interactionServerOn, type Finishing, type InteractionServer } from './interaction-server.ts';
 
 type FakeHints = NonNullable<FakeMcpOptions['hints']>;
 
@@ -30,12 +30,21 @@ export function problemWith(fields: Readonly<Record<string, unknown>>): unknown 
   return expect.objectContaining(fields);
 }
 
+type Timing = NonNullable<ServedParts['toolTiming']>;
+
+/**
+ * The bounds of the server's tool calls that end when its fake tool server shows they are due (a held request seen,
+ * a sleep begun), rather than on the real clock. The fake then sleeps only when the test lets it.
+ */
+export type ToldBounds = (fake: FakeMcpServer) => Partial<Timing>;
+
 export interface SystemOptions {
   readonly type?: CallingType;
   readonly hints?: FakeHints;
   readonly entry?: Readonly<Record<string, unknown>>;
   readonly servers?: Readonly<Record<string, unknown>>;
   readonly timing?: ServedParts['toolTiming'];
+  readonly toldBounds?: ToldBounds;
   readonly ledgerOver?: LedgerOver;
   readonly environment?: Readonly<Record<string, string>>;
   readonly serverTakes?: number;
@@ -84,24 +93,44 @@ function partsOf({ timing, ledgerOver, over }: Parted): ServedParts {
   };
 }
 
-export async function askingASystem({
-  type = 'interaction',
-  hints = {},
-  entry = {},
-  servers = {},
-  timing,
-  ledgerOver,
-  environment = {},
-  serverTakes,
-  over,
-}: SystemOptions = {}): Promise<SystemServer> {
+function boundedBy(
+  timing: Timing | undefined,
+  toldBounds: ToldBounds | undefined,
+  fake: FakeMcpServer,
+): Timing | undefined {
+  return timing === undefined || toldBounds === undefined ? timing : { ...timing, ...toldBounds(fake) };
+}
+
+export async function askingASystem(
+  {
+    type = 'interaction',
+    hints = {},
+    entry = {},
+    servers = {},
+    timing,
+    toldBounds,
+    ledgerOver,
+    environment = {},
+    serverTakes,
+    over,
+  }: SystemOptions = {},
+  finishing: Finishing = onTestFinished,
+): Promise<SystemServer> {
   const takes = serverTakes === undefined ? {} : { mostRequestBytes: serverTakes };
-  const fake = await serveFakeMcp({ bearer: chatKey, data: true, hints, ...takes });
-  onTestFinished(fake.close);
+  const fake = await serveFakeMcp({
+    bearer: chatKey,
+    data: true,
+    hints,
+    ...takes,
+  });
+  const bounded = boundedBy(timing, toldBounds, fake);
+  finishing(fake.close);
   const chat = { url: fake.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme', ...entry };
   const server = await interactionServerOn(
     { CHAT_KEY: chatKey, TOOL_SERVERS: JSON.stringify({ chat, ...servers }), ...environment },
-    partsOf({ timing, ledgerOver, over }),
+    partsOf({ timing: bounded, ledgerOver, over }),
+    'acme',
+    finishing,
   );
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return {

@@ -101,13 +101,18 @@ function sourceServedBy(
   });
 }
 
+interface StoresOpening {
+  readonly database: Parameters<typeof ledgerStoresOpenedBy>[2];
+  readonly loadAws?: Parameters<typeof ledgerStoresOpenedBy>[3];
+}
+
 export async function storesAndConnectionsOf(
   runtime: Parameters<typeof licenseServedBy>[0],
   settings: Settings,
-  database: Parameters<typeof ledgerStoresOpenedBy>[2],
+  { database, loadAws }: StoresOpening,
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
-  const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
+  const stores = await ledgerStoresOpenedBy(runtime.context, settings, database, loadAws);
   const ownKeys = await ownKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };

@@ -5,8 +5,7 @@ import { Schema } from 'effect';
 
 import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 import { alpha } from '../servers/reasoning-server.ts';
-import { runIdIn, workflowSource } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { runIdIn, whenSwept, workflowSource } from '../servers/workflow-server.ts';
 import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
 
 export interface OpenStore {
@@ -115,9 +114,11 @@ export function headsOfTheAnswer(store: OpenStore): Promise<number> {
   return countOf(store, `SELECT COUNT(*) AS counted FROM recorded_content_heads WHERE sha256 = '${answerDigest}'`);
 }
 
+/** The answers given, and held in the logs of the runs waiting on them once the server's sweeps hand them over. */
 export async function answeredAndHeld(store: OpenStore, server: InteractionServer, count: number): Promise<void> {
   await answeredOnce(server, count);
-  await until(
+  await whenSwept(
+    server,
     () =>
       countOf(
         store,

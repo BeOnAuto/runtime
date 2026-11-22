@@ -27,6 +27,7 @@ export interface WriterAndReadersOptions {
   readonly context: ConnectionContext;
   readonly readerPoolSize?: number | undefined;
   readonly maxTaskIdleTime?: number | undefined;
+  readonly onWaitingForTheWriter?: (() => void) | undefined;
 }
 
 interface Opening {
@@ -74,13 +75,19 @@ export function writerAndReadersPool({
   context,
   readerPoolSize = Math.max(leastReaders, cpus().length),
   maxTaskIdleTime,
+  onWaitingForTheWriter,
 }: WriterAndReadersOptions): NodeSqlitePool {
   const opening: Opening = {
     connectionOf,
     connectionOptions,
     databaseReady: onceReady(() => databasePrepared({ connectionOf, connectionOptions })),
   };
-  const writer = writerPool({ getConnection: (abort) => opened(opening, false, abort), context, maxTaskIdleTime });
+  const writer = writerPool({
+    getConnection: (abort) => opened(opening, false, abort),
+    context,
+    maxTaskIdleTime,
+    onWaitingForTheWriter,
+  });
   const readers = createBoundedConnectionPool({
     driverType: nodeSqliteDriverType,
     getConnection: (abort: ReadonlyAbortContext) => opened(opening, true, abort),

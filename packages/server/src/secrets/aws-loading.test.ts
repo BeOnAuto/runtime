@@ -5,6 +5,7 @@ import { Effect, Logger } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ledgerStoresOpenedBy } from '../database/ledger-stores.ts';
+import { reportedByAProcessOfItsOwn } from '../testing/databases/signer-modules.ts';
 import { sqliteLedgerDatabaseOpened } from '../testing/records/opened-ledger-database.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
@@ -47,11 +48,13 @@ function underTheFakes(): void {
 }
 
 describe('a server that opens its secret store under a key in hand, in the ledger', () => {
-  it('loads no module of the client of KMS or of Parameter Store, from the environment or from the file beside the ledger', async () => {
-    await openedAndClosed({ SECRETS_KEY: Buffer.alloc(32, 5).toString('base64') });
-    await openedAndClosed({});
+  it('loads no module of the client of KMS or of Parameter Store, from the environment or from the file beside the ledger, in a process of its own', async () => {
+    const loaded = await reportedByAProcessOfItsOwn(
+      new URL('../testing/entries/report-aws-client-modules.ts', import.meta.url),
+      [{ SECRETS_KEY: Buffer.alloc(32, 5).toString('base64') }, {}],
+    );
 
-    expect([...modulesOfTheClientLoaded('client-kms'), ...modulesOfTheClientLoaded('client-ssm')]).toEqual([]);
+    expect(loaded).toEqual([]);
   });
 });
 

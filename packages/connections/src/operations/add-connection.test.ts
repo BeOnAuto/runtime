@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { servedStudio } from '@on.auto/identity/testing';
 import { fixtureProviders, providerListOf, providerOf, tracker } from '@on.auto/providers/testing';
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -18,7 +18,16 @@ import {
   notes,
   statusesOf,
 } from '../testing/additions.ts';
-import { acmeReader, acmeViewer, ada, crmPolicy, harness, harnessPages, operationNamed } from '../testing/harness.ts';
+import {
+  acmeReader,
+  acmeViewer,
+  ada,
+  crmPolicy,
+  harness,
+  harnessPages,
+  operationNamed,
+  type Harness,
+} from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -446,6 +455,73 @@ describe('listing the connections of an org', () => {
     const outcome = await h.call(operationNamed(h.operations, 'list_connections'), acmeViewer);
 
     expect(outcome).toMatchObject({ status: 'rejected', reason: 'forbidden' });
+  });
+
+  it('says whether the caller may manage its connections: one who may write the org may, one who may only read it may not', async () => {
+    const h = harness();
+    const listing = operationNamed(h.operations, 'list_connections');
+
+    expect([await h.call(listing, ada), await h.call(listing, acmeReader)]).toMatchObject([
+      { status: 'succeeded', output: { may_manage: true } },
+      { status: 'succeeded', output: { may_manage: false } },
+    ]);
+  });
+});
+
+const [trackerKey] = tracker.credentials;
+
+function trackerOf(...ways: readonly unknown[]) {
+  return providerListOf(providerOf({ ...tracker, credentials: ways }));
+}
+
+async function actingRecorded(h: Harness, input: unknown) {
+  const { output } = Schema.decodeUnknownSync(ActingSchema)(await adding(h, input));
+  return output;
+}
+
+const ActingSchema = Schema.Struct({
+  output: Schema.Struct({
+    permissions: Schema.NullOr(Schema.String),
+    account_type: Schema.NullOr(Schema.String),
+    credential: Schema.Record(Schema.String, Schema.Unknown),
+  }),
+});
+
+const ofTracker = { provider: 'tracker', placeholders: { site: 'acme' } } as const;
+
+describe('what an addition records the connection acts as, answered beside its credential', () => {
+  it.each([
+    [
+      'takes an account, as personal',
+      trackerOf({ ...trackerKey, account_types: ['personal'] }),
+      'delegated',
+      'personal',
+    ],
+    [
+      'takes a service account alone, as one',
+      trackerOf({ ...trackerKey, account_types: ['service'] }),
+      'delegated',
+      'service',
+    ],
+    ['acts as the app', trackerOf({ ...trackerKey, permissions: 'application' }), 'application', null],
+  ] as const)('of a provider whose way %s', async (_case, offered, permissions, accountType) => {
+    const answered = await actingRecorded(harness({ providers: offered }), ofTracker);
+
+    expect([answered.permissions, answered.account_type, Object.hasOwn(answered.credential, 'permissions')]).toEqual([
+      permissions,
+      accountType,
+      false,
+    ]);
+  });
+
+  it.each([
+    ['a key, as a personal account', crm, 'delegated', 'personal'],
+    ['client credentials, as the app', billing, 'application', null],
+    ['no credential, as nothing', notes, null, null],
+  ] as const)('given by hand: %s', async (_case, input, permissions, accountType) => {
+    const answered = await actingRecorded(harness(), input);
+
+    expect([answered.permissions, answered.account_type]).toEqual([permissions, accountType]);
   });
 });
 

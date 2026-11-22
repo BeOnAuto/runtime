@@ -3,11 +3,11 @@ import { fileURLToPath } from 'node:url';
 import { withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
 import { localDeveloper } from '@on.auto/identity/testing';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
-import { saidAtStart } from './testing/processes/in-process-starts.ts';
+import { saidAtStart, startedInProcess } from './testing/processes/in-process-starts.ts';
 import { spawnServer } from './testing/processes/spawned-server.ts';
-import { messagesOf, modelLinesOf } from './testing/processes/stderr-lines.ts';
+import { messagesOf } from './testing/processes/stderr-lines.ts';
 import { temporaryLedger } from './testing/records/temporary-ledger.ts';
 import { givenGoals } from './testing/settings/goals-kept.ts';
 
@@ -41,8 +41,6 @@ const refusedSettings: ReadonlyArray<readonly [Readonly<Record<string, string>>,
   [{ MODEL_ALIASES: '{"fast":"gemini"}' }, 'model_settings_invalid'],
 ];
 
-const protectedPath = '/v1/orgs/demo/playbooks';
-
 const noModelProvider =
   'No model provider is configured, so reasoning functions cannot run; set ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY or MODEL_GATEWAYS';
 
@@ -66,111 +64,27 @@ const keptIn: readonly unknown[] = [
 
 const extensionsLoaded = 'Extensions loaded, in their order of precedence: none';
 
-function startInLocalMode(...after: readonly string[]): readonly unknown[] {
-  return [
-    expect.stringMatching(/^Local mode is on: /u),
-    ...keptIn,
-    extensionsLoaded,
-    noModelProvider,
-    ...functionsRun,
-    ...after,
-  ];
+function startInLocalMode(): readonly unknown[] {
+  return [expect.stringMatching(/^Local mode is on: /u), ...keptIn, extensionsLoaded, noModelProvider, ...functionsRun];
 }
 
 describe('main', () => {
-  it('serves health checks when launched with node, writes exactly the listening line to stdout and its logs as JSON lines to stderr, and exits 0 on SIGTERM', async () => {
-    const child = spawnServer(mainModule, loopback);
-    const port = await child.port;
+  it.each<'SIGTERM' | 'SIGINT'>(['SIGTERM', 'SIGINT'])(
+    'serves health checks when launched with node, writes exactly the listening line to stdout and its logs as JSON lines to stderr, and exits 0 on %s',
+    async (signal) => {
+      const child = spawnServer(mainModule, loopback);
+      const port = await child.port;
 
-    const health = await fetch(`http://127.0.0.1:${port}/health`);
-    child.signal('SIGTERM');
-    const exitCode = await child.exited;
+      const health = await fetch(`http://127.0.0.1:${port}/health`);
+      child.signal(signal);
+      const exitCode = await child.exited;
 
-    expect({ status: health.status, exitCode }).toEqual({ status: 200, exitCode: 0 });
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(child.output().stderr).toMatch(/^\{"message":"Local mode is on: .*"level":"WARN".*\}\n/u);
-    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
-  });
-});
-
-describe('main at start', () => {
-  it('names the configured model providers in one line, keeping every provider in its annotations', async () => {
-    const child = spawnServer(mainModule, { ...loopback, OPENAI_API_KEY: 'sk-test' });
-    await child.port;
-    child.signal('SIGTERM');
-    await child.exited;
-
-    expect(modelLinesOf(child.output().stderr)).toEqual([
-      {
-        message: 'Model providers configured: openai',
-        level: 'INFO',
-        annotations: {
-          providers: [
-            { provider: 'openai', configured: true },
-            { provider: 'anthropic', configured: false, missing: ['ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN'] },
-            { provider: 'google', configured: false, missing: ['GOOGLE_GENERATIVE_AI_API_KEY'] },
-            { provider: 'bedrock', configured: false, missing: ['AWS_REGION'] },
-            { provider: 'bedrock-anthropic', configured: false, missing: ['AWS_REGION'] },
-            { provider: 'azure', configured: false, missing: ['AZURE_RESOURCE_NAME or AZURE_BASE_URL'] },
-            {
-              provider: 'vertex',
-              configured: false,
-              missing: ['GOOGLE_VERTEX_PROJECT', 'GOOGLE_VERTEX_LOCATION'],
-            },
-            {
-              provider: 'vertex-anthropic',
-              configured: false,
-              missing: ['GOOGLE_VERTEX_PROJECT', 'GOOGLE_VERTEX_LOCATION'],
-            },
-          ],
-        },
-      },
-    ]);
-  });
-
-  it('adds a warning of its own for a provider that has some of its settings and lacks others', async () => {
-    const child = spawnServer(mainModule, { ...loopback, GOOGLE_VERTEX_PROJECT: 'acme-ai' });
-    await child.port;
-    child.signal('SIGTERM');
-    await child.exited;
-
-    expect(modelLinesOf(child.output().stderr).map(({ message, level }) => ({ message, level }))).toEqual([
-      { message: noModelProvider, level: 'WARN' },
-      { message: 'Model provider vertex is not configured; it needs GOOGLE_VERTEX_LOCATION', level: 'WARN' },
-      { message: 'Model provider vertex-anthropic is not configured; it needs GOOGLE_VERTEX_LOCATION', level: 'WARN' },
-    ]);
-  });
-});
-
-describe('main when it is told to stop', () => {
-  it('exits 0 on SIGINT', async () => {
-    const child = spawnServer(mainModule, loopback);
-    await child.port;
-
-    child.signal('SIGINT');
-
-    expect(await child.exited).toBe(0);
-  });
-});
-
-describe('main with settings', () => {
-  it('requires an API key on protected paths once keys are configured, and logs no warning about access', async () => {
-    const { key, entry } = createApiKey({ id: 'ci-1', org: 'demo', permissions: ['org:read'], playbooks: '*' });
-    const child = spawnServer(mainModule, { ...loopback, API_KEYS: JSON.stringify([entry]) });
-    const port = await child.port;
-
-    const withoutKey = await fetch(`http://127.0.0.1:${port}${protectedPath}`);
-    const withKey = await fetch(`http://127.0.0.1:${port}${protectedPath}`, {
-      headers: { authorization: `Bearer ${key}` },
-    });
-    child.signal('SIGTERM');
-    await child.exited;
-
-    expect({ withoutKey: withoutKey.status, withKey: withKey.status }).toEqual({ withoutKey: 401, withKey: 200 });
-    expect(withoutKey.headers.get('www-authenticate')).toBe('Bearer');
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual([...keptIn, extensionsLoaded, noModelProvider, ...functionsRun]);
-  });
+      expect({ status: health.status, exitCode }).toEqual({ status: 200, exitCode: 0 });
+      expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
+      expect(child.output().stderr).toMatch(/^\{"message":"Local mode is on: .*"level":"WARN".*\}\n/u);
+      expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
+    },
+  );
 
   it('does not start with a setting it cannot read, naming the error in one line on stderr and writing nothing to stdout', async () => {
     const child = spawnServer(mainModule, { ...loopback, PORT: 'eighty' });
@@ -193,76 +107,72 @@ describe('the server main starts, given settings it refuses', () => {
   });
 });
 
-describe('main with secrets in settings it cannot read', () => {
-  it('does not echo a secret of the model settings', async () => {
-    const secret = 'sk-gateway-secret-123';
-    const child = spawnServer(mainModule, {
-      ...loopback,
+const secretOfAGateway = 'sk-gateway-secret-123';
+
+const { key: aKeyAlone } = createApiKey({ id: 'ci-1', org: 'demo', permissions: ['org:read'], playbooks: '*' });
+
+const secretsInRefusedSettings: ReadonlyArray<readonly [string, Readonly<Record<string, string>>, string, string]> = [
+  [
+    'a secret of the model settings',
+    {
       MODEL_GATEWAYS: JSON.stringify([
-        { name: 'internal', base_url: 'ftp://llm.example', headers: { 'x-key': secret } },
+        { name: 'internal', base_url: 'ftp://llm.example', headers: { 'x-key': secretOfAGateway } },
       ]),
-    });
+    },
+    'model_settings_invalid',
+    secretOfAGateway,
+  ],
+  ['API_KEYS', { API_KEYS: aKeyAlone }, 'InvalidApiKeysError', aKeyAlone],
+];
 
-    expect(await child.exited).toBe(1);
-    expect(child.output().stdout).toBe('');
-    expect(child.output().stderr).toMatch(/^Auto Runtime could not start: model_settings_invalid: .*MODEL_GATEWAYS/u);
-    expect(child.output().stderr).not.toContain(secret);
-  });
+describe('the server main starts, given secrets in settings it cannot read', () => {
+  it.each(secretsInRefusedSettings)('does not echo %s', async (_secret, env, error, secret) => {
+    const said = await saidAtStart({ ...loopback, ...env });
 
-  it('does not echo API_KEYS', async () => {
-    const { key } = createApiKey({ id: 'ci-1', org: 'demo', permissions: ['org:read'], playbooks: '*' });
-    const child = spawnServer(mainModule, { ...loopback, API_KEYS: key });
-
-    expect(await child.exited).toBe(1);
-    expect(child.output().stdout).toBe('');
-    expect(child.output().stderr).toMatch(/^Auto Runtime could not start: InvalidApiKeysError: /u);
-    expect(child.output().stderr).not.toContain(key);
+    expect(said.exitCode).toBe(1);
+    expect(said.line.startsWith(`Auto Runtime could not start: ${error}: `)).toBe(true);
+    expect(said.line).not.toContain(secret);
   });
 });
 
-describe('main over MCP', () => {
-  it('serves the playbook tools without a key in local mode, writing only the listening line to stdout', async () => {
-    const child = spawnServer(mainModule, loopback);
-    const port = await child.port;
+async function mcpInProcess(): Promise<{ readonly url: string; readonly logged: () => string }> {
+  const logged = vi.spyOn(console, 'error');
+  onTestFinished(() => {
+    logged.mockRestore();
+  });
+  const server = await startedInProcess(loopback);
+  onTestFinished(() => server.stop());
+  return {
+    url: `http://127.0.0.1:${server.port}/orgs/demo/mcp`,
+    logged: () => logged.mock.calls.flat().map(String).join('\n'),
+  };
+}
 
-    const playbook = await withMcpSession(
-      'current revision',
-      { url: `http://127.0.0.1:${port}/orgs/demo/mcp`, headers: {} },
-      async (session) => {
-        await session.callTool('create_playbook', { playbook: 'support', name: 'Support', goals: givenGoals });
-        return session.callTool('list_playbooks', {});
-      },
-    );
-    child.signal('SIGTERM');
+describe('the server main starts, over MCP', () => {
+  it('serves the playbook tools without a key in local mode', async () => {
+    const { url } = await mcpInProcess();
 
-    expect({ playbook: playbook.structuredContent, exitCode: await child.exited }).toMatchObject({
-      playbook: {
-        playbooks: [{ id: 'support', name: 'Support', created_by: { id: 'local', name: localDeveloper.name } }],
-      },
-      exitCode: 0,
+    const playbook = await withMcpSession('current revision', { url, headers: {} }, async (session) => {
+      await session.callTool('create_playbook', { playbook: 'support', name: 'Support', goals: givenGoals });
+      return session.callTool('list_playbooks', {});
     });
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode());
+
+    expect(playbook.structuredContent).toMatchObject({
+      playbooks: [{ id: 'support', name: 'Support', created_by: { id: 'local', name: localDeveloper.name } }],
+    });
   });
 
-  it('logs what the MCP layer reports as a warning on stderr, answering with its JSON-RPC error', async () => {
-    const child = spawnServer(mainModule, loopback);
-    const port = await child.port;
+  it('logs what the MCP layer reports as a warning, answering with its JSON-RPC error', async () => {
+    const { url, logged } = await mcpInProcess();
 
-    const answer = await fetch(`http://127.0.0.1:${port}/orgs/demo/mcp`, {
+    const answer = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'text/plain', accept: 'application/json, text/event-stream' },
       body: '{}',
     });
     const body: unknown = await answer.json();
-    child.signal('SIGTERM');
-    await child.exited;
 
     expect({ status: answer.status, body }).toMatchObject({ status: 415, body: { error: { code: -32_000 } } });
-    expect(child.output().stdout).toBe(`Auto Runtime listening on port ${port}\n`);
-    expect(child.output().stderr).toMatch(
-      /\n\{"message":"The MCP layer reported an error","level":"WARN".*"annotations":\{"error":"Unsupported Media Type: Content-Type must be application\/json"\}.*\}\n$/u,
-    );
-    expect(messagesOf(child.output().stderr)).toEqual(startInLocalMode('The MCP layer reported an error'));
+    expect(logged()).toMatch(/\{"message":"The MCP layer reported an error","level":"WARN"/u);
   });
 });

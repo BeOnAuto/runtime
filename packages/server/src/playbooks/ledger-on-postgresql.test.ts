@@ -3,9 +3,9 @@ import { fileURLToPath } from 'node:url';
 
 import { campaignPace, campaignRows } from '@on.auto/computation/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
-import { Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { Client } from 'pg';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { alpha, servingReasoning } from '../testing/servers/reasoning-server.ts';
@@ -113,10 +113,46 @@ async function aDatabaseOfItsOwn(): Promise<string> {
   return database.href;
 }
 
-function elapsed(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+type LedgerOver = NonNullable<NonNullable<Parameters<typeof servingReasoning>[3]>['ledgerOver']>;
+
+interface TakenAway {
+  readonly ledgerOver: LedgerOver;
+  readonly arm: () => void;
+}
+
+function messagesTakenAwayAsItWaits(database: string): TakenAway {
+  const armed = { now: false };
+  return {
+    arm: () => {
+      armed.now = true;
+    },
+    ledgerOver: (ledger) => ({
+      ...ledger,
+      waitForAppend: (scope, after, deadline) => {
+        const takingAway = armed.now;
+        armed.now = false;
+        return Effect.andThen(
+          takingAway
+            ? Effect.promise(() =>
+                administerHeldChangesPostgresql(database, 'ALTER TABLE emt_messages RENAME TO emt_messages_away'),
+              )
+            : Effect.void,
+          ledger.waitForAppend(scope, after, deadline),
+        );
+      },
+    }),
+  };
+}
+
+function anErrorLogged(): Promise<void> {
+  const logged = Promise.withResolvers<void>();
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {
+    logged.resolve();
   });
+  onTestFinished(() => {
+    errors.mockRestore();
+  });
+  return logged.promise;
 }
 
 describe.skipIf(skipped)(`A server that keeps its ledger in PostgreSQL${notice}`, () => {
@@ -204,19 +240,21 @@ describe.skipIf(skipped)(`Workflows of a server that keeps its ledger in Postgre
 describe.skipIf(skipped)(`A held request for the changes of a playbook on PostgreSQL${notice}`, () => {
   it('stays held through a read of the ledger that fails, and is answered once the ledger reads again', async () => {
     const database = await aDatabaseOfItsOwn();
-    const serving = await servingReasoning([], {
-      LEDGER_FILE: '',
-      DATABASE_URL: database,
-      SECRETS_KEY: Buffer.alloc(32, 7).toString('base64'),
-    });
+    const takenAway = messagesTakenAwayAsItWaits(database);
+    const serving = await servingReasoning(
+      [],
+      { LEDGER_FILE: '', DATABASE_URL: database, SECRETS_KEY: Buffer.alloc(32, 7).toString('base64') },
+      undefined,
+      { ledgerOver: takenAway.ledgerOver },
+    );
     onTestFinished(() => serving.stop());
     await serving.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const now = Schema.decodeUnknownSync(AnswerSchema)((await serving.call('GET', `${alpha}/changes`)).body).cursor;
 
+    const failedRead = anErrorLogged();
+    takenAway.arm();
     const held = serving.call('GET', `${alpha}/changes?since=${now}&wait=20`);
-    await elapsed(200);
-    await administerHeldChangesPostgresql(database, 'ALTER TABLE emt_messages RENAME TO emt_messages_away');
-    await elapsed(1500);
+    await failedRead;
     await administerHeldChangesPostgresql(database, 'ALTER TABLE emt_messages_away RENAME TO emt_messages');
     await serving.call('POST', `${alpha}/definitions/reasoning`, {
       body: { name: 'summary', source: summaryHeldChangesPostgresql, diagram: 'none' },

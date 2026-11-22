@@ -3,6 +3,7 @@ import type { CalledOnce, OneCall, RequestOnce } from '@on.auto/tool-servers';
 import type { Effect, Redacted } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
+import type { IdentitySchema } from '../events/event-calls.ts';
 import type {
   SubscriptionCallFailed,
   SubscriptionFailedBecause,
@@ -65,10 +66,23 @@ export interface Renewed {
   readonly expiresAt?: string;
 }
 
+export type Identity = typeof IdentitySchema.Type;
+
+interface Identifying {
+  readonly identity: Identity;
+  readonly place: SubscriptionPlace;
+}
+
+export interface IdentifiedUser {
+  readonly id: string;
+  readonly name?: string;
+}
+
 export interface SubscriptionCalls {
   readonly subscribe: <E, R>(asked: Subscribing<E, R>) => Effect.Effect<Subscribed, SubscriptionCallFailed | E, R>;
   readonly renew: (asked: Renewing) => Effect.Effect<Renewed, SubscriptionCallFailed>;
   readonly unsubscribe: (asked: Unsubscribing) => Effect.Effect<void, SubscriptionCallFailed>;
+  readonly identify: (asked: Identifying) => Effect.Effect<IdentifiedUser, SubscriptionCallFailed>;
 }
 
 export interface SubscriptionKey {
@@ -133,6 +147,7 @@ export interface LoopConnection {
   readonly connected?: string;
   readonly account?: string;
   readonly destinations: readonly Destination[];
+  readonly identify?: Identity;
 }
 
 export interface Asking extends PlaybookAddress {
@@ -141,12 +156,23 @@ export interface Asking extends PlaybookAddress {
 
 export type Asker = (asking: Asking) => Effect.Effect<readonly SubscriptionKey[]>;
 
+export interface IdentifiedConnection {
+  readonly id: string;
+  readonly connected: string;
+}
+
 export interface SubscriptionLoopPorts extends SubscriptionPorts {
   readonly connectionsOf: (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]>;
   readonly receives: (type: Destination['type']) => boolean;
   readonly askers: readonly Asker[];
+  readonly triggersAsker: Asker;
   readonly records: SubscriptionRecords;
   readonly secrets: SubscriptionSecrets;
+  readonly identified: (
+    playbook: PlaybookAddress,
+    connection: IdentifiedConnection,
+    user: IdentifiedUser,
+  ) => Effect.Effect<void>;
   readonly mostPerConnection: number;
 }
 

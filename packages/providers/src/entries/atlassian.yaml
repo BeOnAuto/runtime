@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.atlassian.com/v2/mcp?tools=all
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://auth.atlassian.com/VCeDsk8ZHncYF1g234fKtc4lNipbBhu3
     scope: read:me read:account email offline_access read:jira:agent-interface search:jira:agent-interface read:confluence:agent-interface search:confluence:agent-interface write:jira:agent-interface write:confluence:agent-interface
     says:

@@ -7,9 +7,11 @@ import { Effect, Redacted, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import { failedBecause, refusedAs, requestRefusedAs, type SubscriptionCallFailed } from './subscription-failed.ts';
-import type { Renewed, Subscribed, SubscriptionSecret } from './subscription-ports.ts';
+import type { IdentifiedUser, Identity, Renewed, Subscribed, SubscriptionSecret } from './subscription-ports.ts';
 
 type Pointers = NonNullable<Destination['subscribe']>['subscribed'];
+
+type IdentifiedPointers = Identity['identified'];
 
 type RenewedPointers = NonNullable<Destination['renew']>['renewed'];
 
@@ -97,4 +99,20 @@ export function subscribedIn(
 
 export function renewedIn(document: Answered, pointers: RenewedPointers): Renewed {
   return expiringAt(timeIn(document, pointers?.expires_at));
+}
+
+function namedIn(document: Schema.Json, pointer: string | undefined): { readonly name?: string } {
+  const name = pointer === undefined ? undefined : textIn(document, pointer);
+  return name === undefined ? {} : { name };
+}
+
+export function identifiedIn(
+  document: Answered,
+  pointers: IdentifiedPointers,
+): Effect.Effect<IdentifiedUser, SubscriptionCallFailed> {
+  const id = document === undefined ? undefined : textIn(document, pointers.id);
+  if (document === undefined || id === undefined) {
+    return Effect.fail(failedBecause('unreadable'));
+  }
+  return Effect.succeed({ id, ...namedIn(document, pointers.name) });
 }

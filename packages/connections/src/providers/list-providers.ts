@@ -1,4 +1,4 @@
-import { Caller, defineHttpOperation, type Runnable } from '@on.auto/operations';
+import { Caller, defineHttpOperation, mayCall, type Runnable } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
@@ -29,7 +29,12 @@ function withWhoReconnects(services: StartsOfConnections) {
         );
 }
 
-export function defineListProviders(listing: OfferingServices & StartsOfConnections, adding: Runnable<'org'>) {
+interface Asked {
+  readonly adding: Runnable<'org'>;
+  readonly approving: Runnable<'org'>;
+}
+
+export function defineListProviders(listing: OfferingServices & StartsOfConnections, { adding, approving }: Asked) {
   return defineHttpOperation('org', 'query', {
     name: 'list_providers',
     title: 'List providers',
@@ -37,15 +42,18 @@ export function defineListProviders(listing: OfferingServices & StartsOfConnecti
       'Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes.',
       'Use it to show a person what they can connect; add_connection connects one by its name.',
       '`may_add` says whether this caller may add a connection, and `refusal` why not.',
+      '`may_connect` says whether this caller may also approve the connection it adds.',
       "`return_address` is the redirect URI the organization's own OAuth client registers at a provider before a person connects under it.",
     ].join(' '),
     route: { method: 'GET', path: '/providers' },
     body: { kind: 'none' },
     inputSchema: Schema.Record(Schema.String, Schema.Never),
     outputSchema: ProvidersSchema,
-    reasons: [],
+    reasons: ['unavailable'],
     handle: Effect.fnUntraced(function* () {
-      const refusal = yield* addingRefusedTo(listing, adding, yield* Caller);
+      const caller = yield* Caller;
+      const refusal = yield* addingRefusedTo(listing, adding, caller);
+      const mayApprove = yield* mayCall({ operation: approving, caller, org: caller.org });
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
       return {
         providers: yield* Effect.forEach(
@@ -53,6 +61,7 @@ export function defineListProviders(listing: OfferingServices & StartsOfConnecti
           withWhoReconnects(listing),
         ),
         may_add: refusal === null,
+        may_connect: refusal === null && mayApprove,
         refusal,
         return_address: returnAddressOf(listing.pages),
       };

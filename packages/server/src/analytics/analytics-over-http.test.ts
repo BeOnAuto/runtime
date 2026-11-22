@@ -4,6 +4,7 @@ import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { testServersStartAt } from '../testing/waiting/stepped-server-clock.ts';
 
 const summary = [
   '---',
@@ -97,9 +98,7 @@ describe('the analytics of a playbook over HTTP', () => {
   it('count the runs that ended today, by how they ended, and the tokens their models used and what those cost', async () => {
     await playbookWithThreeRuns({});
 
-    const readFrom = Date.now();
     const read = await server.call('GET', `${alpha}/analytics`);
-    const readBy = Date.now();
     const started = await server.call('GET', `${alpha}/runs?type=reasoning&name=summary`);
     const filtered = await server.call('GET', `${alpha}/analytics?days=14&type=reasoning&name=summary`);
 
@@ -121,7 +120,7 @@ describe('the analytics of a playbook over HTTP', () => {
         ],
       },
     });
-    expect([dayOf(readFrom), dayOf(readBy)]).toContain(lastDayOf(read.body));
+    expect(lastDayOf(read.body)).toBe(dayOf(testServersStartAt));
     expect(runsByDay(read.body)).toEqual(runsByTheDayTheyStarted(started.body));
     expect(durationOf(read.body).p50).toBeLessThanOrEqual(durationOf(read.body).p95);
     expect(filtered).toMatchObject({ status: 200, body: { days: 14, runs: { total: 3 } } });

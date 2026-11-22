@@ -2,10 +2,10 @@ import type { ArmTimer, WorkflowEngine } from '@on.auto/workflow-engine';
 import { Effect, Function } from 'effect';
 import { onTestFinished } from 'vitest';
 
-import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import { startLoop } from '../loop/host-loop.ts';
 import { hostWakeUp, type WakeUpParts } from '../loop/host-wake-up.ts';
-import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, openedOn } from '../testing/host-files.ts';
+import type { SteppedClock } from '../testing/stepped-clock.ts';
 import { sqlTimers } from '../timers/sql-timers.ts';
 import type { FakeDueWork } from './fake-due-work.ts';
 
@@ -27,10 +27,10 @@ export interface DueLooping {
 
 export async function dueLooping(
   rows: FakeDueWork,
-  clock: HostClock = systemClock,
+  clock: SteppedClock,
   sweepEveryMs = 3_600_000,
 ): Promise<DueLooping> {
-  const database = await openedOn({ store: 'sqlite', file: aSQLiteFile() });
+  const database = await openedOn(await aLedgerInMemory());
   const order: string[] = [];
   const firedAt: number[] = [];
   const troubles: string[] = [];
@@ -57,6 +57,7 @@ export async function dueLooping(
     resume: () => Effect.succeed(0),
     trouble,
     sweepEveryMs,
+    context: clock.watching(),
   };
   const loop = startLoop(parts, (signal) => hostWakeUp(parts, signal));
   alarm.armed = loop.armed;

@@ -1,11 +1,13 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { Effect, Redacted } from 'effect';
+import { Effect, Redacted, Struct } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import type { Destination } from '../events/destination-fields.ts';
 import { subscriptionLoopOf } from '../subscriptions/subscription-loop.ts';
 import type {
   Asker,
+  IdentifiedConnection,
+  IdentifiedUser,
   LoopConnection,
   MadeSubscription,
   Positions,
@@ -181,25 +183,50 @@ function takingAStep(records: SubscriptionRecords, stepMs: number | undefined): 
       };
 }
 
+interface Identified {
+  readonly connection: IdentifiedConnection;
+  readonly user: IdentifiedUser;
+}
+
 export interface Loop {
   readonly app: FakeApp;
   readonly records: FakeRecords;
   readonly secrets: FakeSecrets;
   readonly connections: Changing<LoopConnection>;
   readonly askers: readonly Changing<SubscriptionKey>[];
+  readonly triggered: Changing<SubscriptionKey>;
+  readonly identified: () => readonly Identified[];
+  readonly identifies: (identified: Identified) => void;
 }
 
 export function loopOver(
   connections: readonly LoopConnection[],
   ...asked: readonly (readonly SubscriptionKey[])[]
 ): Loop {
+  const held = changing(...connections);
+  const identified: Identified[] = [];
   return {
     app: anApp(),
     records: inMemoryRecords(64),
     secrets: inMemorySecrets(),
-    connections: changing(...connections),
+    connections: held,
     askers: asked.map((keys) => changing(...keys)),
+    triggered: changing(),
+    identified: () => identified,
+    identifies: (each) => {
+      identified.push(each);
+      held.becomes(
+        ...held.now().map((kept) => (kept.id === each.connection.id ? Struct.omit(kept, ['identify']) : kept)),
+      );
+    },
   };
+}
+
+function identifiedIn(loop: Loop): SubscriptionLoopPorts['identified'] {
+  return (_playbook, { id, connected }, user) =>
+    Effect.sync(() => {
+      loop.identifies({ connection: { id, connected }, user });
+    });
 }
 
 export const startedAt = Date.parse('2026-10-07T09:00:00.000Z');
@@ -220,9 +247,11 @@ export function portsOf(loop: Loop, runtime: Runtime): SubscriptionLoopPorts {
     callbackOf: (_place, type) => callbacks[type],
     connectionsOf: () => Effect.sync(loop.connections.now),
     receives: (type) => receives.includes(type),
-    askers: loop.askers.map((asked) => askerOf(asked)),
+    askers: [...loop.askers, loop.triggered].map((asked) => askerOf(asked)),
+    triggersAsker: askerOf(loop.triggered),
     records: takingAStep(loop.records.records, runtime.stepMs),
     secrets: loop.secrets.secrets,
+    identified: identifiedIn(loop),
     mostPerConnection: runtime.mostPerConnection ?? 8,
   };
 }

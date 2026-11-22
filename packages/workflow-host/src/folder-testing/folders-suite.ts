@@ -5,7 +5,7 @@ import type { Writing } from '../projector/folder.ts';
 import { definitionsByType } from '../projector/projector-schedule.ts';
 import { reconciledRows, type DefinitionsKept } from '../projector/reconciled-rows.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
-import { readsWhile, untilAWholeWakeHasPassed, watchedSystemClock } from '../testing/watched-clock.ts';
+import { readsWhile, watchedClock } from '../testing/watched-clock.ts';
 import { alphaKey, counting, foldedAll, liveWith } from '../views-testing/view-documents.ts';
 import {
   talliesOf,
@@ -57,8 +57,8 @@ function sharingTests(settingsOf: SettingsOf): void {
     await tallies.saved('runs', counting);
     await tallies.savedTally('succeeded', succeeded);
     await tallies.ranEach('reasoning/runs', [1, 2]);
-    const clock = watchedSystemClock();
-    tallies.startWithTallies({ sweepEveryMs: 60_000, clock });
+    const clock = watchedClock(tallies.clock);
+    tallies.startWithTallies({ sweepEveryMs: 60_000, pace: clock });
     await tallies.folded('runs', liveWith(2));
     await tallies.untilTally(succeeded, liveCounting(2));
 
@@ -110,10 +110,9 @@ function restartTests(settingsOf: SettingsOf): void {
     const watch = tallies.watchingTallies();
 
     await tallies.ranEach('reasoning/runs', [3, 4, 5]);
-    const clock = watchedSystemClock();
-    tallies.startWithTallies({ through: watch.through, clock });
+    tallies.startWithTallies({ through: watch.through });
     await tallies.untilTally(succeeded, liveCounting(5));
-    await untilAWholeWakeHasPassed(clock);
+    await tallies.sweptOnce();
     const [after] = await tallies.tallies();
 
     expect(before.checkpoint).toBeDefined();

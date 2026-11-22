@@ -13,10 +13,10 @@ import { onTestFinished } from 'vitest';
 
 import { tcpPort } from '../../lifecycle/http-server.ts';
 import { startServer } from '../../lifecycle/lifecycle.ts';
-import type { TemporaryLedger } from '../records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from './composition-without-goals.ts';
+import { somethingHappened } from '../waiting/happenings.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
 import { loopbackSettingsOver } from './reasoning-server.ts';
+import { patientThreadPool, testComposition } from './test-compositions.ts';
 
 interface AskedOfTheGateway {
   readonly path: string;
@@ -88,6 +88,7 @@ export async function gatewayOnTheLoopback(
     void bodyOf(incoming).then((body) => {
       const polls = polledIn(asked);
       asked.push({ path, authorization: incoming.headers.authorization, body });
+      somethingHappened();
       if (!answeredOfAVideo(response, path, standings, polls)) {
         answered(response, path);
       }
@@ -114,13 +115,13 @@ export interface GenerationServer {
 
 export async function servingGeneration(
   gateway: GatewayOnTheLoopback | undefined,
-  ledger: TemporaryLedger,
+  ledger: NonNullable<Parameters<typeof loopbackSettingsOver>[0]>,
   settings: Readonly<Record<string, string>> = {},
 ): Promise<GenerationServer> {
   const gateways = gateway === undefined ? {} : { MODEL_GATEWAYS: gateway.gateways };
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...gateways, ...settings },
-    compositionRootWithoutGoals,
+    testComposition({ goals: false, programPoolOf: patientThreadPool }),
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

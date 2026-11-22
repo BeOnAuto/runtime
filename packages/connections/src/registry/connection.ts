@@ -2,6 +2,7 @@ import { RecordedCallerSchema } from '@on.auto/operations';
 import { RecordedEventsSchema, scopesIn } from '@on.auto/providers';
 import { Schema, SchemaTransformation } from 'effect';
 
+import { AccountTypeField, PermissionsField, type RecordedCredential } from './acting-fields.ts';
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { CredentialSchema } from './credential.ts';
 
@@ -91,6 +92,8 @@ export const ConnectionSchema = Schema.Struct({
   document: Schema.optionalKey(ConnectionDocumentSchema),
   events: Schema.optionalKey(EventsAsGivenSchema),
   credential: CredentialSchema,
+  permissions: PermissionsField,
+  account_type: AccountTypeField,
   status: ConnectionStatusSchema.annotate({
     description: 'pending until it is approved and its credential given, connected, broken or removed',
   }),
@@ -133,10 +136,13 @@ export const ConnectionSchema = Schema.Struct({
 
 export type Connection = typeof ConnectionSchema.Type;
 
-export type RecordedConnection = Omit<Connection, 'credential_ends_with'>;
+export interface RecordedConnection extends Omit<Connection, 'credential_ends_with' | 'credential' | 'permissions'> {
+  readonly credential: RecordedCredential;
+}
 
 export function connectionShown(connection: RecordedConnection, endsWith: string | null): Connection {
-  return { ...connection, credential_ends_with: endsWith };
+  const { permissions = null, ...credential } = connection.credential;
+  return { ...connection, credential, permissions, credential_ends_with: endsWith };
 }
 
 export function runsUnderTheOrgsOAuthClient({ credential }: Pick<RecordedConnection, 'credential'>): boolean {

@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import type { ReactionStart } from '../reactions/reaction-options.ts';
-import { restsOfTheHosts } from '../testing/signals.ts';
+import { fewSweeps, type SteppedSweeps } from '../testing/stepped-clock.ts';
 import { nameOfKey } from './playbook-writes.ts';
 
 const TriggerRow = Schema.Struct({
@@ -64,10 +64,11 @@ export async function pausesOf(database: HostDatabase): Promise<readonly (string
   return rows.map(({ definition_key: definitionKey }) => nameOfKey(definitionKey));
 }
 
-export function untilPaused(database: HostDatabase, paused: readonly string[]) {
-  return restsOfTheHosts.whenRead(
+export function untilPaused(sweeps: SteppedSweeps, database: HostDatabase, paused: readonly string[]) {
+  return sweeps.until(
     () => pausesOf(database),
     (found) => found.join() === paused.join(),
+    fewSweeps,
   );
 }
 
@@ -77,37 +78,39 @@ export function refusalsOf(database: HostDatabase) {
   );
 }
 
-export function untilTriggersAt(database: HostDatabase, workflow: string, version: number) {
-  return restsOfTheHosts.whenRead(
+export function untilTriggersAt(sweeps: SteppedSweeps, database: HostDatabase, workflow: string, version: number) {
+  return sweeps.until(
     () => triggerRowsOf(database),
     (rows) => rows.some((row) => row.workflow === workflow && row.version === version),
+    fewSweeps,
   );
 }
 
-export function untilScheduleRuns(database: HostDatabase, reference: string) {
-  return restsOfTheHosts.whenRead(
+export function untilScheduleRuns(sweeps: SteppedSweeps, database: HostDatabase, reference: string) {
+  return sweeps.until(
     () => triggerRowsOf(database),
     (rows) => rows.some((row) => row.reference === reference && row.running !== null),
+    fewSweeps,
   );
 }
 
-export function refusalsSaid(database: HostDatabase, count = 1) {
-  return restsOfTheHosts.whenRead(
-    () =>
-      Effect.runPromise(
-        rowsOf(RefusalRow, database.read(statement`SELECT workflow, reason FROM workflow_reaction_refusals`)),
-      ),
+export function refusalsSaid(sweeps: SteppedSweeps, database: HostDatabase, count = 1) {
+  return sweeps.until(
+    () => refusalsOf(database),
     (found) => found.length >= count,
+    fewSweeps,
   );
 }
 
 export function startsReaching<Start extends ReactionStart>(
+  sweeps: SteppedSweeps,
   starts: () => readonly Start[],
   count: number,
 ): Promise<readonly Start[]> {
-  return restsOfTheHosts.whenRead(
-    () => Promise.resolve<readonly Start[]>([...starts()]),
+  return sweeps.until(
+    (): readonly Start[] => [...starts()],
     (found) => found.length >= count,
+    fewSweeps,
   );
 }
 

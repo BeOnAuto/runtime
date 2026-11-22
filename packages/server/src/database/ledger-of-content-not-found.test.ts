@@ -4,11 +4,11 @@ import { mostInlinePayloadBytes } from '@on.auto/operations/payloads';
 import { Context, Effect, Layer, ManagedRuntime, Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { everyRowSet, onTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, loopbackSettingsOver, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { ledgerOfContentNotFound, withItsContentFound } from './ledger-of-content-not-found.ts';
 import { ledgerRefusalIn } from './ledger-refusals.ts';
 
@@ -77,7 +77,7 @@ async function aDocumentOffloadedIn(ledger: TemporaryLedger): Promise<void> {
 }
 
 function startedOver(ledger: TemporaryLedger): Promise<unknown> {
-  return startServer(loopbackSettingsOver(ledger), compositionRoot).then(
+  return startServer(loopbackSettingsOver(ledger), testComposition()).then(
     (server) => server.stop(),
     (failure: unknown) => failure,
   );
@@ -187,7 +187,7 @@ describe('a server over a ledger whose records name content', () => {
     await aDocumentOffloadedIn(ledger);
 
     expect(await startedOver(ledger)).toBeUndefined();
-  }, 60_000);
+  });
 
   it('does not start where that content is kept elsewhere, and says where and what to do', async () => {
     const ledger = temporaryLedger();
@@ -202,5 +202,5 @@ describe('a server over a ledger whose records name content', () => {
     expect(refusal?.happened).toBe(
       `The ledger is kept in the file ${ledger.fileName}, and its records name content this server cannot find. Content is kept in the ledger's database, since CONTENT_STORE_URL is not set, but 1 of the 1 it looked for is kept on object storage.`,
     );
-  }, 60_000);
+  });
 });

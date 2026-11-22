@@ -2,11 +2,11 @@ import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
 import { browserAt } from '@on.auto/openid-connect/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { personSigningIn, type PersonSigningIn } from '../sign-in/person-signing-in.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { goalsText } from '../testing/settings/goals-kept.ts';
 import { importedBeforeTheRelease } from './roles-of-an-org.ts';
 
@@ -14,7 +14,7 @@ async function servedTo(signing: PersonSigningIn, ledger: TemporaryLedger): Prom
   const port = await aPortNothingListensOn();
   const server = await startServer(
     { HOST: '127.0.0.1', PORT: String(port), LEDGER_FILE: ledger.fileName, ...signing.environment },
-    compositionRoot,
+    testComposition(),
   );
   onTestFinished(async () => {
     await server.stop();

@@ -34,7 +34,7 @@ describe('a workflow whose call the meter refuses for credits', () => {
       until: '2026-10-29T09:00:00.000Z',
     });
     expect(meter.refused()).toEqual([tally(1)]);
-  }, 60_000);
+  });
 
   it('tries again after a minute, then after two, and once admitted goes on from that step without running or charging the earlier call again', async () => {
     const { server, workflow, asked, meter, clock, tally } = await refusedAtItsSecondCall();
@@ -49,7 +49,7 @@ describe('a workflow whose call the meter refuses for credits', () => {
     expect(server.modelCalls()).toBe(1);
     expect(meter.refused()).toEqual([tally(1), tally(2)]);
     expect(meter.admitted()).toEqual([workflow, asked, tally(3)]);
-  }, 60_000);
+  });
 });
 
 describe('a workflow that waits for credits', () => {
@@ -67,7 +67,7 @@ describe('a workflow that waits for credits', () => {
     });
     expect(await waitsOf(server, workflow)).toHaveLength(1);
     expect(meter.admitted()).toHaveLength(2);
-  }, 60_000);
+  });
 
   it('ends rejected as before, in the words of its last refusal, once 24 hours have passed since the first', async () => {
     const { server, workflow, meter, clock, tally } = await refusedAtItsSecondCall();
@@ -81,5 +81,5 @@ describe('a workflow that waits for credits', () => {
     });
     expect(JSON.stringify(settled.body)).toContain('Still no credits for this run');
     expect(meter.refused()).toEqual([tally(1), tally(2)]);
-  }, 60_000);
+  });
 });

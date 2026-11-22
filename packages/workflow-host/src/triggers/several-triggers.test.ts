@@ -3,7 +3,6 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { startsReaching, untilScheduleRuns } from '../reaction-testing/kept-triggers.ts';
-import { movedClock } from '../reaction-testing/moved-clock.ts';
 import {
   at,
   cronTrigger,
@@ -18,9 +17,11 @@ import {
   publishedInTurn,
   runRecorded,
 } from '../reaction-testing/playbook-writes.ts';
-import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
+import type { ReactingHost } from '../reaction-testing/reacting-host.ts';
+import { keptDefinition, steppedReacting, type SteppedReacting } from '../reaction-testing/stepped-reactions.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import { mostStartsAMinute } from '../reactions/start-rates.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 
 const activatedAt = Date.parse(at);
 
@@ -33,13 +34,12 @@ function isoAt(minutes: number): string {
 }
 
 async function openedAt(start: number) {
-  const clock = movedClock(start);
-  const reacting = await reactingHost({ clock });
-  return { reacting, clock, starts: reacting.reactions.starts };
+  const stepped = await steppedReacting({ startsAt: start });
+  return { ...stepped, starts: stepped.reacting.reactions.starts };
 }
 
-function closingSaved({ database }: ReactingHost, onEvents = closed) {
-  return definitionRecorded(database.store, {
+function closingSaved(stepped: SteppedReacting, onEvents = closed) {
+  return keptDefinition(stepped, {
     name: 'close',
     version: 1,
     triggers: [onEvents, cronTrigger('30 9 * * *'), everyTrigger(15 * aMinute)],
@@ -48,7 +48,7 @@ function closingSaved({ database }: ReactingHost, onEvents = closed) {
 
 async function closingAt(start: number, onEvents = closed) {
   const opened = await openedAt(start);
-  await closingSaved(opened.reacting, onEvents);
+  await closingSaved(opened, onEvents);
   return opened;
 }
 
@@ -67,16 +67,16 @@ function runIdOf(start: { readonly runId: string } | undefined): string {
 
 describe('a workflow with an event trigger, a cron schedule and an every schedule', () => {
   it('starts one run for an event and one at each time each schedule is due, each naming its trigger and cause', async () => {
-    const { reacting, clock } = await closingAt(activatedAt + 1000);
+    const { reacting, clock, sweeps } = await closingAt(activatedAt + 1000);
     const activation = definitionRecordAt('close', 1);
     const event = eventRecordOf('e1');
 
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.closed' });
-    await startsReaching(reacting.reactions.starts, 1);
+    await startsReaching(sweeps, reacting.reactions.starts, 1);
     clock.moveTo(activatedAt + 15 * aMinute);
-    await startsReaching(reacting.reactions.starts, 2);
+    await startsReaching(sweeps, reacting.reactions.starts, 2);
     clock.moveTo(activatedAt + 30 * aMinute);
-    const starts = await startsReaching(reacting.reactions.starts, 4);
+    const starts = await startsReaching(sweeps, reacting.reactions.starts, 4);
 
     expect(starts.map(({ runId, trigger, cause, version }) => [runId, trigger, cause, version])).toEqual([
       [
@@ -114,10 +114,10 @@ describe('a workflow with an event trigger, a cron schedule and an every schedul
 
 describe('a due time of a schedule asked for again', () => {
   it('is asked for under the same id, so the playbook starts nothing again', async () => {
-    const { reacting, clock } = await closingAt(activatedAt + 1000);
+    const { reacting, clock, sweeps } = await closingAt(activatedAt + 1000);
     clock.moveTo(activatedAt + 15 * aMinute);
-    await startsReaching(reacting.reactions.starts, 1);
-    await untilScheduleRuns(reacting.database, '/schedule/every');
+    await startsReaching(sweeps, reacting.reactions.starts, 1);
+    await untilScheduleRuns(sweeps, reacting.database, '/schedule/every');
 
     await Effect.runPromise(
       reacting.database.write(
@@ -125,7 +125,7 @@ describe('a due time of a schedule asked for again', () => {
           WHERE reference = '/schedule/every'`,
       ),
     );
-    const [first, again] = await startsReaching(reacting.reactions.starts, 2);
+    const [first, again] = await startsReaching(sweeps, reacting.reactions.starts, 2);
 
     expect([again?.runId, again?.input]).toEqual([first?.runId, first?.input]);
   });
@@ -134,19 +134,21 @@ describe('a due time of a schedule asked for again', () => {
 describe('the start rate of a workflow with several triggers', () => {
   it(`counts the starts of its event trigger to ${mostStartsAMinute} a minute, and never a start of its schedule`, async () => {
     const minute = activatedAt + 15 * aMinute;
-    const { reacting } = await openedAt(minute + 1000);
+    const opened = await openedAt(minute + 1000);
+    const { reacting, sweeps } = opened;
     await closingStartedIn(reacting, minute, mostStartsAMinute - 1);
-    await closingSaved(reacting);
-    await startsReaching(reacting.reactions.starts, 1);
+    await closingSaved(opened);
+    await startsReaching(sweeps, reacting.reactions.starts, 1);
 
     await publishedInTurn(reacting.database.store, [
       { id: 'e1', type: 'com.acme.closed' },
       { id: 'e2', type: 'com.acme.closed' },
     ]);
-    const starts = await startsReaching(reacting.reactions.starts, 2);
-    const waiting = await reacting.whenRead(
+    const starts = await startsReaching(sweeps, reacting.reactions.starts, 2);
+    const waiting = await sweeps.until(
       () => Effect.runPromise(reacting.database.read(statement`SELECT run_id FROM workflow_reaction_backlog`)),
       (rows) => rows.length > 0,
+      fewSweeps,
     );
 
     expect([starts.map(({ trigger }) => trigger.kind), waiting.length]).toEqual([['every', 'event'], 1]);
@@ -156,21 +158,21 @@ describe('the start rate of a workflow with several triggers', () => {
 describe('a workflow whose schedule started a run', () => {
   it('is not started by its own event trigger for that run, its facts, nor the events it emits', async () => {
     const told = eventTrigger({ type: 'com.acme.told' }, { type: 'run_succeeded' });
-    const { reacting, clock, starts: started } = await closingAt(activatedAt + 1000, told);
+    const { reacting, clock, sweeps, starts: started } = await closingAt(activatedAt + 1000, told);
     await definitionRecorded(reacting.database.store, {
       name: 'watch',
       version: 1,
       triggers: [eventTrigger({ type: 'go' })],
     });
     clock.moveTo(activatedAt + 15 * aMinute);
-    const [scheduled] = await startsReaching(started, 1);
+    const [scheduled] = await startsReaching(sweeps, started, 1);
     const run = runIdOf(scheduled);
     const { store } = reacting.database;
 
     await runRecorded(store, { runId: run, type: 'workflow', name: 'close' }, 'run_succeeded');
     await published(store, { id: 'told', type: 'com.acme.told' }, emittedContext(run, 'close', 1));
     await published(store, { id: 'go', type: 'go' });
-    const starts = await startsReaching(reacting.reactions.starts, 2);
+    const starts = await startsReaching(sweeps, reacting.reactions.starts, 2);
 
     expect(starts.map(({ workflow, trigger }) => [workflow, trigger.kind])).toEqual([
       ['close', 'every'],

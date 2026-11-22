@@ -1,5 +1,5 @@
 import { inlinePool, type InlinePool, type ProcessHandlers } from '@on.auto/workflow-engine/dsl';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { documentBounds, documentTooLarge } from '../reading/document-bounds.ts';
 import { refusedUnlessOutOfMemory, type DocumentText } from '../reading/document-text.ts';
@@ -113,11 +113,17 @@ describe('a document whose reading the pool of a host ends', () => {
         ),
     });
     const outOfTime = readInAPoolOfItsOwn({ [documentJobKind]: () => Promise.withResolvers<null>().promise });
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
 
-    const texts = await Promise.all([
+    const reading = Promise.all([
       outOfMemory(pdfOf([['Net 30']]), unbounded),
       outOfTime(pdfOf([['Net 30']]), { ...unbounded, deadlineMs: 200 }),
     ]);
+    await vi.advanceTimersByTimeAsync(200);
+    const texts = await reading;
 
     expect(texts).toEqual(
       [
@@ -125,5 +131,24 @@ describe('a document whose reading the pool of a host ends', () => {
         'It took longer to read than the 0.2 s the call had left, so its reading was stopped',
       ].map((because) => ({ read: false, because, mediaType: 'application/pdf' })),
     );
+  });
+});
+
+describe('a Word document whose reading Node cannot find the memory to decode', () => {
+  it('is stopped as out of memory, never refused as broken', async () => {
+    const decoding = vi.spyOn(TextDecoder.prototype, 'decode').mockImplementation(() => {
+      throw Object.assign(new RangeError('Failed to allocate memory'), { code: 'ERR_MEMORY_ALLOCATION_FAILED' });
+    });
+    onTestFinished(() => {
+      decoding.mockRestore();
+    });
+
+    expect(
+      await readInAPoolOfItsOwn()({ bytes: wordDocumentOf(['a']), mediaType: wordType, name: undefined }, unbounded),
+    ).toEqual({
+      read: false,
+      because: 'It took more memory to read than a process that reads a document may take, so its reading was stopped',
+      mediaType: wordType,
+    });
   });
 });

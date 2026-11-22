@@ -12,6 +12,7 @@ import {
   type FetchHandler,
 } from '../testing/index.ts';
 import { studioSession } from './auto-consents.ts';
+import { consentServiceBehaviour, controlledVendor } from './consent-service-behaviour.ts';
 
 const vendorOrigin = 'https://vendor.example.com';
 
@@ -76,5 +77,52 @@ describe('the answers of the fake consent service', () => {
     const { start } = servedOn('https://studio.another.example.com');
 
     expect(Exit.isFailure(await Effect.runPromiseExit(start))).toBe(true);
+  });
+});
+
+describe('the vendor a contract case controls', () => {
+  it('passes a call that is none of the contract’s through as it is, and answers a chosen one in place of the vendor', async () => {
+    const vendor = controlledVendor(() => Promise.resolve(new Response('from the vendor')));
+    vendor.answerNext('revoke', { status: 503, body: {} });
+    const answers = [
+      await vendor.fetch(`${vendorOrigin}/.well-known/oauth-authorization-server`),
+      await vendor.fetch(`${vendorOrigin}/revoke`, { method: 'POST', body: new URLSearchParams({ token: 't' }) }),
+    ];
+
+    expect(answers.map(({ status }) => status)).toEqual([200, 503]);
+    expect([vendor.called('code'), vendor.called('revoke')]).toEqual([0, 1]);
+  });
+});
+
+consentServiceBehaviour('the fake', () => {
+  const routed = throughHandlers();
+  const clock = { now: 0 };
+  const vendor = controlledVendor(routed.fetch);
+  const service = fakeConsentServiceAnswers({
+    vendor: { origin: vendorOrigin },
+    now: () => clock.now,
+    fetch: vendor.fetch,
+    studioBase: anotherStudio,
+  });
+  routed.handlers.set(
+    vendorOrigin,
+    fakeMcpAnswers({ client: consentRegistration({ redirectUris: [`${anotherStudio}connect-return`] }) }).handlerAt(
+      vendorOrigin,
+    ),
+  );
+  return Promise.resolve({
+    handler: service.handler,
+    issuer: vendorOrigin,
+    scope: 'files.read',
+    studioBase: anotherStudio,
+    returnAddress: `${anotherStudio}connect-return`,
+    fromTheRuntime: {},
+    signedIn: () => Promise.resolve({ authorization: 'Bearer a-studio-session' }),
+    consentAt: async (url) => (await consentedAt(url, routed.fetch)).code,
+    vendor,
+    now: () => clock.now,
+    advance: (ms) => {
+      clock.now += ms;
+    },
   });
 });

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { lookingUp } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const paging = {
   tool: 'pages',
@@ -63,7 +63,7 @@ describe('what a call read and reacted to', () => {
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-replies', source: onReplies } });
 
     await server.runCall('thread-replies');
-    const [reaction] = await until(
+    const [reaction] = await whenHeld(
       async () => decodeRuns((await server.call('GET', `${alpha}/runs?type=workflow&name=on-replies`)).body).runs,
       (runs) => runs.some(({ status }) => status !== 'started'),
     );

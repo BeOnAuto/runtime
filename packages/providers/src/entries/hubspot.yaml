@@ -6,6 +6,7 @@ type: mcp
 url: https://mcp.hubspot.com
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://mcp.hubspot.com
     clients: [registered]
     description: Sign in to HubSpot, choose an account and allow access.

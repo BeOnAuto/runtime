@@ -1,6 +1,6 @@
 import { defineRunDefinition, defineStartVersion, type Capability, type PlaybookOperation } from '@on.auto/definitions';
 import type { Dispatcher, DispatcherServices, Outcome, PlaybookRequest, Registration } from '@on.auto/operations';
-import type { WorkflowHost } from '@on.auto/workflow-host';
+import { queuedStartsOn, type QueuedStartReads, type WorkflowHost, type WorkflowStore } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { defineNextAttempt, defineRefusedAttempt } from '../attempt-leases/next-attempts.ts';
@@ -15,6 +15,7 @@ export type HostDispatches = Readonly<Record<HostOperationName, HostDispatch>>;
 
 interface HostOnceOpened {
   readonly runs: Pick<WorkflowHost, 'start' | 'deliver'>;
+  readonly queued: QueuedStartReads;
   readonly opened: (host: WorkflowHost) => void;
 }
 
@@ -44,7 +45,7 @@ export function hostDispatchesOf(dispatcher: Dispatcher, operations: HostOperati
   };
 }
 
-export function hostOnceOpened(): HostOnceOpened {
+export function hostOnceOpened(store: Pick<WorkflowStore, 'database'>): HostOnceOpened {
   const opening = Promise.withResolvers<WorkflowHost>();
   const host = Effect.promise(() => opening.promise);
   return {
@@ -52,6 +53,7 @@ export function hostOnceOpened(): HostOnceOpened {
       start: (run, start) => Effect.flatMap(host, (opened) => opened.start(run, start)),
       deliver: (run, event) => Effect.flatMap(host, (opened) => opened.deliver(run, event)),
     },
+    queued: queuedStartsOn(store.database),
     opened: (opened) => {
       opening.resolve(opened);
     },

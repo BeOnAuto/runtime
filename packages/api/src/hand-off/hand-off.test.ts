@@ -1,8 +1,9 @@
+import type { Principal } from '@on.auto/identity';
 import { allPermissions, type CallerIdentity } from '@on.auto/operations';
 import { Context } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { authInfoFor, orgCallOf, playbookCallOf } from './caller-hand-off.ts';
+import { actingAsIn, authInfoFor, orgCallOf, playbookCallOf } from './caller-hand-off.ts';
 import { droppedArgumentsIn, postedMessagesOf, withDroppedArgument } from './dropped-arguments.ts';
 
 function posted(body: string, headers: Readonly<Record<string, string>> = {}): Request {
@@ -119,6 +120,35 @@ describe('the hand-off of a caller to the MCP SDK', () => {
 
   it('refuses to serve a playbook endpoint without a playbook', () => {
     expect(() => playbookCallOf({ authInfo: authInfoFor(orgCall) })).toThrow('playbook');
+  });
+});
+
+function principalOf(own: CallerIdentity, named: Pick<Principal, 'orgName'>): Principal {
+  return { own, callerIn: (org) => ({ ...own, org }), ...named };
+}
+
+describe('the hand-off of the org a caller acts in', () => {
+  const orgName = 'Initech';
+
+  it('names the org by the name the caller’s credential gives it, for the org the credential names alone', () => {
+    const named = principalOf(caller, { orgName });
+    const unnamed = principalOf(caller, {});
+
+    expect([
+      actingAsIn(named, caller, 'acme'),
+      actingAsIn(named, caller, 'globex'),
+      actingAsIn(unnamed, caller, 'acme'),
+    ]).toEqual([
+      { caller, org: 'acme', orgName },
+      { caller, org: 'globex' },
+      { caller, org: 'acme' },
+    ]);
+  });
+
+  it('reads back the name of the org beside its id', () => {
+    const named = { ...orgCall, orgName };
+
+    expect(orgCallOf({ authInfo: authInfoFor(named) })).toEqual(named);
   });
 });
 

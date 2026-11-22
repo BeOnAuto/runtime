@@ -8,6 +8,10 @@ import { firstPollWaitMs } from './poll-cadence.ts';
 
 export const generationsWaitingName = 'generations_due';
 
+/**
+ * The times of the next poll are written in whole milliseconds. An earlier version could write one with a fraction,
+ * which SQLite keeps as a REAL; the row is read as it is, so it is polled and written again whole.
+ */
 const WaitingRowSchema = Schema.Struct({
   deferred_id: Schema.String,
   handle: Schema.String,
@@ -17,8 +21,8 @@ const WaitingRowSchema = Schema.Struct({
   open: Schema.Boolean,
   polls: Schema.Int,
   progress: Schema.NullOr(Schema.Int),
-  next_poll_at: Schema.NullOr(Schema.Int),
-  poll_due_at: Schema.NullOr(Schema.Int),
+  next_poll_at: Schema.NullOr(Schema.Number),
+  poll_due_at: Schema.NullOr(Schema.Number),
   ending_due_at: Schema.NullOr(Schema.Int),
 });
 

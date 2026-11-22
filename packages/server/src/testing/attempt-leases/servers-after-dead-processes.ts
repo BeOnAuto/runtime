@@ -1,12 +1,11 @@
 import { createApiKey, type CreatedKey } from '@on.auto/identity';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import type { HostRuntime } from '../../workflows/host-dependencies.ts';
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { alpha, servingReasoning, type ReasoningServer } from '../servers/reasoning-server.ts';
-import { until } from '../waiting/until.ts';
+import { fewSweeps, steppedServerClock, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import { leaseNamesIn, leftByAProcessThatDied, now, runId, type Left } from './left-by-dead-processes.ts';
 
 export const writer = createApiKey({
@@ -21,6 +20,8 @@ export const reader = createApiKey({ id: 'acme-reader', org: 'acme', permissions
 const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Say how the quarter went.'].join('\n');
 
 export const quarter = { input: {}, run_id: runId };
+
+const sweepOftenMs = 10;
 
 const sweepingOften = { WORKFLOW_SWEEP_INTERVAL: 'PT0.01S' };
 
@@ -46,8 +47,12 @@ async function aPlaybookOn(ledger: TemporaryLedger, withTheSummary: boolean): Pr
   await server.stop();
 }
 
-interface Started {
+export interface Stepped {
   readonly server: ReasoningServer;
+  readonly clock: SteppedServerClock;
+}
+
+interface Started extends Stepped {
   readonly leaseNames: () => Promise<readonly string[]>;
 }
 
@@ -55,29 +60,28 @@ export async function startedAfter(left: Left, keys: readonly CreatedKey[], repl
   const ledger = aLedger();
   await aPlaybookOn(ledger, left.type === 'reasoning');
   const heard = Promise.withResolvers<HostRuntime>();
+  const clock = steppedServerClock(now, sweepOftenMs);
   const server = await servingReasoning(replies, { ...keysOf(...keys), ...sweepingOften }, undefined, {
     ledger,
-    clock: movedClock(now),
+    clock,
     startingWork: leftByAProcessThatDied(left, heard.resolve),
   });
   onTestFinished(server.stop);
-  return { server, leaseNames: () => leaseNamesIn(heard.promise) };
+  return { server, clock, leaseNames: () => leaseNamesIn(heard.promise) };
 }
 
 const StatusOf = Schema.decodeUnknownSync(Schema.Struct({ status: Schema.String }));
 
-export function endedOn(server: ReasoningServer, key?: Readonly<CreatedKey>) {
-  return until(
+export function endedOn({ server, clock }: Stepped, key?: Readonly<CreatedKey>) {
+  return clock.swept.until(
     () => server.call('GET', `${alpha}/runs/${runId}`, key === undefined ? {} : as(key)),
     ({ body }) => StatusOf(body).status !== 'started',
+    fewSweeps,
   );
 }
 
-export async function aSummaryOn(
-  ledger: TemporaryLedger,
-  replies: Replies,
-): Promise<{ server: ReasoningServer; clock: MovedClock }> {
-  const clock = movedClock(now);
+export async function aSummaryOn(ledger: TemporaryLedger, replies: Replies): Promise<Stepped> {
+  const clock = steppedServerClock(now, sweepOftenMs);
   const server = await servingReasoning(replies, sweepingOften, undefined, { ledger, clock });
   return { server, clock };
 }

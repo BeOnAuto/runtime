@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { steppedClock } from '../testing/stepped-clock.ts';
+import { fewSweeps, steppedBy, steppedClock } from '../testing/stepped-clock.ts';
 import { dueLooping, keysOf } from './due-looping.ts';
 import { dueAwaitedMs, dueInOneWakeUp, duePerformedAtOnce } from './due-work.ts';
 import { fakeDueWork } from './fake-due-work.ts';
@@ -9,7 +9,8 @@ import { fakeDueWork } from './fake-due-work.ts';
 describe('a due row that calls out nowhere, behind more deliveries than one read of them takes', () => {
   it('is performed, read apart from the deliveries due before it, and not at the next sweep', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     for (const key of keysOf(2 * dueInOneWakeUp + 300, 'delivery')) {
       rows.add(key, now - 2000);
       rows.hanging(key);
@@ -17,7 +18,7 @@ describe('a due row that calls out nowhere, behind more deliveries than one read
     rows.add('expiry', now - 1000);
     rows.local('expiry');
 
-    await dueLooping(rows);
+    await dueLooping(rows, clock);
     const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
 
     expect(performed?.key).toBe('expiry');
@@ -27,7 +28,8 @@ describe('a due row that calls out nowhere, behind more deliveries than one read
 describe('a delivery that waits for a place while deliveries hang', () => {
   it('is not held, so it ends when its ending comes due, and not at the next sweep', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     for (const key of keysOf(duePerformedAtOnce + 4, 'delivery')) {
       rows.add(key, now - 1000);
     }
@@ -37,8 +39,10 @@ describe('a delivery that waits for a place while deliveries hang', () => {
     const endsAt = now + dueAwaitedMs + 500;
     rows.endsAt('delivery-19', endsAt);
 
-    await dueLooping(rows);
-    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
+    await dueLooping(rows, clock);
+    const [performed] = await steppedBy(clock, dueAwaitedMs + 500).until(rows.performed, (done) => done.length > 0, {
+      atMost: 1,
+    });
 
     expect(performed?.key).toBe('delivery-19');
     expect(rows.attempts().filter(({ key }) => key !== 'delivery-19')).toHaveLength(duePerformedAtOnce);
@@ -48,7 +52,8 @@ describe('a delivery that waits for a place while deliveries hang', () => {
 describe('a due row whose ending falls due while a wake-up waits for the rows it handed out', () => {
   it('is performed by the next wake-up, not at the next sweep', async () => {
     const now = Date.now();
-    const rows = fakeDueWork();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
     for (const key of keysOf(duePerformedAtOnce + 4, 'delivery')) {
       rows.add(key, now - 1000);
     }
@@ -58,8 +63,8 @@ describe('a due row whose ending falls due while a wake-up waits for the rows it
     const endsAt = now + 300;
     rows.endsAt('delivery-19', endsAt);
 
-    await dueLooping(rows);
-    const [performed] = await rows.when(rows.performed, (done) => done.length > 0);
+    await dueLooping(rows, clock);
+    const [performed] = await steppedBy(clock, 300).until(rows.performed, (done) => done.length > 0, { atMost: 1 });
 
     expect(performed?.key).toBe('delivery-19');
   });
@@ -68,30 +73,64 @@ describe('a due row whose ending falls due while a wake-up waits for the rows it
 describe('due rows that end while the loop reads when to wake next', () => {
   it('wake it, so the rows behind them are handed out then and not at the next sweep', async () => {
     const now = Date.now();
-    const rows = fakeDueWork(dueAwaitedMs + 500, { nextReadMs: 1000 });
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock, dueAwaitedMs + 500, { nextReadMs: 1000 });
     for (const key of keysOf(duePerformedAtOnce + 1, 'delivery')) {
       rows.add(key, now - 1000);
     }
 
-    await dueLooping(rows);
-    const performed = await rows.when(rows.performed, (done) => done.length === duePerformedAtOnce + 1);
+    await dueLooping(rows, clock);
+    const performed = await steppedBy(clock, 500).until(
+      rows.performed,
+      (done) => done.length === duePerformedAtOnce + 1,
+      fewSweeps,
+    );
 
     expect(performed).toHaveLength(duePerformedAtOnce + 1);
   });
 });
 
+describe('due rows that call out nowhere, more than may be performed at once, all hanging', () => {
+  it('let the host come to rest while the rows past the permits wait their turn, and name none of them awake', async () => {
+    const now = Date.now();
+    const clock = steppedClock(now);
+    const rows = fakeDueWork(clock);
+    for (const key of keysOf(duePerformedAtOnce + 1, 'expiry')) {
+      rows.add(key, now - 1000);
+      rows.local(key);
+      rows.hanging(key);
+    }
+
+    const looping = await dueLooping(rows, clock);
+    await rows.when(rows.attempts, (made) => made.length === duePerformedAtOnce);
+    await clock.atRest();
+    const atRest = [rows.attempts().length, clock.awake()];
+    const stopping = looping.stop();
+    await clock.atRest();
+    clock.step(dueAwaitedMs);
+    await stopping;
+
+    expect(atRest).toEqual([duePerformedAtOnce, []]);
+  });
+});
+
 describe('a host that stops while due rows are in flight', () => {
   it('interrupts them in both lanes', async () => {
-    const rows = fakeDueWork();
+    const clock = steppedClock(Date.now());
+    const rows = fakeDueWork(clock);
     for (const key of ['delivery', 'expiry']) {
       rows.add(key, Date.now() - 1000);
       rows.hanging(key);
     }
     rows.local('expiry');
-    const looping = await dueLooping(rows);
-    await rows.when(rows.attempts, (made) => made.length === 2);
+    const looping = await dueLooping(rows, clock);
+    await steppedBy(clock, dueAwaitedMs).until(rows.attempts, (made) => made.length === 2, fewSweeps);
 
-    await looping.stop();
+    const stopping = looping.stop();
+    // The wake-up in flight waits for its rows at most dueAwaitedMs, and stopping lets that wait run out.
+    await clock.atRest();
+    clock.step(dueAwaitedMs);
+    await stopping;
 
     expect(new Set(rows.interrupted())).toEqual(new Set(['delivery', 'expiry']));
   });
@@ -101,7 +140,7 @@ describe('a delivery handed out while workflow timers fall due', () => {
   it('holds none of them, as the wake-up waits for the rows that call out nowhere alone', async () => {
     const now = Date.now();
     const clock = steppedClock(now);
-    const rows = fakeDueWork();
+    const rows = fakeDueWork(clock);
     for (const key of keysOf(duePerformedAtOnce - 1, 'delivery')) {
       rows.add(key, now - 1000);
     }
@@ -122,12 +161,13 @@ describe('a delivery handed out while workflow timers fall due', () => {
 
 describe('the next time of a due work', () => {
   it('is that of the lane asked, the deliveries or the rest, and the soonest of both when no lane is asked', async () => {
-    const rows = fakeDueWork();
+    const clock = steppedClock(Date.now());
+    const rows = fakeDueWork(clock);
     rows.add('delivery', 3000);
     rows.endsAt('delivery', 5000);
     rows.add('expiry', 2000);
     rows.local('expiry');
-    const inFlight = fakeDueWork(0, { reportsRowsInFlight: true });
+    const inFlight = fakeDueWork(clock, 0, { reportsRowsInFlight: true });
     inFlight.add('delivery', 1000);
     inFlight.endsAt('delivery', 4000);
     const work = rows.work('host');

@@ -1,8 +1,6 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { memoryRecordedContent } from '@on.auto/content/testing';
 import { makeReasoningFunctionAdapter } from '@on.auto/reasoning';
-import { scriptedLanguageModel } from '@on.auto/reasoning/testing';
+import { answers, scriptedLanguageModel, type ScriptedReplies, textResult } from '@on.auto/reasoning/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import type { CheckRequest, ProgramPool, ProgramRun } from '@on.auto/workflow-engine/dsl';
 import type { Consumer, FollowedRecord } from '@on.auto/workflow-host';
@@ -10,21 +8,23 @@ import { Effect, Function, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { ProgramPoolOf } from '../composition/served-computation.ts';
-import {
-  type Answer,
-  gatewayThatHangsFirst,
-  logLinesOf,
-  requestTo,
-  settledOver,
-  welcomingStarted,
-  workflowProcess,
-} from '../testing/processes/workflow-process.ts';
-import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { logLinesOf, requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
+import { ledgerLeftByAKill } from '../testing/records/ledger-left-by-a-kill.ts';
+import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import type { TestResponse } from '../testing/servers/http-client.ts';
 import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
+import { patientThreadPool } from '../testing/servers/worker-pools.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledAsSwept,
+  settledRun,
+  steppedServerClock,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
 import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
-import { until } from '../testing/waiting/until.ts';
+import { heldAnswerOn, type SteppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 import type { ConsumingParts } from './host-dependencies.ts';
 import { longestCallOf } from './workflows.ts';
 
@@ -44,11 +44,6 @@ const timersMs = 1000;
 const historyOf = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
-
-async function isWaiting(port: number, run: Answer): Promise<boolean> {
-  const { body } = await requestTo(port, 'GET', `/gamma/runs/${runIdIn(run.body)}/history`);
-  return historyOf(body).events.some(({ type }) => type === 'step_waiting');
-}
 
 const inputsOf = Schema.decodeUnknownSync(
   Schema.Struct({
@@ -83,7 +78,7 @@ function decidingPastTheDeadline(pool: ProgramPool): ProgramPool {
 }
 
 const poolOf: ProgramPoolOf = (settings, handedWorkflowDeadlines) =>
-  decidingPastTheDeadline(patientWorkerPool(settings, handedWorkflowDeadlines));
+  decidingPastTheDeadline(patientThreadPool(settings, handedWorkflowDeadlines));
 
 const hundred = workflowSource(
   'hundred',
@@ -110,7 +105,7 @@ function recordingChecks(): { readonly checked: readonly CheckRequest[]; readonl
   });
   return {
     checked,
-    poolOf: (settings, handedWorkflowChecks) => recording(patientWorkerPool(settings, handedWorkflowChecks)),
+    poolOf: (settings, handedWorkflowChecks) => recording(patientThreadPool(settings, handedWorkflowChecks)),
   };
 }
 
@@ -193,51 +188,109 @@ describe('workflow lifecycle', () => {
       expect(startUpLines[0]).toMatch(/^WARN Local mode is on: /u);
     });
   });
+});
 
-  describe('a server started again on the ledger of its workflows', () => {
-    it('goes on with a run that waits for an event, and with ones whose timers went off while it was stopped, the fire of each caused by the record that armed it', async () => {
-      const first = workflowProcess(ledger.fileName);
-      const firstPort = await first.port;
-      await requestTo(firstPort, 'POST', '', { playbook: 'gamma', name: 'Gamma', goals: givenGoals });
-      await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', {
-        name: 'approval',
-        source: contributing(approval),
-      });
-      await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', {
-        name: 'pausing',
-        source: contributing(pausing),
-      });
-      await requestTo(firstPort, 'POST', '/gamma/definitions/workflow', {
-        name: 'timing',
-        source: contributing(timing),
-      });
-      const waiting = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/approval/run', { input: {} });
-      const paused = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/pausing/run', { input: {} });
-      const timed = await requestTo(firstPort, 'POST', '/gamma/definitions/workflow/timing/run', { input: {} });
-      await Promise.all([paused, timed].map((run) => until(() => isWaiting(firstPort, run), Boolean)));
-      const timersDueBy = Date.now() + timersMs;
-      first.signal('SIGTERM');
-      await first.exited;
-      await setTimeout(Math.max(0, timersDueBy - Date.now()));
+/*
+ * Servers in the process over one ledger file of the test: what the first leaves on the file is what the second reads,
+ * as a server started again would. A stop is the server's own shutdown; a kill is the ledger the first leaves at that
+ * moment (`ledgerLeftByAKill`), with nothing of its shutdown.
+ */
+async function servedOver(
+  over: TemporaryLedger,
+  clock: SteppedServerClock,
+  replies: readonly ScriptedReplies[] = [],
+): Promise<ReasoningServer> {
+  const served = await servingReasoning(replies, {}, undefined, { ledger: over, clock });
+  onTestFinished(served.stop);
+  return served;
+}
 
-      const second = workflowProcess(ledger.fileName);
-      const port = await second.port;
-      const sent = await requestTo(port, 'POST', `/gamma/runs/${runIdIn(waiting.body)}/events`, {
-        event: { type: 'com.acme.approved', data: { by: 'Ada' } },
-      });
-      const approved = await settledOver(port, `/gamma/runs/${runIdIn(waiting.body)}`);
-      const pausedSettled = await settledOver(port, `/gamma/runs/${runIdIn(paused.body)}`);
-      await settledOver(port, `/gamma/runs/${runIdIn(timed.body)}`);
-      const timedHistory = await requestTo(port, 'GET', `/gamma/runs/${runIdIn(timed.body)}/history?limit=100`);
-      second.signal('SIGTERM');
-      const inputs = inputsOf(timedHistory.body).events.filter(({ type }) => type === 'workflow_input_applied');
+function ledgerOfTheTest(): TemporaryLedger {
+  const own = temporaryLedger();
+  onTestFinished(own.remove);
+  return own;
+}
 
-      expect(sent.status).toBe(200);
-      expect(approved).toMatchObject({ status: 'succeeded', output: { by: 'Ada' } });
-      expect(pausedSettled).toMatchObject({ status: 'succeeded', output: { paused: true } });
-      expect(inputs.map(({ metadata }) => metadata.causation_id).at(-1)).toBe(inputs[0]?.id);
-      expect(await second.exited).toBe(0);
+const gamma = '/v1/orgs/acme/playbooks/gamma';
+
+async function waitingIn(on: ReasoningServer, run: TestResponse): Promise<boolean> {
+  const { body } = await on.call('GET', `${gamma}/runs/${runIdIn(run.body)}/history`);
+  return historyOf(body).events.some(({ type }) => type === 'step_waiting');
+}
+
+describe('a server started again on the ledger of its workflows', () => {
+  it('goes on with a run that waits for an event, and with ones whose timers went off while it was stopped, the fire of each caused by the record that armed it', async () => {
+    const own = ledgerOfTheTest();
+    const firstClock = steppedServerClock();
+    const first = await servedOver(own, firstClock);
+    await first.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'gamma', name: 'Gamma' } });
+    await first.call('POST', `${gamma}/definitions/workflow`, { body: { name: 'approval', source: approval } });
+    await first.call('POST', `${gamma}/definitions/workflow`, { body: { name: 'pausing', source: pausing } });
+    await first.call('POST', `${gamma}/definitions/workflow`, { body: { name: 'timing', source: timing } });
+    const run = (name: string) =>
+      first.call('POST', `${gamma}/definitions/workflow/${name}/run`, { body: { input: {} } });
+    const waiting = await run('approval');
+    const paused = await run('pausing');
+    const timed = await run('timing');
+    await Promise.all([paused, timed].map((each) => whenHeld(() => waitingIn(first, each), Boolean)));
+    await first.stop();
+
+    const clock = steppedServerClock(firstClock.now() + timersMs);
+    const second = await servedOver(own, clock);
+    const sent = await second.call('POST', `${gamma}/runs/${runIdIn(waiting.body)}/events`, {
+      body: { event: { type: 'com.acme.approved', data: { by: 'Ada' } } },
     });
+    const approved = await settledAsSwept(second, clock, `${gamma}/runs/${runIdIn(waiting.body)}`);
+    const pausedSettled = await settledAsSwept(second, clock, `${gamma}/runs/${runIdIn(paused.body)}`);
+    await settledAsSwept(second, clock, `${gamma}/runs/${runIdIn(timed.body)}`);
+    const timedHistory = await second.call('GET', `${gamma}/runs/${runIdIn(timed.body)}/history?limit=100`);
+    const inputs = inputsOf(timedHistory.body).events.filter(({ type }) => type === 'workflow_input_applied');
+
+    expect(sent.status).toBe(200);
+    expect(approved.body).toMatchObject({ status: 'succeeded', output: { by: 'Ada' } });
+    expect(pausedSettled.body).toMatchObject({ status: 'succeeded', output: { paused: true } });
+    expect(inputs.map(({ metadata }) => metadata.causation_id).at(-1)).toBe(inputs[0]?.id);
+  });
+});
+
+const welcome = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Welcome {{ input.name }}.'].join('\n');
+
+const welcoming = workflowSource(
+  'welcoming',
+  "do:\n  - welcome: { call: run_definition, with: { type: reasoning, name: welcome, input: { name: '${ $data.name }' } } }\n",
+);
+
+async function welcomingStartedOn(on: ReasoningServer): Promise<string> {
+  await on.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  await on.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'welcome', source: welcome, diagram: 'none' },
+  });
+  await on.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'welcoming', source: welcoming } });
+  const started = await on.call('POST', `${alpha}/definitions/workflow/welcoming/run`, {
+    body: { input: { name: 'Ada' } },
+  });
+  return runIdIn(started.body);
+}
+
+describe('a server that ran workflows, stopped or killed while a function a workflow called still runs', () => {
+  it.each<readonly [string, (own: TemporaryLedger) => TemporaryLedger]>([
+    ['stopped', Function.identity],
+    ['killed', ledgerLeftByAKill],
+  ])('%s, has the function called again once started again, and the run goes on', async (_, leftBy) => {
+    const own = ledgerOfTheTest();
+    const firstClock = steppedServerClock();
+    const first = await servedOver(own, firstClock, [() => heldAnswerOn(firstClock)]);
+    const runId = await welcomingStartedOn(first);
+    await whenHeld(first.modelCalls, (calls) => calls === 1);
+    const left = leftBy(own);
+    await first.stop();
+
+    const clock = steppedServerClock(firstClock.now());
+    const second = await servedOver(left, clock, [answers(textResult('Welcome, Ada.'))]);
+    const settled = await settledAsSwept(second, clock, `${alpha}/runs/${runId}`);
+
+    expect(settled.body).toMatchObject({ status: 'succeeded', output: 'Welcome, Ada.' });
+    expect([first.modelCalls(), second.modelCalls()]).toEqual([1, 1]);
   });
 });
 
@@ -338,31 +391,6 @@ describe('workflow shutdown', () => {
       expect(exitCode).toBe(0);
       expect(child.output().stderr).not.toContain('was still running');
     });
-
-    it.each([
-      ['SIGTERM', 0, 'beta'],
-      ['SIGKILL', null, 'gamma'],
-    ] as const)(
-      'stopped with %s while a function a workflow called still runs, exits with %s, and calls it again once started again',
-      async (signal, exitedWith, playbook) => {
-        const gateway = await gatewayThatHangsFirst();
-        const first = workflowProcess(ledger.fileName, { MODEL_GATEWAYS: gateway.gateways });
-        const runId = await welcomingStarted(await first.port, playbook);
-        await gateway.firstHeard;
-
-        first.signal(signal);
-        const exitCode = await first.exited;
-        const second = workflowProcess(ledger.fileName, { MODEL_GATEWAYS: gateway.gateways });
-        const settled = await settledOver(await second.port, `/${playbook}/runs/${runId}`);
-        second.signal('SIGTERM');
-
-        expect(exitCode).toBe(exitedWith);
-        expect(first.output().stderr).not.toContain('was still running');
-        expect(settled).toMatchObject({ status: 'succeeded', output: 'Welcome, Ada.' });
-        expect(gateway.requests()).toBe(2);
-        expect(await second.exited).toBe(0);
-      },
-    );
   });
 });
 
@@ -389,7 +417,7 @@ describe('a consumer the composition gives the workflow host', () => {
     });
     const runId = runIdIn(started.body);
     await settledRun(serverFollowerConsumers, `${alpha}/runs/${runId}`);
-    const records = await until(
+    const records = await whenHeld(
       () => wanting.records,
       (found) => found.length > 0,
     );

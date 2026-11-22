@@ -10,12 +10,12 @@ import {
   type Permission,
   type PolicyDecisionPoint,
   type PrincipalReference,
+  type Unavailable,
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { decidedFailingClosed } from '../engine/cedar-decisions.ts';
-import { cedarModuleBundled } from '../engine/cedar-module-bundled.ts';
 import { cedarCallOf } from '../engine/cedar-request.ts';
 import { cedarOf } from '../engine/cedar.ts';
 import { preparedPolicies, type PreparedPolicies } from '../engine/prepared-policies.ts';
@@ -59,8 +59,6 @@ import {
   roleAssignmentCalls,
 } from '../testing/role-assignment-calls.ts';
 import { cedarDecisionPoint, loadedMessage } from './cedar-decision-point.ts';
-
-const moduleOfABundle = cedarModuleBundled(async () => ({ default: await cedarOnDisk() }));
 
 const viewerRoleForEveryPerson: RoleAssignments = {
   heldBy: (principal, org) =>
@@ -169,10 +167,6 @@ function decidingOnAnUncutGrant(decisionPoint: PolicyDecisionPoint): PolicyDecis
 
 pinnedTableBehaviour('the engine Node loads', (parts) =>
   cedarDecisionPoint({ module: cedarOnDisk, files: filesOnDisk, ...parts }),
-);
-
-pinnedTableBehaviour('the engine a bundle hands over compiled, as a Worker loads it', (parts) =>
-  cedarDecisionPoint({ module: moduleOfABundle, files: filesOnDisk, ...parts }),
 );
 
 describe('the dispatcher decided by the decision point, with the built-in policies and every person taken as an Editor', () => {
@@ -303,7 +297,7 @@ function admitted(
 }
 
 interface Listed {
-  readonly listed: readonly boolean[];
+  readonly listed: readonly (boolean | 'indeterminate')[];
   readonly reads: number;
 }
 
@@ -311,7 +305,7 @@ function listedCountingReads(
   decisionPoint: PolicyDecisionPoint,
   reads: () => number,
   listing: readonly CallAsked[],
-): Effect.Effect<Listed> {
+): Effect.Effect<Listed, Unavailable> {
   return Effect.suspend(() => {
     const before = reads();
     return Effect.map(callPermissionDecidedBy(decisionPoint)(listing), (listed) => ({

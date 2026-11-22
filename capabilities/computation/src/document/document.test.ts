@@ -1,6 +1,6 @@
 import { issueText } from '@on.auto/definitions/document';
 import { savedIn, shapeNamed } from '@on.auto/definitions/testing';
-import { InvalidInput, Unavailable } from '@on.auto/operations';
+import { InvalidInput } from '@on.auto/operations';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -96,7 +96,7 @@ describe('the check of a computation function that has problems', () => {
 });
 
 describe('a check of a computation function that does not answer', () => {
-  it('refuses the document when a ready checker runs past its deadline, and is unavailable when no checker was ready', async () => {
+  it('refuses the document when a ready checker runs past its deadline, and is busy, with the wait, when no checker was ready', async () => {
     const pool = poolOf();
     const tooLong = {
       ...pool,
@@ -112,14 +112,9 @@ describe('a check of a computation function that does not answer', () => {
     expect(await Effect.runPromiseExit(computationWith(tooLong).prepared(campaignPace).check(savedIn))).toEqual(
       Exit.fail(new InvalidInput({ detail: tooLongToCheck, issues: [{ pointer: '', detail: tooLongToCheck }] })),
     );
-    expect(await Effect.runPromiseExit(computationWith(busy).prepared(campaignPace).check(savedIn))).toEqual(
-      Exit.fail(
-        new Unavailable({
-          detail:
-            'No checker was ready in time for this save, since this server checks one document at a time with one checker; try again',
-        }),
-      ),
-    );
+    expect(
+      await Effect.runPromise(Effect.flip(computationWith(busy).prepared(campaignPace).check(savedIn))),
+    ).toMatchObject({ _tag: 'unavailable', kind: 'busy', retry_after: 1 });
   });
 });
 

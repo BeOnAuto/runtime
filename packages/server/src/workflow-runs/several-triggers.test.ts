@@ -1,12 +1,11 @@
 import { withMcpSession } from '@on.auto/api/testing';
 import { internalTermsIn } from '@on.auto/operations/testing';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { fewSweeps, steppedServerClock, type SteppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
 
 const aMinuteAndASecond = 61_000;
 
@@ -86,10 +85,11 @@ let server: ReasoningServer;
 
 let seen: Seen;
 
-function endedRuns(count: number): Promise<typeof ListedRuns.Type> {
-  return until(
+function endedRuns(clock: SteppedServerClock, count: number): Promise<typeof ListedRuns.Type> {
+  return clock.swept.until(
     async () => runsIn((await server.call('GET', `${alpha}/runs?type=workflow&name=close-the-month`)).body),
     (listed) => listed.runs.filter(({ status }) => status !== 'started').length >= count,
+    fewSweeps,
   );
 }
 
@@ -102,20 +102,20 @@ function startByKind(kind: string): Start | undefined {
 }
 
 async function triggeredThreeTimes(): Promise<Seen> {
-  const clock = movedClock(Date.now());
+  const clock = steppedServerClock();
   server = await servingWorkflows([], {}, undefined, clock);
   const mcp = { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} };
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await withMcpSession('current revision', mcp, (session) =>
     session.callTool('create_definition', { type: 'workflow', name: 'close-the-month', source: closing }),
   );
-  const savedBy = Date.now();
+  const savedBy = clock.now();
   await server.call('POST', `${alpha}/events`, {
     body: { event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'september' } } },
   });
-  await endedRuns(1);
+  await endedRuns(clock, 1);
   clock.moveTo(savedBy + aMinuteAndASecond);
-  const runs = await endedRuns(3);
+  const runs = await endedRuns(clock, 3);
   const starts = await Promise.all(runs.runs.map(({ run_id: runId }) => startOf(runId)));
   const newest = runs.runs[0]?.run_id ?? '';
   const overMcp = await withMcpSession('current revision', mcp, async (session) => ({

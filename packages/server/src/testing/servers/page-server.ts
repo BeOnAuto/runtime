@@ -4,9 +4,9 @@ import { Option, Schema } from 'effect';
 import { expect } from 'vitest';
 
 import type { ProgramPoolOf } from '../../composition/served-computation.ts';
-import { until } from '../waiting/until.ts';
+import { somethingHappened, whenHeld } from '../waiting/until.ts';
 import { alpha, servingReasoning, type ReasoningServer } from './reasoning-server.ts';
-import { patientWorkerPool } from './worker-pools.ts';
+import { patientThreadPool } from './worker-pools.ts';
 
 export function answering(...outputs: readonly Schema.Json[]): readonly ScriptedReplies[] {
   return outputs.map((output) => answers(jsonResult(output)));
@@ -15,7 +15,7 @@ export function answering(...outputs: readonly Schema.Json[]): readonly Scripted
 export function servingPages(
   replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
-  programPoolOf: ProgramPoolOf = patientWorkerPool,
+  programPoolOf: ProgramPoolOf = patientThreadPool,
 ): Promise<ReasoningServer> {
   return servingReasoning(replies, environment, undefined, { programPoolOf });
 }
@@ -42,13 +42,18 @@ export function foldsHeldUntilOpened(): Gate {
     fold: async (request, signal) => {
       const turn = Promise.withResolvers<void>();
       waiting.push(turn.resolve);
+      somethingHappened();
       released();
       await turn.promise;
-      return pool.fold(request, signal);
+      try {
+        return await pool.fold(request, signal);
+      } finally {
+        somethingHappened();
+      }
     },
   });
   return {
-    poolOf: (settings, handed) => held(patientWorkerPool(settings, handed)),
+    poolOf: (settings, handed) => held(patientThreadPool(settings, handed)),
     letThrough: (folds) => {
       allowed.folds += folds;
       released();
@@ -62,7 +67,7 @@ export function foldsHeldUntilOpened(): Gate {
 }
 
 export function foldsHeld(gate: Gate, folds: number): Promise<void> {
-  return until(() => {
+  return whenHeld(() => {
     expect(gate.held()).toBe(folds);
   });
 }
@@ -72,7 +77,7 @@ const StandingSchema = Schema.Struct({ page: Schema.Struct({ standing: Schema.St
 const decodeStanding = Schema.decodeUnknownOption(StandingSchema);
 
 export function pageInState(server: ReasoningServer, definition: string, state: string): Promise<unknown> {
-  return until(async () => {
+  return whenHeld(async () => {
     const { body } = await server.call('GET', `${alpha}/definitions/${definition}`);
     expect(Option.getOrUndefined(decodeStanding(body))?.page.standing.state).toBe(state);
     return body;

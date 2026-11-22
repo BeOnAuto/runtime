@@ -27,7 +27,7 @@ import {
   streamedIn,
 } from '../payload-testing/kept-payloads.ts';
 import { definitionOfTheTests, runAt, startOf, workflow } from '../testing/host-documents.ts';
-import { aSQLiteFile, onPostgreSQLAt, openedOn } from '../testing/host-files.ts';
+import { aLedgerInMemory, onPostgreSQLAt, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
 import { readingMeasured } from '../waiting-testing/measured-reads.ts';
@@ -282,13 +282,11 @@ describe('the payloads the host composes from the context of its runtime', () =>
 
 describe('the engine the host composes', () => {
   it('keeps every value a run holds inline in its log, past the size a store of payloads would keep outside, writing format 11, while payloads are not kept outside', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(run, startOf(holding)));
 
-    const stored = await Effect.runPromise(
-      ledgerRunLogStore(await openedOn({ store: 'sqlite', file })).load(runKeyOf(run)),
-    );
+    const stored = await Effect.runPromise(ledgerRunLogStore(await openedOn(ledger)).load(runKeyOf(run)));
 
     expect(stored.tail.map(({ event }) => [event.format, 'kept' in event])).toEqual([[stateFormat, false]]);
     expect(JSON.stringify(stored.tail)).toContain(large);
@@ -297,7 +295,7 @@ describe('the engine the host composes', () => {
 
 describe('the engine the host composes where payloads are kept outside', () => {
   it('keeps a value past the threshold outside its log, writing format 12, and the ledger holds it for the log in the append', async () => {
-    const settings = { store: 'sqlite', file: aSQLiteFile(), holders } as const;
+    const settings = await aLedgerInMemory({ holders });
     await startedKeeping(settings);
 
     const log = await runLogOn(settings);
@@ -322,10 +320,10 @@ describeOnPostgreSQL('the engine the host composes where payloads are kept outsi
 
 describe('the run store of the host, refusing', () => {
   it('refuses to load a run whose snapshot does not decode', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(runSnapshotChunks, startOf(waiting)));
-    const database = await openedOn({ store: 'sqlite', file });
+    const database = await openedOn(ledger);
     await Effect.runPromise(
       database.write(
         statement`INSERT INTO workflow_snapshot_chunks (run_key, version, chunk, chunks, bytes, text)
@@ -339,11 +337,11 @@ describe('the run store of the host, refusing', () => {
   });
 
   it('refuses a snapshot of an event its log does not hold yet', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(runSnapshotChunks, startOf(waiting)));
     const state = await Effect.runPromise(hosted.host.stateOf(runSnapshotChunks));
-    const runStore = ledgerRunLogStore(await openedOn({ store: 'sqlite', file }));
+    const runStore = ledgerRunLogStore(await openedOn(ledger));
 
     const defect = await defectOf(runStore.saveSnapshot(snapshotOf(state, 2, stateFormat)));
 
@@ -353,11 +351,11 @@ describe('the run store of the host, refusing', () => {
 
 describe('the run store of the host, saving a snapshot', () => {
   it('learns that its log holds the event from the version of the log, reading nothing of the event', async () => {
-    const file = aSQLiteFile();
-    const hosted = await hostedOn({ store: 'sqlite', file });
+    const ledger = await aLedgerInMemory();
+    const hosted = await hostedOn(ledger);
     await Effect.runPromise(hosted.host.start(runSnapshotChunks, startOf(waiting, { text: 'x'.repeat(100 * 1024) })));
     const state = await Effect.runPromise(hosted.host.stateOf(runSnapshotChunks));
-    const measured = readingMeasured(await openedOn({ store: 'sqlite', file }));
+    const measured = readingMeasured(await openedOn(ledger));
 
     await Effect.runPromise(ledgerRunLogStore(measured.database).saveSnapshot(snapshotOf(state, 1, stateFormat)));
     const read = measured.bytesRead();

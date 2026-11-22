@@ -14,10 +14,26 @@ export interface RunWatch {
 
 const mostClockSteps = 10_000;
 
+/**
+ * A turn of the event loop between the steps of the clock, on no clock: an answer given `later` is a promise that work
+ * outside the virtual clock settles, so it lands before the next step rather than after time it was never given. A
+ * message to itself on a `MessageChannel` is a task of the event loop on every host the testing entry runs on, with no
+ * timer, so the fake timers of a test do not hold it.
+ */
 function nextTurn(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
+  const { promise, resolve } = Promise.withResolvers<void>();
+  const { port1, port2 } = new MessageChannel();
+  port1.addEventListener(
+    'message',
+    () => {
+      port1.close();
+      resolve();
+    },
+    { once: true },
+  );
+  port1.start();
+  port2.postMessage(null);
+  return promise;
 }
 
 function endless(runId: string, steps: number): Error {

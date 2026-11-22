@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-
 import { assessmentIdOf, GoalsReadSchema } from '@on.auto/goals';
 import { ContextSchema, streamPrefixOfDefinition, type Decider } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
@@ -30,23 +28,41 @@ const checksText = [
   '',
 ].join('\n');
 
-const JudgedRun = Schema.Tuple([
-  Schema.String,
-  Schema.Literals(['passed', 'failed']),
-  Schema.Number,
-  Schema.Literals(['crossing', 'final', 'deadline']),
-  Schema.Number,
-]);
+const reportedAndPassed = 'All 14 checks reported and passed.';
+const oneFailed = '1 of 14 checks failed (backup-restore-test).';
+const sixReported = '6 of 14 checks reported, 0 failed.';
+const quiet = 'Went quiet: only 9 of 14 checks reported within 3 minutes.';
 
-const Recorded = Schema.Struct({
-  recorded: Schema.String,
-  says: Schema.Array(Schema.String),
-  judged: Schema.Array(JudgedRun),
-});
+interface Judged {
+  readonly key: string;
+  readonly verdict: 'passed' | 'failed';
+  readonly at: string;
+  readonly by: 'crossing' | 'final' | 'deadline';
+  readonly says: string;
+}
 
-const recorded = Schema.decodeUnknownSync(Recorded)(
-  JSON.parse(readFileSync(new URL('compliance-judged.json', import.meta.url), 'utf8')),
-);
+/** `count` check runs judged a minute apart from `from`, as the goal judged them. */
+function judgedFrom(from: string, count: number, judged: Omit<Judged, 'key' | 'at'>): readonly Judged[] {
+  return Array.from({ length: count }, (_, minute) => {
+    const at = new Date(Date.parse(from) + minute * 60_000).toISOString();
+    return { ...judged, key: at, at };
+  });
+}
+
+/*
+ * A few check runs a day, in Pacific time: on Nov 13, 11 passed and then 11 failed, the failures past midnight UTC;
+ * on Nov 14 the last pass at 01:00 and 3 misses, the latest two judged at their deadline, whose sentence the day does
+ * not take since their measurement is not final; none on Nov 15; 2 misses on Nov 16. A day of 22 and the 12 passes
+ * are read in pages of ten.
+ */
+const judgedRuns: readonly Judged[] = [
+  ...judgedFrom('2026-11-13T18:00:00.000Z', 11, { verdict: 'passed', by: 'final', says: reportedAndPassed }),
+  ...judgedFrom('2026-11-14T04:00:00.000Z', 11, { verdict: 'failed', by: 'crossing', says: oneFailed }),
+  ...judgedFrom('2026-11-14T09:00:00.000Z', 1, { verdict: 'passed', by: 'final', says: reportedAndPassed }),
+  ...judgedFrom('2026-11-14T10:00:00.000Z', 1, { verdict: 'failed', by: 'final', says: quiet }),
+  ...judgedFrom('2026-11-14T10:30:00.000Z', 2, { verdict: 'failed', by: 'deadline', says: sixReported }),
+  ...judgedFrom('2026-11-16T20:00:00.000Z', 2, { verdict: 'failed', by: 'final', says: quiet }),
+];
 
 const FactSchema = Schema.Struct({ type: Schema.String, data: Schema.Json, context: ContextSchema });
 
@@ -73,13 +89,9 @@ const rule = {
   window: { after: 'started', for: 'PT3M', grace: 'PT1M' },
 };
 
-type Judged = typeof JudgedRun.Type;
-
-function factsOf([key, verdict, at, by, said]: Judged): readonly Fact[] {
+function factsOf({ key, verdict, at: judgedAt, by, says }: Judged): readonly Fact[] {
   const per = `run-${key}`;
-  const judgedAt = new Date(at).toISOString();
   const context = { at: judgedAt, by: 'playbook:alpha' };
-  const says = recorded.says[said];
   const source = { record: `record-${key}`, run: `run-of-${key}`, workflow: 'watch-compliance-checks', version: 1 };
   return [
     {
@@ -97,7 +109,7 @@ function factsOf([key, verdict, at, by, said]: Judged): readonly Fact[] {
             ? { value: 0, final: false, as_of: judgedAt }
             : { value: verdict === 'passed' ? 0 : 5, final: true, as_of: judgedAt },
         title: `Check run ${per}`,
-        ...(says === undefined ? {} : { says }),
+        says,
       },
       context,
     },
@@ -111,9 +123,9 @@ async function judgedUnderTheGoal(served: Assessing): Promise<void> {
   const prefix = streamPrefixOfDefinition({ org: 'acme', definition });
   await Effect.runPromise(
     Effect.forEach(
-      recorded.judged,
+      judgedRuns,
       (judged) => {
-        const stream = `${prefix}assessments/${assessmentIdOf({ definition, per: `run-${judged[0]}` })}`;
+        const stream = `${prefix}assessments/${assessmentIdOf({ definition, per: `run-${judged.key}` })}`;
         return Effect.forEach(
           factsOf(judged),
           ({ type, data, context }) =>
@@ -158,7 +170,7 @@ beforeAll(async () => {
     await assessed.server.stop();
     ledger.remove();
   };
-}, 300_000);
+});
 
 describe('the days of a goal whose check runs a preview runtime judged', () => {
   it('counts what each day in Pacific time judged and passed, with the sentence of the latest judged on its measurement, the last pass and the misses since, as its ledger holds them', async () => {
@@ -167,34 +179,33 @@ describe('the days of a goal whose check runs a preview runtime judged', () => {
       `${alpha}/goals?time_zone=${pacific}&days=7&until=2026-11-16`,
     );
     const [read] = exactly(body).goals;
-    const quiet = 'Went quiet: only 9 of 14 checks reported within 3 minutes.';
 
     expect(status).toBe(200);
     expect(read?.assessments.closed).toMatchObject({
       days: {
         counts: [
-          { day: '2026-11-16', judged: 111, passed: 0, says: quiet },
+          { day: '2026-11-16', judged: 2, passed: 0, says: quiet },
           { day: '2026-11-15', judged: 0, passed: 0 },
-          { day: '2026-11-14', judged: 795, passed: 0, says: quiet },
-          { day: '2026-11-13', judged: 168, passed: 16 },
+          { day: '2026-11-14', judged: 4, passed: 1, says: quiet },
+          { day: '2026-11-13', judged: 22, passed: 11, says: oneFailed },
         ],
       },
-      last_passed: { at: '2026-11-14T05:49:04.681Z' },
-      misses_since: { at: '2026-11-14T05:51:04.698Z', count: 1035 },
+      last_passed: { at: '2026-11-14T09:00:00.000Z' },
+      misses_since: { at: '2026-11-14T10:00:00.000Z', count: 5 },
     });
   });
 
   it('reads one day of them ten at a time, newest first, to the last', async () => {
-    expect(await itemsOfTheDay('2026-11-13')).toHaveLength(168);
+    expect(await itemsOfTheDay('2026-11-13')).toHaveLength(22);
   });
 
   it('reads the misses of a day alone, and the passes of the whole goal alone, ten at a time', async () => {
     const missed = await itemsOfTheDay('2026-11-13', '&outcome=failed');
     const passed = await itemsOf('results?outcome=passed');
 
-    expect(missed).toHaveLength(152);
+    expect(missed).toHaveLength(11);
     expect(new Set(missed)).toEqual(new Set(['failed']));
-    expect(passed).toHaveLength(16);
+    expect(passed).toHaveLength(12);
     expect(new Set(passed)).toEqual(new Set(['passed']));
   });
 

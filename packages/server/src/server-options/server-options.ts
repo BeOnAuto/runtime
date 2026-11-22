@@ -1,7 +1,8 @@
-import type { AppRuntime, CallContext, RegisterRoutes, RuntimeControl } from '@on.auto/api';
+import type { ApiEnv, AppRuntime, CallContext, RegisterRoutes, RuntimeControl } from '@on.auto/api';
 import type { AccessMode, DefaultIdentityProvider, SignInSettings, StudioSettings } from '@on.auto/identity';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
+import type { MiddlewareHandler } from 'hono';
 
 import type { Settings } from '../settings/settings.ts';
 import type { SignInServed } from '../sign-in/company-sign-in.ts';
@@ -38,6 +39,8 @@ export interface Served extends SignInServed {
   readonly stopWork: () => Promise<void>;
   readonly licenseNotice?: LicenseNotice;
   readonly callContext?: CallContext;
+  /** Middleware that sees each request after the telemetry's own: what a test watches to know a request ended. */
+  readonly observedRequests?: MiddlewareHandler<ApiEnv>;
 }
 
 export type ServedClosing = (served: Served) => Served;

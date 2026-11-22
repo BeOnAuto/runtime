@@ -1,5 +1,4 @@
-import { appendFileSync, existsSync, readFileSync } from 'node:fs';
-import { setTimeout } from 'node:timers/promises';
+import { appendFileSync } from 'node:fs';
 
 import type { SettleRun } from '@on.auto/definitions';
 import type { CallResult } from '@on.auto/operations';
@@ -9,9 +8,10 @@ import { workflowHostOnALedger } from './src/ledger-testing/ledger-connections.t
 import { recordedReactions } from './src/reaction-testing/recorded-reactions.ts';
 import { definitionOfTheTests, startOf, testMachine } from './src/testing/host-documents.ts';
 import { databaseSettingsOf, type ProcessDatabase } from './src/testing/host-processes.ts';
+import { steppedClock } from './src/testing/stepped-clock.ts';
 import { recordedWaiting } from './src/waiting-testing/recorded-waiting.ts';
 
-const [settingsText = '', mode = '', settlementsFile = '', sweepEveryMs = '20'] = process.argv.slice(2);
+const [settingsText = '', mode = '', settlementsFile = '', sweepEveryMs = '20', startsAt = '0'] = process.argv.slice(2);
 
 const database: ProcessDatabase = Schema.decodeUnknownSync(
   Schema.fromJsonString(
@@ -34,21 +34,29 @@ const notifying = {
   do: [{ notify: { call: 'notify', with: { to: 'ada' } } }],
 };
 
+/** The host's clock, which moves only when the test says "step <ms>" on standard input. */
+const clock = steppedClock(Number(startsAt));
+
 function said(line: string): Effect.Effect<void> {
   return Effect.sync(() => {
     process.stdout.write(`${line}\n`);
   });
 }
 
-const hangs = Effect.never;
+/** A call or a settlement that never answers waits on the host's clock, so the host still comes to rest. */
+const hangs: Effect.Effect<never> = Effect.andThen(clock.sleep(Number.POSITIVE_INFINITY), Effect.never);
 
 const answered: Effect.Effect<CallResult> = Effect.succeed({ status: 'succeeded', output: 'sent' });
+
+const settled = Promise.withResolvers<void>();
 
 const settle: SettleRun = ({ id }, settlement) =>
   mode === 'hang-on-settle'
     ? Effect.andThen(said('settling'), hangs)
     : Effect.sync(() => {
         appendFileSync(settlementsFile, `${JSON.stringify({ id, settlement })}\n`);
+        process.stdout.write('settled\n');
+        settled.resolve();
         return {
           run_id: id,
           type: 'workflow',
@@ -59,15 +67,6 @@ const settle: SettleRun = ({ id }, settlement) =>
           started_by: { id: 'acme-admin', name: 'acme-admin' },
         } as const;
       });
-
-async function stoppedOnceSettled(stop: () => Promise<void>): Promise<void> {
-  if (existsSync(settlementsFile) && readFileSync(settlementsFile, 'utf8') !== '') {
-    await stop();
-    return;
-  }
-  await setTimeout(20);
-  await stoppedOnceSettled(stop);
-}
 
 const host = await workflowHostOnALedger(databaseSettingsOf(database), {
   machine: testMachine,
@@ -82,10 +81,35 @@ const host = await workflowHostOnALedger(databaseSettingsOf(database), {
   mostCallsAtOnce: 1,
   reactions: recordedReactions().options,
   waiting: recordedWaiting().options,
+  clock,
+  context: clock.watching(),
+});
+
+async function steppedBy(line: string): Promise<void> {
+  const [, milliseconds = '0'] = line.split(' ');
+  await clock.atRest();
+  clock.step(Number(milliseconds));
+  await clock.atRest();
+  process.stdout.write(`stepped ${String(clock.now())}\n`);
+}
+
+/** Each line "step <ms>" on standard input steps the host's clock from its rest, said once the host rests again. */
+const unread = { text: '' };
+
+process.stdin.setEncoding('utf8').on('data', (chunk: string) => {
+  const lines = `${unread.text}${chunk}`.split('\n');
+  unread.text = lines.pop() ?? '';
+  for (const line of lines.filter((each) => each.startsWith('step '))) {
+    void steppedBy(line);
+  }
 });
 
 if (mode === 'finish') {
-  await stoppedOnceSettled(host.stop);
+  await new Promise<void>((closed) => {
+    process.stdin.on('end', closed);
+  });
+  await settled.promise;
+  await host.stop();
 } else {
   await Effect.runPromise(host.start(run, { ...startOf(notifying), attributes: {} }));
 }

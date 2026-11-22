@@ -22,10 +22,10 @@ function startedOf(capabilities: readonly Capability[], { facts = composedFactsO
   return storedTypesByStatus(facts.onRuns).started;
 }
 
-function movesServed(capabilities: readonly Capability[], reading: RunReading, goals: boolean) {
+function movesServed(capabilities: readonly Capability[], reading: RunReading, kept: GoalsKeeping) {
   const { connections } = reading;
   const started = startedOf(capabilities, reading);
-  return connections === undefined ? [] : [defineMoveDefinitions(capabilities, { goals, started, connections })];
+  return connections === undefined ? [] : [defineMoveDefinitions(capabilities, { kept, started, connections })];
 }
 
 export function makeDefinitionOperations(
@@ -37,7 +37,7 @@ export function makeDefinitionOperations(
   return [
     ...operationsOnDefinitions(capabilities, pages, kept, startedOf(capabilities, reading)),
     ...runOperations(capabilities, reading),
-    ...movesServed(capabilities, reading, kept.goals),
+    ...movesServed(capabilities, reading, kept),
     ...(kept.goals ? [defineExportPlaybook(capabilities, pages)] : []),
   ];
 }

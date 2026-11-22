@@ -85,7 +85,7 @@ async function retiredFor(order: Order, until: string): Promise<Together> {
   await harness.goalsSaved([summarised], '2026-11-08T12:00:00.000Z');
   await harness.observed('mon', { failed: 1 }, '2026-11-09T09:00:00.000Z');
   harness.statusIs('retired');
-  await harness.until(until);
+  await harness.steppedTo(until);
   return { harness, seen };
 }
 
@@ -112,7 +112,7 @@ async function factsOf({ harness }: Together): Promise<readonly string[]> {
 async function restored({ harness, seen }: Together): Promise<readonly boolean[]> {
   const from = seen.starts.length;
   harness.statusIs('active');
-  await harness.until('2026-11-13T00:00:00.000Z');
+  await harness.steppedTo('2026-11-13T00:00:00.000Z');
   const references = seen.starts.slice(from).map(({ trigger }) => trigger.reference);
   return [
     references.some((reference) => reference.startsWith('goals/goal-of-controls-hold/assessments/')),
@@ -197,7 +197,7 @@ async function retiredWith(window: keyof typeof windowsOf): Promise<Together> {
   await harness.observed('first', failing('door'), '2026-11-09T11:20:00.000Z');
   await harness.observed('second', failing('vault'), '2026-11-09T14:37:00.000Z');
   harness.statusIs('retired');
-  await harness.until('2026-11-16T12:00:00.000Z');
+  await harness.steppedTo('2026-11-16T12:00:00.000Z');
   return { harness, seen };
 }
 
@@ -206,7 +206,7 @@ const retiredMidnights = [10, 11, 12, 13, 14, 15, 16].map((date) => `2026-11-${S
 async function summarisedAfterRestore({ harness, seen }: Together): Promise<readonly string[]> {
   const from = seen.starts.length;
   harness.statusIs('active');
-  await harness.until('2026-11-17T00:00:00.000Z');
+  await harness.steppedTo('2026-11-17T00:00:00.000Z');
   return seen.starts
     .slice(from)
     .map(({ trigger }) => trigger.reference)
@@ -221,7 +221,7 @@ async function retiredAt(at: string, goals: Parameters<ClockHarness['goalsSaved'
   await harness.goalsSaved(goals, at);
   harness.statusIs('retired');
   const saved = harness.wakes.length;
-  await harness.until('2026-11-12T00:00:00.000Z');
+  await harness.steppedTo('2026-11-12T00:00:00.000Z');
   return { wakes: harness.wakes.slice(saved).map(({ at: woke }) => new Date(woke).toISOString()), starts: seen.starts };
 }
 

@@ -27,11 +27,36 @@ export function reportedOnStderr(line: string): void {
   process.stderr.write(`${line}\n`);
 }
 
-export function startingFor({ home, environment, fetch }: AgentRelaying): AgentStarting {
-  const started = new StartedRuntimes();
+/** What the starting of a relay reaches outside it: the port, the lock, the notices and the start of a process. */
+export type StartingReach = Omit<BackgroundStarting, 'saw' | 'remember' | 'pausing'>;
+
+/**
+ * The starting of a relay on what it reaches: it remembers what it sees on the port and the runtimes it starts, so
+ * its recovery can tell a runtime it started from one it did not.
+ */
+export function agentStartingWith(
+  reach: StartingReach,
+  log: (line: string) => void,
+  now?: () => number,
+): AgentStarting {
+  const started = new StartedRuntimes(now);
   const sighting = new Sighting((instance) => started.ended(instance));
-  const log = loggedTo(home, reportedOnStderr);
   const starting: BackgroundStarting = {
+    ...reach,
+    saw: (probe) => {
+      sighting.saw(probe);
+    },
+    remember: (runtime) => {
+      started.remember(runtime);
+    },
+    pausing: () => started.pausing(),
+  };
+  return { starting, sighting, started, log };
+}
+
+export function startingFor({ home, environment, fetch }: AgentRelaying): AgentStarting {
+  const log = loggedTo(home, reportedOnStderr);
+  const reach: StartingReach = {
     fetch,
     version: release.version,
     logFile: logFileIn(home),
@@ -47,13 +72,6 @@ export function startingFor({ home, environment, fetch }: AgentRelaying): AgentS
       report: reportedOnStderr,
       log,
     }),
-    saw: (probe) => {
-      sighting.saw(probe);
-    },
-    remember: (runtime) => {
-      started.remember(runtime);
-    },
-    pausing: () => started.pausing(),
   };
-  return { starting, sighting, started, log };
+  return agentStartingWith(reach, log);
 }

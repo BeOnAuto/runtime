@@ -85,7 +85,9 @@ interface AtTheApp {
   readonly secret: string;
 }
 
-type Act = 'subscribe' | 'renew' | 'unsubscribe';
+type Act = 'subscribe' | 'renew' | 'unsubscribe' | 'identify';
+
+const itsAccount = { member: { key: 'member-7', handle: 'sam' }, self: { uid: 7 } };
 
 export interface AppAnswering {
   readonly reusesIds?: boolean;
@@ -111,7 +113,17 @@ function actOf(tool: string): Act {
   if (tool.startsWith('create_')) {
     return 'subscribe';
   }
-  return tool.startsWith('update_') ? 'renew' : 'unsubscribe';
+  if (tool.startsWith('update_')) {
+    return 'renew';
+  }
+  return tool.startsWith('delete_') ? 'unsubscribe' : 'identify';
+}
+
+function actRequested(method: string): Act {
+  if (method === 'DELETE') {
+    return 'unsubscribe';
+  }
+  return method === 'GET' ? 'identify' : 'subscribe';
 }
 
 function textIn(input: Readonly<Record<string, unknown>>, name: string): string | null {
@@ -127,7 +139,11 @@ function toolAsked({ reference, input }: OneCall): Asked {
 
 function requestAsked({ method, url }: ConnectionRequest): Asked {
   const id = url.slice(url.lastIndexOf('/') + 1);
-  return { act: method === 'DELETE' ? 'unsubscribe' : 'subscribe', target: url, id, lease: null };
+  return { act: actRequested(method), target: url, id, lease: null };
+}
+
+function answeredTo(asked: Asked, answered: (asked: Asked) => Schema.Json): Schema.Json {
+  return asked.act === 'identify' ? itsAccount : answered(asked);
 }
 
 export function anApp(answering: AppAnswering = {}): FakeApp {
@@ -163,13 +179,13 @@ export function anApp(answering: AppAnswering = {}): FakeApp {
         Effect.sync(() => {
           const asked = toolAsked(call);
           const failure = failed(asked);
-          return failure === undefined ? answeredWith(answered(asked)) : failedCalls[failure];
+          return failure === undefined ? answeredWith(answeredTo(asked, answered)) : failedCalls[failure];
         }),
       requestOnce: (request) =>
         Effect.sync(() => {
           const asked = requestAsked(request);
           const failure = failed(asked);
-          return failure === undefined ? requestedWith(answered(asked)) : failedRequests[failure];
+          return failure === undefined ? requestedWith(answeredTo(asked, answered)) : failedRequests[failure];
         }),
       mostRequestBytesTo: () => answering.mostRequestBytes ?? 1_048_576,
     },

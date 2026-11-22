@@ -64,7 +64,7 @@ describe('the instructions read from a server', () => {
   it('are as the page shows them, without the sentence that names the caller', () => {
     const [own] = surface.connections;
 
-    expect(own?.instructions).not.toContain('This connection acts as');
+    expect(own?.instructions).not.toContain(acmeAdminActing.caller.id);
     expect(page.page.text).toContain(`<pre class="verbatim">${escaped(String(own?.instructions))}</pre>`);
   });
 

@@ -4,12 +4,13 @@ import type { LedgerServices } from '@on.auto/ledger';
 import { AssetKeeper, IncidentReporter } from '@on.auto/operations';
 import {
   PayloadOffloading,
+  payloadGateOf,
   PayloadSizeThreshold,
   PayloadsShared,
   sharedPayloadsWithin,
 } from '@on.auto/operations/payloads';
 import { HeldValueSizeThreshold, hostPayloadCacheBytes } from '@on.auto/workflow-host';
-import { Context, Layer } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 
 import { leasedAttemptsLayer } from '../attempt-leases/leased-attempts.ts';
 import { logIncident } from '../logging/logging.ts';
@@ -17,8 +18,13 @@ import type { PayloadSettings } from '../settings/content-settings.ts';
 
 export const loggingIncidentReporter = Layer.succeed(IncidentReporter, IncidentReporter.of({ report: logIncident }));
 
-export function payloadsSharedInTheProcess() {
-  return Layer.succeed(PayloadsShared, sharedPayloadsWithin(hostPayloadCacheBytes));
+/** The payloads the process shares, its gate counting its wait on the clock the server is given, where it is given one. */
+export function payloadsSharedInTheProcess(now?: () => number) {
+  const shared = sharedPayloadsWithin(hostPayloadCacheBytes);
+  return Layer.succeed(
+    PayloadsShared,
+    now === undefined ? shared : { ...shared, gate: payloadGateOf(Effect.sync(now)) },
+  );
 }
 
 export function payloadOffloadingOf({ offloading, sizeThresholdBytes }: PayloadSettings): Layer.Layer<never> {

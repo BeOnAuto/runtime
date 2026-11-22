@@ -104,6 +104,12 @@ export const EventMappingSchema = Schema.Struct({
         'How to tell that a delivery reports no new item, such as an edit, a deletion or a notice: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is not an event.',
     }),
   ),
+  actor: Schema.optionalKey(
+    ExpressionSchema.annotate({
+      description:
+        'Where a delivery names the account that did what it reports, as a runtime expression. It must give the same value as the id that identity answers for that account, so that the two can be compared.',
+    }),
+  ),
   own: Schema.optionalKey(
     Schema.Tuple([ExpressionSchema, ExpressionSchema]).annotate({
       description:

@@ -34,6 +34,7 @@ export interface ConnectionArrival {
 
 export interface ServedConnection {
   readonly topicsOf: (event: Pick<ReportedEvent, 'type' | 'subject'>) => Effect.Effect<readonly string[]>;
+  readonly user?: string;
 }
 
 export interface IntakePorts {
@@ -108,6 +109,13 @@ function isOutOfItsTopic(served: ServedConnection, { event, topic }: ConnectionA
     : Effect.map(served.topicsOf(event), (topics) => !topics.includes(topic));
 }
 
+function isItsOwn({ actor }: ReportedEvent, { user }: ServedConnection): boolean | undefined {
+  if (actor === undefined) {
+    return false;
+  }
+  return user === undefined ? undefined : actor === user;
+}
+
 export function intakeMatching(parts: MatchingParts): TakeIn {
   const { database, servedConnection, registry, savedTriggers, record, match } = parts;
   return (arrival) =>
@@ -131,14 +139,16 @@ export function intakeMatching(parts: MatchingParts): TakeIn {
       if (yield* isOutOfItsTopic(served, arrival)) {
         return yield* notTaken([beforeAnyTrigger('topic_mismatch')]);
       }
-      const publication = connectionPublicationOf(connection, event, at);
+      const own = isItsOwn(event, served);
+      const publication = connectionPublicationOf(connection, event, at, own === true);
       if (publication === undefined) {
         return yield* notTaken([beforeAnyTrigger('invalid_event')]);
       }
       const { event: judged } = publication;
       const naming = namingTheConnection(judged.type, judged);
       const triggers = judgedIn(playbook, yield* savedTriggers(playbook, naming));
-      const outcomes = yield* outcomesOfTheTriggers({ match, naming, event: judged, now }, triggers);
+      const judging = { match, naming, event: judged, now, ownUntold: own === undefined };
+      const outcomes = yield* outcomesOfTheTriggers(judging, triggers);
       if (outcomes === 'taken') {
         yield* record(playbook, publication, at);
         return taken;

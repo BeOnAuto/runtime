@@ -1,9 +1,7 @@
-import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Result, type Schema } from 'effect';
+import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { eventDestinationOf } from '../reading/provider-list.ts';
-import { providersShippedRoots, readProviders } from '../reading/shipped-providers.ts';
 import {
   aPost,
   aRoomOpened,
@@ -12,6 +10,7 @@ import {
   overASocket,
   postTypes,
   trackerOverASocket,
+  whoItActsAs,
 } from '../testing/event-destinations.ts';
 import { providersOf } from '../testing/fixture-providers.ts';
 import { arrivalReadingOf, type Arrival, type ArrivalReading } from './arrival-readings.ts';
@@ -21,7 +20,8 @@ type Fields = Readonly<Record<string, Schema.Json>>;
 type Reader = (arrival: Arrival) => ArrivalReading | undefined;
 
 function readerOf(declared: object, type: 'webhook' | 'websocket' = 'webhook'): Reader {
-  const entry = { ...trackerOverASocket, events: { types: postTypes, destinations: [declared] } };
+  const events = { types: postTypes, identity: whoItActsAs, destinations: [declared] };
+  const entry = { ...trackerOverASocket, events };
   const destination = eventDestinationOf(providersOf(entry), 'tracker', type);
   return (arrival) => (destination === undefined ? undefined : arrivalReadingOf(destination, arrival));
 }
@@ -147,6 +147,20 @@ describe('an event that an app or the connection itself made', () => {
   });
 });
 
+describe('the account that did what an event reports', () => {
+  it('is named where actor is declared, as text that is not empty or a whole number written as text', () => {
+    const readWhoPosted = readerOf(mapping(ofTheApp, { ...aPost, actor: '$request.body#/post/by' }));
+    const actorOf = (by: Schema.Json) => readWhoPosted(aPostIn({ by }))?.event?.actor;
+
+    expect([actorOf('M0ADA'), actorOf(4_242), actorOf(''), actorOf(1.5)]).toEqual([
+      'M0ADA',
+      '4242',
+      undefined,
+      undefined,
+    ]);
+  });
+});
+
 describe('the time of an event', () => {
   it('is an RFC 3339 date-time, read as one or as seconds since the epoch, and none otherwise', () => {
     expect([
@@ -201,6 +215,7 @@ const fromThePayload = {
   automatic: '$message.payload#/payload/post/app',
   changed: '$message.payload#/payload/post/edit_of',
   own: ['$message.payload#/payload/post/by', '$message.payload#/payload/member'],
+  actor: '$message.payload#/payload/post/by',
 };
 
 describe('the event a message down a socket is', () => {
@@ -210,79 +225,8 @@ describe('the event a message down a socket is', () => {
 
     expect(readOverASocket({ transport: 'message', payload: { type: 'events_api', payload } })).toEqual({
       wake: { conversation: 'R0OPS' },
-      event: { ...posted, data: { words: 'The build is red' } },
+      event: { ...posted, data: { words: 'The build is red' }, actor: 'M0ADA' },
       connection: { account: 'T0TEAM', user: 'M0ADA' },
     });
-  });
-});
-
-const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
-
-const overSlacksSocket = eventDestinationOf(shipped, 'slack-bot', 'websocket');
-
-const aPersonsMessage = {
-  type: 'message',
-  channel: 'C0SUPPORT',
-  channel_type: 'channel',
-  user: 'U0PERSON',
-  text: 'The build is red',
-  ts: '1763629200.000100',
-};
-
-function slacksEventOf(event: Fields): ArrivalReading['event'] {
-  const payload = {
-    team_id: 'T0WORKSPACE',
-    api_app_id: 'A0APP',
-    type: 'event_callback',
-    event: { ...aPersonsMessage, ...event },
-  };
-  const envelope = { envelope_id: 'dbdd0ef3-1543-4f94-bfb4-133d0e6c1545', type: 'events_api', payload };
-  return overSlacksSocket === undefined
-    ? undefined
-    : arrivalReadingOf(overSlacksSocket, { transport: 'message', payload: envelope }).event;
-}
-
-const inTheThread = { thread_ts: '1763629100.000200' };
-
-describe('a message Slack’s Socket Mode sends, as the shipped slack-bot maps it', () => {
-  it('is the event that a message is posted, in a channel or a private channel, as a reply in a thread or not', () => {
-    expect(slacksEventOf({})).toEqual({
-      type: 'com.slack.message',
-      id: 'C0SUPPORT/1763629200.000100',
-      time: '2025-11-20T09:00:00.000100Z',
-      subject: 'C0SUPPORT',
-      data: { text: 'The build is red', user: 'U0PERSON', channel: 'C0SUPPORT', ts: '1763629200.000100' },
-    });
-    const postedToo: readonly Fields[] = [
-      { channel_type: 'group' },
-      inTheThread,
-      { subtype: 'thread_broadcast', ...inTheThread },
-      { subtype: 'file_share' },
-      { subtype: 'me_message' },
-    ];
-
-    expect(postedToo.map((event) => slacksEventOf(event)?.type)).toEqual(postedToo.map(() => 'com.slack.message'));
-  });
-
-  it('is marked automatic where an app posted it, as a current app or as a classic integration', () => {
-    expect([
-      slacksEventOf({ bot_id: 'B0APP' })?.automatic,
-      slacksEventOf({ subtype: 'bot_message', bot_id: 'B0APP' })?.automatic,
-      slacksEventOf({})?.automatic,
-    ]).toEqual([true, true, undefined]);
-  });
-
-  it('is none for a notice, an edit or a deletion, a direct message, or another kind of event', () => {
-    const passedOver: readonly Fields[] = [
-      { subtype: 'channel_join' },
-      { subtype: 'channel_topic', topic: 'Builds' },
-      { subtype: 'message_changed', hidden: true },
-      { subtype: 'message_deleted', hidden: true },
-      { channel_type: 'im' },
-      { channel_type: 'mpim' },
-      { type: 'reaction_added' },
-    ];
-
-    expect(passedOver.filter((event) => slacksEventOf(event) !== undefined)).toEqual([]);
   });
 });

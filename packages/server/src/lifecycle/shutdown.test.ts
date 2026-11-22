@@ -1,26 +1,23 @@
+import { createServer, type Server } from 'node:http';
+import { setImmediate } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 import { stoppedWithinMs } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import type { RunningServer } from '../server-options/server-options.ts';
 import { defaultServerOptions } from '../testing/entries/serving-options.ts';
-import { isAcceptingConnections, untilRefusingConnections } from '../testing/processes/accepting-connections.ts';
+import { isAcceptingConnections, untilItsListenerClosed } from '../testing/processes/accepting-connections.ts';
 import { shortShutdownTimeoutMs, shutdownTimeoutVariable } from '../testing/processes/shutdown-timeouts.ts';
 import { serverHoldingARequest, spawnServer } from '../testing/processes/spawned-server.ts';
-import {
-  gatewayThatHangsFirst,
-  requestTo,
-  settledOver,
-  welcomingStarted,
-} from '../testing/processes/workflow-process.ts';
+import { gatewayThatHangs, requestTo, settledOver, welcomingStarted } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { contributing, givenGoals, runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 import { longerThanTheTestMs } from '../testing/waiting/until.ts';
 import { startServer } from './lifecycle.ts';
-import { longestStopMs } from './shutdown.ts';
+import { longestStopMs, shutDown, type ShutdownHooks } from './shutdown.ts';
 
 const serveWithTestRoutes = fileURLToPath(new URL('../testing/entries/serve-with-test-routes.ts', import.meta.url));
 
@@ -39,47 +36,139 @@ function composedWithALongShutdown(environment: Readonly<Record<string, string>>
       ...noConsentThroughAuto,
       ...environment,
     },
-    { ...compositionRoot, shutdownTimeoutMs: longerThanTheTestMs },
+    { ...testComposition(), shutdownTimeoutMs: longerThanTheTestMs },
   );
 }
 
 describe('shutting down the server process', () => {
   it('lets a request in flight finish after SIGTERM and exits 0 once it has, without waiting for the shutdown timeout', async () => {
-    const { child, port, answer } = await serverHoldingARequest(serveWithTestRoutes, shuttingDownPatiently);
+    const held = await serverHoldingARequest(serveWithTestRoutes, shuttingDownPatiently);
+    const { child, port, answer } = held;
 
     child.signal('SIGTERM');
-    await untilRefusingConnections(port);
+    await untilItsListenerClosed(held);
+    const refusing = !(await isAcceptingConnections(port));
     child.signal('SIGUSR2');
 
-    expect({ answer: await answer, exitCode: await child.exited }).toEqual({
+    expect({ refusing, answer: await answer, exitCode: await child.exited }).toEqual({
+      refusing: true,
       answer: { status: 200, body: { held: true } },
       exitCode: 0,
     });
   });
 
-  it('cuts off a request still running at the shutdown timeout, no sooner, and exits 0', async () => {
+  /* That the cut waits for the shutdown timeout, and no less, is proven in process below, on a timer the test moves. */
+  it('cuts off a request still running at the shutdown timeout and exits 0', async () => {
     const { child, answer } = await serverHoldingARequest(serveWithTestRoutes, {});
 
-    const signalled = performance.now();
     child.signal('SIGTERM');
     const exitCode = await child.exited;
 
     expect({ exitCode, answer: await answer }).toEqual({ exitCode: 0, answer: 'unanswered' });
-    expect(performance.now() - signalled).toBeGreaterThanOrEqual(shortShutdownTimeoutMs - 50);
   });
+});
+
+/** A server that never listened, so nothing is opened: its close leaves a connection open until it is cut. */
+function serverHoldingAConnection(record: (event: string) => void): Server {
+  const server = createServer();
+  return Object.assign(server, {
+    close: () => {
+      record('listener closed');
+      return server;
+    },
+    closeAllConnections: () => {
+      record('connections cut');
+      server.emit('close');
+    },
+  });
+}
+
+function hooksRecordedIn(record: (event: string) => void): ShutdownHooks {
+  const step = (event: string) => () => {
+    record(event);
+    return Promise.resolve();
+  };
+  return {
+    stopWork: step('work stopped'),
+    closeApi: step('API closed'),
+    disposeRuntime: step('runtime disposed'),
+    stopTelemetry: step('telemetry stopped'),
+  };
+}
+
+interface MovedTimer {
+  readonly elapsed: (milliseconds: number) => Promise<void>;
+  readonly asked: () => readonly number[];
+  readonly pass: (milliseconds: number) => Promise<void>;
+}
+
+/** A timer whose waits end only when the test says that many milliseconds passed. */
+function movedTimer(): MovedTimer {
+  const waits = new Map<number, () => void>();
+  return {
+    elapsed: (milliseconds) => {
+      const wait = Promise.withResolvers<void>();
+      waits.set(milliseconds, wait.resolve);
+      return wait.promise;
+    },
+    asked: () => [...waits.keys()],
+    pass: async (milliseconds) => {
+      waits.get(milliseconds)?.();
+      await setImmediate();
+    },
+  };
+}
+
+describe('shutting down a server with a connection still open', () => {
+  it.each([50, shortShutdownTimeoutMs, 8000])(
+    'closes its listener and stops its work at once, waits %i ms of the shutdown timeout before closing the rest, and cuts the connection only after the grace that follows',
+    async (timeoutMs) => {
+      const events: string[] = [];
+      const record = (event: string): void => {
+        events.push(event);
+      };
+      const timer = movedTimer();
+
+      const shuttingDown = shutDown(
+        serverHoldingAConnection(record),
+        hooksRecordedIn(record),
+        timeoutMs,
+        timer.elapsed,
+      );
+      await setImmediate();
+      const beforeTheTimeout = { events: [...events], asked: timer.asked() };
+      await timer.pass(timeoutMs);
+      const beforeTheGrace = { events: [...events], asked: timer.asked() };
+      await timer.pass(100);
+      await shuttingDown;
+
+      expect(beforeTheTimeout).toEqual({ events: ['listener closed', 'work stopped'], asked: [timeoutMs] });
+      expect(beforeTheGrace).toEqual({
+        events: ['listener closed', 'work stopped', 'API closed', 'runtime disposed', 'telemetry stopped'],
+        asked: [timeoutMs, 100],
+      });
+      expect(events.at(-1)).toBe('connections cut');
+    },
+  );
 });
 
 describe('a repeated stop signal', () => {
   it.each<NodeJS.Signals>(['SIGTERM', 'SIGINT'])(
     'ends the server process at once while it shuts down after the first %s, cutting off what still runs, and exits 1',
     async (signal) => {
-      const { child, port, answer } = await serverHoldingARequest(serveWithTestRoutes, shuttingDownPatiently);
+      const held = await serverHoldingARequest(serveWithTestRoutes, shuttingDownPatiently);
+      const { child, port, answer } = held;
 
       child.signal(signal);
-      await untilRefusingConnections(port);
+      await untilItsListenerClosed(held);
+      const refusing = !(await isAcceptingConnections(port));
       child.signal(signal);
 
-      expect({ answer: await answer, exitCode: await child.exited }).toEqual({ answer: 'unanswered', exitCode: 1 });
+      expect({ refusing, answer: await answer, exitCode: await child.exited }).toEqual({
+        refusing: true,
+        answer: 'unanswered',
+        exitCode: 1,
+      });
       expect(child.output().stderr).toContain(
         'Auto Runtime was told to stop again, so it exits now without finishing its shutdown\n',
       );
@@ -129,7 +218,7 @@ describe('the composition of main, started in the process with a shutdown timeou
   });
 
   it('stops while a function a workflow called still runs, without waiting for it or for the timeout', async () => {
-    const gateway = await gatewayThatHangsFirst();
+    const gateway = await gatewayThatHangs();
     const server = await composedWithALongShutdown({ MODEL_GATEWAYS: gateway.gateways });
     await welcomingStarted(server.port, 'beta');
     await gateway.firstHeard;

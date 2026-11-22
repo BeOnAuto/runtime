@@ -1,4 +1,4 @@
-import { defineHttpOperation, defineQuery } from '@on.auto/operations';
+import { Caller, defineHttpOperation, defineQuery, mayCall, type Runnable } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { ConnectionSchema } from '../registry/connection.ts';
@@ -28,7 +28,7 @@ const listedOf = Effect.fnUntraced(function* (kept: readonly KeptConnection[], r
   return yield* moreOfferedTo(yield* shownConnections(reading.secrets, kept), reading);
 });
 
-export function defineListConnections(reading: Reading) {
+export function defineListConnections(reading: Reading, managing: Runnable<'org'>) {
   return defineQuery('org', {
     name: 'list_connections',
     title: 'List connections',
@@ -43,13 +43,22 @@ export function defineListConnections(reading: Reading) {
         Schema.Boolean.annotate({ description: 'Whether to list removed connections as well; false when left out' }),
       ),
     }),
-    outputSchema: Schema.Struct({ connections: Schema.Array(ListedConnectionSchema) }),
-    reasons: [],
+    outputSchema: Schema.Struct({
+      connections: Schema.Array(ListedConnectionSchema),
+      may_manage: Schema.Boolean.annotate({
+        description: 'true when this caller may remove the connections of the org. false when it may not.',
+      }),
+    }),
+    reasons: ['unavailable'],
     handle: Effect.fnUntraced(function* ({ include_removed: includeRemoved = false }) {
       const listed = newestFirst(yield* loadRegistry(reading)).filter(
         ({ connection }) => includeRemoved || connection.status !== 'removed',
       );
-      return { connections: yield* listedOf(listed, reading) };
+      const caller = yield* Caller;
+      return {
+        connections: yield* listedOf(listed, reading),
+        may_manage: yield* mayCall({ operation: managing, caller, org: caller.org }),
+      };
     }),
     plainLanguage: {
       task: 'list the connections',

@@ -7,8 +7,7 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import type { ComposedServerOptions } from '../server-options/composed-options.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { loopbackSettingsOver } from '../testing/servers/reasoning-server.ts';
-import { compositionRootWith } from './composition-root.ts';
-import { loggedModelAccess } from './served-reasoning.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 
 const entitled: ReadonlyMap<string, readonly string[]> = new Map([['acme', ['example-feature']]]);
 
@@ -53,9 +52,7 @@ function seeingTheFeatures(composition: ComposedServerOptions): Seeing {
 
 describe('a server composed with packages and the features of a license of its own', () => {
   it('loads the extension its settings list from those packages, and answers from those features', async () => {
-    const seeing = seeingTheFeatures(
-      compositionRootWith(loggedModelAccess, { installed: packagesHolding([]), features }),
-    );
+    const seeing = seeingTheFeatures(testComposition({ goals: false, installed: packagesHolding([]), features }));
 
     const server = await startServer(settingsListingTheGreeters(), seeing.options);
     const answered = await Effect.runPromise(
@@ -72,7 +69,8 @@ describe('a server composed with packages and the features of a license of its o
   });
 
   it('refuses to start for a listed extension that provides a point this release does not serve, naming the one it serves', async () => {
-    const composition = compositionRootWith(loggedModelAccess, {
+    const composition = testComposition({
+      goals: false,
       installed: packagesHolding([{ point: 'capability/greeting', contract: 1, implementation: {} }]),
     });
 

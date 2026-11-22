@@ -11,6 +11,7 @@ const moved = {
   from: 'alpha',
   to: 'beta',
   moved_by: recordedAdmin,
+  expectedVersion: 1,
   by: 'acme-admin',
   at: '2026-11-19T09:00:00.000Z',
 };
@@ -41,5 +42,23 @@ describe('the decision of a move on the stream of one definition', () => {
       _tag: 'Failure',
       failure: { _tag: 'conflict', kind: 'retired' },
     });
+  });
+
+  it('moves a definition at the version it was read at, and refuses one saved since as changed meanwhile', async () => {
+    const definitions = harness();
+    await definitions.call(operations.createDefinition, toAlpha(acmeAdmin, { ...greet, source: '{"greeting":"Hi"}' }));
+    await definitions.call(operations.updateDefinition, toAlpha(acmeAdmin, { ...greet, source: '{"greeting":"Hey"}' }));
+    const [held] = definitions.ledger.names();
+    const { state } = await Effect.runPromise(
+      definitions.ledger.service.load(`${String(held?.definitionKey)}definitions/echo`, decider),
+    );
+
+    expect([
+      decider.decide({ ...moved, expectedVersion: 2 }, state),
+      decider.decide({ ...moved, expectedVersion: 1 }, state),
+    ]).toMatchObject([
+      { _tag: 'Success', success: [{ type: 'definition_moved' }] },
+      { _tag: 'Failure', failure: { _tag: 'conflict', kind: 'concurrent_change' } },
+    ]);
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { refusalsSaid, runStillGoing, startsReaching, triggerRowsOf } from '../reaction-testing/kept-triggers.ts';
-import { movedClock, type MovedClock } from '../reaction-testing/moved-clock.ts';
 import {
   cronTrigger,
   definitionKeyNamed,
@@ -10,33 +9,31 @@ import {
   everyTrigger,
   published,
 } from '../reaction-testing/playbook-writes.ts';
-import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
+import type { ReactingHost } from '../reaction-testing/reacting-host.ts';
+import { keptDefinition, steppedReacting, type SteppedReacting } from '../reaction-testing/stepped-reactions.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 
-interface InNewYork {
-  readonly reacting: ReactingHost;
-  readonly clock: MovedClock;
-}
+type InNewYork = SteppedReacting;
 
 const savedAt = '2026-03-06T12:00:00.000Z';
 
 async function inNewYork(saved = savedAt): Promise<InNewYork> {
-  const clock = movedClock(Date.parse(saved) + 1000);
-  const reacting = await reactingHost({ clock });
-  await definitionRecorded(reacting.database.store, {
+  const zoned = await steppedReacting({ startsAt: Date.parse(saved) + 1000 });
+  await keptDefinition(zoned, {
     name: 'morning',
     version: 1,
     triggers: [cronTrigger('0 6 * * *', { time_zone: 'America/New_York' })],
     when: saved,
   });
-  return { reacting, clock };
+  return zoned;
 }
 
-function startedAtEach({ reacting, clock }: InNewYork, dueTimes: readonly string[]) {
+function startedAtEach({ reacting, clock, sweeps }: InNewYork, dueTimes: readonly string[]) {
   return dueTimes.reduce<Promise<ReturnType<ReactingHost['reactions']['starts']>>>(async (before, due, index) => {
     await before;
     clock.moveTo(Date.parse(due));
-    return startsReaching(reacting.reactions.starts, index + 1);
+    return startsReaching(sweeps, reacting.reactions.starts, index + 1);
   }, Promise.resolve([]));
 }
 
@@ -73,7 +70,7 @@ describe('a workflow with a cron schedule in a time zone', () => {
 
     zoned.clock.moveTo(Date.parse('2026-03-08T10:00:00.000Z'));
 
-    expect(await refusalsSaid(zoned.reacting.database)).toEqual([
+    expect(await refusalsSaid(zoned.sweeps, zoned.reacting.database)).toEqual([
       {
         workflow: 'morning',
         reason:
@@ -84,7 +81,7 @@ describe('a workflow with a cron schedule in a time zone', () => {
 });
 
 async function aRoundWithSchedulesThatCannotBeComputed() {
-  const { reacting, clock } = await inNewYork();
+  const { reacting, clock, sweeps } = await inNewYork();
   const { database } = reacting;
   const misread = cronTrigger('61 2 * * *');
   await definitionRecorded(database.store, { name: 'misread', version: 1, triggers: [misread], when: savedAt });
@@ -95,11 +92,12 @@ async function aRoundWithSchedulesThatCannotBeComputed() {
 
   clock.moveTo(Date.parse('2026-03-07T11:00:00.000Z'));
   await published(database.store, { id: 'closed-1', type: 'closed' });
-  const started = await startsReaching(reacting.reactions.starts, 2);
-  const refused = await refusalsSaid(database, 2);
-  const rows = await reacting.whenRead(
+  const started = await startsReaching(sweeps, reacting.reactions.starts, 2);
+  const refused = await refusalsSaid(sweeps, database, 2);
+  const rows = await sweeps.until(
     () => triggerRowsOf(database),
     (found) => found.filter(({ next_due: nextDue }) => nextDue === null).length >= 3,
+    fewSweeps,
   );
   return {
     started: started.map(({ workflow }) => workflow).toSorted(),

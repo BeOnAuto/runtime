@@ -3,11 +3,11 @@ import { handleOf } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { secretsKey } from '../testing/records/kept-credentials.ts';
 import { consentStartedBy } from '../testing/servers/consents-over-http.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 
 const connections = '/v1/orgs/local/connections';
 
@@ -120,7 +120,7 @@ describe('a runtime whose consent service is named on http off the loopback', ()
   it('does not start, naming the setting', async () => {
     const starting = startServer(
       { HOST: '127.0.0.1', PORT: '0', CONSENT_SERVICE_URL: 'http://consent.example.com' },
-      compositionRoot,
+      testComposition(),
     );
 
     await expect(starting).rejects.toThrow(

@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { createServer, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
@@ -8,7 +8,7 @@ import { onTestFinished } from 'vitest';
 
 import { tcpPort } from '../../lifecycle/http-server.ts';
 import { runIdIn, isStarted, workflowSource, contributing, givenGoals } from '../servers/workflow-server.ts';
-import { until } from '../waiting/until.ts';
+import { whenHeld } from '../waiting/until.ts';
 import { spawnServer, type SpawnedServer } from './spawned-server.ts';
 
 export interface LogLine {
@@ -62,7 +62,7 @@ export async function requestTo(port: number, method: string, path: string, body
 }
 
 export async function settledOver(port: number, path: string): Promise<unknown> {
-  const { body } = await until(
+  const { body } = await whenHeld(
     () => requestTo(port, 'GET', path),
     (answer) => !isStarted(answer.body),
   );
@@ -82,31 +82,14 @@ export interface StubGateway {
   readonly firstHeard: Promise<void>;
 }
 
-function answered(response: ServerResponse): void {
-  response.setHeader('content-type', 'application/json');
-  response.end(
-    JSON.stringify({
-      id: 'chatcmpl-stub',
-      object: 'chat.completion',
-      created: 1_790_000_000,
-      model: 'stub',
-      choices: [{ index: 0, message: { role: 'assistant', content: 'Welcome, Ada.' }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
-    }),
-  );
-}
-
-export async function gatewayThatHangsFirst(): Promise<StubGateway> {
+/** A model gateway that hears each request and answers none. */
+export async function gatewayThatHangs(): Promise<StubGateway> {
   const heard = Promise.withResolvers<void>();
   const counted = { requests: 0 };
-  const server = createServer((request, response) => {
+  const server = createServer((request) => {
     counted.requests += 1;
     request.resume();
-    if (counted.requests === 1) {
-      heard.resolve();
-      return;
-    }
-    answered(response);
+    heard.resolve();
   }).listen(0, '127.0.0.1');
   await once(server, 'listening');
   onTestFinished(() => {
@@ -135,4 +118,44 @@ export async function welcomingStarted(port: number, playbook: string): Promise<
     input: { name: 'Ada' },
   });
   return runIdIn(started.body);
+}
+
+export interface AskedTool {
+  readonly name: string;
+  readonly arguments: string;
+}
+
+const asking = (tool: AskedTool): string =>
+  JSON.stringify({
+    id: 'chatcmpl-stub',
+    object: 'chat.completion',
+    created: 1_790_000_000,
+    model: 'stub',
+    choices: [
+      {
+        index: 0,
+        message: { role: 'assistant', content: null, tool_calls: [{ id: 'call_1', type: 'function', function: tool }] },
+        finish_reason: 'tool_calls',
+      },
+    ],
+    usage: { prompt_tokens: 8, completion_tokens: 4, total_tokens: 12 },
+  });
+
+/** A model gateway that lists no models, and whose model asks for the tool given each time it is called. */
+export async function gatewayThatAsksForATool(tool: AskedTool): Promise<string> {
+  const server = createServer((request, response) => {
+    request.resume();
+    response.setHeader('content-type', 'application/json');
+    if (String(request.url).endsWith('/models')) {
+      response.end(JSON.stringify({ object: 'list', data: [] }));
+      return;
+    }
+    response.end(asking(tool));
+  }).listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  onTestFinished(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  return JSON.stringify([{ name: 'stub', base_url: `http://127.0.0.1:${tcpPort(server.address())}/v1` }]);
 }

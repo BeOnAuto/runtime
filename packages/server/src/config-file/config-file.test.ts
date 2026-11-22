@@ -1,7 +1,7 @@
 import { createApiKey } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
-import { configuredServer, rejectedRun, settingLines, stoppedOutput } from '../testing/processes/configured-server.ts';
+import { configuredServer, rejectedRun, settingLines } from '../testing/processes/configured-server.ts';
 import { request } from '../testing/servers/http-client.ts';
 
 const gatewayKey = 'gateway-key-SECRET-7f3a';
@@ -34,8 +34,8 @@ function fromOrigin(port: number, origin: string): Promise<number> {
 
 describe('a server with a configuration file and no variable for its settings', () => {
   it('takes its gateways, aliases, voice model, API keys and origins from the file, and says so once', async () => {
-    const { child, configFile } = configuredServer(fileText, { GATEWAY_API_KEY: gatewayKey });
-    const port = await child.port;
+    const { port: started, configFile, stopped } = configuredServer(fileText, { GATEWAY_API_KEY: gatewayKey });
+    const port = await started;
 
     const voice = await fetch(`http://127.0.0.1:${port}/v1/orgs/acme/voice`, {
       headers: { authorization: `Bearer ${created.key}` },
@@ -47,7 +47,7 @@ describe('a server with a configuration file and no variable for its settings', 
       listed: await fromOrigin(port, 'https://app.example.com'),
       other: await fromOrigin(port, 'https://other.example'),
     };
-    const stderr = await stoppedOutput(child);
+    const stderr = await stopped();
 
     expect({ unauthenticated: unauthenticated.status, rejected: rejected.body, origins, voice }).toMatchObject({
       unauthenticated: 401,
@@ -71,12 +71,12 @@ allowed_models:
 
 describe('a server whose configuration file declares and allows models', () => {
   it('lists the declared models as a list it narrows, and refuses a definition that names a model it does not allow', async () => {
-    const { child, configFile } = configuredServer(modelsText, { AWS_REGION: 'eu-central-1' });
-    const port = await child.port;
+    const { port: started, configFile, stopped } = configuredServer(modelsText, { AWS_REGION: 'eu-central-1' });
+    const port = await started;
 
     const listed = await request(port, 'GET', '/v1/orgs/acme/models?provider=bedrock');
     const rejected = await rejectedRun(port);
-    const stderr = await stoppedOutput(child);
+    const stderr = await stopped();
 
     expect(listed.body).toMatchObject({
       object: 'list',
@@ -106,13 +106,13 @@ describe('a server whose configuration file declares and allows models', () => {
 
 describe('a server with settings in the environment', () => {
   it('reads them as before, and says nothing of a configuration file, when CONFIG_FILE is not set', async () => {
-    const { child } = configuredServer(undefined, {
+    const { port: started, stopped } = configuredServer(undefined, {
       MODEL_GATEWAYS: JSON.stringify([{ name: 'relay', base_url: 'https://relay.example.com/v1' }]),
       MODEL_ALIASES: JSON.stringify({ 'house/fast': 'relay/llama-3.3-70b' }),
     });
 
-    const rejected = await rejectedRun(await child.port);
-    const stderr = await stoppedOutput(child);
+    const rejected = await rejectedRun(await started);
+    const stderr = await stopped();
 
     expect(rejected.body).toMatchObject({
       detail: 'openai is not configured. Configured providers: relay. Aliases: house/fast',
@@ -121,14 +121,18 @@ describe('a server with settings in the environment', () => {
   });
 
   it('lets a variable win over the file whole, and says once which settings it won', async () => {
-    const { child, configFile } = configuredServer(fileText, {
+    const {
+      port: started,
+      configFile,
+      stopped,
+    } = configuredServer(fileText, {
       GATEWAY_API_KEY: gatewayKey,
       API_KEYS: JSON.stringify([created.entry]),
       MODEL_ALIASES: JSON.stringify({ 'house/fast': 'gateway/llama-3.3-70b' }),
     });
 
-    const rejected = await rejectedRun(await child.port, created.key);
-    const stderr = await stoppedOutput(child);
+    const rejected = await rejectedRun(await started, created.key);
+    const stderr = await stopped();
 
     expect(rejected.body).toMatchObject({
       detail: 'openai is not configured. Configured providers: gateway. Aliases: house/fast',

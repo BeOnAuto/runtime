@@ -1,14 +1,14 @@
 import { sha256Of } from '@on.auto/content';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { authStoreOnAFile } from '../testing/store-on-a-file.ts';
+import { authStoreInMemory } from '../testing/store-in-memory.ts';
 import { hashedAdapterOf } from './hashed-adapter.ts';
 import type { ProviderRows } from './provider-rows.ts';
 
 const at = Date.parse('2026-11-19T09:00:00Z');
 
-async function rowsOnAFile(): Promise<ProviderRows> {
-  const { store, close } = await authStoreOnAFile();
+async function rowsInMemory(): Promise<ProviderRows> {
+  const { store, close } = await authStoreInMemory();
   onTestFinished(close);
   return store.providerRows;
 }
@@ -25,7 +25,7 @@ function sweepsCountedOn(rows: ProviderRows, swept: (endedBefore: number) => voi
 
 describe('the adapter that keeps the authorization server rows by the SHA-256 of their ids', () => {
   it("finds a row by its id, puts the id back, and keeps neither the id nor an interaction's session value", async () => {
-    const rows = await rowsOnAFile();
+    const rows = await rowsInMemory();
     const adapter = hashedAdapterOf({ rows, now: () => at });
     const interactions = adapter('Interaction');
 
@@ -41,7 +41,7 @@ describe('the adapter that keeps the authorization server rows by the SHA-256 of
   });
 
   it('finds a session by its uid, without the value its cookie holds', async () => {
-    const adapter = hashedAdapterOf({ rows: await rowsOnAFile(), now: () => at });
+    const adapter = hashedAdapterOf({ rows: await rowsInMemory(), now: () => at });
 
     await adapter('Session').upsert('session-value', { jti: 'session-value', uid: 'uid-2', accountId: 'a3f1' }, 60);
 
@@ -51,7 +51,7 @@ describe('the adapter that keeps the authorization server rows by the SHA-256 of
 
 describe('the adapter, as rows are consumed, destroyed and swept', () => {
   it('consumes a row once, and ends its whole grant when it is consumed a second time', async () => {
-    const adapter = hashedAdapterOf({ rows: await rowsOnAFile(), now: () => at });
+    const adapter = hashedAdapterOf({ rows: await rowsInMemory(), now: () => at });
     await adapter('Grant').upsert('grant-1', { jti: 'grant-1', accountId: 'a3f1' }, 600);
     await adapter('AccessToken').upsert('access', { jti: 'access', grantId: 'grant-1' }, 60);
     await adapter('RefreshToken').upsert('refresh', { jti: 'refresh', grantId: 'grant-1' }, 600);
@@ -66,7 +66,7 @@ describe('the adapter, as rows are consumed, destroyed and swept', () => {
   });
 
   it('marks a consumed row so, and destroys rows by their id and by their grant', async () => {
-    const adapter = hashedAdapterOf({ rows: await rowsOnAFile(), now: () => at });
+    const adapter = hashedAdapterOf({ rows: await rowsInMemory(), now: () => at });
     await adapter('AuthorizationCode').upsert('code', { jti: 'code', grantId: 'grant-2' }, 60);
     await adapter('AccessToken').upsert('access', { jti: 'access', grantId: 'grant-2' }, 60);
     await adapter('Grant').upsert('grant-2', { jti: 'grant-2' }, 600);
@@ -88,7 +88,7 @@ describe('the adapter, as rows are kept', () => {
   it('sweeps the rows that ended a day before, at most once a minute, as rows are kept', async () => {
     const swept: number[] = [];
     const clock = { now: at };
-    const counted = sweepsCountedOn(await rowsOnAFile(), (endedBefore) => {
+    const counted = sweepsCountedOn(await rowsInMemory(), (endedBefore) => {
       swept.push(endedBefore);
     });
     const adapter = hashedAdapterOf({ rows: counted, now: () => clock.now });

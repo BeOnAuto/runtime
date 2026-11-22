@@ -24,6 +24,7 @@ placeholders:
           mcp_host: advertising-ai-fe.amazon.com
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://lwa.amazon.com
     scope: advertising::campaign_management
     says:

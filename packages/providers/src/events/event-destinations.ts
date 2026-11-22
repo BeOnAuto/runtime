@@ -9,7 +9,7 @@ import {
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
-import { readsTheSubject } from './event-calls.ts';
+import { answerIssuesOf, callIssuesOf, IdentitySchema, identityTemplates, readsTheSubject } from './event-calls.ts';
 import { pathOf } from './json-texts.ts';
 import { subscriptionIssuesOf } from './subscription-checks.ts';
 
@@ -74,6 +74,7 @@ const EventsFieldsSchema = Schema.Struct({
         'The kinds of events the service reports. Only a provider that ships with the runtime can declare them.',
     }),
   ),
+  identity: Schema.optionalKey(IdentitySchema),
   destinations: Schema.Array(DestinationSchema).check(Schema.isMinLength(1)).annotate({
     description:
       'The ways the service sends what happens where a request waits, one of each type, in the order the runtime tries them, the first it can take serving',
@@ -121,12 +122,37 @@ function subjectIssuesOf(types: readonly EventType[], destinations: readonly Des
   );
 }
 
-function eventsIssuesOf({ types = [], destinations }: EventsFields): readonly DestinationIssue[] {
+type Identity = NonNullable<EventsFields['identity']>;
+
+function identityIssuesOf(identity: Identity): readonly DestinationIssue[] {
+  const { id, name } = identity.identified;
+  return [
+    ...callIssuesOf('/identity', identity, identityTemplates),
+    ...answerIssuesOf([
+      ['/identity/identified/id', id],
+      ['/identity/identified/name', name],
+    ]),
+  ].map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
+}
+
+const unidentified =
+  'Expected identity under events, the call that asks which account the connection acts as, since actor is compared with that account';
+
+function actorIssuesOf(destinations: readonly Destination[]): readonly DestinationIssue[] {
+  return destinations.flatMap(({ events = [] }, index) =>
+    events.flatMap(({ actor }, each): readonly DestinationIssue[] =>
+      actor === undefined ? [] : [{ path: ['destinations', index, 'events', each, 'actor'], issue: unidentified }],
+    ),
+  );
+}
+
+function eventsIssuesOf({ types = [], identity, destinations }: EventsFields): readonly DestinationIssue[] {
   return [
     ...typeIssuesOf(destinations),
     ...declaredTypeIssuesOf(types),
     ...mappedTypeIssuesOf(types, destinations),
     ...subjectIssuesOf(types, destinations),
+    ...(identity === undefined ? actorIssuesOf(destinations) : identityIssuesOf(identity)),
   ];
 }
 
@@ -150,5 +176,5 @@ export function requestOriginsOf({ events }: { readonly events?: Events | undefi
     renew,
     unsubscribe,
   ]);
-  return [...new Set(calls.flatMap((call) => requestOriginOf(call)))];
+  return [...new Set([...calls, events?.identity].flatMap((call) => requestOriginOf(call)))];
 }

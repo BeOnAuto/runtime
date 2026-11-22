@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
-import { readsWhile, watchedSystemClock } from '../testing/watched-clock.ts';
+import { readsWhile, watchedClock } from '../testing/watched-clock.ts';
 import { counting, detailsOf, foldOf, foldedAll, isLive, liveWith } from './view-documents.ts';
 import { viewHarness } from './view-harness.ts';
 
@@ -16,8 +16,8 @@ function joiningTests(settingsOf: SettingsOf): void {
     await views.saved('b', countingRunsOf('reasoning/b'));
     await views.ran('reasoning/a', 1);
     await views.ran('reasoning/b', 1);
-    const clock = watchedSystemClock();
-    views.start({ sweepEveryMs: 60_000, clock });
+    const clock = watchedClock(views.clock);
+    views.start({ sweepEveryMs: 60_000, pace: clock });
     await views.folded('a', liveWith(1));
     await views.folded('b', liveWith(1));
 

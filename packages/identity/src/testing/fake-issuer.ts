@@ -17,9 +17,12 @@ export interface FakeClient {
   readonly claims: Claims;
 }
 
+type FakeKeys = 'shared' | 'its own';
+
 export interface FakeIssuerOptions {
   readonly metadata?: Claims;
   readonly clients?: Readonly<Record<string, FakeClient>>;
+  readonly keys?: FakeKeys;
 }
 
 export interface FakeIssuer {
@@ -52,8 +55,20 @@ const pairs: Readonly<Record<FakeSigner, () => KeyPair>> = {
   EdDSA: () => generateKeyPairSync('ed25519'),
 };
 
-function keyOf(signer: FakeSigner, generation: number): FakeKey {
-  const { publicKey, privateKey } = pairs[signer]();
+const sharedPairs = new Map<FakeSigner, KeyPair>();
+
+function sharedPairOf(signer: FakeSigner): KeyPair {
+  const pair = sharedPairs.get(signer) ?? pairs[signer]();
+  sharedPairs.set(signer, pair);
+  return pair;
+}
+
+function pairOf(signer: FakeSigner, drawn: FakeKeys, generation: number): KeyPair {
+  return drawn === 'shared' && generation === 1 ? sharedPairOf(signer) : pairs[signer]();
+}
+
+function keyOf(signer: FakeSigner, generation: number, drawn: FakeKeys): FakeKey {
+  const { publicKey, privateKey } = pairOf(signer, drawn, generation);
   const kid = `${signer.toLowerCase()}-${generation}`;
   return {
     kid,
@@ -69,14 +84,14 @@ function keyOf(signer: FakeSigner, generation: number): FakeKey {
   };
 }
 
-type FakeKeys = Readonly<Record<FakeSigner, FakeKey>>;
+type KeysOfAGeneration = Readonly<Record<FakeSigner, FakeKey>>;
 
-function keysOf(generation: number): FakeKeys {
+function keysOf(generation: number, drawn: FakeKeys): KeysOfAGeneration {
   return {
-    RS256: keyOf('RS256', generation),
-    PS256: keyOf('PS256', generation),
-    ES256: keyOf('ES256', generation),
-    EdDSA: keyOf('EdDSA', generation),
+    RS256: keyOf('RS256', generation, drawn),
+    PS256: keyOf('PS256', generation, drawn),
+    ES256: keyOf('ES256', generation, drawn),
+    EdDSA: keyOf('EdDSA', generation, drawn),
   };
 }
 
@@ -165,9 +180,12 @@ function metadataOf(issuer: string, metadata: Claims): Claims {
   };
 }
 
-export function fakeIssuer(issuer: string, { metadata = {}, clients = {} }: FakeIssuerOptions = {}): FakeIssuer {
+export function fakeIssuer(
+  issuer: string,
+  { metadata = {}, clients = {}, keys: drawn = 'shared' }: FakeIssuerOptions = {},
+): FakeIssuer {
   let generation = 1;
-  let keys = keysOf(generation);
+  let keys = keysOf(generation, drawn);
   let reads = 0;
   const signed: Sign = (claims, { signer = 'RS256', kid, typ = 'at+jwt' } = {}) => {
     const key = keys[signer];
@@ -193,7 +211,7 @@ export function fakeIssuer(issuer: string, { metadata = {}, clients = {} }: Fake
     session: sessionsOf(issuer, signed),
     rotate: () => {
       generation += 1;
-      keys = keysOf(generation);
+      keys = keysOf(generation, drawn);
     },
     keySetReads: () => reads,
   };

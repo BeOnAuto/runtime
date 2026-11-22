@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber } from '../database/host-database.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
-import { movedClock, type MovedClock } from './moved-clock.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import {
   at,
   definitionKeyNamed,
@@ -15,8 +15,9 @@ import {
   everyTrigger,
   published,
 } from './playbook-writes.ts';
-import { reactingHost, type ReactingHost, type ReactingOptions } from './reacting-host.ts';
+import type { ReactingOptions } from './reacting-host.ts';
 import { unreadWhile } from './recorded-reactions.ts';
+import { keptDefinition, steppedReacting, type SteppedReacting } from './stepped-reactions.ts';
 
 const activatedAt = Date.parse(at);
 
@@ -35,10 +36,7 @@ type ScheduleState = typeof ScheduleRow.Type;
 
 type SettingsOf = () => Promise<NonNullable<ReactingOptions['settings']>>;
 
-interface Ticking {
-  readonly reacting: ReactingHost;
-  readonly clock: MovedClock;
-}
+type Ticking = SteppedReacting;
 
 function minutesIn(minutes: number): number {
   return activatedAt + minutes * aMinute;
@@ -60,19 +58,18 @@ async function everyFiveMinutes(
   unread: Readonly<{ now: boolean }>,
   triggers: ReadonlyArray<ReturnType<typeof everyTrigger>> = [everyTrigger(5 * aMinute)],
 ): Promise<Ticking> {
-  const clock = movedClock(activatedAt + 1000);
-  const reacting = await reactingHost({ settings: await settingsOf(), clock, failure: unreadWhile(unread) });
-  await definitionRecorded(reacting.database.store, { name: 'tick', version: 1, triggers });
-  return { reacting, clock };
+  const ticking = await steppedReacting({ settings: await settingsOf(), failure: unreadWhile(unread) });
+  await keptDefinition(ticking, { name: 'tick', version: 1, triggers });
+  return ticking;
 }
 
 function scheduleReaching(
-  { reacting, clock }: Readonly<Ticking>,
+  { reacting, clock, sweeps }: Readonly<Ticking>,
   minutes: number,
   holds: (row: ScheduleState) => boolean,
 ) {
   clock.moveTo(minutesIn(minutes));
-  return reacting.whenRead(
+  return sweeps.until(
     async () => {
       const [row] = await Effect.runPromise(
         rowsOf(
@@ -85,13 +82,15 @@ function scheduleReaching(
       return row;
     },
     (row) => row !== undefined && holds(row),
+    fewSweeps,
   );
 }
 
-async function startsOf({ reacting }: Readonly<Ticking>) {
-  const starts = await reacting.whenRead(
-    () => Promise.resolve(reacting.reactions.starts()),
+async function startsOf({ reacting, sweeps }: Readonly<Ticking>) {
+  const starts = await sweeps.until(
+    () => reacting.reactions.starts(),
     (found) => found.length > 0,
+    fewSweeps,
   );
   return starts.map(({ runId, input }) => ({ runId, input }));
 }
@@ -212,9 +211,10 @@ function heldPastSeveralDueTimes(settingsOf: SettingsOf) {
     await scheduleReaching(ticking, 5, (row) => row.held_due !== null);
 
     const heldAgain = await scheduleReaching(ticking, 17, (row) => row.held_due === minutesIn(15));
-    const said = await ticking.reacting.whenRead(
+    const said = await ticking.sweeps.until(
       () => refusalsOf(ticking),
       (rows) => rows.some(({ count }) => count === 2),
+      fewSweeps,
     );
     unread.now = false;
     await scheduleReaching(ticking, 18, (row) => row.held_due === null);
@@ -240,7 +240,7 @@ async function quartersPassed(ticking: Readonly<Ticking>, from: number, to: numb
   }
   const next = from + 0.25;
   ticking.clock.moveTo(minutesIn(next));
-  await Effect.runPromise(Effect.sleep(50));
+  await ticking.sweeps.rested();
   await quartersPassed(ticking, next, to);
 }
 
@@ -258,9 +258,10 @@ function heldBesideAHeldEventStart(settingsOf: SettingsOf) {
     unread.now = false;
     await scheduleReaching(ticking, 6, (row) => row.held_due === null);
     ticking.clock.moveTo(minutesIn(7));
-    const starts = await ticking.reacting.whenRead(
-      () => Promise.resolve(ticking.reacting.reactions.starts()),
+    const starts = await ticking.sweeps.until(
+      () => ticking.reacting.reactions.starts(),
       (found) => found.length === 2,
+      fewSweeps,
     );
 
     expect([held, starts.map(({ trigger }) => trigger.kind).toSorted(), await refusalsOf(ticking)]).toEqual([

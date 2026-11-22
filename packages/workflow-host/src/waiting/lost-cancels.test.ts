@@ -1,10 +1,10 @@
 import { describe } from 'vitest';
 
-import { onSQLite } from '../testing/host-files.ts';
+import { onASQLiteFile } from '../testing/host-files.ts';
 import { lostCancelSuite } from '../waiting-testing/lost-cancel-suite.ts';
 import { endedRunSuite } from '../waiting-testing/resumed-cancels.ts';
 
 describe('the cancels a follower passed over', () => {
-  lostCancelSuite(onSQLite);
-  endedRunSuite(onSQLite);
+  lostCancelSuite(onASQLiteFile);
+  endedRunSuite(onASQLiteFile);
 });

@@ -1,9 +1,19 @@
-import { Deferred, Effect, Exit, Fiber } from 'effect';
+import { Deferred, Effect, Exit, Fiber, type Semaphore } from 'effect';
 
 import { forkedIn, type HostContext } from '../loop/forked-fibers.ts';
+import type { HostClock } from '../loop/host-clock.ts';
+
+export type InTurn = <A, E, R>(work: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
+
+/** The work once a permit is free, the permit held while it runs, its wait for the permit queued on the clock where it can be. */
+export function takingTurns(atOnce: Semaphore.Semaphore, queued: HostClock['queued']): InTurn {
+  return queued === undefined
+    ? (work) => atOnce.withPermit(work)
+    : (work) => queued((permitted) => atOnce.withPermit(Effect.andThen(permitted, work)));
+}
 
 export interface Background {
-  readonly run: (key: string, work: Effect.Effect<void>) => void;
+  readonly run: (key: string, work: Effect.Effect<void>, label?: string) => void;
   readonly has: (key: string) => boolean;
   readonly size: () => number;
   readonly awaited: (keys: readonly string[]) => Effect.Effect<void>;
@@ -16,7 +26,7 @@ export function background(context?: HostContext): Background {
   const fibers = new Map<string, Fiber.Fiber<void>>();
   const lifecycle = { stopped: false };
   return {
-    run: (key, work) => {
+    run: (key, work, label) => {
       if (lifecycle.stopped || fibers.has(key)) {
         return;
       }
@@ -31,6 +41,7 @@ export function background(context?: HostContext): Background {
             }),
           ),
         ),
+        label ?? key,
       );
       fibers.set(key, fiber);
       Deferred.doneUnsafe(gate, Exit.void);

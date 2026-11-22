@@ -12,6 +12,8 @@ import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 
 import { servingReasoning } from '../servers/reasoning-server.ts';
+import type { SteppedServerClock } from '../waiting/stepped-server-clock.ts';
+import { receiptsTold } from '../waiting/told-fakes.ts';
 
 const slackKey = 'slack-api-key-7c2e9b14';
 
@@ -34,6 +36,8 @@ export interface MeetingsServer {
   readonly onPlaybook: <T>(playbook: string, use: (session: McpSession) => Promise<T>) => Promise<T>;
   readonly answeringForms: (call: ToolCall, answering: Partial<FormAnswering>) => Promise<LinksAsked>;
   readonly chat: FakeMcpServer | undefined;
+  /** The stepped clock the server runs on, which moves only when its test moves it. */
+  readonly clock: SteppedServerClock | undefined;
   readonly stop: () => Promise<void>;
 }
 
@@ -57,7 +61,7 @@ async function chatServing(options: MeetingsOptions) {
   if (options.chat !== true) {
     return { chat: undefined, servers: {} };
   }
-  const chat = await serveFakeMcp({ bearer: chatKey, chat: true });
+  const chat = receiptsTold(await serveFakeMcp({ bearer: chatKey, chat: true }));
   const entry = {
     url: chat.url,
     headers: { Authorization: 'Bearer ${CHAT_KEY}' },
@@ -94,7 +98,7 @@ export async function servingMeetings(
   replies: readonly ScriptedReplies[],
   options: MeetingsOptions = {},
 ): Promise<MeetingsServer> {
-  const slack = await serveFakeMcp({ bearer: slackKey });
+  const slack = receiptsTold(await serveFakeMcp({ bearer: slackKey }));
   const { chat, servers } = await chatServing(options);
   const server = await servingReasoning(replies, toolServersOf(slack, servers));
   const onMcp = <T>(use: (session: McpSession) => Promise<T>): Promise<T> =>
@@ -107,6 +111,7 @@ export async function servingMeetings(
   return {
     surfaces,
     chat,
+    clock: server.clock,
     onMcp,
     answeringForms: (call, answering) =>
       calledAnsweringForms({ url: `${server.origin}/mcp`, headers: {} }, call, answering),

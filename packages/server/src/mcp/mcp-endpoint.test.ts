@@ -16,12 +16,12 @@ import {
 import { localDeveloper } from '@on.auto/identity/testing';
 import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { toolsInsideAPlaybook as definitionTools } from '../testing/servers/served-tool-names.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const playbookTools = [
   'create_playbook',
@@ -164,7 +164,7 @@ function onMcpEndpointWorkflows<T>(use: (session: McpSession) => Promise<T>): Pr
 }
 
 function settled(session: McpSession, runId: string): Promise<ToolResult> {
-  return until(
+  return whenHeld(
     () => session.callTool('get_run', { playbook: 'sales', run_id: runId }),
     (reading) => reading.structuredContent?.['status'] !== 'started',
   );
@@ -201,14 +201,17 @@ async function welcomedAfterReply(session: McpSession): Promise<ToolResult> {
 }
 
 describe('mcp endpoint', () => {
-  afterEach(async () => {
+  beforeAll(async () => {
+    server = await servingReasoning([]);
+    await server.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  });
+
+  afterAll(async () => {
     await server.stop();
   });
 
   describe('the playbook argument of the definition tools on /mcp', () => {
     it('is required in every one of them that only a playbook answers, as a string with the playbook id pattern', async () => {
-      server = await servingReasoning([]);
-
       const definition = (await listingOn('/mcp')).filter(({ name }) => insideAPlaybookAlone.includes(name));
       const playbookArguments = definition.map(({ inputSchema }) => {
         const { required, properties } = playbookArgumentIn(inputSchema);
@@ -224,9 +227,6 @@ describe('mcp endpoint', () => {
 
   describe('the tools of /mcp', () => {
     it('are the playbook tools, list_models, search and the definition tools, the definition tools taking a playbook, with self-contained input schemas', async () => {
-      server = await servingReasoning([]);
-      await server.call('POST', '/v1/orgs/local/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-
       const [own, org, playbook] = [
         await listingOn('/mcp'),
         await listingOn('/orgs/local/mcp'),
@@ -242,14 +242,13 @@ describe('mcp endpoint', () => {
     });
 
     it('are the same in every one of sixty listings asked at once, each deciding who may call them in one round', async () => {
-      server = await servingReasoning([]);
       const alone = toolNamesIn(await onMcp('/mcp', (session) => session.listTools()));
 
       const together = await onMcp('/mcp', (session) =>
         Promise.all(Array.from({ length: 60 }, async () => toolNamesIn(await session.listTools()))),
       );
 
-      expect(alone).toHaveLength(42);
+      expect(alone).toHaveLength(43);
       expect(new Set(together.map((names) => names.join(' ')))).toEqual(new Set([alone.join(' ')]));
     });
   });
@@ -258,9 +257,6 @@ describe('mcp endpoint', () => {
     it.each(connections)(
       'on $path say whom they act as in which org, what a playbook, a definition and a run are, and name only the tools the endpoint serves',
       async ({ path, org, endpoint, served, sentence, unnamed }) => {
-        server = await servingReasoning([]);
-        await onMcp('/mcp', (session) => session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }));
-
         const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
         expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served));
@@ -270,8 +266,6 @@ describe('mcp endpoint', () => {
     );
 
     it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the workflow, the job, and the step each function type takes', async () => {
-      server = await servingReasoning([]);
-
       const tools = await onMcp('/mcp', async (session) => listedTools(await session.listTools()));
       const createDefinition = tools.find(({ name }) => name === 'create_definition');
 
@@ -293,6 +287,30 @@ describe('mcp endpoint', () => {
         properties: { type: { description: "The definition's type" } },
       });
     });
+  });
+
+  describe('a definition tool on /mcp', () => {
+    it('answers a call without a playbook, and with an unknown playbook, as isError', async () => {
+      const outcome = await onMcp('/mcp', async (session) => ({
+        without: await session.callTool('list_definitions', { type: 'reasoning' }),
+        unknown: await session.callTool('list_definitions', { playbook: 'nowhere', type: 'reasoning' }),
+      }));
+
+      expect(problemIn(outcome.without)).toMatchObject({
+        reason: 'invalid_input',
+        errors: [{ detail: 'Missing key', pointer: '/playbook' }],
+      });
+      expect(problemIn(outcome.unknown)).toMatchObject({
+        reason: 'not_found',
+        detail: 'There is no playbook nowhere in this org',
+      });
+    });
+  });
+});
+
+describe('mcp endpoint, each on a server of its own', () => {
+  afterEach(async () => {
+    await server.stop();
   });
 
   describe('one connection to /mcp', () => {
@@ -334,26 +352,6 @@ describe('mcp endpoint', () => {
     });
   });
 
-  describe('a definition tool on /mcp', () => {
-    it('answers a call without a playbook, and with an unknown playbook, as isError', async () => {
-      server = await servingReasoning([]);
-
-      const outcome = await onMcp('/mcp', async (session) => ({
-        without: await session.callTool('list_definitions', { type: 'reasoning' }),
-        unknown: await session.callTool('list_definitions', { playbook: 'nowhere', type: 'reasoning' }),
-      }));
-
-      expect(problemIn(outcome.without)).toMatchObject({
-        reason: 'invalid_input',
-        errors: [{ detail: 'Missing key', pointer: '/playbook' }],
-      });
-      expect(problemIn(outcome.unknown)).toMatchObject({
-        reason: 'not_found',
-        detail: 'There is no playbook nowhere in this org',
-      });
-    });
-  });
-
   describe('/mcp in local mode', () => {
     it('acts in the org local, whose playbooks the HTTP API lists', async () => {
       server = await servingReasoning([]);
@@ -374,14 +372,14 @@ describe('mcp endpoint workflows', () => {
   });
 
   describe('/mcp with workflows', () => {
-    it('lists forty-two tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
+    it('lists forty-three tools, and the description of run_definition says how to see whether a workflow run ended', async () => {
       server = await servingWorkflows([]);
 
       const listing = await onMcpEndpointWorkflows((session) => session.listTools());
       const tools = toolNamesIn(listing);
 
-      expect(tools).toHaveLength(42);
-      expect(tools.slice(-3)).toEqual(['get_asset', 'send_run_event', 'get_guide']);
+      expect(tools).toHaveLength(43);
+      expect(tools.slice(-3)).toEqual(['list_queued_starts', 'send_run_event', 'get_guide']);
       expect(listedTools(listing).find(({ name }) => name === 'run_definition')?.description).toContain(
         'one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended.',
       );

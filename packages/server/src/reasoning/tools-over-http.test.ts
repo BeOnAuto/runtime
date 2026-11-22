@@ -18,7 +18,12 @@ import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { release } from '../composition/release.ts';
-import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  type ReasoningServer,
+  servingReasoning,
+  documentsReadInProcess,
+} from '../testing/servers/reasoning-server.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -49,7 +54,25 @@ async function fakeGraph(): Promise<FakeMcpServer> {
   return fake;
 }
 
-async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
+/** The stdio tool server is a process the server starts, so only the case about such a process configures one. */
+const aProcessTheServerStarts = {
+  limitless: {
+    command: process.execPath,
+    args: [fakeStdioServerPath()],
+    env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
+    org: 'acme',
+  },
+};
+
+function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies[]): Promise<ReasoningServer> {
+  return servingWith({}, fake, replies);
+}
+
+async function servingWith(
+  processes: Readonly<Record<string, unknown>>,
+  fake: FakeMcpServer,
+  replies: readonly ScriptedReplies[],
+): Promise<ReasoningServer> {
   const server = await servingReasoning(replies, {
     GRAPH_API_KEY: apiKey,
     GRAPH_PIN: pin,
@@ -61,12 +84,7 @@ async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies
         org: 'acme',
       },
       crm: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'globex' },
-      limitless: {
-        command: process.execPath,
-        args: [fakeStdioServerPath()],
-        env: { NODE_V8_COVERAGE: '${NODE_V8_COVERAGE:-}' },
-        org: 'acme',
-      },
+      ...processes,
     }),
   });
   closing.push(server.stop);
@@ -186,12 +204,17 @@ const source = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [billing/se
 async function servingOrgs() {
   const billing = await serveFakeApi({ key: apiKeyToolsSeveralOrgs });
   onTestFinished(billing.close);
-  const server = await servingReasoning([searchedToolsSeveralOrgs(), searchedToolsSeveralOrgs()], {
-    BILLING_KEY: apiKeyToolsSeveralOrgs,
-    TOOL_SERVERS: JSON.stringify({
-      billing: { document: billing.documentUrl, security: { apiKeyAuth: '${BILLING_KEY}' }, org: ['acme', 'globex'] },
-    }),
-  });
+  const server = await servingReasoning(
+    [searchedToolsSeveralOrgs(), searchedToolsSeveralOrgs()],
+    {
+      BILLING_KEY: apiKeyToolsSeveralOrgs,
+      TOOL_SERVERS: JSON.stringify({
+        billing: { document: billing.documentUrl, security: { apiKeyAuth: '${BILLING_KEY}' }, org: ['acme', 'globex'] },
+      }),
+    },
+    undefined,
+    { documents: documentsReadInProcess },
+  );
   onTestFinished(server.stop);
   await Promise.all(
     ['acme', 'globex', 'initech'].map(async (org) => {
@@ -227,13 +250,18 @@ async function servingBoth() {
   onTestFinished(graph.close);
   const billing = await serveFakeApi({ key: apiKey });
   onTestFinished(billing.close);
-  const server = await servingReasoning([searchedBoth], {
-    GRAPH_API_KEY: apiKey,
-    TOOL_SERVERS: JSON.stringify({
-      graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
-      billing: { document: billing.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' },
-    }),
-  });
+  const server = await servingReasoning(
+    [searchedBoth],
+    {
+      GRAPH_API_KEY: apiKey,
+      TOOL_SERVERS: JSON.stringify({
+        graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
+        billing: { document: billing.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' },
+      }),
+    },
+    undefined,
+    { documents: documentsReadInProcess },
+  );
   onTestFinished(server.stop);
   const sourceToolsTwoKinds = [
     '---',
@@ -279,7 +307,7 @@ describe('tools over http', () => {
     });
 
     it('runs with a tool of a process the server starts', async () => {
-      const server = await serving(await fakeGraph(), searched('limitless'));
+      const server = await servingWith(aProcessTheServerStarts, await fakeGraph(), [searched('limitless')]);
 
       expect(await running(server, 'limitless')).toMatchObject({ status: 200, body: { output: 'Acme has 2 rows.' } });
       expect(await historyOf(server)).toEqual(toolRun);

@@ -1,6 +1,6 @@
 import { Effect } from 'effect';
 
-import { systemClock, type HostClock } from '../loop/host-clock.ts';
+import type { HostClock } from '../loop/host-clock.ts';
 import { signals, type Signals } from './signals.ts';
 
 export interface WatchedClock extends HostClock {
@@ -45,19 +45,11 @@ export function watchedClock(clock: HostClock): WatchedClock {
   };
 }
 
-export function watchedSystemClock(): WatchedClock {
-  return watchedClock(systemClock);
-}
-
 async function untilAsleepOnceAsked(clock: WatchedClock, sleeps: number): Promise<void> {
   await clock.when(
     (): Sleeps => ({ asked: clock.asked().length, sleeping: clock.sleeping() }),
     ({ asked, sleeping }) => asked >= sleeps && sleeping > 0,
   );
-}
-
-export function untilAWholeWakeHasPassed(clock: WatchedClock): Promise<void> {
-  return untilAsleepOnceAsked(clock, clock.asked().length + 2);
 }
 
 export async function readsWhile(reading: Reading, clock: WatchedClock, work: () => Promise<unknown>): Promise<number> {

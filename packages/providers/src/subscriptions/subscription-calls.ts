@@ -6,7 +6,7 @@ import { Clock, Effect, Redacted, Result, type Schema } from 'effect';
 import type { Destination } from '../events/destination-fields.ts';
 import { placesTheSecret } from '../events/event-calls.ts';
 import { isAddressedAsWritten, type TopicOfARequest } from './request-addresses.ts';
-import { answeredIn, renewedIn, requestedIn, subscribedIn } from './subscription-answers.ts';
+import { answeredIn, identifiedIn, renewedIn, requestedIn, subscribedIn } from './subscription-answers.ts';
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
   HeldSubscription,
@@ -106,6 +106,8 @@ function topicIn({ topic: written }: Destination, rendered: string): TopicOfAReq
   return { written, rendered };
 }
 
+const noTopic: TopicOfARequest = { written: undefined, rendered: '' };
+
 function webhookAddressOf(callback: string, connectionId: string): string {
   return `${callback}?${new URLSearchParams({ connection_id: connectionId }).toString()}`;
 }
@@ -168,5 +170,9 @@ export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls
         Effect.catchIf(isNotThere, () => Effect.void),
       );
     },
+    identify: ({ identity, place }) =>
+      Effect.flatMap(sentThrough(ports, { place, call: identity, variables: {}, topic: noTopic }), (document) =>
+        identifiedIn(document, identity.identified),
+      ),
   };
 }

@@ -9,7 +9,7 @@ import {
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions, type SessionsServed } from './fake-sessions.ts';
-import { manualSleepers, realSleep, type Sleepers } from './fake-sleepers.ts';
+import { manualSleepers, type Sleepers } from './fake-sleepers.ts';
 import { fakeToolChanges } from './fake-tool-changes.ts';
 import type { FakeHints, FakeTool, ReceivedCall } from './fake-tools.ts';
 import { nextAnswers, watchedChanges, type NextAnswers } from './next-answers.ts';
@@ -26,7 +26,6 @@ export interface FakeMcpOptions extends SessionsServed {
   readonly data?: boolean;
   readonly echoes?: string;
   readonly tools?: readonly FakeTool[];
-  readonly realSleep?: boolean;
 }
 
 const SeenClientInfoSchema = Schema.Struct({ name: Schema.String, version: Schema.String });
@@ -201,7 +200,7 @@ interface Changed {
 
 function recordsOf(options: FakeMcpOptions, { removed, hints }: Changed, chat: FakeChat, sleepers: Sleepers) {
   return {
-    sleep: options.realSleep === false ? sleepers.sleep : realSleep,
+    sleep: sleepers.sleep,
     isRemoved: (tool: string) => removed.has(tool),
     annotated: options.annotated ?? true,
     hints,

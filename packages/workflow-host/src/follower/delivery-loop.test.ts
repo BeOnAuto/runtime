@@ -22,6 +22,7 @@ import {
 import { reactingHost } from '../reaction-testing/reacting-host.ts';
 import type { Sweep } from '../sweeps/org-sweeps.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { followedThroughTheLatest, type Resting } from '../waiting-testing/followed-host.ts';
 import { parentId, waitingParent } from '../waiting-testing/waiting-parent.ts';
 import {
@@ -537,17 +538,19 @@ describe('a record the follower delivers twice, as a pass that goes on from the 
       'do:\n  - both: { listen: { to: { all: [{ with: { type: com.acme.a } }, { with: { type: com.acme.b } }] } } }';
     await Effect.runPromise(reacting.host.start(runAt(waiting), startOf(workflow(both))));
     await published(store, { id: 'e1', type: 'com.acme.a', data: 'first' });
-    await reacting.whenRead(
+    await reacting.sweeps.until(
       () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
       (state) => state.inbox.received === 1,
+      fewSweeps,
     );
 
     await deliveredAgain(reacting.database, reacting, () => reacting.reactions.starts().length > 1);
     const between = await Effect.runPromise(reacting.host.stateOf(runAt(waiting)));
     await published(store, { id: 'e3', type: 'com.acme.b', data: 'second' });
-    const state = await reacting.whenRead(
+    const state = await reacting.sweeps.until(
       () => Effect.runPromise(reacting.host.stateOf(runAt(waiting))),
       (found) => found.status === 'ended',
+      fewSweeps,
     );
     const runIds = reacting.reactions.starts().map(({ runId }) => runId);
 
@@ -900,9 +903,10 @@ describe('a record of a playbook the follower cannot read', () => {
     );
 
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
-    await reacting.whenRead(
+    await reacting.sweeps.until(
       () => Promise.resolve(reacting.reactions.starts()),
       (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+      fewSweeps,
     );
 
     expect(reacting.notes()).toMatchObject([
@@ -927,9 +931,10 @@ describe('a record the consumers of waiting calls cannot read', () => {
     await recorded(store, stream, { type: 'run_succeeded', data: { output: null, record: {} } });
 
     await published(store, { id: 's1', type: 'com.acme.sentinel' });
-    await reacting.whenRead(
+    await reacting.sweeps.until(
       () => Promise.resolve(reacting.reactions.starts()),
       (starts) => starts.some(({ cause }) => cause === messageIdOf(`${alpha}events/s1`, 1)),
+      fewSweeps,
     );
 
     expect(reacting.notes()).toEqual([
@@ -964,9 +969,10 @@ describe('a consumer the host is given', () => {
     await published(reacting.database.store, { id: 'e1', type: 'com.acme.noted' });
     await published(reacting.database.store, { id: 'e2', type: 'com.acme.other' });
     await published(reacting.database.store, { id: 'e3', type: 'com.acme.noted' });
-    const delivered = await reacting.whenRead(
+    const delivered = await reacting.sweeps.until(
       () => Promise.resolve<readonly string[]>([...received]),
       (ids) => ids.length >= 2,
+      fewSweeps,
     );
 
     expect(delivered).toEqual(['e1', 'e3']);

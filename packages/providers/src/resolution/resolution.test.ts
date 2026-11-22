@@ -29,6 +29,32 @@ const growing = decodedEntry({
   credentials: [{ ...consent, more: [sharing] }, { kind: 'none' }],
 });
 
+const [aKey] = tracker.credentials;
+
+const keyed = decodedEntry({
+  ...tracker,
+  credentials: [
+    { ...aKey, account_types: ['personal'] },
+    { ...aKey, permissions: 'application' },
+  ],
+});
+
+describe('the way an addition takes of a provider with two ways of one kind', () => {
+  it('takes the first way of the kind, and carries what it acts as and the account types it takes', () => {
+    const addition = resolved(keyed, { kind: 'secret', placeholders: { site: 'acme' } });
+
+    expect([addition.permissions, addition.account_types]).toEqual(['delegated', ['personal']]);
+  });
+
+  it('carries the permissions of a way that acts as the app, which takes no account type', () => {
+    const addition = resolved(decodedEntry({ ...tracker, credentials: [{ ...aKey, permissions: 'application' }] }), {
+      placeholders: { site: 'acme' },
+    });
+
+    expect([addition.permissions, addition.account_types]).toEqual(['application', []]);
+  });
+});
+
 describe('the way an addition takes of a provider with one way of each kind', () => {
   it('takes the way of the kind the caller names, the first where it names none, and refuses a kind the provider does not take', () => {
     expect([resolved(growing, {}).credential.kind, resolved(growing, { kind: 'none' }).credential.kind]).toEqual([
@@ -154,5 +180,23 @@ describe('the addition of a way of consent under the organization’s own OAuth 
     expect(
       resolved(tracker, { oauthClientFor: () => 'own', kind: 'secret', placeholders: { site: 'acme' } }).credential,
     ).not.toHaveProperty('client_source');
+  });
+});
+
+describe('the addition a provider of consent makes with a choice', () => {
+  it('places the host the choice sets in the token endpoint, as it does in the address of the API', () => {
+    const { entry, credential } = resolved(campaigns, { placeholders: { region: 'eu' } });
+
+    expect([entry.base_url, credential]).toEqual([
+      'https://api-eu.campaigns.example.com/v1',
+      {
+        kind: 'authorization',
+        issuer: 'https://auth.campaigns.example.com',
+        authorization_endpoint: 'https://auth.campaigns.example.com/authorize',
+        token_endpoint: 'https://auth-eu.campaigns.example.com/oauth/token',
+        revocation_endpoint: 'https://auth.campaigns.example.com/revoke',
+        scope: 'campaigns.read',
+      },
+    ]);
   });
 });

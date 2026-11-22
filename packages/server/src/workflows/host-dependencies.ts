@@ -61,7 +61,7 @@ export interface HostParts {
   readonly projector: ProjectorSettings;
   readonly dueWork: NonNullable<HostOptions['dueWork']>;
   readonly evaluations: WorkParts['evaluations'];
-  readonly clock?: HostClock;
+  readonly clock?: ServerClock;
   readonly startingWork?: StartingWork;
   readonly studioAddress: StudioAddress;
   readonly results: boolean;
@@ -74,6 +74,20 @@ export interface HostParts {
 }
 
 export type HostRuntime = AppRuntime<ServerServices>;
+
+/**
+ * The clock the host sleeps on. A clock a test steps also watches the fibers the host forks, given in the host's
+ * context, so that the test knows when the host is wholly at rest.
+ */
+interface ServerClock extends HostClock {
+  readonly watching?: (context: HostContext) => HostContext;
+}
+
+type HostContext = NonNullable<HostOptions['context']>;
+
+function hostContextOn(runtime: HostRuntime, clock: ServerClock | undefined): HostContext {
+  return clock?.watching?.(runtime.context) ?? runtime.context;
+}
 
 export async function openedHost(
   runtime: HostRuntime,
@@ -111,7 +125,7 @@ export async function openedHost(
     dueWork: [...dueWork, ...started.dueWork, ...ownWork],
     ...work,
     reports: hostReports(runtime),
-    context: runtime.context,
+    context: hostContextOn(runtime, clock),
     sweepEveryMs: workflows.sweepEveryMs,
     mostCallsAtOnce: workflows.mostCallsAtOnce,
     mostOpenCalls: workflows.mostOpenCalls,

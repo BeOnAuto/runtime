@@ -5,9 +5,9 @@ import {
   type Registration,
   type RouteRegistration,
   OperationsServed,
-  mayCallEach,
+  Unavailable,
 } from '@on.auto/operations';
-import { Array as Arr, Context, Effect } from 'effect';
+import { Context } from 'effect';
 
 import { playbookCallOf, orgCallOf, type HandedOff, type OrgCall } from '../hand-off/caller-hand-off.ts';
 import { toolCallbackOf, type AnsweringServing } from '../tools/linked-answers.ts';
@@ -20,8 +20,8 @@ import {
   type ToolDefinition,
   type Twins,
 } from '../tools/tool-definition.ts';
-import type { McpEndpoint, ServedTools } from './instructions.ts';
 import { connectionOf, serverOf, type Connection, type EveryTool, type McpServing } from './mcp-connection.ts';
+import { unavailableServerFor, permittedInOrgAndPlaybooks, permittedTo } from './permitted-offers.ts';
 import {
   everyListing,
   orgDispatchOf,
@@ -37,6 +37,8 @@ import {
 export type ToolServing = McpServing & AnsweringServing;
 
 export type McpServerFactory = (context: HandedOff) => Promise<McpServer>;
+
+type ServedTools = EveryTool['served'];
 
 interface Offered<R extends Registration> {
   readonly registration: R;
@@ -71,42 +73,6 @@ function servedAsTools<S extends OperationScope>(
   registrations: readonly RouteRegistration<S>[],
 ): readonly Registration<S>[] {
   return registrations.filter((registration) => registration.servedOverHttpAlone === undefined);
-}
-
-function mayCallEachOf(
-  { caller, org, context }: OrgCall,
-  offers: readonly Offered<Registration>[],
-  playbook?: string,
-): Promise<readonly boolean[]> {
-  const named = playbook === undefined ? {} : { playbook };
-  const asked = offers.map((offer) => ({ operation: offer.registration, caller, org, ...named }));
-  return Effect.runPromise(mayCallEach(asked).pipe(Effect.provideContext(context)));
-}
-
-function mayBeCalled<R extends Registration>(
-  offers: readonly Offered<R>[],
-  answers: readonly boolean[],
-): readonly Offered<R>[] {
-  return Arr.zip(offers, answers)
-    .filter(([, may]: readonly [Offered<R>, boolean]) => may)
-    .map(([offer]: readonly [Offered<R>, boolean]) => offer);
-}
-
-async function permittedTo<R extends Registration>(
-  call: OrgCall,
-  offers: readonly Offered<R>[],
-  playbook?: string,
-): Promise<readonly Offered<R>[]> {
-  return mayBeCalled(offers, await mayCallEachOf(call, offers, playbook));
-}
-
-async function permittedInOrgAndPlaybooks(
-  call: OrgCall,
-  orgOffers: readonly Offered<Registration<'org'>>[],
-  playbookOffers: readonly Offered<Registration<'playbook'>>[],
-): Promise<readonly [readonly Offered<Registration<'org'>>[], readonly Offered<Registration<'playbook'>>[]]> {
-  const answers = await mayCallEachOf(call, [...orgOffers, ...playbookOffers]);
-  return [mayBeCalled(orgOffers, answers), mayBeCalled(playbookOffers, answers.slice(orgOffers.length))];
 }
 
 function namesOf(offers: readonly Offered<Registration>[]): readonly string[] {
@@ -162,9 +128,10 @@ function servingBeside(call: OrgCall, served: ServedTools): OrgCall {
 function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: readonly Tool[]): McpServer {
   const { connection, serving, call } = connected;
   const callBeside = servingBeside(call, served);
+  const { caller, org, orgName } = call;
   const session = {
     connection,
-    actingAs: { caller: call.caller, org: call.org },
+    actingAs: orgName === undefined ? { caller, org } : { caller, org, orgName },
     states: serving.linkedAnswers.states,
   };
   return serverOf(session, served, (server) => {
@@ -198,6 +165,9 @@ export function orgServerFactory(serving: ToolServing): McpServerFactory {
   return async (context) => {
     const call = orgCallOf(context);
     const listed = await permittedTo(call, orgOffers);
+    if (listed instanceof Unavailable) {
+      return unavailableServerFor(serving.serverInfo, orgOffers, listed);
+    }
     const tools = toolsOf(listed, orgDispatchOf(serving.dispatcher, call, twins), orgInputBeside(twins));
     return serverWithTools({ connection, serving, call }, servedTools(listed, []), tools);
   };
@@ -209,6 +179,9 @@ export function playbookServerFactory(serving: ToolServing): McpServerFactory {
   return async (context) => {
     const call = playbookCallOf(context);
     const listed = await permittedTo(call, playbookOffers, call.playbook);
+    if (listed instanceof Unavailable) {
+      return unavailableServerFor(serving.serverInfo, playbookOffers, listed);
+    }
     const tools = toolsOf(listed, playbookDispatchOf(serving.dispatcher, call));
     return serverWithTools({ connection, serving, call }, servedTools([], listed), tools);
   };
@@ -246,7 +219,11 @@ function ownOrgServerFactory(
   const connection = connectionOf(endpoint, serving, everyToolOf(orgOffers, playbookOffers));
   return async (context) => {
     const call = orgCallOf(context);
-    const [listedInOrg, listedInPlaybook] = await permittedInOrgAndPlaybooks(call, orgOffers, playbookOffers);
+    const permitted = await permittedInOrgAndPlaybooks(call, orgOffers, playbookOffers);
+    if (permitted instanceof Unavailable) {
+      return unavailableServerFor(serving.serverInfo, [...orgOffers, ...playbookOffers], permitted);
+    }
+    const [listedInOrg, listedInPlaybook] = permitted;
     const tools = [
       ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins, listed), orgInputBeside(twins)),
       ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call, listed), withoutThePlaybook),
@@ -268,7 +245,10 @@ function ownOrgListingOf(serving: Cataloged): EveryTool {
   return everyToolOf(orgOffers, playbookOffers);
 }
 
-export function listingsOf(serving: Cataloged, directory: Cataloged): Readonly<Record<McpEndpoint, EveryTool>> {
+export function listingsOf(
+  serving: Cataloged,
+  directory: Cataloged,
+): Readonly<Record<Connection['endpoint'], EveryTool>> {
   return {
     'own org': ownOrgListingOf(serving),
     org: everyToolOf(orgServingOf(serving).offers, []),

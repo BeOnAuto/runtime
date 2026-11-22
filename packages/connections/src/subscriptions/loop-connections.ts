@@ -4,6 +4,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import type { RecordedConnection } from '../registry/connection.ts';
 import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import type { KeptConnection } from '../registry/registry.ts';
 import { holdsItUnrefused } from '../sockets/socket-holders.ts';
 
 export interface LoopConnectionsParts {
@@ -34,7 +35,18 @@ function declaredFor(providers: ProviderList, { provider, events }: RecordedConn
   return Option.match(asGivenByHand(events), { onNone: () => [], onSome: ({ destinations }) => destinations });
 }
 
-function loopConnectionOf(providers: ProviderList, connection: RecordedConnection): LoopConnection {
+function identityOwedBy(
+  providers: ProviderList,
+  { connection, identified }: KeptConnection,
+): Pick<LoopConnection, 'identify'> {
+  const identity = providerFoundBy(providers, connection.provider)?.entry.events?.identity;
+  return identity === undefined || identified !== undefined || connection.status !== 'connected'
+    ? {}
+    : { identify: identity };
+}
+
+export function loopConnectionOf(providers: ProviderList, kept: KeptConnection): LoopConnection {
+  const { connection } = kept;
   const { id, name, connected_at: connectedAt, account } = connection;
   const destinations = takenThrough(connection, declaredFor(providers, connection));
   return {
@@ -43,18 +55,25 @@ function loopConnectionOf(providers: ProviderList, connection: RecordedConnectio
     ...(connectedAt === null ? {} : { connected: connectedAt }),
     ...(account === null ? {} : { account: account.id }),
     destinations,
+    ...identityOwedBy(providers, kept),
   };
 }
 
-export function loopConnectionsOf({
+export function connectionsServingOf({
   registry,
   providers,
-}: LoopConnectionsParts): (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]> {
+}: LoopConnectionsParts): (playbook: PlaybookAddress) => Effect.Effect<readonly KeptConnection[]> {
   const fold = connectionsFoldOf(providers);
   return (playbook) =>
     Effect.map(registry.load(connectionsStreamOfOrg(playbook.org), fold), ({ state }) =>
-      [...state.values()]
-        .filter(({ connection }) => servesThePlaybook(connection, playbook))
-        .map(({ connection }) => loopConnectionOf(providers, connection)),
+      [...state.values()].filter(({ connection }) => servesThePlaybook(connection, playbook)),
     );
+}
+
+export function loopConnectionsOf(
+  parts: LoopConnectionsParts,
+): (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]> {
+  const servingOf = connectionsServingOf(parts);
+  return (playbook) =>
+    Effect.map(servingOf(playbook), (serving) => serving.map((kept) => loopConnectionOf(parts.providers, kept)));
 }

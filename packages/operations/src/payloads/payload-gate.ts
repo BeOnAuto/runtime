@@ -16,11 +16,12 @@ export function tryAgainAfter(failures: number, factor: number, most = mostTryAg
   return Math.min(most, firstTryAgainMs * 2 ** (failures - 1)) * (0.5 + factor / 2);
 }
 
-export function payloadGateOf(): PayloadGate {
+/** The gate, its wait counted on the time it is handed: Effect's clock unless it is handed another. */
+export function payloadGateOf(timeNow: Effect.Effect<number> = Clock.currentTimeMillis): PayloadGate {
   let failures = 0;
   let nextTryAt = 0;
   const closedAfterAFailure = Effect.gen(function* () {
-    const now = yield* Clock.currentTimeMillis;
+    const now = yield* timeNow;
     const factor = yield* Random.next;
     failures += 1;
     nextTryAt = now + tryAgainAfter(failures, factor);
@@ -30,7 +31,7 @@ export function payloadGateOf(): PayloadGate {
     nextTryAt = 0;
   });
   const through = <A, E>(call: Effect.Effect<A, E>, detail: string): Effect.Effect<A, E | Unavailable> =>
-    Effect.flatMap(Clock.currentTimeMillis, (now): Effect.Effect<A, E | Unavailable> =>
+    Effect.flatMap(timeNow, (now): Effect.Effect<A, E | Unavailable> =>
       now < nextTryAt
         ? Effect.fail(new Unavailable({ detail }))
         : call.pipe(

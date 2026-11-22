@@ -738,6 +738,25 @@ importers:
         specifier: 'catalog:'
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
 
+  packages/chat:
+    dependencies:
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../operations
+      '@on.auto/reasoning':
+        specifier: workspace:*
+        version: link:../../capabilities/reasoning
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
+
   packages/config:
     dependencies:
       '@on.auto/operations':

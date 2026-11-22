@@ -167,6 +167,7 @@ describe('the fold of a consent', () => {
       issuer: 'https://accounts.drive.example.com',
       client_id: 'auto-runtime',
       client_source: 'registered',
+      permissions: 'delegated',
     });
   });
 });

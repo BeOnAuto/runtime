@@ -45,7 +45,7 @@ function unreferredBy(answer: Readonly<Response>): readonly (string | null)[] {
 
 describe('an invitation link opened in a browser', () => {
   it('remembers a pending invitation for that browser in a cookie of its own for an hour, and sends the browser on, neither kept nor passed on', async () => {
-    const browser = browserAt((await aServer()).at);
+    const browser = browserAt(await aServer());
 
     const opened = await browser.at(`/invitations/${pendingInvitationSecret}`);
 
@@ -67,7 +67,7 @@ describe('an invitation link opened in a browser', () => {
 
   it('shows the page of a link that stopped working, neither kept nor passed on, and remembers nothing', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
 
     const ended = await browser.at('/invitations/a-link-revoked-used-or-expired');
 
@@ -79,7 +79,7 @@ describe('an invitation link opened in a browser', () => {
 describe('a cookie of an invitation a person types by hand', () => {
   it('is handed to the sign-in as it is, which decides what it accepts, and cleared', async () => {
     const typing = carriedTo();
-    const browser = browserAt((await aServer({ signIn: typing.signIn })).at);
+    const browser = browserAt(await aServer({ signIn: typing.signIn }));
     browser.cookieSet(invitationCookie, 'an-id-from-a-listing');
 
     await signedInAs(browser, { clientId: await registered(browser) });
@@ -91,8 +91,8 @@ describe('a cookie of an invitation a person types by hand', () => {
 describe('an invitation a browser carries into a sign-in', () => {
   it('is handed to the sign-in as it finishes, once, and cleared whatever the outcome', async () => {
     const [admitting, refusing] = [carriedTo(), carriedTo(() => Promise.resolve({ refused: 'no_access' }))];
-    const browser = browserAt((await aServer({ signIn: admitting.signIn })).at);
-    const refused = browserAt((await aServer({ signIn: refusing.signIn })).at);
+    const browser = browserAt(await aServer({ signIn: admitting.signIn }));
+    const refused = browserAt(await aServer({ signIn: refusing.signIn }));
     const clientId = await registered(browser);
 
     await browser.at(`/invitations/${pendingInvitationSecret}`);

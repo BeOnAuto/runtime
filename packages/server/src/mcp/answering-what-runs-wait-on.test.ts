@@ -9,8 +9,7 @@ import {
   servingMeetings,
   type MeetingsServer,
 } from '../testing/interaction-servers/meetings-server.ts';
-import { runIdIn, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { runIdIn, whenSwept, workflowSource } from '../testing/servers/workflow-server.ts';
 
 let meetings: MeetingsServer;
 
@@ -107,19 +106,21 @@ async function openRequestsIn(session: McpSession): Promise<readonly OpenRequest
 }
 
 function deliveredRequestsIn(session: McpSession, count: number): Promise<readonly OpenRequest[]> {
-  return until(async () => {
-    const open = await openRequestsIn(session);
-    expect(open.filter(({ standing }) => standing === 'delivered')).toHaveLength(count);
-    return open;
-  });
+  return whenSwept(
+    meetings,
+    () => openRequestsIn(session),
+    (open) => open.filter(({ standing }) => standing === 'delivered').length === count,
+  );
 }
 
+const StatusSchema = Schema.Struct({ status: Schema.String });
+
 function endedIn(session: McpSession, runId: string): Promise<unknown> {
-  return until(async () => {
-    const read = await session.callTool('get_run', { ...inMeetings, run_id: runId });
-    expect(read.structuredContent).not.toMatchObject({ status: 'started' });
-    return read.structuredContent;
-  });
+  return whenSwept(
+    meetings,
+    async () => (await session.callTool('get_run', { ...inMeetings, run_id: runId })).structuredContent,
+    (read) => Schema.decodeUnknownSync(StatusSchema)(read).status !== 'started',
+  );
 }
 
 function draftFor(session: McpSession, month: string): Promise<string> {
@@ -134,13 +135,14 @@ function draftFor(session: McpSession, month: string): Promise<string> {
 }
 
 function deliveredRequestFor(session: McpSession, month: string): Promise<OpenRequest | undefined> {
-  return until(async () => {
-    const delivered = (await openRequestsIn(session)).find(
-      ({ message, standing }) => standing === 'delivered' && message.includes(month),
-    );
-    expect(delivered).toBeDefined();
-    return delivered;
-  });
+  return whenSwept(
+    meetings,
+    async () =>
+      (await openRequestsIn(session)).find(
+        ({ message, standing }) => standing === 'delivered' && message.includes(month),
+      ),
+    (found) => found !== undefined,
+  );
 }
 
 async function approvedAsText(session: McpSession) {
@@ -152,6 +154,11 @@ async function approvedAsText(session: McpSession) {
     answer: JSON.stringify({ decision: 'approve' }),
   });
   return { answered, ended: await endedIn(session, november) };
+}
+
+/** What the chat was sent since the count given: the server is the file's, and another test may have posted before. */
+function postedSince(count: number | undefined): readonly unknown[] {
+  return (meetings.chat?.chat.posted() ?? []).slice(count).map(({ text }) => text);
 }
 
 async function approvedThenNextMonth(session: McpSession) {
@@ -195,6 +202,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
   });
 
   it('answers the request the person approved, which ends the run that waited, and starts a new run only for the next month', async () => {
+    const postedBefore = meetings.chat?.chat.posted().length;
     const outcome = await meetings.onMcp(approvedThenNextMonth);
 
     expect([outcome.asked?.delivery, outcome.asked?.message, outcome.asked?.answer_schema]).toEqual([
@@ -208,7 +216,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
     expect(outcome.openForOctober.map(({ message }) => message)).toEqual([
       'Here is the draft for October: approve, revise or skip?',
     ]);
-    expect(meetings.chat?.chat.posted().map(({ text }) => text)).toEqual([
+    expect(postedSince(postedBefore)).toEqual([
       'Here is the draft for September: approve, revise or skip?',
       'Here is the draft for October: approve, revise or skip?',
     ]);

@@ -1,21 +1,23 @@
-import { Effect } from 'effect';
-
 import type { HostClock } from '../loop/host-clock.ts';
 import { zoneClockOf } from '../schedules/zone-clock.ts';
+import { steppedClock, type SteppedClock } from '../testing/stepped-clock.ts';
 
-export interface MovedClock extends HostClock {
+interface MovedTime {
   readonly moveTo: (at: number) => void;
   readonly forgetZone: (timeZone: string) => void;
 }
 
-const aBreath = 5;
+export interface SteppedMovedClock extends SteppedClock, Pick<HostClock, 'inZone'>, MovedTime {}
 
-export function movedClock(start: number): MovedClock {
-  const time = { now: start };
+/**
+ * A moved clock on which time moves only when the test moves it: to a moment, with `moveTo`, or by the sweeps it
+ * names (`steppedBy`). A sleep of the host ends only once the time reaches it.
+ */
+export function steppedMovedClock(start: number): SteppedMovedClock {
+  const stepped = steppedClock(start);
   const forgotten = new Set<string>();
   return {
-    now: () => time.now,
-    sleep: (milliseconds) => Effect.sleep(Math.min(milliseconds, aBreath)),
+    ...stepped,
     inZone: (timeZone) => {
       if (forgotten.has(timeZone)) {
         throw new RangeError(`Invalid time zone specified: ${timeZone}`);
@@ -23,7 +25,7 @@ export function movedClock(start: number): MovedClock {
       return zoneClockOf(timeZone);
     },
     moveTo: (at) => {
-      time.now = at;
+      stepped.step(at - stepped.now());
     },
     forgetZone: (timeZone) => {
       forgotten.add(timeZone);

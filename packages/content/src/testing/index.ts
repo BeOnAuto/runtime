@@ -2,9 +2,10 @@ export { memoryContentHeads, memoryContentStore, memoryRecordedContent, type Hel
 export {
   aStepFailedAtItsPause,
   defectOf,
-  longEnoughForAPutToSettle,
+  onATestClock,
   pausableStore,
-  settledWithin,
+  settledYet,
+  type OnATestClock,
   type PausableStore,
   type PausedStep,
 } from './paused-store.ts';

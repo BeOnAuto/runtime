@@ -13,6 +13,7 @@ const anyWords: unknown = expect.any(String);
 
 const neverStarted: WorkflowAdapterDependencies = {
   runs: { start: () => Effect.die('A workflow started') },
+  queued: { queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }) },
   check: testExpressionCheck,
   connectionEvents: connectionsReporting({}),
   mostDurationMs: 30 * 24 * 3_600_000,

@@ -9,7 +9,13 @@ import { weeklyOrders } from '../testing/weekly-orders.ts';
 
 const anyText: unknown = expect.any(String);
 
-const asked = { org: 'acme', playbook: 'alpha', name: 'weekly-orders', version: 1 } as const;
+const asked = {
+  org: 'acme',
+  playbook: 'alpha',
+  definition: '0199a3c4-7d2e-7c1a-9b3f-00000000f0ca',
+  name: 'weekly-orders',
+  version: 1,
+} as const;
 
 const document = Result.getOrThrow(parsePredictionDocument(weeklyOrders));
 

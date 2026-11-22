@@ -1,7 +1,7 @@
 import { endedWhileItRuns } from '@on.auto/operations/testing';
 import { onTestFinished } from 'vitest';
 
-import { until } from '../waiting/until.ts';
+import { whenHeldIn } from '../waiting/watched-folder.ts';
 import { runtimesStillRunningInTheBackgroundIn, startedInTheBackgroundIn } from './runtimes-in-the-background.ts';
 
 export interface StartedInTheBackground {
@@ -15,7 +15,8 @@ export function runtimesStartedInTheBackgroundEndedWithTheTest(home: string): St
   const read = { starts: 0 };
   return {
     pid: async () => {
-      const started = await until(
+      const started = await whenHeldIn(
+        home,
         () => startedInTheBackgroundIn(home),
         (starts) => starts.length > read.starts,
       );

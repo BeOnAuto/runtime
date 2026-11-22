@@ -54,6 +54,24 @@ export interface FakeConsentServiceAnswers extends Omit<FakeConsentService, 'url
   readonly handler: FetchHandler;
 }
 
+/** An S256 challenge is the base64url of 32 bytes: 43 characters, as the service takes it. */
+const ChallengeSchema = Schema.String.check(Schema.isPattern(/^[\w-]{43}$/u));
+
+/** The parameters the service sets itself, or that would carry another request, which a start may not set. */
+const setByTheService: ReadonlySet<string> = new Set([
+  'response_type',
+  'client_id',
+  'code_challenge',
+  'code_challenge_method',
+  'redirect_uri',
+  'state',
+  'scope',
+  'resource',
+  'request',
+  'request_uri',
+  'response_mode',
+]);
+
 const decodeStart = Schema.decodeUnknownOption(
   Schema.fromJsonString(
     Schema.Struct({
@@ -62,7 +80,7 @@ const decodeStart = Schema.decodeUnknownOption(
       parameters: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
       resource: ResourceSchema,
       return: ReturnSchema,
-      challenge: GivenSchema,
+      challenge: ChallengeSchema,
       challenge_method: Schema.Literal('S256'),
     }),
   ),
@@ -112,7 +130,8 @@ function isServedBase({ kind, base }: Return, store: Store): boolean {
 
 function started({ text }: Asked, store: Store): Response {
   const asked = Option.getOrUndefined(decodeStart(text));
-  if (asked === undefined || refuses(store, 'start')) {
+  const setsItsOwn = Object.keys(asked?.parameters ?? {}).some((name) => setByTheService.has(name));
+  if (asked === undefined || setsItsOwn || refuses(store, 'start')) {
     return problem(400, 'The consent cannot be started as it is asked');
   }
   if (asked.issuer !== store.options.vendor.origin || !isServedBase(asked.return, store)) {

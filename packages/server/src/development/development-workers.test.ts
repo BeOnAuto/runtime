@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { developmentFiles, startDevelopment, untilListening } from '../testing/processes/development-process.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
 import { givenGoals } from '../testing/settings/goals-kept.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const meetings = '/v1/orgs/local/playbooks/meetings';
 
@@ -56,7 +56,7 @@ describe('the functions pnpm dev serves in worker threads', () => {
     const echoed = await call('POST', `${meetings}/definitions/computation/echo/run`, { input: { said: 'hello' } });
     expect(echoed.body).toMatchObject({ status: 'succeeded', output: { said: 'hello' } });
     await call('PUT', `${meetings}/definitions/computation/echo`, { source: echoWithWhatItWasTold, diagram: 'none' });
-    const presented = await until(async () => {
+    const presented = await whenHeld(async () => {
       const read = await call('GET', `${meetings}/definitions/computation/echo`);
       expect(read.body).toMatchObject({ page: { standing: { state: 'live', folded: 1 } } });
       return read;

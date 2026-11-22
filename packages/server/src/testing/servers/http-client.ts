@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import { inAWaitsRead, readByAWaitHeader } from '../waiting/happenings.ts';
+
 export interface TestResponse {
   readonly status: number;
   readonly headers: Headers;
@@ -38,6 +40,7 @@ export async function requestThrough(
       method,
       headers: {
         ...authorizationOf(options),
+        ...(inAWaitsRead() ? { [readByAWaitHeader]: 'yes' } : {}),
         ...(body === undefined ? {} : { 'content-type': 'application/json' }),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),

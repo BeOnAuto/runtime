@@ -15,6 +15,7 @@ marks:
     - analyticsdata.properties.audienceExports.query
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/analytics.readonly
     says:

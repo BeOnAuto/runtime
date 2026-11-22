@@ -3,6 +3,7 @@ import { accountFake, accountServerOver, testSigners } from '@on.auto/meter/test
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 
+import { receiptsTold } from '../waiting/told-fakes.ts';
 import { assetMadeBy, onAlphaOf, servingAPicture } from './asset-calls.ts';
 import { linkIn } from './connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from './reasoning-server.ts';
@@ -16,7 +17,7 @@ export interface ToolServing extends ReasoningServer {
 }
 
 export async function servingWithAToolServer(replies: readonly ScriptedReplies[]): Promise<ToolServing> {
-  const graph = await serveFakeMcp({ bearer: toolServerKey });
+  const graph = receiptsTold(await serveFakeMcp({ bearer: toolServerKey }));
   const account = accountFake();
   const accounts = await accountServerOver(account);
   const environment = {
@@ -52,7 +53,7 @@ export async function toolServerToolsCalled(
 ): Promise<readonly (readonly [string, ToolResult])[]> {
   const asked = { server: 'graph', tool: 'search' };
   const searchedFor = { ...asked, arguments: { query: 'acme' } };
-  const crmServer = await serveFakeMcp();
+  const crmServer = receiptsTold(await serveFakeMcp());
   const crm = { name: 'crm', type: 'mcp', entry: { url: crmServer.url }, credential: { kind: 'none' } };
   const added = await session.callTool('add_connection', crm);
   const { id, token } = linkIn(added.structuredContent);

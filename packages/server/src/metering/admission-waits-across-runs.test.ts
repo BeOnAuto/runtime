@@ -54,7 +54,7 @@ describe('a workflow whose call the meter refuses for any other reason', () => {
       rejection: { reason: 'conflict', kind: 'account_closed' },
     });
     expect(await waitsOf(server, runIdIn(started.body))).toEqual([]);
-  }, 60_000);
+  });
 });
 
 describe('a workflow whose call two levels below the run at the top is refused for credits', () => {
@@ -74,7 +74,7 @@ describe('a workflow whose call two levels below the run at the top is refused f
     expect(settledTop.body).toMatchObject({ status: 'succeeded', output: { counted: true } });
     expect(server.modelCalls()).toBe(1);
     expect(meter.admitted()).toEqual([top, workflow, asked, tally(2)]);
-  }, 60_000);
+  });
 });
 
 describe('a workflow that waits for credits on a server that stops', () => {
@@ -92,5 +92,5 @@ describe('a workflow that waits for credits on a server that stops', () => {
     expect(after.modelCalls()).toBe(0);
     expect(meter.refused()).toEqual([tally(1)]);
     expect(admitting.admitted()).toEqual([tally(2)]);
-  }, 60_000);
+  });
 });

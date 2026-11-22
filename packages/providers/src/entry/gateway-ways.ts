@@ -31,8 +31,10 @@ type Gateway = typeof GatewaySchema.Type;
 
 export const PermissionsSchema = Schema.Literals(['application', 'delegated']).annotate({
   description:
-    'For authorization, whether a connection made this way acts as the app, application, or as the person who connects, delegated; delegated where it is left out',
+    'For authorization and secret, whether a connection made this way acts as the app, application, or as an account at the service, delegated; delegated where it is left out',
 });
+
+export type Permissions = typeof PermissionsSchema.Type;
 
 export const wayThroughAGateway = 'an authorization way through a gateway';
 

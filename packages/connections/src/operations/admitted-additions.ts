@@ -6,10 +6,12 @@ import { describedAdditionOf, type DescribedAddition } from '../entries/describe
 import { credentialUnnamedOf, takesConsentOf, wayRefusalOf, type WayRefused } from '../page/consent-words.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
 import {
+  actingAsItsKind,
   checkedAdditionOf,
   gatewayRefusalOfTheAddition,
   refusalOfTheAddition,
   type GivenAddition,
+  type GivenWay,
 } from '../providers/provider-additions.ts';
 import type { AdditionGiven } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
@@ -43,15 +45,27 @@ function credentialOf({ issuer, clients, scope }: NamedWay): Credential {
   return { kind: 'authorization', issuer, clients, ...(scope === undefined ? {} : { scope }) };
 }
 
+function clientCredentialsOf({ issuer, scope, takesClientCredentials }: NamedWay): readonly GivenWay[] {
+  const credential: Credential = { kind: 'client_credentials', issuer, ...(scope === undefined ? {} : { scope }) };
+  return takesClientCredentials ? [actingAsItsKind(credential)] : [];
+}
+
+function withItsWays(addition: GivenAddition, others: readonly GivenWay[]): GivenAddition {
+  return others.length === 0 ? addition : { ...addition, ways: [addition.credential, ...others] };
+}
+
 function takesTheWayItNames(kind: KindGiven): boolean {
   return kind === 'left_out' || kind === 'authorization';
 }
 
 function withTheWayNamed({ addition, kind, url }: Asked, named: NamedWay): Effect.Effect<GivenAddition, InvalidInput> {
   if (takesTheWayItNames(kind)) {
-    return Effect.succeed({ ...addition, credential: credentialOf(named) });
+    const signingIn = { ...addition, credential: { ...addition.credential, ...credentialOf(named) } };
+    return Effect.succeed(withItsWays(signingIn, clientCredentialsOf(named)));
   }
-  return kind === 'client_credentials' ? Effect.succeed(addition) : Effect.fail(takesConsentOf(url, named.issuer));
+  return kind === 'client_credentials'
+    ? Effect.succeed(withItsWays(addition, [actingAsItsKind(credentialOf(named))]))
+    : Effect.fail(takesConsentOf(url, named.issuer));
 }
 
 function cannotBeAsked({ refused }: WayRefusal): boolean {

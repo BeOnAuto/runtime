@@ -18,6 +18,7 @@ import type {
 import {
   isLasting,
   isTheSameFailure,
+  keyOf,
   leaseFrom,
   retryWaitOf,
   withLapse,
@@ -31,6 +32,7 @@ export interface Round {
   readonly playbook: PlaybookAddress;
   readonly now: number;
   readonly connections: ReadonlyMap<string, LoopConnection>;
+  readonly unreadFor: ReadonlyMap<string, Pick<SubscriptionCallFailed, 'kind' | 'because'>>;
 }
 
 export type Later = readonly number[];
@@ -97,6 +99,8 @@ interface Attempt {
 }
 
 const aSubscribe: Attempt = { recordsWhatPasses: true, makes: true };
+
+const aSubscribeNotSent: Attempt = { recordsWhatPasses: true, makes: false };
 
 const aSubscribeAgain: Attempt = { recordsWhatPasses: false, makes: true };
 
@@ -170,6 +174,10 @@ function madeOf({ destination, generation }: Through, { id, secretId }: Made): M
 
 function subscribed(round: Round, acting: Acting): Effect.Effect<Later> {
   const { key, destination } = acting;
+  const unread = round.unreadFor.get(keyOf(key));
+  if (unread !== undefined) {
+    return failedOn(round, acting, unread, aSubscribeNotSent);
+  }
   return Effect.matchEffect(subscribedThrough(round, { key, destination }), {
     onFailure: (failure: CallFailure) => failedOn(round, acting, failure, aSubscribe),
     onSuccess: (made) =>

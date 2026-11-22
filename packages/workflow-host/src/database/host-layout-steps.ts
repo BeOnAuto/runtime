@@ -1,3 +1,8 @@
 const triggerOutcomesLayout = 29;
 
-export const hostLayoutSteps = [{ layout: triggerOutcomesLayout, statements: [] }] as const;
+const queueByDefinitionLayout = 30;
+
+export const hostLayoutSteps = [
+  { layout: triggerOutcomesLayout, statements: [] },
+  { layout: queueByDefinitionLayout, statements: [] },
+] as const;

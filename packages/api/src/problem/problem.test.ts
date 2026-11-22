@@ -117,6 +117,22 @@ describe('problemResponse', () => {
   });
 });
 
+describe('a busy refusal', () => {
+  it.each([1, 2, 4, 8])('asks a busy client to retry after the %i seconds its problem gives', (seconds) => {
+    expect(retryAfterOf({ kind: 'busy', retry_after: seconds })).toBe(String(seconds));
+  });
+
+  it('gives a busy problem its own type, with the reason unavailable and the status 503', () => {
+    expect(problemOf('unavailable', 'Busy', { kind: 'busy', retry_after: 1 })).toMatchObject({
+      type: 'https://on.auto/problems/busy',
+      status: 503,
+      reason: 'unavailable',
+      kind: 'busy',
+      retry_after: 1,
+    });
+  });
+});
+
 describe('the retry of a refusal of a prediction function', () => {
   it('asks for a retry of a prediction function whose dataset is not ready, and none of one whose dataset stalled', () => {
     expect([

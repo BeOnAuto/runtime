@@ -14,11 +14,11 @@ import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Option, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { personSigningIn } from '../sign-in/person-signing-in.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { servingReasoningWithGoals } from '../testing/settings/goals-kept.ts';
 
 const summary = [
@@ -86,10 +86,10 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 42, bytes: 67_383, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 40, bytes: 64_946, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 43, bytes: 69_091, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 41, bytes: 66_654, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 24_566, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 29, bytes: 46_132, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 30, bytes: 47_716, mostBytes: mostListingBytes.playbook },
 ];
 
 function outputIn(result: ToolResult): unknown {
@@ -114,17 +114,17 @@ async function listingOnTheWireServedSchemasWith(
 }
 
 const endpointsServedSchemasWith = [
-  { path: '/mcp', tools: 44, bytes: 73_450, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 42, bytes: 71_013, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 45, bytes: 75_472, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 43, bytes: 73_035, mostBytes: mostListingBytes.directory },
   { path: '/orgs/local/mcp', tools: 18, bytes: 27_035, mostBytes: mostListingBytes.org },
-  { path: '/orgs/local/playbooks/alpha/mcp', tools: 31, bytes: 49_644, mostBytes: mostListingBytes.playbook },
+  { path: '/orgs/local/playbooks/alpha/mcp', tools: 32, bytes: 51_542, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 const endpointsOfTheShippedServerSigningPeopleIn: readonly Endpoint[] = [
-  { path: '/mcp', tools: 46, bytes: 74_678, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 44, bytes: 72_241, mostBytes: mostListingBytes.directory },
+  { path: '/mcp', tools: 47, bytes: 76_700, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 45, bytes: 74_263, mostBytes: mostListingBytes.directory },
   { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 28_263, mostBytes: mostListingBytes.org },
-  { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 31, bytes: 49_644, mostBytes: mostListingBytes.playbook },
+  { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 32, bytes: 51_542, mostBytes: mostListingBytes.playbook },
 ];
 
 describe('served schemas', () => {
@@ -253,7 +253,7 @@ describe('served schemas of the server as it ships, signing people in', () => {
     const ledger = temporaryLedger();
     const shipped = await startServer(
       { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: ledger.fileName, ...signing.environment },
-      compositionRoot,
+      testComposition(),
     );
     onTestFinished(async () => {
       await shipped.stop();

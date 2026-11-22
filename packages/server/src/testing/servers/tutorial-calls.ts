@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { plainTextIn, type McpSession, type ToolResult } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 
-import { until } from '../waiting/until.ts';
+import { whenSwept, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 import { runIdIn } from './workflow-server.ts';
 
 export interface ApprovalRun {
@@ -112,8 +112,14 @@ function called(session: McpSession, tool: string, input: Readonly<Record<string
   return session.callTool(tool, inTutorial(input));
 }
 
-function settledOn(session: McpSession, id: string): Promise<ToolResult> {
-  return until(
+/** The server the tutorial runs on: its sweeps are stepped while a wait does not hold. */
+interface Swept {
+  readonly clock?: SteppedServerClock;
+}
+
+function settledOn(server: Swept, session: McpSession, id: string): Promise<ToolResult> {
+  return whenSwept(
+    server,
     () => called(session, 'get_run', { run_id: id }),
     ({ structuredContent }) => structuredContent?.['status'] !== 'started',
   );
@@ -146,13 +152,14 @@ async function saved(session: McpSession): Promise<readonly string[]> {
   ];
 }
 
-async function startedAndAsked(session: McpSession) {
+async function startedAndAsked(server: Swept, session: McpSession) {
   const started = await called(session, 'run_definition', {
     type: 'workflow',
     name: 'review-and-approve',
     input: { brief, owner: 'ada@example.com' },
   });
-  const listed = await until(
+  const listed = await whenSwept(
+    server,
     () => called(session, 'list_interactions', {}),
     ({ structuredContent }) =>
       decodeListed(structuredContent).interactions.some(({ standing }) => standing === 'delivered'),
@@ -166,25 +173,28 @@ async function startedAndAsked(session: McpSession) {
   };
 }
 
-export async function approvalRunOn(session: McpSession): Promise<ApprovalRun> {
-  const created = await saved(session);
-  const { started, listed, workflowId, requestId } = await startedAndAsked(session);
-  const answer = { verdict: 'approve', note: 'Approved for the autumn launch.' };
-  const answered = await called(session, 'answer_interaction', { run_id: requestId, answer });
-  const ended = await settledOn(session, workflowId);
-  const history = await called(session, 'list_playbook_events', { run_id: workflowId, order: 'asc' });
-  const request = await settledOn(session, requestId);
-  const leftOpen = await called(session, 'list_interactions', {});
-  const again = await called(session, 'answer_interaction', { run_id: requestId, answer: { verdict: 'revise' } });
-  return {
-    summaries: [
-      ...created,
-      ...[started, listed, answered, history, request, ended, leftOpen].map((result) => plainTextIn(result)),
-      ...decodeEvents(history.structuredContent)
-        .events.filter(({ metadata }) => metadata.run_id === workflowId)
-        .map(({ summary }) => summary),
-    ],
-    output: ended.structuredContent?.['output'],
-    answeredAgain: again.isError,
+/** The tutorial's approval, run over an MCP session on the server, its sweeps stepped while it waits. */
+export const approvalRunOn =
+  (server: Swept) =>
+  async (session: McpSession): Promise<ApprovalRun> => {
+    const created = await saved(session);
+    const { started, listed, workflowId, requestId } = await startedAndAsked(server, session);
+    const answer = { verdict: 'approve', note: 'Approved for the autumn launch.' };
+    const answered = await called(session, 'answer_interaction', { run_id: requestId, answer });
+    const ended = await settledOn(server, session, workflowId);
+    const history = await called(session, 'list_playbook_events', { run_id: workflowId, order: 'asc' });
+    const request = await settledOn(server, session, requestId);
+    const leftOpen = await called(session, 'list_interactions', {});
+    const again = await called(session, 'answer_interaction', { run_id: requestId, answer: { verdict: 'revise' } });
+    return {
+      summaries: [
+        ...created,
+        ...[started, listed, answered, history, request, ended, leftOpen].map((result) => plainTextIn(result)),
+        ...decodeEvents(history.structuredContent)
+          .events.filter(({ metadata }) => metadata.run_id === workflowId)
+          .map(({ summary }) => summary),
+      ],
+      output: ended.structuredContent?.['output'],
+      answeredAgain: again.isError,
+    };
   };
-}

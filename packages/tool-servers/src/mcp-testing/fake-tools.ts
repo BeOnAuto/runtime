@@ -150,7 +150,7 @@ const answeringTools: readonly FakeTool[] = [
 const troubleTools: readonly FakeTool[] = [
   {
     name: 'sleep',
-    description: 'Answers after the milliseconds it is given, unless it is cancelled first.',
+    description: 'Answers once the test wakes it, unless it is cancelled first.',
     inputSchema: { type: 'object', properties: { ms: { type: 'number' } }, required: ['ms'] },
     annotations: { readOnlyHint: true, idempotentHint: true },
     answer: async (input, { signal, state }) => {

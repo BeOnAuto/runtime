@@ -1,16 +1,10 @@
 import { Conflict, InvalidInput } from '@on.auto/operations';
 import { alternatives, quoted } from '@on.auto/phrasing';
-import {
-  providerNamed,
-  scopeWith,
-  scopesIn,
-  type CredentialWay,
-  type ProviderList,
-  type ScopeGroup,
-} from '@on.auto/providers';
-import { Function, Result } from 'effect';
+import { scopeWith, scopesIn, type CredentialWay, type ProviderList, type ScopeGroup } from '@on.auto/providers';
+import { Function } from 'effect';
 
 import type { RecordedConnection, SaidScope } from '../registry/connection.ts';
+import { wayOfTheConnection } from '../registry/what-connections-act-as.ts';
 
 type OfAWay = Pick<RecordedConnection, 'provider' | 'credential'>;
 
@@ -38,18 +32,8 @@ interface WayAsItStands {
   readonly names: (scope: string) => boolean;
 }
 
-function wayOf({ provider, credential }: OfAWay, providers: ProviderList): CredentialWay | undefined {
-  return provider === null
-    ? undefined
-    : Result.getOrUndefined(
-        Result.map(providerNamed(providers, provider), ({ entry }) =>
-          entry.credentials.find(({ kind }) => kind === credential.kind),
-        ),
-      );
-}
-
 function groupsOf(connection: OfAWay, providers: ProviderList): readonly ScopeGroup[] {
-  return wayOf(connection, providers)?.more ?? [];
+  return wayOfTheConnection(connection, providers)?.more ?? [];
 }
 
 function scopesNamedBy({ scope, more = [] }: CredentialWay): ReadonlySet<string> {
@@ -57,7 +41,7 @@ function scopesNamedBy({ scope, more = [] }: CredentialWay): ReadonlySet<string>
 }
 
 function wayAsItStandsOf(connection: OfAWay, providers: ProviderList): WayAsItStands {
-  const way = wayOf(connection, providers);
+  const way = wayOfTheConnection(connection, providers);
   if (way === undefined) {
     return { scope: connection.credential.scope, says: {}, names: Function.constTrue };
   }

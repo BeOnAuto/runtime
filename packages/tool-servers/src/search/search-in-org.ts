@@ -55,7 +55,7 @@ export function defineSearchInOrg(
     reachesOutside: true,
     inputSchema: OrgSearchInputSchema,
     outputSchema: OrgFoundSchema,
-    reasons: ['invalid_input', 'not_found'],
+    reasons: ['invalid_input', 'not_found', 'unavailable'],
     handle: Effect.fnUntraced(function* (asked) {
       const { playbook, server } = asked;
       if (playbook !== undefined) {

@@ -6,9 +6,9 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { servedBy } from '../../server-options/server-options.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
-import { compositionRootWithoutGoals } from './composition-without-goals.ts';
 import { playbookOperations } from './pageless-playbooks.ts';
 import { loopbackSettingsOver } from './reasoning-server.ts';
+import { testComposition } from './test-compositions.ts';
 
 export interface WaitingServer {
   readonly port: number;
@@ -21,10 +21,11 @@ const holdsItsCallsForMs = 200;
 export async function servingAToolThatWaits(): Promise<WaitingServer> {
   const ledger = temporaryLedger();
   const calling = Promise.withResolvers<void>();
+  const composition = testComposition({ goals: false });
   const server = await startServer<DispatcherServices>(loopbackSettingsOver(ledger), {
-    ...compositionRootWithoutGoals,
+    ...composition,
     composed: async (settings, telemetry, shippedFiles) => ({
-      ...(await compositionRootWithoutGoals.composed(settings, telemetry, shippedFiles)),
+      ...(await composition.composed(settings, telemetry, shippedFiles)),
       serve: async (runtime) =>
         servedBy(
           await routesServing([...playbookOperations, waitForeverAnnouncing(calling.resolve)], {

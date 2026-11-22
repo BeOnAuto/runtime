@@ -73,6 +73,37 @@ describe("a goal's decisions", () => {
   });
 });
 
+describe("a goal's move", () => {
+  it('moves a goal held at the version it was read at, retired or not, and refuses one gone, moved away or changed since, as changed meanwhile', () => {
+    const movedBy = { id: acting.by, name: 'Ada Lovelace' };
+    const move: GoalCommand = {
+      type: 'move',
+      to: 'beta',
+      moved_by: movedBy,
+      position: 4,
+      expectedVersion: 3,
+      ...acting,
+    };
+    const moved = { type: 'goal_moved', data: { from: 'alpha', to: 'beta', moved_by: movedBy, position: 4 } };
+
+    expect([
+      decidedOnAGoal(move, held),
+      decidedOnAGoal(move, { ...held, goal: { ...theGoal, retired: true } }),
+      decidedOnAGoal(move, goalFoldOf('goal-1').initialState),
+      decidedOnAGoal(move, { ...held, removed: true }),
+      decidedOnAGoal(move, { ...held, playbook: 'beta' }),
+      decidedOnAGoal(move, { ...held, version: 4 }),
+    ]).toEqual([
+      Result.succeed([moved]),
+      Result.succeed([moved]),
+      Result.fail(changedMeanwhile),
+      Result.fail(changedMeanwhile),
+      Result.fail(changedMeanwhile),
+      Result.fail(changedMeanwhile),
+    ]);
+  });
+});
+
 const leadsPerWeek = 'leads-per-week';
 
 const rename: GoalCommand = {
@@ -130,6 +161,71 @@ describe("a goal's rename, decided", () => {
     expect([decidedOnAGoal(saving(experiments.id), after), decidedOnAGoal(saving(leadsPerWeek), after)]).toEqual([
       Result.fail(changedMeanwhile),
       Result.succeed([]),
+    ]);
+  });
+});
+
+describe("a goal's record, read after a move", () => {
+  it('holds a goal that moved in the playbook it moved to, at its new place, with its version and the yes it had, so a save or a yes is taken there and refused where it was', () => {
+    const fold = goalFoldOf('goal-1');
+    const context = { at: acting.at, by: acting.by, definitionId: 'goal-1' };
+    const facts: readonly RecordedGoalEvent[] = [
+      { type: 'goal_created', data: { playbook: 'alpha', position: 0, goal: theGoal }, context },
+      { type: 'goal_agreed', data: { version: 1 }, context },
+      {
+        type: 'goal_moved',
+        data: { from: 'alpha', to: 'beta', moved_by: { id: acting.by, name: 'Ada Lovelace' }, position: 2 },
+        context,
+      },
+    ];
+    const state = facts.reduce((before, fact) => fold.evolve(before, fact), fold.initialState);
+    const agree = (playbook: string): GoalCommand => ({ type: 'agree', seen: [1], ...acting, playbook });
+    const save = (playbook: string): GoalCommand => ({ type: 'save', goal: theGoal, position: 2, ...acting, playbook });
+
+    expect(state).toMatchObject({ playbook: 'beta', position: 2, version: 1, agreed: { version: 1 } });
+    expect([
+      decidedOnAGoal(save('beta'), state),
+      decidedOnAGoal(agree('beta'), state),
+      decidedOnAGoal(save('alpha'), state),
+      decidedOnAGoal(agree('alpha'), state),
+    ]).toEqual([Result.succeed([]), Result.succeed([]), Result.fail(changedMeanwhile), Result.fail(changedMeanwhile)]);
+  });
+});
+
+describe("a goal's rename and move, one after the other", () => {
+  it('moves a goal renamed, at the version it kept, and renames a goal moved where it moved, not where it was', () => {
+    const fold = goalFoldOf('goal-1');
+    const context = { at: acting.at, by: acting.by, definitionId: 'goal-1' };
+    const movedBy = { id: acting.by, name: 'Ada' };
+    const facts = (...later: readonly RecordedGoalEvent[]): readonly RecordedGoalEvent[] => [
+      { type: 'goal_created', data: { playbook: 'alpha', position: 0, goal: theGoal }, context },
+      ...later,
+    ];
+    const foldedOver = (recorded: readonly RecordedGoalEvent[]) =>
+      recorded.reduce((before, fact) => fold.evolve(before, fact), fold.initialState);
+    const renamedFirst = foldedOver(
+      facts({ type: 'goal_renamed', data: { from: experiments.id, to: leadsPerWeek, renamed_by: movedBy }, context }),
+    );
+    const movedFirst = foldedOver(
+      facts({ type: 'goal_moved', data: { from: 'alpha', to: 'beta', moved_by: movedBy, position: 1 }, context }),
+    );
+    const move: GoalCommand = {
+      type: 'move',
+      to: 'beta',
+      moved_by: movedBy,
+      position: 1,
+      expectedVersion: 1,
+      ...acting,
+    };
+
+    expect([
+      decidedOnAGoal(move, renamedFirst),
+      decidedOnAGoal({ ...rename, playbook: 'beta' }, movedFirst),
+      decidedOnAGoal(rename, movedFirst),
+    ]).toMatchObject([
+      { _tag: 'Success', success: [{ type: 'goal_moved' }] },
+      { _tag: 'Success', success: [{ type: 'goal_renamed' }] },
+      { _tag: 'Failure', failure: { _tag: 'invalid_input' } },
     ]);
   });
 });

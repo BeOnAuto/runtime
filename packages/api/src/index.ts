@@ -56,6 +56,7 @@ export type {
 } from './webhooks/event-ports.ts';
 export { apiCatalogRoutes } from './discovery/api-catalog.ts';
 export { clientMetadataRoutes, type ClientMetadataDocument } from './discovery/client-metadata.ts';
+export { actingAsIn } from './hand-off/caller-hand-off.ts';
 export {
   instructionsActingAs,
   instructionsFor,

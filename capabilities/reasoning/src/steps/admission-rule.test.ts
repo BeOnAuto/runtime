@@ -182,5 +182,5 @@ describe('the admission of a step performed again after its tools changed what t
     const broken = await Promise.all(scenarios(48).map((scenario) => heldTo(scenario)));
 
     expect(broken.flat()).toEqual([]);
-  }, 60_000);
+  });
 });

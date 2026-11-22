@@ -6,7 +6,7 @@ import { assessmentIdOf, summaryRunIdOf } from '../assessments/assessment-identi
 import { goalIdentityOf } from '../assessor/assessor-ledger.ts';
 import { experimentsGoal, performedAt, sales } from '../notices/notice-samples.ts';
 import { noticesSeenOf } from '../notices/notices-seen.ts';
-import { summaryRecorded, summarySeenIn } from './summary-ledger.ts';
+import { summaryRecorded, summarySeenIn, summarySeenRecorded } from './summary-ledger.ts';
 import {
   friday,
   fridayRun,
@@ -94,6 +94,16 @@ describe('the start of a summary seen by the consumer', () => {
     );
 
     expect(batches.map(({ deliveries }) => deliveries.map(({ workflow }) => workflow))).toEqual([[], ['weekly-note']]);
+  });
+});
+
+describe('the start of a summary recorded on a goal', () => {
+  it('records nothing where the goal has no clock row', async () => {
+    const summary = await summaryBookOf();
+    const seen = { definition: 'another-goal', due: friday, run: summaryRunIdOf('another-goal', friday) };
+    await Effect.runPromise(summarySeenRecorded(summary.book.ledger, sales, seen, friday));
+
+    expect(await summary.summaryFacts()).toEqual([]);
   });
 });
 

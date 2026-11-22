@@ -18,7 +18,11 @@ import {
   type AnyLedger,
   type LedgerMaker,
 } from './happenings.ts';
-import { namesOfTheRuns } from './named-runs.ts';
+import {
+  aPageSplitAtTheTimeItStartsFrom,
+  theTimeAPageStartsFrom,
+  type ALedgerWhoseRecordsMoveBack,
+} from './page-time-behaviour.ts';
 import { runsBehaviour } from './runs-behaviour.ts';
 
 const everything: RecordedSelection = { kind: 'everything' };
@@ -245,42 +249,10 @@ function cursorsOfARead(aLedger: LedgerMaker): void {
   });
 }
 
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-function theTimeAPageStartsFrom(aLedger: LedgerMaker): void {
-  describe('the time a page starts from', () => {
-    it('bounds the page from below by the time the store recorded, oldest or newest first', async () => {
-      const ledger = await aLedger();
-      await happen(ledger, inAlpha('notes'), noted('noted', 1), noted('noted', 2));
-      await sleep(1100);
-      await happen(ledger, inAlpha('notes'), noted('noted', 3), noted('noted', 4));
-      const { records } = await reading(ledger, everything, { order: 'asc', limit: 10 });
-      const since = String(records[2]?.recordedAt);
-
-      const pages = await Promise.all([
-        reading(ledger, everything, { order: 'asc', limit: 10, since }),
-        reading(ledger, everything, { order: 'desc', limit: 10, since }),
-        reading(ledger, everything, { order: 'asc', limit: 10, since: '2000-01-01T00:00:00Z' }),
-        reading(ledger, everything, { order: 'desc', limit: 10, since: '2999-01-01T00:00:00Z' }),
-      ]);
-
-      expect(pages.map((page) => [details(page), page.nextCursor])).toEqual([
-        [[3, 4], null],
-        [[4, 3], null],
-        [[1, 2, 3, 4], null],
-        [[], null],
-      ]);
-    });
-  });
-}
-
 export function recordedBehaviour(
   aLedger: LedgerMaker,
   keepingNames: (names: DefinitionNames) => Promise<AnyLedger>,
+  aLedgerWhoseRecordsMoveBack?: () => Promise<ALedgerWhoseRecordsMoveBack>,
 ): void {
   thePlaybookOfARead(aLedger);
   pagesWhileAppending(aLedger);
@@ -289,8 +261,11 @@ export function recordedBehaviour(
   theLastRecordExamined(aLedger);
   cursorsOfARead(aLedger);
   theTimeAPageStartsFrom(aLedger);
+  if (aLedgerWhoseRecordsMoveBack !== undefined) {
+    aPageSplitAtTheTimeItStartsFrom(aLedgerWhoseRecordsMoveBack);
+  }
   runsBehaviour(aLedger);
-  runFiltersBehaviour(() => keepingNames(namesOfTheRuns));
+  runFiltersBehaviour(keepingNames);
   lineageBehaviour(aLedger);
   headsBehaviour(aLedger);
 }

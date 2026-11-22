@@ -178,3 +178,14 @@ describe('internalTermsIn', () => {
     ]).toEqual([[], ['131'], ['404'], ['404']]);
   });
 });
+
+describe('unsuccessfulWords of a busy refusal', () => {
+  it('give the wait the refusal carries, so each wait reads otherwise, and read in full without one', () => {
+    const busy = rejected('unavailable', 'The server is busy', undefined, 'busy');
+    const words = [busy, { ...busy, retry_after: 2 }, { ...busy, retry_after: 8 }].map((refusal) =>
+      unsuccessfulWords('save the function', 'command', refusal),
+    );
+
+    expect(new Set(words).size).toBe(3);
+  });
+});

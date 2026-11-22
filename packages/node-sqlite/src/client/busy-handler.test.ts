@@ -1,7 +1,5 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { SQL } from '@event-driven-io/dumbo';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { aConnectedClient, rowsOf, settled } from '../testing/clients.ts';
 import { aDatabaseFile } from '../testing/temporary-files.ts';
@@ -14,6 +12,43 @@ const outsideATransaction: LockWait = { busyTimeout: 5000, inATransaction: () =>
 
 function aBusyFailure(): Error {
   return Object.assign(new Error('database is locked'), { code: 'ERR_SQLITE_ERROR', errcode: 5 });
+}
+
+interface Sleeps {
+  readonly slept: () => readonly number[];
+  readonly asleep: () => number;
+  readonly settledOn: (work: Promise<unknown>) => Promise<PromiseSettledResult<unknown>>;
+}
+
+function sleepsCounted(): Sleeps {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  const began = Number(vi.getMockedSystemTime());
+  const woke: number[] = [];
+  return {
+    slept: () => woke.map((at, place) => at - (woke[place - 1] ?? began)),
+    asleep: () => vi.getTimerCount(),
+    settledOn: async (work) => {
+      const outcome = { settled: false };
+      const answer = settled(work).finally(() => {
+        outcome.settled = true;
+      });
+      const stepped = async (): Promise<void> => {
+        await new Promise<void>((resolve) => {
+          setImmediate(resolve);
+        });
+        if (!outcome.settled) {
+          await vi.advanceTimersToNextTimerAsync();
+          woke.push(Number(vi.getMockedSystemTime()));
+          await stepped();
+        }
+      };
+      await stepped();
+      return answer;
+    },
+  };
 }
 
 interface Attempts {
@@ -58,12 +93,14 @@ describe('a statement that finds its file busy', () => {
   it('fails with SQLite’s busy error once the busy timeout has passed, after as many attempts as SQLite makes', async () => {
     const busy = aBusyFailure();
     const statement = failingFirst(Array.from({ length: 10 }, () => busy));
-    const began = performance.now();
+    const sleeps = sleepsCounted();
 
-    const outcome = await settled(waitedForTheLock(statement.attempt, { ...outsideATransaction, busyTimeout: 20 }));
+    const outcome = await sleeps.settledOn(
+      waitedForTheLock(statement.attempt, { ...outsideATransaction, busyTimeout: 20 }),
+    );
 
     expect(outcome).toEqual({ status: 'rejected', reason: busy });
-    expect(performance.now() - began).toBeGreaterThanOrEqual(19);
+    expect(sleeps.slept()).toEqual([1, 2, 5, 10, 2]);
     expect(statement.made()).toBe(6);
   });
 
@@ -98,30 +135,25 @@ describe('a client of node:sqlite whose file another connection holds', () => {
   it('waits for the lock without holding the event loop, and writes once the holder lets go', async () => {
     const [holder, waiting] = await twoClientsOnOneFile();
     await holder.command(SQL`BEGIN IMMEDIATE`);
-    const ticks: number[] = [];
-    const ticking = setInterval(() => {
-      ticks.push(performance.now());
-    }, 1);
+    const sleeps = sleepsCounted();
 
-    const written = waiting.command(SQL`INSERT INTO notes VALUES ('waited')`);
-    await sleep(40);
+    const written = sleeps.settledOn(waiting.command(SQL`INSERT INTO notes VALUES ('waited')`));
     await holder.command(SQL`COMMIT`);
-    const answer = await written;
-    clearInterval(ticking);
+    const asleepAsTheHolderLetGo = sleeps.asleep();
 
-    expect(answer).toEqual({ rowCount: 1, rows: [] });
-    expect(ticks.length).toBeGreaterThan(1);
+    expect(await written).toEqual({ status: 'fulfilled', value: { rowCount: 1, rows: [] } });
+    expect([asleepAsTheHolderLetGo, sleeps.slept()]).toEqual([1, [1]]);
     expect(await rowsOf(holder, 'SELECT note FROM notes')).toEqual([{ note: 'waited' }]);
   });
 
   it('fails with SQLITE_BUSY once its busy timeout has passed, as the add-on did', async () => {
     const [holder, waiting] = await twoClientsOnOneFile();
     await holder.command(SQL`BEGIN IMMEDIATE`);
-    const began = performance.now();
+    const sleeps = sleepsCounted();
 
-    const refusal = await settled(waiting.command(SQL`INSERT INTO notes VALUES ('refused')`));
+    const refusal = await sleeps.settledOn(waiting.command(SQL`INSERT INTO notes VALUES ('refused')`));
 
-    expect(performance.now() - began).toBeGreaterThanOrEqual(99);
+    expect(sleeps.slept().reduce((sum, delay) => sum + delay, 0)).toBe(100);
     expect(refusal).toMatchObject({
       status: 'rejected',
       reason: { errorType: 'LockNotAvailableError', message: 'SQLITE_BUSY: database is locked' },
@@ -134,11 +166,11 @@ describe('a client of node:sqlite whose file another connection holds', () => {
     await waiting.command(SQL`BEGIN DEFERRED`);
     await rowsOf(waiting, 'SELECT count(*) FROM notes');
     await holder.command(SQL`INSERT INTO notes VALUES ('moved on')`);
-    const began = performance.now();
+    const sleeps = sleepsCounted();
 
-    const refusal = await settled(waiting.command(SQL`INSERT INTO notes VALUES ('stale')`));
+    const refusal = await sleeps.settledOn(waiting.command(SQL`INSERT INTO notes VALUES ('stale')`));
 
-    expect(performance.now() - began).toBeLessThan(50);
+    expect(sleeps.slept()).toEqual([]);
     expect(refusal).toMatchObject({ status: 'rejected', reason: { errorType: 'LockNotAvailableError' } });
     await waiting.command(SQL`ROLLBACK`);
   });

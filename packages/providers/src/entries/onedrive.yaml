@@ -7,6 +7,7 @@ document: documents/onedrive.openapi.json
 request_id: request-id
 credentials:
   - kind: authorization
+    account_types: [service, personal]
     issuer: https://login.microsoftonline.com/organizations/v2.0
     authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
     token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token

@@ -4,12 +4,15 @@ import { expect, it } from 'vitest';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { steppedOn } from './stepped-hosts.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
+const pauseMs = 50;
+
 const approval = workflow(`
 do:
-  - pause: { wait: PT0.05S }
+  - pause: { wait: PT${pauseMs / 1000}S }
   - notify: { call: notify, with: { to: ada } }
   - approval: { listen: { to: { one: { with: { type: com.acme.approved } } } } }
 `);
@@ -23,6 +26,7 @@ export function runSuite(settings: SettingsOf): void {
     const run = runAt(runId);
 
     const started = await Effect.runPromise(hosted.host.start(run, startOf(approval)));
+    await steppedOn(hosted.clock, pauseMs);
     await hosted.when(hosted.calls, (calls) => calls.length > 0);
     const delivered = await Effect.runPromise(hosted.host.deliver(run, approved));
     const settlements = await hosted.when(hosted.settlements, (settled) => settled.size > 0);

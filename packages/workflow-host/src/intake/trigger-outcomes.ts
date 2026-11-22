@@ -8,7 +8,9 @@ export const notTakenReasons = [
   'no_trigger',
   'topic_mismatch',
   'invalid_event',
+  'connection_unidentified',
   'automatic_not_asked',
+  'own_not_asked',
   'filtered',
   'filter_failed',
 ] as const;

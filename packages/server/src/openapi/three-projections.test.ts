@@ -36,10 +36,12 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'transcribe',
   'get_connection',
   'set_connection_playbooks',
+  'set_connection_account_type',
   'set_connection_signing_secret',
   'remove_connection_signing_secret',
   'read_link',
   'approve',
+  'choose_way',
   'give_credential',
   'give_client',
   'start',
@@ -97,14 +99,14 @@ describe('the operations of the document and the tools of the endpoints', () => 
     expect(servedAsTools().map((described) => toolsOf(described).map(({ description }) => description))).toEqual(
       servedAsTools().map(({ operation }) => [operation.description]),
     );
-    expect(servedAsTools()).toHaveLength(45);
+    expect(servedAsTools()).toHaveLength(46);
   });
 
   it('leave no tool of an endpoint without its operation, and give none to an operation served over HTTP alone', () => {
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(34);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(36);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

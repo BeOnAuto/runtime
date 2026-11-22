@@ -27,7 +27,7 @@ export interface ClockHarness {
   readonly statusIs: (status: PlaybookStatus) => void;
   readonly observed: (id: string, output: Schema.Json, at: string, workflow?: string) => Promise<readonly string[]>;
   readonly performedAt: (at: Instant) => Promise<number>;
-  readonly until: (at: string) => Promise<void>;
+  readonly steppedTo: (at: string) => Promise<void>;
   readonly row: (table: string, key: string, goal?: string) => Promise<ProjectedRow | undefined>;
   readonly rebuilt: () => Promise<ClockHarness>;
 }
@@ -153,7 +153,7 @@ export function clockHarnessOf(start: string, book: Book = bookOf(), clockOf: Cl
   const driven = drivenOf(start, book, clockOf);
   const { moment } = driven;
   const assessor = assessorOver(book, moment);
-  const until = (at: string) => Effect.runPromise(performedUntil(driven, Date.parse(at)));
+  const steppedTo = (at: string) => Effect.runPromise(performedUntil(driven, Date.parse(at)));
   return {
     book: {
       ...book,
@@ -166,22 +166,22 @@ export function clockHarnessOf(start: string, book: Book = bookOf(), clockOf: Cl
     now: moment.now,
     movedTo: moment.movedTo,
     goalsSaved: async (goals, at) => {
-      await until(at);
+      await steppedTo(at);
       await book.goalsSaved(goals, at);
       await Effect.runPromise(performedAt(driven, Date.parse(at)));
     },
     paused: async (workflow, at) => {
-      await until(at);
+      await steppedTo(at);
       await pausedIn(book, workflow, at);
     },
     statusIs: moment.statusIs,
     observed: async (id, output, at, workflow = 'check') => {
-      await until(at);
+      await steppedTo(at);
       const { failed } = await deliveredAll(assessor, finished({ id, workflow, at: Date.parse(at), data: { output } }));
       return failed;
     },
     performedAt: (at) => Effect.runPromise(performedAt(driven, at)),
-    until,
+    steppedTo,
     row: async (table, key, goal) => (await book.rows(table, goal))[key],
     rebuilt: async () => {
       const fresh = bookOf();

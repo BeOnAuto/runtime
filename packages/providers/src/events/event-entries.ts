@@ -81,11 +81,14 @@ function bearerIssuesOf({ credentials }: WithEvents, events: Events): readonly E
   if (credentials.some((way) => givesABearerToken(way))) {
     return [];
   }
-  return events.destinations.flatMap((destination, index) =>
-    callsOfASubscription
-      .filter((call) => isADeclaredRequest(destination[call]))
-      .map((call) => ({ path: ['events', 'destinations', index, call], issue: noBearerWay })),
-  );
+  return [
+    ...(isADeclaredRequest(events.identity) ? [{ path: ['events', 'identity'], issue: noBearerWay }] : []),
+    ...events.destinations.flatMap((destination, index) =>
+      callsOfASubscription
+        .filter((call) => isADeclaredRequest(destination[call]))
+        .map((call) => ({ path: ['events', 'destinations', index, call], issue: noBearerWay })),
+    ),
+  ];
 }
 
 function appCredentialsOf({ credentials }: WithEvents): readonly string[] {

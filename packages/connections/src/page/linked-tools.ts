@@ -6,10 +6,12 @@ import { toolsOfTheDocument, type DocumentTool } from '../documents/document-too
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { providingOf } from '../providers/provider-providing.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
+import type { KeptConnection } from '../registry/registry.ts';
+import { LinkedWaysField, linkedWaysOf } from './linked-ways.ts';
 
 export type LinkReading = Pick<
   ConnectionServices,
-  'consent' | 'pages' | 'providers' | 'providerValues' | 'modelProviders'
+  'consent' | 'pages' | 'providers' | 'providerValues' | 'modelProviders' | 'policy'
 >;
 
 const LinkedToolSchema = Schema.Struct({
@@ -23,7 +25,7 @@ const LinkedToolSchema = Schema.Struct({
   }),
 }).annotate({ description: 'A tool the document offers, with its mark' });
 
-export const LinkedToolsField = Schema.optionalKey(
+const LinkedToolsField = Schema.optionalKey(
   Schema.NullOr(Schema.Array(LinkedToolSchema)).annotate({
     description:
       'For an HTTP API given its OpenAPI document whole, the tools that document offers that its entry allows, by name, read from the document the runtime keeps for the connection, so the page lists them before the person approves; never the text of the document. Null where that document cannot be read, missing or not the one the connection was added with, so nothing the connection could call is known. Left out for every other connection',
@@ -34,7 +36,7 @@ interface LinkedTools {
   readonly tools?: readonly DocumentTool[] | null;
 }
 
-export function linkedToolsOf(
+function linkedToolsOf(
   connection: RecordedConnection,
   reading: LinkReading,
 ): Effect.Effect<LinkedTools, never, OrgContext | OrgReader> {
@@ -47,4 +49,10 @@ export function linkedToolsOf(
     const checking = { org, modelProviders: reading.modelProviders, providing: providingOf(connection, reading) };
     return { tools: yield* toolsOfTheDocument(connection, document, checking) };
   });
+}
+
+export const ListedOnThePageFields = { tools: LinkedToolsField, ways: LinkedWaysField };
+
+export function listedOnThePageOf(kept: KeptConnection, reading: LinkReading) {
+  return Effect.map(linkedToolsOf(kept.connection, reading), (tools) => ({ ...tools, ...linkedWaysOf(kept, reading) }));
 }

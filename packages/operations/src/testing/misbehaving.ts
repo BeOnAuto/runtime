@@ -113,10 +113,10 @@ export const holdTree = defineQuery('playbook', {
 export const linger = defineQuery('playbook', {
   name: 'linger',
   title: 'Linger',
-  description: 'Answers after the given number of milliseconds.',
+  description: 'Answers on the next turn when given no milliseconds, and otherwise holds until its call ends.',
   route: { method: 'GET', path: '/linger' },
   inputSchema: Schema.Struct({ milliseconds: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 3_600_000 })) }),
   outputSchema: Schema.Struct({ lingered: Schema.Int }),
   reasons: [],
-  handle: ({ milliseconds }) => Effect.sleep(milliseconds).pipe(Effect.as({ lingered: milliseconds })),
+  handle: ({ milliseconds }) => (milliseconds === 0 ? Effect.yieldNow.pipe(Effect.as({ lingered: 0 })) : Effect.never),
 });

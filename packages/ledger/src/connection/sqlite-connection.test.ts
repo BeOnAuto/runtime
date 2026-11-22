@@ -1,5 +1,4 @@
 import { DatabaseSync } from 'node:sqlite';
-import { setTimeout } from 'node:timers/promises';
 
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -128,16 +127,18 @@ describe('the reads of the connection of the ledger in one snapshot, on SQLite',
   it('hold the one connection of a private database in memory, so a write asked meanwhile lands once they end', async () => {
     const { connection } = await withOneRow(':memory:');
     const firstRead = Promise.withResolvers<void>();
+    const writeAsked = Promise.withResolvers<void>();
     const readTwice = async (reading: ReadRows) => {
       const before = await reading(figuresRead);
       firstRead.resolve();
-      await setTimeout(50);
+      await writeAsked.promise;
       return [...before, ...(await reading(figuresRead))];
     };
 
     const reading = connection.readConsistently(readTwice);
     await firstRead.promise;
     const writing = connection.write(raised);
+    writeAsked.resolve();
     const read = await reading;
     await writing;
 

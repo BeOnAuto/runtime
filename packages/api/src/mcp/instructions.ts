@@ -18,12 +18,16 @@ export interface RecipeCalls {
 export interface ActingAs {
   readonly caller: CallerIdentity;
   readonly org: string;
+  readonly orgName?: string;
 }
 
 interface Serving {
   readonly endpoint: McpEndpoint;
   readonly listed: (name: string) => boolean;
+  readonly orgInAddresses: string;
 }
+
+const orgPlaceholder = '{org}';
 
 export const whatThisServerIsFor = [
   'A playbook holds work that keeps running after a conversation, in any line of business.',
@@ -58,7 +62,7 @@ const whatTheConnectionDoes: Readonly<Record<McpEndpoint, (serving: Serving) => 
   directory: ownOrg,
   org: (serving) =>
     joinedClauses("This connection manages the org's playbooks", playbooksClause(serving, 'them'), [
-      "each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp",
+      `each playbook's definitions are made on /orgs/${serving.orgInAddresses}/playbooks/{playbook}/mcp`,
     ]),
   playbook: () => 'This connection acts inside one playbook.',
 };
@@ -75,12 +79,11 @@ export function recipesFollowedWith<Calls extends RecipeCalls>(
   return recipes.filter(({ calls }) => calls.every((name) => names.includes(name)));
 }
 
-function callerInWords(caller: CallerIdentity): string {
-  return isKeyHolder(caller) ? `the key ${caller.id}` : `${caller.name} (${caller.id})`;
-}
-
-function whomTheConnectionActsAs({ caller, org }: ActingAs): string {
-  return `This connection acts as ${callerInWords(caller)} in the org ${org}.`;
+function whomTheAgentActsFor({ caller, org, orgName }: ActingAs): string {
+  const organization = orgName ?? org;
+  return isKeyHolder(caller)
+    ? `You are using the key ${caller.id} in the organization ${organization}.`
+    : `You are acting on behalf of ${caller.name} (${caller.id}) in the organization ${organization}.`;
 }
 
 export interface InstructionsKept {
@@ -104,14 +107,18 @@ function askingWhereGoalsAreKept(endpoint: McpEndpoint, { goals = false }: Instr
   return goals && asking !== undefined ? [asking] : [];
 }
 
-function sentencesFor(endpoint: McpEndpoint, tools: ServedTools): readonly string[] {
+function sentencesFor(endpoint: McpEndpoint, tools: ServedTools, orgInAddresses: string): readonly string[] {
   const names = namesOf(tools);
-  const serving: Serving = { endpoint, listed: (name) => names.includes(name) };
+  const serving: Serving = { endpoint, listed: (name) => names.includes(name), orgInAddresses };
   return [whereToBegin, buildFromTheJob, ...whatThisServerIsFor, whatTheConnectionDoes[endpoint](serving)];
 }
 
 export function instructionsFor(endpoint: McpEndpoint, tools: ServedTools, kept: InstructionsKept = {}): string {
-  return [...sentencesFor(endpoint, tools), ...askingWhereGoalsAreKept(endpoint, kept), whenAToolCannot].join(' ');
+  return [
+    ...sentencesFor(endpoint, tools, orgPlaceholder),
+    ...askingWhereGoalsAreKept(endpoint, kept),
+    whenAToolCannot,
+  ].join(' ');
 }
 
 export function instructionsActingAs(
@@ -121,8 +128,8 @@ export function instructionsActingAs(
   kept: InstructionsKept = {},
 ): string {
   return [
-    ...sentencesFor(endpoint, tools),
-    whomTheConnectionActsAs(actingAs),
+    ...sentencesFor(endpoint, tools, actingAs.org),
+    whomTheAgentActsFor(actingAs),
     ...askingWhereGoalsAreKept(endpoint, kept),
     whenAToolCannot,
   ].join(' ');

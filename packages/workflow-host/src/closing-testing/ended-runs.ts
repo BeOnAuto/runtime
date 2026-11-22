@@ -4,10 +4,10 @@ import { onTestFinished } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
 import { closeHostParts, openHostParts } from '../host/host-parts.ts';
-import { systemClock } from '../loop/host-clock.ts';
 import { startOf, workflow } from '../testing/host-documents.ts';
-import { recordedOptionsOf } from '../testing/host-runs.ts';
+import { recordedOptionsOf, hostedStartsAt } from '../testing/host-runs.ts';
 import { openedWithRuns, runKeyAt, runLogAt } from '../testing/started-runs.ts';
+import { steppedClock } from '../testing/stepped-clock.ts';
 
 const calling = workflow('do:\n  - notify: { call: notify, with: { to: ada } }');
 
@@ -59,7 +59,7 @@ export function bytesOf({ call, attributes, result }: EndedCallRow): number {
 export async function ranOn(calls: readonly string[], paused: readonly string[] = []): Promise<HostDatabase> {
   const store = { database: await openedWithRuns([...calls, ...paused]) };
   const recorded = recordedOptionsOf();
-  const parts = openHostParts(store, { ...recorded.options, clock: systemClock }, Function.constVoid);
+  const parts = openHostParts(store, { ...recorded.options, clock: steppedClock(hostedStartsAt) }, Function.constVoid);
   onTestFinished(() => closeHostParts(parts));
   const started = (runId: string, document: typeof calling) => {
     recorded.know(runId);

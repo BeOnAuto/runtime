@@ -26,6 +26,7 @@ export {
 export { callDocument, repliesOutput, type CallOptions } from './call-documents.ts';
 export { askedRunId, askedThroughChat, type AskedRequest, type AskingOptions } from './asked-requests.ts';
 export { nudgedRequest, nudging } from './nudging.ts';
+export { firstReadWaitMs } from '../conversations/cadence.ts';
 export { attemptedThenStopped } from './stopped-requests.ts';
 export { broughtBeforeDeciding, recordedReply, takenReply, type RacingDelivery } from './racing-deliveries.ts';
 export { fakeTools, noTools, type FakeAnswer, type FakeTools } from './fake-tools.ts';

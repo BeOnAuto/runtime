@@ -1,17 +1,14 @@
 import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { sha256Of } from '@on.auto/content';
 import { Effect, Redacted } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi, type MockInstance } from 'vitest';
 
-import { spawnServer } from '../testing/processes/spawned-server.ts';
+import { saidAtStart, startedInProcess } from '../testing/processes/in-process-starts.ts';
 import { messagesOf } from '../testing/processes/stderr-lines.ts';
 import { ownKeyFactsIn, secretStoreInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-
-const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
 const loopback = { HOST: '127.0.0.1', PORT: '0' };
 
@@ -49,12 +46,26 @@ async function secretsKeptIn(fileName: string): Promise<void> {
   await store.close();
 }
 
+let logged: MockInstance<typeof console.error>;
+
+beforeEach(() => {
+  logged = vi.spyOn(console, 'error');
+});
+
+afterEach(() => {
+  logged.mockRestore();
+});
+
+/** Starts and stops the server in this process, and answers the lines it logged meanwhile. */
 async function startedWith(environment: Readonly<Record<string, string>>): Promise<string> {
-  const child = spawnServer(mainModule, { ...loopback, ...environment });
-  await child.port;
-  child.signal('SIGTERM');
-  await child.exited;
-  return child.output().stderr;
+  const before = logged.mock.calls.length;
+  const server = await startedInProcess({ ...loopback, ...environment });
+  await server.stop();
+  return logged.mock.calls
+    .slice(before)
+    .flat()
+    .map((line) => `${String(line)}\n`)
+    .join('');
 }
 
 function secretsLinesIn(stderr: string): readonly string[] {
@@ -130,11 +141,11 @@ describe('the secret store as the server starts with a key in a file', () => {
   });
 });
 
+/** The line a start refused in, in this process, once it says it exits 1. */
 async function refusedStart(environment: Readonly<Record<string, string>>): Promise<string> {
-  const child = spawnServer(mainModule, { ...loopback, ...environment });
-  expect(await child.exited).toBe(1);
-  expect(child.output().stdout).toBe('');
-  return child.output().stderr;
+  const said = await saidAtStart({ ...loopback, ...environment });
+  expect(said.exitCode).toBe(1);
+  return said.line;
 }
 
 function lastLinesOf(stderr: string): readonly string[] {
@@ -144,7 +155,7 @@ function lastLinesOf(stderr: string): readonly string[] {
 const refusedAs = 'Auto Runtime could not start: InvalidSettingsError: The secrets settings are invalid.';
 
 describe('a server whose secrets key cannot be had', () => {
-  it('stops the process at start when the key file beside the ledger may be read by others, naming the setting and the file', async () => {
+  it('stops the start when the key file beside the ledger may be read by others, naming the setting and the file', async () => {
     const fileName = aLedgerFile();
     const keyFile = keyFileBeside(fileName, 'secrets.key', currentKey);
     chmodSync(keyFile, 0o640);
@@ -158,7 +169,7 @@ describe('a server whose secrets key cannot be had', () => {
     expect(secretsIn(stderr)).toEqual([]);
   });
 
-  it('stops the process at start for a file SECRETS_KEY_FILE names that does not exist, and makes none', async () => {
+  it('stops the start for a file SECRETS_KEY_FILE names that does not exist, and makes none', async () => {
     const fileName = aLedgerFile();
     const keyFile = join(fileName, '..', 'mounted.key');
 
@@ -196,7 +207,7 @@ describe('the keys the runtime keeps for itself as the server starts', () => {
     expect(secretsIn(`${first}${next}`, written)).toEqual([]);
   });
 
-  it('stops the process at start when SECRETS_KEY cannot read it, naming its purpose and the words of the store and never a key', async () => {
+  it('stops the start when SECRETS_KEY cannot read it, naming its purpose and the words of the store and never a key', async () => {
     const fileName = aLedgerFile();
     await startedWith({ LEDGER_FILE: fileName, SECRETS_KEY: currentKey.toString('base64') });
     const ownKeys = await ownKeysIn(fileName);
@@ -212,7 +223,7 @@ describe('the keys the runtime keeps for itself as the server starts', () => {
 });
 
 describe('a server given its secrets keys in more places than one', () => {
-  it('stops the process at start for two previous keys, naming the settings and never a key', async () => {
+  it('stops the start for two previous keys, naming the settings and never a key', async () => {
     const fileName = aLedgerFile();
 
     const stderr = await refusedStart({
@@ -229,7 +240,7 @@ describe('a server given its secrets keys in more places than one', () => {
     expect(secretsIn(stderr)).toEqual([]);
   });
 
-  it('stops the process at start for a ledger in PostgreSQL without SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, naming them and no URL', async () => {
+  it('stops the start for a ledger in PostgreSQL without SECRETS_KEY, SECRETS_KEY_FILE or SECRETS_KEY_KMS, naming them and no URL', async () => {
     const stderr = await refusedStart({
       DATABASE_URL: 'postgresql://playbooks:a-secret-password@db.example.com/playbooks',
     });

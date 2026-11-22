@@ -1,37 +1,53 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
-import { kmsCustodian } from '@on.auto/secrets/aws';
-import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/served-fakes';
+import { kmsCustodian, parameterStoreKeeper } from '@on.auto/secrets/aws';
+import { fakeKmsInProcess, fakeParameterStoreInProcess } from '@on.auto/secrets/in-process-fakes';
 import { Effect, Redacted } from 'effect';
-import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi, type MockInstance } from 'vitest';
 
-import { spawnServer } from '../testing/processes/spawned-server.ts';
+import type { AwsAdapters } from '../secrets/aws-adapters.ts';
+import { saidAtStart, startedInProcess } from '../testing/processes/in-process-starts.ts';
 import { annotationsOf } from '../testing/processes/stderr-lines.ts';
 import { ownKeyFactsIn, secretRowsInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-
-const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
 const keyId = crypto.randomUUID();
 
 const keyArn = `arn:aws:kms:eu-west-1:111122223333:key/${keyId}`;
 
-const fake = await serveFakeKms({ keys: [keyArn] });
+const kms = fakeKmsInProcess({ keys: [keyArn] });
 
-const parameterStore = await serveFakeParameterStore();
+const parameterStore = fakeParameterStoreInProcess();
 
-const elsewhere = await serveFakeParameterStore({ region: 'eu-north-1' });
-
-afterAll(async () => {
-  await fake.close();
-  await parameterStore.close();
-  await elsewhere.close();
-});
+const elsewhere = fakeParameterStoreInProcess({ region: 'eu-north-1' });
 
 const page = readFileSync(new URL('../../../../docs/self-host/secret-manager.md', import.meta.url), 'utf8');
 
 const credentials = { accessKeyId: 'an-access-key-of-the-tests', secretAccessKey: 'a-secret-access-key-of-the-tests' };
+
+const inProcessAws: AwsAdapters = {
+  kmsCustodian: (options) => kmsCustodian({ ...options, credentials, requestHandlerOf: kms.requestHandlerOf }),
+  parameterStoreKeeper: (options) =>
+    parameterStoreKeeper({
+      ...options,
+      credentials,
+      requestHandlerOf: (options.region === 'eu-north-1' ? elsewhere : parameterStore).requestHandlerOf,
+    }),
+};
+
+function loadAws(): Promise<AwsAdapters> {
+  return Promise.resolve(inProcessAws);
+}
+
+let logged: MockInstance<typeof console.error>;
+
+beforeEach(() => {
+  logged = vi.spyOn(console, 'error');
+});
+
+afterEach(() => {
+  logged.mockRestore();
+});
 
 function aLedgerFile(): string {
   const { fileName, remove } = temporaryLedger();
@@ -40,15 +56,7 @@ function aLedgerFile(): string {
 }
 
 function underTheKeyInKms(fileName: string): Readonly<Record<string, string>> {
-  return {
-    HOST: '127.0.0.1',
-    PORT: '0',
-    LEDGER_FILE: fileName,
-    SECRETS_KEY_KMS: keyArn,
-    AWS_ENDPOINT_URL_KMS: fake.url,
-    AWS_ACCESS_KEY_ID: credentials.accessKeyId,
-    AWS_SECRET_ACCESS_KEY: credentials.secretAccessKey,
-  };
+  return { HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: fileName, SECRETS_KEY_KMS: keyArn };
 }
 
 const prefix = '/auto-runtime/secrets';
@@ -60,18 +68,19 @@ function inTheManager(fileName: string): Readonly<Record<string, string>> {
     LEDGER_FILE: fileName,
     SECRETS_KEEPER: `aws-parameter-store:${prefix}`,
     AWS_REGION: 'eu-west-1',
-    AWS_ENDPOINT_URL_SSM: parameterStore.url,
-    AWS_ACCESS_KEY_ID: credentials.accessKeyId,
-    AWS_SECRET_ACCESS_KEY: credentials.secretAccessKey,
   };
 }
 
+/** Starts and stops the server in this process, and answers the lines it logged meanwhile. */
 async function startedUnder(environment: Readonly<Record<string, string>>): Promise<string> {
-  const child = spawnServer(mainModule, environment);
-  await child.port;
-  child.signal('SIGTERM');
-  await child.exited;
-  return child.output().stderr;
+  const before = logged.mock.calls.length;
+  const server = await startedInProcess(environment, loadAws);
+  await server.stop();
+  return logged.mock.calls
+    .slice(before)
+    .flat()
+    .map((line) => `${String(line)}\n`)
+    .join('');
 }
 
 function startedOnce(fileName: string): Promise<string> {
@@ -84,7 +93,7 @@ async function dataKeysIn(fileName: string): Promise<readonly string[]> {
   await rows.close();
   const proxy = { enabled: false, environment: {} };
   const custodian = await Effect.runPromise(
-    kmsCustodian({ keyId: keyArn, region: 'eu-west-1', proxy, credentials, endpoint: fake.url }),
+    kmsCustodian({ keyId: keyArn, region: 'eu-west-1', proxy, credentials, requestHandlerOf: kms.requestHandlerOf }),
   );
   const dataKeys = await Effect.runPromise(
     Effect.forEach(held, ({ holding }) => custodian.unwrap(String(holding.wrappedKey))),
@@ -101,9 +110,9 @@ describe('a server whose secrets a key in KMS holds, as it starts', () => {
     const first = await startedOnce(fileName);
     const next = await startedOnce(fileName);
     const dataKeys = await dataKeysIn(fileName);
-    const stderr = `${first}\n${next}`;
+    const logs = `${first}\n${next}`;
 
-    expect(stderr.split('\n').filter((line) => line.includes('Secrets are kept'))).toEqual([
+    expect(logs.split('\n').filter((line) => line.includes('Secrets are kept'))).toEqual([
       expect.stringContaining(
         `"message":"Secrets are kept in the ledger's database, sealed under the key ${keyId} that the KMS key ${keyArn} holds, and 0 sealed under the previous key were sealed again under it"`,
       ),
@@ -111,24 +120,22 @@ describe('a server whose secrets a key in KMS holds, as it starts', () => {
     ]);
     expect(dataKeys.length).toBeGreaterThan(0);
     expect(
-      [credentials.accessKeyId, credentials.secretAccessKey, ...dataKeys].filter((secret) => stderr.includes(secret)),
+      [credentials.accessKeyId, credentials.secretAccessKey, ...dataKeys].filter((secret) => logs.includes(secret)),
     ).toEqual([]);
   });
 
-  it('stops the process at start for a key that is disabled, naming the setting, the key and the words of KMS', async () => {
-    fake.tell(keyArn, 'disabled');
+  it('stops the start for a key that is disabled, naming the setting, the key and the words of KMS', async () => {
+    kms.tell(keyArn, 'disabled');
     onTestFinished(() => {
-      fake.tell(keyArn, 'enabled');
+      kms.tell(keyArn, 'enabled');
     });
-    const child = spawnServer(mainModule, underTheKeyInKms(aLedgerFile()));
 
-    const exitCode = await child.exited;
+    const said = await saidAtStart(underTheKeyInKms(aLedgerFile()), loadAws);
 
-    expect(exitCode).toBe(1);
-    expect(child.output().stderr.split('\n').slice(-2)).toEqual([
-      `Auto Runtime could not start: InvalidSettingsError: The secrets settings are invalid. SECRETS_KEY_KMS: The KMS key ${keyId} it names could not wrap and unwrap a data key at start: The custodian of the key ${keyId} refused to wrap a data key: DisabledException: key/${keyId} is disabled.`,
-      '',
-    ]);
+    expect(said).toEqual({
+      exitCode: 1,
+      line: `Auto Runtime could not start: InvalidSettingsError: The secrets settings are invalid. SECRETS_KEY_KMS: The KMS key ${keyId} it names could not wrap and unwrap a data key at start: The custodian of the key ${keyId} refused to wrap a data key: DisabledException: key/${keyId} is disabled.\n`,
+    });
   });
 });
 
@@ -144,13 +151,13 @@ describe('a server whose secrets AWS Parameter Store keeps, as it starts', () =>
     const { fileName, directory, remove } = temporaryLedger();
     onTestFinished(remove);
 
-    const stderr = `${await startedUnder(inTheManager(fileName))}\n${await startedUnder(inTheManager(fileName))}`;
+    const logs = `${await startedUnder(inTheManager(fileName))}\n${await startedUnder(inTheManager(fileName))}`;
     const [held] = await heldInTheManager(fileName);
     const [kept] = await ownKeyFactsIn(fileName);
     const name = String(held?.holding.held).replace(/:1$/u, '');
     const ownKey = String(parameterStore.parameter(name)?.versions[0]);
 
-    expect(stderr.split('\n').filter((line) => line.includes('Secrets are kept'))).toEqual([
+    expect(logs.split('\n').filter((line) => line.includes('Secrets are kept'))).toEqual([
       expect.stringContaining(
         `"message":"Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 0 kept by the previous keeper were moved there"`,
       ),
@@ -164,7 +171,7 @@ describe('a server whose secrets AWS Parameter Store keeps, as it starts', () =>
     });
     expect(Buffer.from(ownKey, 'base64')).toHaveLength(32);
     expect(
-      [ownKey, credentials.accessKeyId, credentials.secretAccessKey].filter((secret) => stderr.includes(secret)),
+      [ownKey, credentials.accessKeyId, credentials.secretAccessKey].filter((secret) => logs.includes(secret)),
     ).toEqual([]);
   });
 });
@@ -173,8 +180,8 @@ function ownKeysInTheManager(kept: Awaited<ReturnType<typeof ownKeyFactsIn>>): r
   return kept.flatMap(({ data }) => parameterStore.parameter(`${prefix}/${data.secret_id}`)?.versions ?? []);
 }
 
-function movedIntoTheManager(stderr: string): readonly unknown[] {
-  return annotationsOf(stderr)
+function movedIntoTheManager(logs: string): readonly unknown[] {
+  return annotationsOf(logs)
     .filter(({ secrets_keeper: keeper }) => keeper === 'aws-parameter-store')
     .map(({ secrets_moved: moved }) => moved);
 }
@@ -190,7 +197,7 @@ describe('a server that moves its secrets into AWS Parameter Store, as it starts
     const moving = await startedUnder({ ...inTheManager(fileName), ...key, SECRETS_KEEPER_PREVIOUS: 'ledger' });
     const alone = await startedUnder(inTheManager(fileName));
     const ownKeys = ownKeysInTheManager(kept);
-    const stderr = [sealed, moving, alone].join('\n');
+    const logs = [sealed, moving, alone].join('\n');
 
     expect(sealed).toContain('and 0 sealed under the previous key were sealed again under it"');
     expect(moving).toContain(`"message":"Secrets are kept in AWS Parameter`);
@@ -199,7 +206,7 @@ describe('a server that moves its secrets into AWS Parameter Store, as it starts
     expect(ownKeys).toHaveLength(kept.length);
     expect(
       [key.SECRETS_KEY, ...ownKeys, credentials.accessKeyId, credentials.secretAccessKey].filter((secret) =>
-        stderr.includes(secret),
+        logs.includes(secret),
       ),
     ).toEqual([]);
     expect(await heldInTheManager(fileName)).toEqual(
@@ -214,19 +221,16 @@ describe('a server that moves its secrets into AWS Parameter Store, as it starts
 });
 
 describe('a server whose prefix in AWS Parameter Store cannot be used, as it starts', () => {
-  it('stops the process at start for a prefix the identity may not write, naming the setting, the prefix and the words of the manager', async () => {
+  it('stops the start for a prefix the identity may not write, naming the setting, the prefix and the words of the manager', async () => {
     parameterStore.tell('denied', ['PutParameter']);
     onTestFinished(() => {
       parameterStore.tell('answering');
     });
-    const { fileName, remove } = temporaryLedger();
-    onTestFinished(remove);
-    const child = spawnServer(mainModule, inTheManager(fileName));
 
-    const exitCode = await child.exited;
+    const said = await saidAtStart(inTheManager(aLedgerFile()), loadAws);
 
-    expect(exitCode).toBe(1);
-    expect(child.output().stderr.split('\n').at(-2)).toMatch(
+    expect(said.exitCode).toBe(1);
+    expect(said.line).toMatch(
       new RegExp(
         `^Auto Runtime could not start: InvalidSettingsError: The secrets settings are invalid. SECRETS_KEEPER: AWS Parameter Store under ${prefix} could not write, read and delete a parameter at start: AWS Parameter Store could not write the parameter ${prefix}/probe-[\\da-f-]{36}: AccessDeniedException: User: user/runtime is not authorized to perform: ssm:PutParameter`,
         'u',
@@ -241,49 +245,35 @@ const goneInTheNorth = `The key the runtime keeps for retry_state is no longer i
 
 describe('a server whose own key is gone from AWS Parameter Store, as it starts', () => {
   it('logs where its own key is and its id at start, in the words the page quotes, and stops a later start once that parameter is deleted, naming the prefix, the region and the variable that names it', async () => {
-    const { fileName, remove } = temporaryLedger();
-    onTestFinished(remove);
+    const fileName = aLedgerFile();
     const first = await startedUnder(inTheManager(fileName));
     const [kept] = await ownKeyFactsIn(fileName);
     const secretId = String(kept?.data.secret_id);
     parameterStore.remove(`${prefix}/${secretId}`);
-    const child = spawnServer(mainModule, inTheManager(fileName));
 
-    const exitCode = await child.exited;
+    const said = await saidAtStart(inTheManager(fileName), loadAws);
 
     expect(first).toContain(`"message":"${readInTheWest}"`);
     expect(first).toContain(`"own_key":"retry_state","own_key_id":"${secretId}"`);
     expect(page).toContain(`\`${readInTheWest}\``);
-    expect(exitCode).toBe(1);
-    expect(child.output().stderr.split('\n').slice(-2)).toEqual([
-      `Auto Runtime could not start: OwnKeyUnavailable: The key the runtime keeps for retry_state is no longer in AWS Parameter Store under ${prefix} in eu-west-1, the region AWS_REGION names, so the server does not start`,
-      '',
-    ]);
+    expect(said).toEqual({
+      exitCode: 1,
+      line: `Auto Runtime could not start: OwnKeyUnavailable: The key the runtime keeps for retry_state is no longer in AWS Parameter Store under ${prefix} in eu-west-1, the region AWS_REGION names, so the server does not start\n`,
+    });
   });
 });
 
 describe('a server started in another region than the one its secrets are kept in', () => {
-  it('stops a start in another region at its own key, after a probe that passes, in the words the page quotes, serving nothing and writing nothing there but the probe, and starts once the region is set back', async () => {
-    const { fileName, remove } = temporaryLedger();
-    onTestFinished(remove);
+  it('stops a start in another region at its own key, after a probe that passes, in the words the page quotes, writing nothing there but the probe, and starts once the region is set back', async () => {
+    const fileName = aLedgerFile();
     await startedUnder(inTheManager(fileName));
-    const child = spawnServer(mainModule, {
-      ...inTheManager(fileName),
-      AWS_REGION: 'eu-north-1',
-      AWS_ENDPOINT_URL_SSM: elsewhere.url,
-    });
 
-    const exitCode = await child.exited;
+    const said = await saidAtStart({ ...inTheManager(fileName), AWS_REGION: 'eu-north-1' }, loadAws);
     const setBack = await startedUnder(inTheManager(fileName));
     const [kept] = await ownKeyFactsIn(fileName);
     const probe = `${prefix}/probe-[\\da-f-]{36}`;
 
-    expect(exitCode).toBe(1);
-    expect(child.output().stdout).toBe('');
-    expect(child.output().stderr.split('\n').slice(-2)).toEqual([
-      `Auto Runtime could not start: OwnKeyUnavailable: ${goneInTheNorth}`,
-      '',
-    ]);
+    expect(said).toEqual({ exitCode: 1, line: `Auto Runtime could not start: OwnKeyUnavailable: ${goneInTheNorth}\n` });
     expect(page).toContain(`\`${goneInTheNorth}\``);
     expect(elsewhere.calls().map(({ operation, name, answer }) => `${operation} ${name} ${answer}`)).toEqual([
       expect.stringMatching(new RegExp(`^PutParameter ${probe} answered$`, 'u')),

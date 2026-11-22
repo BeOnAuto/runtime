@@ -9,8 +9,6 @@ import {
   textResult,
 } from '@on.auto/reasoning/testing';
 import { type FakeMcpServer, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import type { HostClock } from '@on.auto/workflow-host';
-import { movedClock } from '@on.auto/workflow-host/testing';
 import { Effect, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
@@ -18,9 +16,17 @@ import type { SpawnedServer } from '../testing/processes/spawned-server.ts';
 import { requestTo, settledOver, workflowProcess } from '../testing/processes/workflow-process.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledAsSwept,
+  settledRun,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
 import { contributing, givenGoals } from '../testing/settings/goals-kept.ts';
-import { until } from '../testing/waiting/until.ts';
+import type { SteppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { steppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
@@ -134,7 +140,10 @@ const decodeHistoryWorkflowToolCancellation = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
 
-async function servingWorkflowToolCancellation(fake: FakeMcpServer, clock: HostClock): Promise<ReasoningServer> {
+async function servingWorkflowToolCancellation(
+  fake: FakeMcpServer,
+  clock: SteppedServerClock,
+): Promise<ReasoningServer> {
   const server = await servingWorkflows(
     [callingTools([['graph__sleep', { ms: 60_000 }]], answers(textResult('Slept.')))],
     {
@@ -158,7 +167,7 @@ async function servingWorkflowToolCancellation(fake: FakeMcpServer, clock: HostC
 type Seen = ReturnType<FakeMcpServer['seen']>;
 
 function untilCancelled(fake: FakeMcpServer): Promise<Seen> {
-  return until(
+  return whenHeld(
     (): Seen => fake.seen().filter(({ rpc }) => rpc === 'tools/call' || rpc === 'notifications/cancelled'),
     (seen) => seen.some(({ rpc }) => rpc === 'notifications/cancelled'),
   );
@@ -327,21 +336,22 @@ describe('workflow tool cancellation', () => {
     it('aborts the call in flight at its MCP server, and ends the run cancelled with the call ended as interrupted and its spending', async () => {
       const fake = await serveFakeMcp({ bearer: apiKey });
       closing.push(fake.close);
-      const clock = movedClock(Date.now());
+      const clock = steppedServerClock();
       const server = await servingWorkflowToolCancellation(fake, clock);
 
       const startedWorkflowToolCancellation = await server.call('POST', `${alpha}/definitions/workflow/impatient/run`, {
         body: { input: {} },
       });
-      await until(
-        () => fake.received(),
-        (received) => received.length > 0,
-      );
+      await fake.once(() => fake.received().length > 0);
       clock.moveTo(clock.now() + aSecond);
-      const workflow = await settledRun(server, `${alpha}/runs/${runIdIn(startedWorkflowToolCancellation.body)}`);
+      const workflow = await settledAsSwept(
+        server,
+        clock,
+        `${alpha}/runs/${runIdIn(startedWorkflowToolCancellation.body)}`,
+      );
       const calls = await untilCancelled(fake);
       const nested = String(server.modelRunIds()[0]);
-      const run = await settledRun(server, `${alpha}/runs/${nested}`);
+      const run = await settledAsSwept(server, clock, `${alpha}/runs/${nested}`);
       const history = await server.call('GET', `${alpha}/runs/${nested}/history`);
       const again = await server.call('POST', `${alpha}/definitions/reasoning/sleeper/run`, {
         body: { input: {}, run_id: nested },

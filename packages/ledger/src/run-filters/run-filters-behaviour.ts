@@ -11,7 +11,7 @@ import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { details, reading, stamped, type AnyLedger, type LedgerMaker } from '../testing/happenings.ts';
-import { definitionsHolding, keyOf } from '../testing/named-runs.ts';
+import { definitionsHolding, keyOf, namesOfTheRuns } from '../testing/named-runs.ts';
 
 const RunFactSchema = Schema.Struct({
   type: Schema.String,
@@ -287,7 +287,8 @@ function theDefinitionOfAnAwkwardRun(aLedger: LedgerMaker): void {
   });
 }
 
-export function runFiltersBehaviour(aLedger: LedgerMaker): void {
+export function runFiltersBehaviour(keepingNames: (names: typeof namesOfTheRuns) => Promise<AnyLedger>): void {
+  const aLedger: LedgerMaker = () => keepingNames(namesOfTheRuns);
   describe('the runs of one definition', () => {
     theRunsOfOneType(aLedger);
     theRunsOfOneName(aLedger);

@@ -32,6 +32,7 @@ export interface ClientRegistration {
   readonly takesPublicClientsAlone?: boolean;
   readonly listsRevocationMethods?: boolean;
   readonly scopesSupported?: readonly string[];
+  readonly grantTypes?: readonly string[] | null;
   readonly protectedScopes?: readonly string[];
   readonly requiredScopes?: readonly string[];
   readonly refusesRegistration?: boolean;

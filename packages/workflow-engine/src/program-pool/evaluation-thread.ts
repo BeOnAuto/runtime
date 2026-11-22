@@ -25,7 +25,7 @@ export type FlagWait = (
   timeoutMs: number,
 ) => 'ok' | 'not-equal' | 'timed-out';
 
-function atomicWait(
+export function atomicWait(
   flags: Readonly<Int32Array>,
   index: number,
   value: number,

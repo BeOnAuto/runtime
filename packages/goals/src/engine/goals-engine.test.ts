@@ -15,6 +15,7 @@ const unused = () => Promise.reject(new Error('A port the goals engine does not 
 const dies = () => Effect.die(new Error('A port the goals engine does not use yet'));
 
 const database: HostDatabase = {
+  dialect: 'sqlite',
   store: {
     mostEventsInOneAppend: 100,
     read: unused,

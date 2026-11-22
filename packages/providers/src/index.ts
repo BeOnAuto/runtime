@@ -1,13 +1,15 @@
+export { WayKindSchema, holdsAClientId, wayFields, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
+export { consentEndpoints, consentIssuesOf, type ConsentFields } from './entry/consent-fields.ts';
 export {
-  WayKindSchema,
-  consentEndpoints,
-  consentIssuesOf,
-  holdsAClientId,
-  wayFields,
-  type ConsentFields,
-  type CredentialWay,
-  type WayKind,
-} from './entry/credential-ways.ts';
+  AccountTypeSchema,
+  accountTypeIssueOf,
+  accountTypeWhereNoneIsGiven,
+  accountTypesOf,
+  isTheWayAsked,
+  permissionsOf,
+  type AccountType,
+} from './entry/account-types.ts';
+export { PermissionsSchema, type Permissions } from './entry/gateway-ways.ts';
 export { scopesIn, scopeWith, type ScopeGroup } from './entry/scope-groups.ts';
 export { wayAddresses, type WayAddress } from './entry/templates.ts';
 export { keyFieldNames, keyFields, type AppCredential, type KeyFieldName } from './keys/key-fields.ts';
@@ -80,6 +82,7 @@ export {
 export { requestOriginsOf } from './events/event-destinations.ts';
 export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
 export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
+export { identitiesReadOf } from './subscriptions/subscription-identities.ts';
 export {
   requestsAskerOf,
   triggersAskerOf,
@@ -87,7 +90,7 @@ export {
   type ConnectionTrigger,
   type WaitingRequest,
 } from './subscriptions/subscription-topics.ts';
-export { resyncedAfterMs } from './subscriptions/subscription-records.ts';
+export { isLasting, resyncedAfterMs } from './subscriptions/subscription-records.ts';
 export {
   SubscriptionCallFailed,
   SubscriptionFailedBecauseSchema,

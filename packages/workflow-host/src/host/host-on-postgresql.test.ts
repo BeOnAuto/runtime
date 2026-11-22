@@ -1,7 +1,7 @@
 import { describe } from 'vitest';
 
 import { failureSuite } from '../suite-testing/failure-suite.ts';
-import { claimSuite, leaseSuite } from '../suite-testing/lease-suite.ts';
+import { leaseSuite } from '../suite-testing/lease-suite.ts';
 import { portSuite } from '../suite-testing/port-suite.ts';
 import { databaseSettingsOf, type ProcessDatabasesOf } from '../testing/host-processes.ts';
 import { describeOnPostgreSQL } from '../testing/postgresql-databases.ts';
@@ -22,7 +22,6 @@ describeOnPostgreSQL('the host', (aDatabase) => {
   });
 
   describe('one of two hosts on one database', () => {
-    leaseSuite(processDatabase);
-    claimSuite(processDatabase, 'database');
+    leaseSuite(processDatabase, 'database');
   });
 });

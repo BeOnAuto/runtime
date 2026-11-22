@@ -98,7 +98,7 @@ describe('the tools of /mcp', () => {
     const instructions = await asKey(acmeAdmin.key, (session) => Promise.resolve(session.instructions));
 
     expect(instructions).toBe(instructionsActingAs(acmeAdminActing, 'own org', { orgTools, playbookTools }));
-    expect(instructions).toContain('This connection acts as the key acme-admin in the org acme.');
+    expect(instructions).toContain(acmeAdminActing.caller.id);
     expect(instructions).toContain("The org is the caller's own.");
   });
 });

@@ -14,7 +14,7 @@ import { logLinesOf, requestTo, workflowProcess } from '../testing/processes/wor
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
 import { contributing, givenGoals, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 import { computationServedBy, type ProgramPoolOf, type ServedComputation, workerPool } from './served-computation.ts';
 import { toolAccessOf } from './served-tool-access.ts';
 
@@ -231,7 +231,7 @@ describe('served access control', () => {
       await requestTo(port, 'POST', '/delta/events', {
         event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'october' } },
       });
-      const started = await until(
+      const started = await whenHeld(
         () => requestTo(port, 'GET', '/delta/runs?type=workflow&name=close-the-month'),
         ({ body }) => runsOf(body).runs.length > 0,
       );

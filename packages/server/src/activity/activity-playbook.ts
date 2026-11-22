@@ -1,9 +1,9 @@
 import { agentDelivery, approvalDocument } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 
-import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { aMomentApart, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { runIdIn, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 export const tallySource = (note: string) =>
   [
@@ -47,8 +47,9 @@ export interface ActivityPlaybook {
 
 export function activityPlaybookOn(server: ReasoningServer, org: string, key?: string): ActivityPlaybook {
   const playbook = `/v1/orgs/${org}/playbooks/alpha`;
+  const apart = aMomentApart(server);
   const call = (method: string, path: string, body?: unknown) =>
-    server.call(method, path, { ...(key === undefined ? {} : { key }), ...(body === undefined ? {} : { body }) });
+    apart(method, path, { ...(key === undefined ? {} : { key }), ...(body === undefined ? {} : { body }) });
   return {
     playbook,
     call,
@@ -59,7 +60,7 @@ export function activityPlaybookOn(server: ReasoningServer, org: string, key?: s
     settled: async (runId) =>
       (await settledRun(server, `${playbook}/runs/${runId}`, key === undefined ? {} : { key })).body,
     openRequests: async (count) => {
-      const { interactions } = await until(
+      const { interactions } = await whenHeld(
         async () => interactionsOf((await call('GET', `${playbook}/interactions`)).body),
         (listed) => listed.interactions.length === count,
       );

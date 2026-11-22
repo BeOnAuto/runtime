@@ -1,5 +1,6 @@
 import { Effect, Function } from 'effect';
 
+import { agentStartingWith, type AgentStarting } from '../../background-start/agent-starting.ts';
 import type { BackgroundStarting } from '../../background-start/background-start.ts';
 import type { StartedRuntime } from '../../background-start/started-runtimes.ts';
 import { probeEveryMs, type RuntimeFetch } from '../../local-runtime/runtime-probe.ts';
@@ -168,4 +169,54 @@ export function startingOn(computer: Computer, options: Options = {}): Backgroun
 
 export function ranProbeByProbe<A>(program: Effect.Effect<A>): Effect.Effect<A> {
   return Effect.race(program, Effect.forever(after(probeEveryMs)));
+}
+
+/**
+ * A runtime started in the background that stops answering: SIGTERM does not end it, as it does not end a stopped
+ * process; SIGKILL does, and the port then refuses.
+ */
+function frozenOnceStarted(computer: Computer, instance: string, pid: number): StartedRuntime {
+  const end = Promise.withResolvers<void>();
+  const state: { endedAt: number | undefined } = { endedAt: undefined };
+  return {
+    instance,
+    pid,
+    startedAt: 0,
+    endedAt: () => state.endedAt,
+    signal: (name) => {
+      computer.record(name);
+      if (name === 'SIGKILL') {
+        state.endedAt = 1;
+        computer.answerWith();
+        end.resolve();
+      }
+      return true;
+    },
+    ended: end.promise,
+  };
+}
+
+/**
+ * The starting of an agent's relay on a fake computer, wired by `agentStartingWith` as `startingFor` wires it: each
+ * runtime it starts stops answering until SIGKILL; its log lines are recorded on the computer.
+ */
+export function agentStartingOn(computer: Computer): AgentStarting {
+  const starts = { count: 0 };
+  return agentStartingWith(
+    {
+      ...startingOn(computer),
+      startInBackground: () => {
+        starts.count += 1;
+        const instance = `instance-${starts.count}`;
+        const pid = 4342 + starts.count;
+        computer.record('started');
+        computer.answerWith({ ...startedForAnAgent, instance, pid });
+        return frozenOnceStarted(computer, instance, pid);
+      },
+    },
+    () => {
+      computer.record('logged');
+    },
+    () => 0,
+  );
 }

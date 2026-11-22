@@ -1,8 +1,7 @@
-import { setTimeout } from 'node:timers/promises';
-
 import { Effect } from 'effect';
 
 import { signals, type Signals } from '../testing/signals.ts';
+import type { SteppedClock } from '../testing/stepped-clock.ts';
 import type { DueItem, DueWork } from './due-work.ts';
 
 interface PerformedRow {
@@ -58,7 +57,7 @@ interface RowStore {
 }
 
 interface Flight {
-  readonly attempt: (row: PerformedRow, performMs: number) => Promise<boolean>;
+  readonly attempt: (row: PerformedRow, sleep: Effect.Effect<void>) => Promise<boolean>;
   readonly failing: (key: string) => void;
   readonly hanging: (key: string) => void;
   readonly hold: () => void;
@@ -127,12 +126,12 @@ function flight(changed: () => void): Flight {
   const counts = { now: 0, most: 0 };
   const holding: { gate?: PromiseWithResolvers<void> } = {};
   return {
-    attempt: async (row, performMs) => {
+    attempt: async (row, sleep) => {
       attempts.push(row);
       counts.now += 1;
       counts.most = Math.max(counts.most, counts.now);
       changed();
-      await (holding.gate?.promise ?? setTimeout(performMs));
+      await (holding.gate?.promise ?? Effect.runPromise(sleep));
       counts.now -= 1;
       return failing.has(row.key);
     },
@@ -164,14 +163,18 @@ function itemOf(
   store: RowStore,
   flown: Flight,
   row: Omit<PerformedRow, 'at'>,
-  { performMs, callsOut }: { readonly performMs: number; readonly callsOut: boolean },
+  {
+    performing,
+    hung,
+    callsOut,
+  }: { readonly performing: Effect.Effect<void>; readonly hung: Effect.Effect<never>; readonly callsOut: boolean },
 ): DueItem {
   return {
     key: row.key,
     callsOut,
     perform: (at) =>
-      Effect.promise(() => flown.attempt({ ...row, at }, performMs)).pipe(
-        Effect.andThen((fails) => (flown.hangs(row.key) ? Effect.never : Effect.succeed(fails))),
+      Effect.promise(() => flown.attempt({ ...row, at }, performing)).pipe(
+        Effect.andThen((fails) => (flown.hangs(row.key) ? hung : Effect.succeed(fails))),
         Effect.flatMap((fails) =>
           fails
             ? Effect.fail(new Error(`The row ${row.key} cannot be performed`))
@@ -220,7 +223,12 @@ function countedReads(changed: () => void): CountedReads {
   };
 }
 
+/**
+ * Due rows on a stepped clock: performing a row takes `performMs` of it, reading when the next is due `nextReadMs`,
+ * and a row that hangs waits on work the clock holds, so the loop performing it can still come to rest.
+ */
 export function fakeDueWork(
+  clock: SteppedClock,
   performMs = 0,
   { reportsRowsInFlight = false, nextReadMs = 0 }: FakeOptions = {},
 ): FakeDueWork {
@@ -233,15 +241,22 @@ export function fakeDueWork(
       name: 'the fake rows',
       due: (now, most, callsOut) =>
         read('due', () =>
-          store
-            .dueBy(now, most, callsOut)
-            .map(({ key, endsAt }) =>
-              itemOf(store, flown, { key, by }, { performMs, callsOut: endsAt === null || endsAt > now }),
+          store.dueBy(now, most, callsOut).map(({ key, endsAt }) =>
+            itemOf(
+              store,
+              flown,
+              { key, by },
+              {
+                performing: clock.sleep(performMs),
+                hung: Effect.andThen(clock.hold().wait, Effect.never),
+                callsOut: endsAt === null || endsAt > now,
+              },
             ),
+          ),
         ),
       nextDueAt: (after, callsOut) =>
         Effect.andThen(
-          Effect.sleep(nextReadMs),
+          clock.sleep(nextReadMs),
           read('next', () => (reportsRowsInFlight ? store.soonest(callsOut) : store.nextAfter(after, callsOut))),
         ),
     }),

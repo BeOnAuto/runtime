@@ -2,15 +2,8 @@ import { InvalidInput, PlaybookContext, PlaybookWriter, randomUUIDv7, type Issue
 import { Effect, Result } from 'effect';
 
 import { commandMetadata } from '../operations/command-metadata.ts';
-import {
-  decidedOnAGoal,
-  goalDecider,
-  goalStream,
-  notReplacing,
-  type GoalCommand,
-  type GoalState,
-} from './goal-decider.ts';
-import { agentIssue, type GoalIssue } from './goal-issues.ts';
+import { decidedOnAGoal, goalDecider, goalStream, type GoalCommand, type GoalState } from './goal-decider.ts';
+import { agentIssue, notReplacing, type GoalIssue } from './goal-issues.ts';
 import type { GoalsDocument } from './goals-document.ts';
 import { goalStatesIn } from './playbook-goals.ts';
 

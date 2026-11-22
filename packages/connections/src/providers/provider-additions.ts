@@ -1,7 +1,12 @@
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
 import {
+  accountTypeWhereNoneIsGiven,
+  accountTypesOf,
   additionOfProvider,
+  permissionsOf,
   providerNamed,
+  type AccountType,
+  type Permissions,
   type Provider,
   type ProviderList,
   type EventsByHand,
@@ -30,10 +35,16 @@ import {
 } from './provider-listing.ts';
 import { providingOf, type ProviderServices } from './provider-providing.ts';
 
+export interface GivenWay extends Credential {
+  readonly permissions?: Permissions;
+}
+
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
   readonly says?: Readonly<Record<string, string>>;
   readonly events?: EventsByHand;
+  readonly account_type?: AccountType;
+  readonly ways?: readonly GivenWay[];
 }
 
 type Checking = Omit<EntryChecking, 'providing'>;
@@ -46,19 +57,31 @@ const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allow
 
 const namedByTheServer: Credential = { kind: 'authorization' };
 
+function withItsAccountType(addition: GivenAddition, taken: readonly AccountType[]): GivenAddition {
+  const accountType = accountTypeWhereNoneIsGiven(taken);
+  return accountType === undefined ? addition : { ...addition, account_type: accountType };
+}
+
+export function actingAsItsKind(credential: Credential): GivenWay {
+  const permissions = permissionsOf(credential);
+  return { ...credential, ...(permissions === undefined ? {} : { permissions }) };
+}
+
 function givenByHand(given: AdditionGiven): GivenAddition {
   const { document_text: documentText, ...entry } = Option.getOrThrow(Option.fromNullishOr(given.entry));
   const { events } = given;
-  return {
+  const credential = given.credential ?? namedByTheServer;
+  const addition = {
     name: Option.getOrThrow(Option.fromNullishOr(given.name)),
     type: Option.getOrThrow(Option.fromNullishOr(given.type)),
     provider: null,
     placeholders: null,
     entry,
     ...(documentText === undefined ? {} : { documentText }),
-    credential: given.credential ?? namedByTheServer,
+    credential: actingAsItsKind(credential),
     ...(events === undefined ? {} : { events }),
   };
+  return withItsAccountType(addition, accountTypesOf(credential));
 }
 
 function namedHere(providers: ProviderList, provider: string): Result.Result<Provider, readonly Issue[]> {
@@ -101,9 +124,12 @@ function givenToProvider(
           record_content: entry.record_content,
         },
       ),
-      (addition) => {
+      ({ account_types: accountTypes, permissions, ...addition }) => {
         const unoffered = unofferedGatewayOf(named, addition, listing);
-        return unoffered.length === 0 ? Result.succeed(addition) : Result.fail(unoffered);
+        const acting = { ...addition.credential, ...(permissions === undefined ? {} : { permissions }) };
+        return unoffered.length === 0
+          ? Result.succeed(withItsAccountType({ ...addition, credential: acting }, accountTypes))
+          : Result.fail(unoffered);
       },
     ),
   );

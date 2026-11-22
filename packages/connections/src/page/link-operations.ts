@@ -35,7 +35,7 @@ import {
   sourcesFor,
   type Sources,
 } from './consent-asking.ts';
-import { linkedToolsOf, LinkedToolsField, type LinkReading } from './linked-tools.ts';
+import { listedOnThePageOf, ListedOnThePageFields, type LinkReading } from './linked-tools.ts';
 
 const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -80,7 +80,7 @@ const LinkedSchema = Schema.Struct({
         'The client the caller who asked for this link called through, add_connection for the link of an addition and reconnect_connection for a new one, as the token of that call named it: its client ID, its name and the domain of its client ID metadata document. Left out where the call named none, as a call with an API key, or with a session of a page, names none',
     }),
   ),
-  tools: LinkedToolsField,
+  ...ListedOnThePageFields,
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
@@ -150,6 +150,7 @@ export function defineReadLink(reading: LinkReading) {
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'asked_by names the client the link was asked through, where the call that gave it named one.',
       'For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read.',
+      'For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them.',
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
@@ -182,7 +183,7 @@ export function defineReadLink(reading: LinkReading) {
         ...returnAddressFor(kept.connection, reading),
         ...nextClientOf(kept),
         ...askedByOf(kept),
-        ...(yield* linkedToolsOf(kept.connection, reading)),
+        ...(yield* listedOnThePageOf(kept, reading)),
       };
     }),
   });

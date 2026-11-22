@@ -47,7 +47,7 @@ describe('auto-runtime license, against the runtime running on this computer', (
       `Licensed to Acme Corporation on the free plan, with 1000 runs left. Runtime id ${installation}. Features: none.`,
     );
     expect(accounts.account.activations().at(-1)).toEqual({ installation, actions: 0, licensed: 0 });
-  }, 60_000);
+  });
 
   it('gives the runtime an allocation, and prints its next report, signed, for the account holder or an organization admin to upload', async () => {
     const home = aHome();
@@ -69,5 +69,5 @@ describe('auto-runtime license, against the runtime running on this computer', (
     expect(said.at(-1)).toMatch(
       /^\{"report":\{"allocation":"[0-9a-f-]+","installation":"[0-9a-f-]+","sequence":1,"spent":0,/u,
     );
-  }, 60_000);
+  });
 });

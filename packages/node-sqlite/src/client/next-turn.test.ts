@@ -5,10 +5,6 @@ import { describe, expect, it } from 'vitest';
 import { onTheNextTurn } from './next-turn.ts';
 import { inTurn } from './statements.ts';
 
-function aStatementHoldingTheThreadFor(milliseconds: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-}
-
 describe('a statement', () => {
   it('runs and answers on a later turn of the event loop, after what was already waiting for one', async () => {
     const order: string[] = [];
@@ -26,27 +22,23 @@ describe('a statement', () => {
     expect(order).toEqual(['the caller carries on', 'a waiting turn', 'the statement']);
   });
 
-  it('lets a timer fire between statements that follow each other', async () => {
+  it('lets what one statement set going run before the statement after it, a turn of the event loop between them', async () => {
     const order: string[] = [];
+    const statements = [
+      () => {
+        setImmediate(() => {
+          order.push('what the first statement set going');
+        });
+        order.push('the first statement');
+      },
+      () => {
+        order.push('the second statement');
+      },
+    ];
 
-    await onTheNextTurn(() => {
-      setTimeout(() => {
-        order.push('the timer');
-      }, 1);
-      aStatementHoldingTheThreadFor(2);
-      order.push('the first statement');
-    });
-    await inTurn(
-      Array.from({ length: 20 }, (_, place) => place),
-      (place) =>
-        onTheNextTurn(() => {
-          aStatementHoldingTheThreadFor(0.5);
-          order.push(`statement ${place}`);
-        }),
-    );
+    await inTurn(statements, (statement) => onTheNextTurn(statement));
 
-    expect(order.indexOf('the timer')).toBeGreaterThan(0);
-    expect(order.indexOf('the timer')).toBeLessThan(order.length - 1);
+    expect(order).toEqual(['the first statement', 'what the first statement set going', 'the second statement']);
   });
 });
 

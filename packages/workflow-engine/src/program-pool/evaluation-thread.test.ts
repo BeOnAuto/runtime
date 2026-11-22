@@ -9,6 +9,7 @@ import {
   evaluatedAt,
   loadingAfterItsWork,
   machineWaitingOn,
+  readyFlag,
   runningOutOnce,
 } from '../pool-testing/evaluation-workers.ts';
 import { machineOnTheThread, testPoolSettings } from '../pool-testing/test-pools.ts';
@@ -64,6 +65,15 @@ function threadStartsOfTheTest(): ThreadStarts {
   onTestFinished(starts.stop);
   return starts;
 }
+
+describe('a scripted wait on the flags of an evaluation worker', () => {
+  it('fails, naming the flag, where the worker has not notified it by the bound of the test', () => {
+    const waits = runningOutOnce('answer', 0);
+    const flags = new Int32Array(new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT));
+
+    expect(() => waits.wait(flags, readyFlag, 0, longerThanTheTestMs)).toThrow(/ready/u);
+  });
+});
 
 describe('the evaluation worker of a pool asked before any reserve', () => {
   it('starts with the module of the sandbox the settings of the pool hand it, and answers once it is ready', () => {

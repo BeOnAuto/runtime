@@ -137,6 +137,7 @@ export interface NamedWay {
   readonly issuer: string;
   readonly clients: readonly WayClientSource[];
   readonly scope: string | undefined;
+  readonly takesClientCredentials: boolean;
 }
 
 export type IssuerRefusal = Refused<

@@ -1,7 +1,6 @@
 import { Effect, Logger } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { until } from '../testing/until.ts';
 import { postgresqlSecretRows, type SecretConnections } from './postgresql-secret-rows.ts';
 
 const lostConnectionWarning =
@@ -104,18 +103,17 @@ describe('the rows of the secret store on PostgreSQL, without a database', () =>
 
   it('log a connection their pool loses as a lost connection of the ledger, through the loggers they were opened with', async () => {
     const logged: string[] = [];
+    const firstLogged = Promise.withResolvers<void>();
     const capture = Logger.map(Logger.formatJson, (line: string) => {
       logged.push(line);
+      firstLogged.resolve();
     });
     const fake = connectionsAnsweringOneRow();
     await Effect.runPromise(postgresqlSecretRows({ pools: fake.pools }).pipe(Effect.provide(Logger.layer([capture]))));
 
     fake.lose(new Error('terminating connection due to administrator command'));
 
-    await until(
-      () => logged.length,
-      (count) => count > 0,
-    );
+    await firstLogged.promise;
     expect(logged).toEqual([expect.stringContaining(lostConnectionWarning)]);
     expect(logged[0]).toContain('"annotations":{"error":"terminating connection due to administrator command"}');
   });

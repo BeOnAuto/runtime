@@ -57,7 +57,7 @@ async function monitored(): Promise<ClockHarness> {
   const harness = clockHarnessOf('2026-11-08T07:00:00.000Z');
   await harness.book.workflowSaved('check', 1, checking);
   await harness.goalsSaved([controls], '2026-11-08T12:00:00.000Z');
-  await harness.until('2026-11-09T12:00:00.000Z');
+  await harness.steppedTo('2026-11-09T12:00:00.000Z');
   return harness;
 }
 
@@ -89,7 +89,7 @@ describe('a retired goal', () => {
     const harness = await monitored();
 
     await harness.goalsSaved([{ ...controls, retired: true }], '2026-11-09T12:00:00.000Z');
-    await harness.until('2026-11-12T00:00:00.000Z');
+    await harness.steppedTo('2026-11-12T00:00:00.000Z');
 
     expect(await harness.row(assessmentsName, dayOf('2026-11-09'))).toMatchObject({
       outcome: 'goal_retired',
@@ -136,10 +136,10 @@ describe('a retired playbook whose retired goal left assessments open', () => {
 
     harness.statusIs('retired');
     await harness.goalsSaved([{ ...experiments, retired: true }], '2026-11-10T09:00:00.000Z');
-    await harness.until('2026-11-12T12:00:00.000Z');
+    await harness.steppedTo('2026-11-12T12:00:00.000Z');
     const whileRetired = await harness.row(assessmentsName, experimentId('MAR-41'));
     harness.statusIs('active');
-    await harness.until('2026-11-14T12:00:00.000Z');
+    await harness.steppedTo('2026-11-14T12:00:00.000Z');
 
     expect(whileRetired).toMatchObject({ outcome: null, open: true });
     expect(await harness.row(assessmentsName, experimentId('MAR-41'))).toMatchObject({ outcome: 'goal_retired' });
@@ -158,7 +158,7 @@ describe('a retired playbook', () => {
     const harness = await monitored();
 
     harness.statusIs('retired');
-    await harness.until('2026-11-16T12:00:00.000Z');
+    await harness.steppedTo('2026-11-16T12:00:00.000Z');
 
     expect(await harness.row(assessmentsName, dayOf('2026-11-09'))).toMatchObject({
       outcome: 'playbook_retired',
@@ -181,10 +181,10 @@ describe('a retired playbook', () => {
   it('resumes within a day of its restore, opening only the current window', async () => {
     const harness = await monitored();
     harness.statusIs('retired');
-    await harness.until('2026-11-12T12:00:00.000Z');
+    await harness.steppedTo('2026-11-12T12:00:00.000Z');
 
     harness.statusIs('active');
-    await harness.until('2026-11-13T00:00:00.000Z');
+    await harness.steppedTo('2026-11-13T00:00:00.000Z');
 
     expect(Object.keys(await harness.book.rows(assessmentsName)).toSorted()).toEqual(
       [dayOf('2026-11-09'), dayOf('2026-11-13')].toSorted(),
@@ -196,7 +196,7 @@ describe('a retired playbook', () => {
     const harness = await monitored();
 
     harness.statusIs('unknown');
-    await harness.until('2026-11-11T12:00:00.000Z');
+    await harness.steppedTo('2026-11-11T12:00:00.000Z');
 
     expect(Object.keys(await harness.book.rows(assessmentsName))).toEqual([dayOf('2026-11-09')]);
     expect(await harness.row(clocksName, clockKey)).toMatchObject({ opens_at: Date.parse('2026-11-12T00:00:00.000Z') });
@@ -216,7 +216,7 @@ describe('a retired playbook with many short windows', () => {
     await harness.observed('many', { results: many }, '2026-11-09T09:30:00.000Z', 'launch');
 
     harness.statusIs('retired');
-    await harness.until('2026-11-11T12:00:00.000Z');
+    await harness.steppedTo('2026-11-11T12:00:00.000Z');
     const outcomes = Object.values(await harness.book.rows(assessmentsName)).map((row) => row['outcome']);
 
     expect(outcomes).toHaveLength(mostHeldInARead + 2);
@@ -232,15 +232,15 @@ describe('a rebuilt table', () => {
   it('holds every due the folds set, so the clock goes on from it as it would have', async () => {
     const harness = await monitored();
     await harness.observed('mon', { failed: 0 }, '2026-11-09T13:00:00.000Z');
-    await harness.until('2026-11-10T06:00:00.000Z');
+    await harness.steppedTo('2026-11-10T06:00:00.000Z');
 
     const rebuilt = await harness.rebuilt();
     const performedAfterRebuild = await rebuilt.performedAt(rebuilt.now());
 
     expect(performedAfterRebuild).toBe(0);
     expect(await duesOf(rebuilt)).toEqual(await duesOf(harness));
-    await harness.until('2026-11-12T06:00:00.000Z');
-    await rebuilt.until('2026-11-12T06:00:00.000Z');
+    await harness.steppedTo('2026-11-12T06:00:00.000Z');
+    await rebuilt.steppedTo('2026-11-12T06:00:00.000Z');
     expect(await rebuilt.book.rows(assessmentsName)).toEqual(await harness.book.rows(assessmentsName));
     expect(stamps(rebuilt)).toEqual(stamps(harness).slice(-4));
   });

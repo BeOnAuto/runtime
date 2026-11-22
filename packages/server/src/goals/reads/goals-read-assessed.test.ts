@@ -2,12 +2,11 @@ import { assessmentIdOf, GoalsReadSchema, type GoalsRead } from '@on.auto/goals'
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { assessing, savedWorkflow, type Assessing } from '../../testing/goals/assessed-runs.ts';
+import { assessing, minuteByMinute, savedWorkflow, type Assessing } from '../../testing/goals/assessed-runs.ts';
 import { goalOf } from '../../testing/goals/goal-identities.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
 import { alpha } from '../../testing/servers/reasoning-server.ts';
 import { goalsText } from '../../testing/settings/goals-kept.ts';
-import { until } from '../../testing/waiting/until.ts';
 
 const controlsText = [
   '- id: controls-hold',
@@ -82,10 +81,7 @@ async function goalsRead(assessed: Assessing): Promise<GoalsRead> {
 }
 
 function readHolding(assessed: Assessing, holds: (read: GoalsRead) => boolean): Promise<GoalsRead> {
-  return until(() => {
-    assessed.ranAMinuteOn();
-    return goalsRead(assessed);
-  }, holds);
+  return minuteByMinute(assessed, () => goalsRead(assessed), holds);
 }
 
 const experimentsOf = (read: GoalsRead) => read.goals[0]?.assessments;

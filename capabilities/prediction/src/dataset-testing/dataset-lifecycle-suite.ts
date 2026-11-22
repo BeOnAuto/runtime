@@ -55,13 +55,13 @@ function slotsTest(settingsOf: SettingsOf): void {
     const first = await datasets.saved('orders', weeklyOrders);
     const second = await datasets.saved('summed-orders', summed);
     await datasets.published([north('2026-10-06T10:00:00Z'), north('2026-10-07T10:00:00Z')]);
-    const watch = watchingDatasets();
+    const watch = watchingDatasets(datasets.steppedUntil);
     datasets.start({ through: watch.through });
     await watch.until(second.dataSha256, liveFolded(2));
     await watch.until(first.dataSha256, liveFolded(2));
     await datasets.stop();
     await datasets.published([north('2026-10-08T10:00:00Z')]);
-    const restarted = watchingDatasets();
+    const restarted = watchingDatasets(datasets.steppedUntil);
     datasets.start({ through: restarted.through });
     const after = await datasets.until(first.dataSha256, folded(3));
     await restarted.until(first.dataSha256, folded(3));

@@ -8,13 +8,18 @@ import { allPermissions } from '@on.auto/operations';
 import { answers, callingTools, textResult } from '@on.auto/reasoning/testing';
 import { type FakeApiServer, type FakeMcpServer, serveFakeApi, serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { release } from '../composition/release.ts';
 import { askingASystem, openInput, systemRunId } from '../testing/interaction-servers/system-calls.ts';
 import { configuredServer } from '../testing/processes/configured-server.ts';
 import { request } from '../testing/servers/http-client.ts';
-import { alpha, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
+import {
+  alpha,
+  type ReasoningServer,
+  servingReasoning,
+  documentsReadInProcess,
+} from '../testing/servers/reasoning-server.ts';
 import { givenGoals } from '../testing/settings/goals-kept.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
@@ -36,14 +41,19 @@ async function serving(): Promise<Serving> {
   closing.push(graph.close);
   const billing = await serveFakeApi({ key: apiKey });
   closing.push(billing.close);
-  const server = await servingReasoning([], {
-    API_KEYS: JSON.stringify([builder.entry, reader.entry]),
-    GRAPH_API_KEY: apiKey,
-    TOOL_SERVERS: JSON.stringify({
-      graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
-      billing: { document: billing.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' },
-    }),
-  });
+  const server = await servingReasoning(
+    [],
+    {
+      API_KEYS: JSON.stringify([builder.entry, reader.entry]),
+      GRAPH_API_KEY: apiKey,
+      TOOL_SERVERS: JSON.stringify({
+        graph: { url: graph.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' },
+        billing: { document: billing.documentUrl, security: { apiKeyAuth: '${GRAPH_API_KEY}' }, org: 'acme' },
+      }),
+    },
+    undefined,
+    { documents: documentsReadInProcess },
+  );
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', {
     key: builder.key,
@@ -216,13 +226,22 @@ async function renderedAndWritten(bytes: number, copies: number) {
 }
 
 describe('tool reads over http', () => {
-  afterEach(async () => {
-    await Promise.all(closing.splice(0).map((close) => close()));
+  let shared: Serving;
+  let closingShared: (() => Promise<void>)[] = [];
+
+  // The cases only read: none calls a tool or changes the server, so they share one.
+  beforeAll(async () => {
+    shared = await serving();
+    closingShared = closing.splice(0);
+  });
+
+  afterAll(async () => {
+    await Promise.all(closingShared.map((close) => close()));
   });
 
   describe('introspect over HTTP', () => {
     it('describes a tool of an MCP server and an operation of an HTTP API to a key that may only read, and calls neither', async () => {
-      const { server, graph, billing } = await serving();
+      const { server, graph, billing } = shared;
 
       const fromTheServer = await server.call('GET', toolPath('graph', 'search'), { key: reader.key });
       const fromTheApi = await server.call('GET', toolPath('billing', 'updateProfile'), { key: reader.key });
@@ -254,7 +273,7 @@ describe('tool reads over http', () => {
 
   describe('validate and dry_run over HTTP', () => {
     it('take their arguments from the JSON body of a POST, for a key that may only read, and call nothing', async () => {
-      const { server, graph, billing } = await serving();
+      const { server, graph, billing } = shared;
       const body = { arguments: { id: 'ada', body: { rows: 'many' } } };
 
       const validated = await server.call('POST', toolPath('billing', 'updateProfile', '/validate'), {
@@ -275,7 +294,7 @@ describe('tool reads over http', () => {
     });
 
     it('refuse a query string beside the body, as every POST does', async () => {
-      const { server } = await serving();
+      const { server } = shared;
 
       const refusedToolReads = await server.call('POST', `${toolPath('graph', 'search', '/validate')}?arguments=x`, {
         key: builder.key,
@@ -294,7 +313,7 @@ describe('tool reads over http', () => {
 
   describe('introspect and dry_run over MCP', () => {
     it('are tools that only read, dry_run though it is routed by POST, and validate is served over HTTP alone', async () => {
-      const { server } = await serving();
+      const { server } = shared;
 
       const tools = await withMcpSession(
         'current revision',
@@ -320,12 +339,13 @@ describe('tool reads over http', () => {
 
 describe('the document of an openapi server', () => {
   it('is read when a request first needs the tool servers; a document that cannot be read fails that request, naming its entry, and is read again on the next', async () => {
-    const { child, configFile } = configuredServer(
-      'tool_servers:\n  billing:\n    document: billing.json\n    org: acme\n',
-      {},
-    );
+    const {
+      port: started,
+      configFile,
+      stopped,
+    } = configuredServer('tool_servers:\n  billing:\n    document: billing.json\n    org: acme\n', {});
     const document = join(dirname(configFile), 'billing.json');
-    const port = await child.port;
+    const port = await started;
     await request(port, 'POST', '/v1/orgs/acme/playbooks', {
       body: { playbook: 'alpha', name: 'Alpha', goals: givenGoals },
     });
@@ -335,13 +355,9 @@ describe('the document of an openapi server', () => {
     const read = await request(port, 'GET', search);
     rmSync(document);
     const kept = await request(port, 'GET', search);
-    child.signal('SIGTERM');
-    await child.exited;
+    const stderr = await stopped();
     const incident = /urn:uuid:(?<id>[\da-f-]+)/u.exec(missing.text)?.groups?.['id'];
-    const logged = child
-      .output()
-      .stderr.split('\n')
-      .filter((line) => line.includes(refused));
+    const logged = stderr.split('\n').filter((line) => line.includes(refused));
 
     expect({
       statuses: [missing.status, read.status, kept.status],
@@ -406,10 +422,12 @@ describe('runtime user agent', () => {
       closing.push(billing.close);
       const entry = { document: billing.documentUrl, security: { apiKeyAuth: '${BILLING_KEY}' }, org: 'acme' };
       const own = { ...entry, headers: { 'User-Agent': 'operator-agent/2.0' } };
-      const server = await servingReasoning([], {
-        BILLING_KEY: apiKeyRuntimeUserAgent,
-        TOOL_SERVERS: JSON.stringify({ billing: entry, ledger: own }),
-      });
+      const server = await servingReasoning(
+        [],
+        { BILLING_KEY: apiKeyRuntimeUserAgent, TOOL_SERVERS: JSON.stringify({ billing: entry, ledger: own }) },
+        undefined,
+        { documents: documentsReadInProcess },
+      );
       closing.push(server.stop);
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
       const searchRuntimeUserAgent = { body: { arguments: { query: 'acme' } } };

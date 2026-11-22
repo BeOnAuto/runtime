@@ -21,7 +21,7 @@ const studio = { clientId: studioClient, redirectUri: studioRedirect, scope: 'op
 describe('Studio on the cloud, a client derived from its origin', () => {
   it('is never asked to be allowed, gets a refresh token, and signs in again with the session alone', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
 
     const tokens = await exchanged(browser, codeIn(await signedInAs(browser, studio)), studio);
     const more = await browser.at(authorizationAskedBy({ ...studio, scope: `${studio.scope} org:write` }));
@@ -35,7 +35,7 @@ describe('Studio on the cloud, a client derived from its origin', () => {
 
   it('signs the person out at the end-session endpoint, on the page the server gives, and is sent back to its own origin', async () => {
     const server = await aServer();
-    const browser = browserAt(server.at);
+    const browser = browserAt(server);
     await signedInAs(browser, studio);
     const asked = new URLSearchParams({ client_id: studioClient, post_logout_redirect_uri: `${studioOrigin}/` });
 
@@ -48,7 +48,7 @@ describe('Studio on the cloud, a client derived from its origin', () => {
   });
 
   it("sends a person who signs out with no client to return to to the server's own page", async () => {
-    const browser = browserAt((await aServer()).at);
+    const browser = browserAt(await aServer());
 
     const page = await browser.at('/session/end');
     const ended = await browser.at('/session/end/confirm', formOf(hiddenFieldsIn(await page.text())));

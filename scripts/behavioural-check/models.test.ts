@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { askingThroughItsCommand, versionOf, type Model } from './models.ts';
+import { askingThroughItsCommand, versionOf, type Bound, type Model } from './models.ts';
 
 function nodeRunning(script: string, prompt: Model['prompt']): Model {
   return {
@@ -39,10 +39,28 @@ await test('a command that fails keeps its exit code and the end of what it wrot
   assert.ok(answer.stderr.endsWith('signed out'));
 });
 
-await test('a command that takes longer than an answer may is stopped, and its answer says so', async () => {
-  const answer = await askingThroughItsCommand(200)(nodeRunning('setTimeout(() => {}, 60_000)', 'stdin'), 'Wait');
+await test('a command that takes longer than an answer may is stopped at the bound, and its answer says so', async () => {
+  const bounds: number[] = [];
+  const expiring = {
+    now: (): void => {
+      assert.fail('The bound was never set');
+    },
+  };
+  const bound: Bound = {
+    after: (ms, expire) => {
+      bounds.push(ms);
+      expiring.now = expire;
+      return () => {
+        bounds.push(0);
+      };
+    },
+  };
+  const asked = askingThroughItsCommand(900, bound)(nodeRunning('setInterval(() => {}, 1000)', 'stdin'), 'Wait');
 
-  assert.equal(answer.exit, 'timeout');
+  expiring.now();
+  const answer = await asked;
+
+  assert.deepEqual([bounds, answer.exit], [[900, 0], 'timeout']);
 });
 
 await test('a command stopped by a signal, and one that cannot start, are told apart from an answer', async () => {

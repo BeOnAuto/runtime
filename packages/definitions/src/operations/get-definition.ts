@@ -8,6 +8,7 @@ import {
   definitionStanding,
   definitionWordsFor,
   offeredAttemptFor,
+  queuedRunsInWords,
   whatItDoes,
   type OfferedDefinition,
 } from '../plain-language/definition-words.ts';
@@ -17,7 +18,7 @@ import { definitionRead, type PageMissing } from './definition-read.ts';
 
 const description = [
   'Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares.',
-  'For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own.',
+  'For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own, and how many of its runs are queued to start.',
   'A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page.',
   'Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type.',
   "`type` is the definition's type and `name` its name.",
@@ -61,7 +62,8 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
         task: `look up a ${words.kinds}`,
         attempt: (asked) => `${readingVerbOf(asked)} ${words.named(asked.type, asked.name)}`,
         attemptAsOffered: offeredAttemptFor(capabilities, readingVerbOf),
-        outcome: (definition) => `${definitionStanding(words, definition)}${whatItDoes(definition)}`,
+        outcome: (definition) =>
+          `${definitionStanding(words, definition)}${queuedRunsInWords(words, definition)}${whatItDoes(definition)}`,
       },
     }),
   );

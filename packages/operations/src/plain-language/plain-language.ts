@@ -1,3 +1,6 @@
+import { counted } from '@on.auto/phrasing';
+
+import type { Rejected } from '../outcome/outcome.ts';
 import type { RejectionBecause } from '../outcome/rejection-because.ts';
 import type { RejectionKind } from '../outcome/rejection.ts';
 
@@ -19,6 +22,23 @@ export const tokenTypeRefusal: Explanation = {
   why: 'only a person signed in to Studio can do that',
   remedy: 'An agent or an API key cannot do it, whatever access it was given.',
 };
+
+const second = { one: 'second', other: 'seconds' };
+
+function busyRemedy(wait: string): string {
+  return `Try again in ${wait}.`;
+}
+
+export const busyExplanation: Explanation = { why: 'the server is busy', remedy: busyRemedy('a few seconds') };
+
+export function withTheWait(
+  explanation: Explanation,
+  { kind, retry_after: retryAfter }: Pick<Rejected, 'kind' | 'retry_after'>,
+): Explanation {
+  return kind === 'busy' && retryAfter !== undefined
+    ? { ...explanation, remedy: busyRemedy(counted(retryAfter, second)) }
+    : explanation;
+}
 
 export type Explanations = Readonly<Partial<Record<RejectionKind, Explanation>>>;
 

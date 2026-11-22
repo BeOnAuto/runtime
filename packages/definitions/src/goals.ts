@@ -24,6 +24,7 @@ export {
   type PlaybookGoals,
 } from './goals/playbook-goals.ts';
 export { goalFactTypes, GoalEventSchema, type RecordedGoalEvent } from './goals/goals-facts.ts';
+export { goalStream } from './goals/goal-decider.ts';
 export { goalType } from './goals/goal-names.ts';
 export {
   PlaybookGoalAgreementsEventSchema,

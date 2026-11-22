@@ -93,7 +93,11 @@ describe('the relay of the org’s connections to the playbooks that listen thro
       await askedAfter(connected('connection-2')),
       await askedAfter({ type: 'connection_playbooks_set', data: { connection: 'connection-2', playbooks: ['beta'] } }),
       await askedAfter({ type: 'connection_removed', data: { connection: 'connection-2' } }),
-    ]).toEqual([false, false, true, true, true]);
+      await askedAfter({
+        type: 'connection_identified',
+        data: { connection: 'connection-1', connected_at: '2026-11-17T08:00:00.000Z', user: { id: 'h-7' } },
+      }),
+    ]).toEqual([false, false, true, true, true, false]);
   });
 });
 

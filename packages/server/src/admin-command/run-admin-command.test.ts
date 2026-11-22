@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -6,6 +5,7 @@ import type { Environment } from '@on.auto/config';
 import { statement } from '@on.auto/ledger';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { ranToItsEnd } from '../testing/processes/awaited-children.ts';
 import { aLedgerAServerKeptAt, type KeptBySignIn } from '../testing/records/ledger-a-server-kept.ts';
 import { readOfTheLedgerIn, rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
@@ -217,15 +217,15 @@ describe('the admin commands', () => {
     const LEDGER_FILE = aLedgerFile();
     await aLedgerAServerKeptAt({ LEDGER_FILE }, tiedWithASession);
     const asAProcess = (...args: readonly string[]) =>
-      spawnSync(process.execPath, [fileURLToPath(new URL('../admin-command.ts', import.meta.url)), ...args], {
-        encoding: 'utf8',
+      ranToItsEnd(process.execPath, [fileURLToPath(new URL('../admin-command.ts', import.meta.url)), ...args], {
         env: { NODE_V8_COVERAGE: process.env['NODE_V8_COVERAGE'], LEDGER_FILE },
       });
 
-    const [answered, refused] = [asAProcess('reset-setup'), asAProcess()];
+    const answered = await asAProcess('reset-setup');
+    const refused = await asAProcess();
 
-    expect([answered.status, answered.stdout.trim().split('\n').length]).toEqual([0, 2]);
-    expect([refused.status, refused.stdout, refused.stderr.trim().split('\n').length]).toEqual([1, '', 5]);
+    expect([answered.code, answered.stdout.trim().split('\n').length]).toEqual([0, 2]);
+    expect([refused.code, refused.stdout, refused.stderr.trim().split('\n').length]).toEqual([1, '', 5]);
     expect(await contextsOf(LEDGER_FILE, 'setup_reopened')).toEqual([{ by: 'command' }]);
   });
 });

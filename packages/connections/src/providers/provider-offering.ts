@@ -4,6 +4,7 @@ import {
   roleRefusalDetail,
   type CallerIdentity,
   type Runnable,
+  type Unavailable,
 } from '@on.auto/operations';
 import type { OfferedGroup, OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
@@ -33,7 +34,7 @@ export function addingRefusedTo(
   services: OfferingServices,
   adding: Runnable<'org'>,
   caller: CallerIdentity,
-): Effect.Effect<string | null> {
+): Effect.Effect<string | null, Unavailable> {
   return Effect.map(mayCall({ operation: adding, caller, org: caller.org }), (mayAdd) =>
     refusalToAdd(services, { operation: adding, caller }, mayAdd),
   );

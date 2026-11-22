@@ -1,0 +1,11 @@
+{
+  "type": "connection_account_type_set",
+  "data": {
+    "connection": "connection-1",
+    "account_type": "personal"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

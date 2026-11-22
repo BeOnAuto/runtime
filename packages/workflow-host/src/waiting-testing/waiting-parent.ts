@@ -5,7 +5,8 @@ import { waitingCallsOf } from '../calls/call-rows.ts';
 import { runOfTheTestsStarted } from '../reaction-testing/playbook-writes.ts';
 import { runKeyOf } from '../runs/run-address.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
-import type { HostedOptions } from '../testing/host-runs.ts';
+import type { SteppedHostedOptions } from '../testing/host-runs.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import { followedHost, type FollowedHost } from './followed-host.ts';
 
 export const parentId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -24,7 +25,7 @@ export interface WaitingParent extends FollowedHost {
   readonly answeredCalls: () => Promise<readonly CallState[]>;
 }
 
-export async function waitingParent(child: string, options: HostedOptions = {}): Promise<WaitingParent> {
+export async function waitingParent(child: string, options: SteppedHostedOptions = {}): Promise<WaitingParent> {
   const followed = await followedHost({ ...options, answer: () => Effect.succeed({ status: 'waiting', child }) });
   const { database, hosted } = followed;
   hosted.know(parentId);
@@ -32,9 +33,10 @@ export async function waitingParent(child: string, options: HostedOptions = {}):
   await Effect.runPromise(
     hosted.host.start(runAt(parentId), startOf(workflow('do:\n  - ask: { call: notify, with: { to: ada } }'))),
   );
-  await hosted.whenRead(
+  await hosted.sweeps.until(
     () => Effect.runPromise(waitingCallsOf(database, parentRun)),
     (waiting) => waiting.length === 1,
+    fewSweeps,
   );
   const callStates = async () =>
     Schema.decodeUnknownSync(States)(
@@ -43,6 +45,7 @@ export async function waitingParent(child: string, options: HostedOptions = {}):
   return {
     ...followed,
     callStates,
-    answeredCalls: () => hosted.whenRead(callStates, (states) => states.every(({ delivered }) => delivered === 1)),
+    answeredCalls: () =>
+      hosted.sweeps.until(callStates, (states) => states.every(({ delivered }) => delivered === 1), fewSweeps),
   };
 }

@@ -1,20 +1,23 @@
 import { localDeveloper } from '@on.auto/identity/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { compositionRoot } from '../composition/composition-root.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { request, type TestResponse } from '../testing/servers/http-client.ts';
+import { testComposition } from '../testing/servers/test-compositions.ts';
 import { goalsText } from '../testing/settings/goals-kept.ts';
 import { noConsentThroughAuto } from '../testing/settings/no-consent-through-auto.ts';
 
-const playbooks = '/v1/orgs/acme/playbooks';
+/** The playbooks of the org of the case: each case has an org of its own on the server the file shares. */
+let playbooks = '/v1/orgs/acme/playbooks';
+
+let orgs = 0;
 
 let ledger: TemporaryLedger;
 let server: RunningServer;
 
-beforeEach(async () => {
+beforeAll(async () => {
   ledger = temporaryLedger();
   server = await startServer(
     {
@@ -23,13 +26,18 @@ beforeEach(async () => {
       LEDGER_FILE: ledger.fileName,
       ...noConsentThroughAuto,
     },
-    compositionRoot,
+    testComposition(),
   );
 });
 
-afterEach(async () => {
+afterAll(async () => {
   await server.stop();
   ledger.remove();
+});
+
+beforeEach(() => {
+  orgs += 1;
+  playbooks = `/v1/orgs/acme-${orgs}/playbooks`;
 });
 
 function create(body: Readonly<Record<string, unknown>>): Promise<TestResponse> {

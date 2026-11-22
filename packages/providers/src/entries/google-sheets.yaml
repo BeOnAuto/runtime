@@ -6,6 +6,7 @@ type: openapi
 document: documents/google-sheets.openapi.json
 credentials:
   - kind: authorization
+    account_types: [personal]
     issuer: https://accounts.google.com
     scope: https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/spreadsheets
     says:

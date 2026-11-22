@@ -97,7 +97,8 @@ export { comparePoints, isAfter, pointIn, pointText, type Point } from './pages/
 export { pageFolding, pageViewsBounds, pageViewsFolder } from './views/page-views.ts';
 export { replayBounds, viewsAsOfOn, type ViewAsOf, type ViewsAsOf } from './pages/view-replay.ts';
 export { viewsPortOn, type ViewsPort } from './views/views-port.ts';
-export type { HostClock } from './loop/host-clock.ts';
+export { sleepOr, type HostClock } from './loop/host-clock.ts';
+export { ForkWatch, InForkedFiber, type FiberWatch, type ForkedFiber } from './loop/forked-fibers.ts';
 export {
   hostWakeUp,
   oneWakeAtATime,
@@ -137,6 +138,12 @@ export { isKnownTimeZone, zoneClockOf, type InZone, type ZoneClock } from './sch
 export { mostListenersInAPlaybook } from './listeners/sql-listeners.ts';
 export { mostReactionDepth } from './reactions/subscription-starts.ts';
 export { mostDeferredStarts, mostStartsAMinute } from './reactions/start-rates.ts';
+export {
+  queuedStartsOn,
+  type QueuedPlace,
+  type QueuedStart,
+  type QueuedStartReads,
+} from './queued-starts/queued-starts.ts';
 export { mostOpenCallsOfATree, type WaitingOptions } from './waiting/waiting-options.ts';
 export {
   orgFollowerCursorOf,

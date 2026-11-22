@@ -131,6 +131,7 @@ describe('a saved workflow that carries contributes', () => {
   it('is prepared to run on a host that keeps no goals, with the document the engine runs left without it', async () => {
     const notKeeping = makeWorkflowAdapter({
       runs: kept.host,
+      queued: { queuedStartsOf: () => Effect.succeed({ queued: 0, nextDueAt: null }) },
       check: testExpressionCheck,
       connectionEvents: connectionsReporting({}),
       mostDurationMs: 2_592_000_000,
@@ -143,14 +144,14 @@ describe('a saved workflow that carries contributes', () => {
   });
 
   it('runs exactly as the same workflow without it', async () => {
-    await saving(kept, 'plain', plain);
+    await Promise.all([saving(kept, 'run-contributing', contributing), saving(kept, 'run-plain', plain)]);
     const ran = async (name: string, runId: string): Promise<Outcome> => {
       await kept.call(kept.runDefinition, { type: 'workflow', name, input: { name: 'Ada' }, run_id: runId });
       return kept.settled(runId);
     };
     const [withIt, withoutIt] = await Promise.all([
-      ran('contributing', '0199a3c4-7d2e-7c1a-9b3f-4444444444a1'),
-      ran('plain', '0199a3c4-7d2e-7c1a-9b3f-4444444444a2'),
+      ran('run-contributing', '0199a3c4-7d2e-7c1a-9b3f-4444444444a1'),
+      ran('run-plain', '0199a3c4-7d2e-7c1a-9b3f-4444444444a2'),
     ]);
 
     expect(ending(withIt)).toEqual(ending(withoutIt));

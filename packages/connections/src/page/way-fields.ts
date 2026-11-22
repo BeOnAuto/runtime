@@ -1,0 +1,28 @@
+import { AccountTypeSchema, PermissionsSchema } from '@on.auto/providers';
+import { Schema } from 'effect';
+
+import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
+import { CredentialKindSchema } from '../registry/credential.ts';
+
+export const ChoosingTheWaySchema = Schema.Struct({
+  id: ConnectionIdField,
+  token: TokenField,
+  credential: Schema.Struct({
+    kind: CredentialKindSchema.annotate({ description: 'The kind of the way, as the list of ways names it.' }),
+    permissions: Schema.optionalKey(
+      PermissionsSchema.annotate({
+        description:
+          'application or delegated, as the list of ways names it. client_credentials always means application. Left out, every other kind that sends a credential means delegated.',
+      }),
+    ),
+  }).annotate({
+    description:
+      'The way to connect. For a connection made from a provider, one of the ways list_providers lists for it. For a server given by hand, one of the ways read_link lists in ways.',
+  }),
+  account_type: Schema.optionalKey(
+    AccountTypeSchema.annotate({
+      description:
+        'service when the connection will act as an account the company made for automations. personal when it will act as the account of the person who connects it. Left out when another way is chosen, it is personal if the way takes personal accounts, and otherwise the type the way takes. Left out for the way the connection already has, the type stays as it is.',
+    }),
+  ),
+});

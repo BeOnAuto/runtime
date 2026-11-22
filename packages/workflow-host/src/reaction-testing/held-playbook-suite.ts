@@ -2,6 +2,7 @@ import { messageIdOf } from '@on.auto/operations';
 import { expect, it } from 'vitest';
 
 import type { SettingsOf } from '../testing/host-files.ts';
+import { fewSweeps } from '../testing/stepped-clock.ts';
 import {
   causesOf,
   heldUntil,
@@ -11,17 +12,13 @@ import {
   type Holding,
   type HoldState,
 } from './followed-rows.ts';
-import { movedClock } from './moved-clock.ts';
-import { alpha, at, definitionRecorded, eventTrigger, published } from './playbook-writes.ts';
-import { reactingHost } from './reacting-host.ts';
+import { alpha, definitionRecorded, eventTrigger, published } from './playbook-writes.ts';
 import { unreadWhile } from './recorded-reactions.ts';
-
-const startedAt = Date.parse(at) + 1000;
+import { steppedReacting } from './stepped-reactions.ts';
 
 async function sentinelsHeldWhile(settingsOf: SettingsOf, unread: Readonly<{ now: boolean }>): Promise<Holding> {
-  const clock = movedClock(startedAt);
-  const reacting = await reactingHost({ settings: await settingsOf(), clock, failure: unreadWhile(unread) });
-  const { store } = reacting.database;
+  const holding = await steppedReacting({ settings: await settingsOf(), failure: unreadWhile(unread) });
+  const { store } = holding.reacting.database;
   await definitionRecorded(store, {
     name: 'watch',
     version: 1,
@@ -29,7 +26,7 @@ async function sentinelsHeldWhile(settingsOf: SettingsOf, unread: Readonly<{ now
   });
   await published(store, { id: 's1', type: 'com.acme.sentinel' });
   await published(store, { id: 's2', type: 'com.acme.sentinel' });
-  return { reacting, clock };
+  return holding;
 }
 
 function sentinel(id: string): string {
@@ -63,17 +60,18 @@ function heldAtTheFirstStart(settingsOf: SettingsOf) {
     const holding = await sentinelsHeldWhile(settingsOf, { now: true });
 
     const held = await holdReaching(holding, (state) => state.holds === 1);
+    const heldAt = holding.clock.now();
 
-    expect(held).toMatchObject({ held_since: startedAt, holds: 1, held_for: 'content', attempts: 0 });
-    expect(waitedFor(held, startedAt)).toBeGreaterThanOrEqual(500);
-    expect(waitedFor(held, startedAt)).toBeLessThanOrEqual(1000);
+    expect(held).toMatchObject({ held_since: heldAt, holds: 1, held_for: 'content', attempts: 0 });
+    expect(waitedFor(held, heldAt)).toBeGreaterThanOrEqual(500);
+    expect(waitedFor(held, heldAt)).toBeLessThanOrEqual(1000);
     expect(causesOf(holding)).toEqual([]);
     expect(await notesReaching(holding, 'content_hold', 1)).toMatchObject([
       {
         org: 'acme',
         playbook: 'alpha',
         heldFor: 'content',
-        heldSince: startedAt,
+        heldSince: heldAt,
         heldMs: 0,
         holds: 1,
         heldUntil: heldUntil(held),
@@ -88,12 +86,13 @@ function triedOnTheSchedule(settingsOf: SettingsOf) {
   it('tries it again once its time has come, twice as long after each try, never counting a try as an attempt', async () => {
     const holding = await sentinelsHeldWhile(settingsOf, { now: true });
     const first = await holdReaching(holding, (state) => state.holds === 1);
+    const heldAt = holding.clock.now();
 
     const waits = await waitsOfTheTries(holding, first, [2, 3, 4]);
 
     expect(onTheSchedule(waits)).toEqual([true, true, true]);
     expect(await holdReaching(holding, (state) => state.holds === 4)).toMatchObject({
-      held_since: startedAt,
+      held_since: heldAt,
       attempts: 0,
       held_for: 'content',
     });
@@ -111,14 +110,15 @@ function keptThroughARestart(settingsOf: SettingsOf) {
     const unread = { now: true };
     const first = await sentinelsHeldWhile(settingsOf, unread);
     const held = await holdReaching(first, (state) => state.holds === 1);
+    const heldAt = first.clock.now();
     await first.reacting.host.stop();
     unread.now = false;
-    const reacting = await reactingHost({
+    const second = await steppedReacting({
       settings: first.reacting.settings,
       clock: first.clock,
       failure: unreadWhile(unread),
     });
-    const second: Holding = { reacting, clock: first.clock };
+    const { reacting } = second;
     const restarted = await holdReaching(second, (state) => state.holds === 1);
     await published(reacting.database.store, { id: 's3', type: 'com.acme.sentinel' });
 
@@ -126,9 +126,11 @@ function keptThroughARestart(settingsOf: SettingsOf) {
     const startsWhileHeld = causesOf(second);
     first.clock.moveTo(heldUntil(held));
     const lifted = await holdReaching(second, (state) => state.holds === 0);
-    const delivered = await reacting.whenRead(
-      () => Promise.resolve(causesOf(second)),
+    const liftedAt = first.clock.now();
+    const delivered = await second.sweeps.until(
+      () => causesOf(second),
       (causes) => causes.length === 3,
+      fewSweeps,
     );
 
     expect([passedOver.holds, passedOver.held_until, startsWhileHeld]).toEqual([1, held.held_until, []]);
@@ -139,8 +141,8 @@ function keptThroughARestart(settingsOf: SettingsOf) {
         org: 'acme',
         playbook: 'alpha',
         heldFor: 'content',
-        heldSince: startedAt,
-        heldMs: heldUntil(held) - startedAt,
+        heldSince: heldAt,
+        heldMs: liftedAt - heldAt,
         holds: 1,
         records: 3,
         more: false,

@@ -7,7 +7,7 @@ import { onTestFinished, vi } from 'vitest';
 import { connectedWith, connectionsIn } from '../servers/connected-servers.ts';
 import { connectionsAllowing } from '../servers/loopback-connections.ts';
 import type { ServedParts } from '../servers/served-parts.ts';
-import { until } from '../waiting/until.ts';
+import { receiptsTold, whenHeld } from '../waiting/until.ts';
 import { flatReading } from './chat-readings.ts';
 import { servingInteractions, type InteractionServer } from './interaction-server.ts';
 
@@ -16,6 +16,9 @@ export const roomsKey = 'rooms-api-key-7c2d41e9';
 export const theWebhookUrl = 'https://events.example.com';
 
 export const theRoom = '#approvals-ada';
+
+/** The account the rooms connection acts as, which its tool `who_am_i` answers. */
+export const itsAccountInRooms = 'u-rooms-of-the-connection';
 
 function named(properties: readonly string[]): FakeTool['inputSchema'] {
   return {
@@ -30,6 +33,11 @@ const hookTools: readonly FakeTool[] = [
     name: 'create_hook',
     inputSchema: named(['room', 'callback', 'secret']),
     answer: () => ({ content: [], structuredContent: { hook: { id: 'hook-7' } } }),
+  },
+  {
+    name: 'who_am_i',
+    inputSchema: named([]),
+    answer: () => ({ content: [], structuredContent: { me: { id: itsAccountInRooms } } }),
   },
 ];
 
@@ -112,7 +120,7 @@ export const roomsDelivery: readonly string[] = [
 ];
 
 export async function roomsServer(): Promise<FakeMcpServer> {
-  const rooms = await serveFakeMcp({ bearer: roomsKey, chat: true, tools: hookTools });
+  const rooms = receiptsTold(await serveFakeMcp({ bearer: roomsKey, chat: true, tools: hookTools }));
   onTestFinished(rooms.close);
   return rooms;
 }
@@ -146,7 +154,7 @@ function hooksMadeAt(rooms: FakeMcpServer) {
 }
 
 export async function hookMadeAt(rooms: FakeMcpServer): Promise<MadeHook> {
-  await until(
+  await whenHeld(
     () => hooksMadeAt(rooms).length,
     (count) => count > 0,
   );
@@ -186,7 +194,7 @@ export function takenOnceRecorded(
   body = said,
 ): Promise<string> {
   const { pathname, search } = new URL(hook.callback);
-  return until(
+  return whenHeld(
     () => delivered(server, `${pathname}${search}`, signedWith(hook.secret, 'hook-7', body), body),
     (answer) => answer === '200 ',
   );

@@ -14,7 +14,7 @@ import {
 } from '../testing/extensions/scratch-packages.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { alpha, noNetwork, type ReasoningServer, servingReasoning } from '../testing/servers/reasoning-server.ts';
-import { patientWorkerPool } from '../testing/servers/worker-pools.ts';
+import { patientThreadPool } from '../testing/servers/worker-pools.ts';
 import { dailyVisits } from './published-visits.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -80,7 +80,7 @@ type ShippedFilesOver = (files: ShippedFiles) => ShippedFiles;
 
 async function servingWith(
   fillings: readonly ScratchPackage[],
-  programPoolOf: ProgramPoolOf = patientWorkerPool,
+  programPoolOf: ProgramPoolOf = patientThreadPool,
   shippedFilesOver?: ShippedFilesOver,
 ): Promise<ReasoningServer> {
   const ledger = temporaryLedger();
@@ -259,7 +259,7 @@ describe('prediction by an extension', () => {
     it('does not start for an extension whose capability lacks a member, naming it, and closes the pool it opened', async () => {
       const closed: string[] = [];
       const recordingClose: ProgramPoolOf = (settings, handed) => {
-        const pool = patientWorkerPool(settings, handed);
+        const pool = patientThreadPool(settings, handed);
         return {
           ...pool,
           close: async () => {
@@ -288,7 +288,7 @@ describe('prediction by an extension', () => {
     it('says the value the operator set, where the page names it, though the page writes another default', async () => {
       const server = await servingWith(
         [forecastsFilling('@acme/forecasts', 6, naming)],
-        patientWorkerPool,
+        patientThreadPool,
         withThePageNamingTheValue,
       );
 

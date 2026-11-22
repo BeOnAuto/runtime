@@ -35,6 +35,7 @@ export interface WriterPoolOptions {
   readonly getConnection: (context: ReadonlyAbortContext) => NodeSqliteConnection | Promise<NodeSqliteConnection>;
   readonly context: ConnectionContext;
   readonly maxTaskIdleTime?: number | undefined;
+  readonly onWaitingForTheWriter?: (() => void) | undefined;
 }
 
 interface Writer {
@@ -107,13 +108,19 @@ function withWriterTransaction<Result>(
       );
 }
 
-export function writerPool({ getConnection, context, maxTaskIdleTime }: WriterPoolOptions): NodeSqlitePool {
+export function writerPool({
+  getConnection,
+  context,
+  maxTaskIdleTime,
+  onWaitingForTheWriter,
+}: WriterPoolOptions): NodeSqlitePool {
   const inner = createSingletonConnectionPool({ driverType: nodeSqliteDriverType, getConnection });
   const writer: Writer = {
     inner,
     queue: writerQueue({
       mostWaiting: mostWaitingForTheWriter,
       longestWaitToStart: maxTaskIdleTime ?? longestWaitForTheWriterToStart,
+      onWaiting: onWaitingForTheWriter,
     }),
     context,
   };

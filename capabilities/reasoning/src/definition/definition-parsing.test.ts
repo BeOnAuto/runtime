@@ -1,6 +1,7 @@
 import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { Token } from 'liquidjs';
+import { describe, expect, it, vi } from 'vitest';
 
 import { documentOf, issuesIn, parsed } from '../testing/definition-documents.ts';
 
@@ -106,10 +107,22 @@ describe('the smallest reasoning function definition', () => {
 
 function issuesOfMarkers(count: number) {
   const markers = '{%system%}\n'.repeat(count);
-  const before = process.cpuUsage();
-  const issues = issuesIn(documentOf('model: openai/gpt-5', markers));
-  const { user, system } = process.cpuUsage(before);
-  return { markers, issues, milliseconds: (user + system) / 1000 };
+  const scans = vi.spyOn(Token.prototype, 'getPosition');
+  try {
+    const issues = issuesIn(documentOf('model: openai/gpt-5', markers));
+    return { markers, issues, scans: scans.mock.calls.length };
+  } finally {
+    scans.mockRestore();
+  }
+}
+
+function issuesShownOfMarkers(count: number): readonly string[] {
+  return [
+    'Line 4: {% system %} is never closed by {% endsystem %}',
+    `Line 4: A template may use at most 1000 names in its tags and outputs (variables, properties, filters and keywords); this one uses ${count}`,
+    ...Array.from({ length: 18 }, (_, index) => `Line ${index + 5}: A template holds at most one {% system %} block`),
+    `Line 23: ${count - 19} more issues are not shown`,
+  ];
 }
 
 describe('the issues of a document', () => {
@@ -143,18 +156,16 @@ describe('the issues of a document', () => {
     ]);
   });
 
-  it('are at most 20, with how many more there were, however many the document holds', () => {
-    issuesOfMarkers(590);
-    const tenth = issuesOfMarkers(590);
-    const { markers, issues, milliseconds } = issuesOfMarkers(5900);
+  it.each([1180, 2950, 5900])(
+    'are at most 20, with how many more there were, of %i markers, each found on its line without a scan from the start of the document',
+    (count) => {
+      const { markers, issues, scans } = issuesOfMarkers(count);
 
-    expect(markers.length).toBeLessThan(65_536);
-    expect(issues).toEqual([
-      'Line 4: {% system %} is never closed by {% endsystem %}',
-      'Line 4: A template may use at most 1000 names in its tags and outputs (variables, properties, filters and keywords); this one uses 5900',
-      ...Array.from({ length: 18 }, (_, index) => `Line ${index + 5}: A template holds at most one {% system %} block`),
-      'Line 23: 5881 more issues are not shown',
-    ]);
-    expect(milliseconds).toBeLessThan(Math.max(tenth.milliseconds, 5) * 30);
-  });
+      expect(markers.length).toBeLessThan(65_536);
+      expect({ issues, scans }).toEqual({
+        issues: issuesShownOfMarkers(count),
+        scans: 0,
+      });
+    },
+  );
 });

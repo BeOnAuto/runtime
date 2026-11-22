@@ -1,11 +1,17 @@
 import { localDeveloper } from '@on.auto/identity/testing';
-import { movedClock, type MovedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { runIdIn, servingWorkflows, settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
-import { until } from '../testing/waiting/until.ts';
+import {
+  runIdIn,
+  servingWorkflows,
+  settledAsSwept,
+  settledRun,
+  workflowSource,
+} from '../testing/servers/workflow-server.ts';
+import { fewSweeps, steppedServerClock, type SteppedServerClock } from '../testing/waiting/stepped-server-clock.ts';
+import { whenHeld } from '../testing/waiting/until.ts';
 
 const aMinuteAndASecond = 61_000;
 
@@ -63,7 +69,7 @@ afterEach(async () => {
   await server.stop();
 });
 
-async function servingAPlaybook(clock?: MovedClock): Promise<void> {
+async function servingAPlaybook(clock?: SteppedServerClock): Promise<void> {
   server = await servingWorkflows([], {}, undefined, clock);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
 }
@@ -88,16 +94,22 @@ async function runIdsOf(name: string): Promise<readonly string[]> {
   );
 }
 
-function runsReaching(name: string, count: number): Promise<readonly string[]> {
-  return until(
-    () => runIdsOf(name),
-    (runs) => runs.length >= count,
-  );
+function runsReaching(name: string, count: number, clock?: SteppedServerClock): Promise<readonly string[]> {
+  const holds = (runs: readonly string[]) => runs.length >= count;
+  return clock === undefined
+    ? whenHeld(() => runIdsOf(name), holds)
+    : clock.swept.until(() => runIdsOf(name), holds, fewSweeps);
 }
 
-async function inputsOf(name: string): Promise<readonly unknown[]> {
+async function inputsOf(name: string, clock?: SteppedServerClock): Promise<readonly unknown[]> {
   const runs = await runIdsOf(name);
-  const settled = await Promise.all(runs.map((runId) => settledRun(server, `${alpha}/runs/${runId}`)));
+  const settled = await Promise.all(
+    runs.map((runId) =>
+      clock === undefined
+        ? settledRun(server, `${alpha}/runs/${runId}`)
+        : settledAsSwept(server, clock, `${alpha}/runs/${runId}`),
+    ),
+  );
   return settled.map(({ body }) => keptInputOf(body).output.input).toReversed();
 }
 
@@ -187,23 +199,24 @@ describe('a workflow retired and restored over HTTP', () => {
 
 describe('the triggers of a workflow paused and resumed', () => {
   it('start nothing for an event or a due time while it is paused, the due time swept after the pause, and replay none once it is resumed', async () => {
-    const clock = movedClock(Date.now());
+    const clock = steppedServerClock();
     await servingAPlaybook(clock);
     await created('workflow', { name: 'close-the-month', source: triggered('close-the-month') });
     await created('workflow', { name: 'witness', source: triggered('witness') });
-    const savedBy = Date.now();
+    const savedBy = clock.now();
 
     await standingChanged('close-the-month', 'pause');
     clock.moveTo(savedBy + aMinuteAndASecond);
     await published('while paused');
-    await runsReaching('witness', 2);
+    await runsReaching('witness', 2, clock);
     const whilePaused = await runIdsOf('close-the-month');
 
-    const resumedAfter = Date.now();
+    const resumedAfter = clock.now();
     const resumed = await standingChanged('close-the-month', 'resume');
     await published('once resumed');
-    await runsReaching('close-the-month', 2);
-    const inputs = await inputsOf('close-the-month');
+    clock.moveTo(resumedAfter + aMinuteAndASecond);
+    await runsReaching('close-the-month', 2, clock);
+    const inputs = await inputsOf('close-the-month', clock);
     const dues = inputs.filter((input) => isScheduled(input)).map(({ schedule }) => schedule.due);
 
     expect([whilePaused, isActive(resumed.body)]).toEqual([[], true]);

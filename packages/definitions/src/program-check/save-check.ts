@@ -1,4 +1,4 @@
-import { InvalidInput, Unavailable } from '@on.auto/operations';
+import { InvalidInput, Unavailable, busyRefusal, busyWaitsOf, type BusyWaits } from '@on.auto/operations';
 import type { ShippedFiles, ShippedRoots } from '@on.auto/shipped-files';
 import {
   handedFilesOf,
@@ -39,8 +39,9 @@ export const checkDeadlineMs = 2000;
 
 export type CheckedDocument = { readonly issues: readonly CheckIssue[] } | { readonly stripped: StrippedForms };
 
-const stoppedBecause: Readonly<Record<Exclude<Stopped, 'deadline'>, string>> = {
-  busy: 'No checker was ready in time for this save, since this server checks one document at a time with one checker; try again',
+const notSaved = 'nothing was saved';
+
+const stoppedBecause: Readonly<Record<Exclude<Stopped, 'deadline' | 'busy'>, string>> = {
   memory: 'The check of the document took more memory than its worker may use, and was stopped; try again',
   cancelled: 'The save was stopped before its check ended',
   closing: 'The server is stopping',
@@ -66,19 +67,34 @@ function checkedOf(job: CheckJob, issues: readonly CheckIssue[], stripped = notS
   return issues.length === 0 ? { stripped: formsOf(job, stripped) } : { issues };
 }
 
+interface CheckLimits {
+  readonly deadlineMs: number;
+  readonly waits: BusyWaits;
+}
+
+function stoppedWith(because: Stopped, { deadlineMs, waits }: CheckLimits): InvalidInput | Unavailable {
+  if (because === 'busy') {
+    return busyRefusal(notSaved, waits.refused());
+  }
+  waits.answered();
+  if (because === 'deadline') {
+    const detail = tooLongToCheck(deadlineMs);
+    return new InvalidInput({ detail, issues: [{ pointer: '', detail }] });
+  }
+  return new Unavailable({ detail: stoppedBecause[because] });
+}
+
 function issuesOf(
   job: CheckJob,
   outcome: CheckOutcome,
-  deadlineMs: number,
+  limits: CheckLimits,
 ): Effect.Effect<CheckedDocument, InvalidInput | Unavailable> {
+  if (outcome.ran === 'stopped') {
+    return Effect.fail(stoppedWith(outcome.because, limits));
+  }
+  limits.waits.answered();
   if (outcome.ran === 'checked') {
     return Effect.succeed(checkedOf(job, outcome.issues, outcome.stripped));
-  }
-  if (outcome.ran === 'stopped') {
-    const detail = tooLongToCheck(deadlineMs);
-    return outcome.because === 'deadline'
-      ? Effect.fail(new InvalidInput({ detail, issues: [{ pointer: '', detail }] }))
-      : Effect.fail(new Unavailable({ detail: stoppedBecause[outcome.because] }));
   }
   return Effect.die(
     new Error(outcome.ran === 'crashed' ? outcome.detail : 'The check worker could not read the check it was given'),
@@ -91,6 +107,6 @@ export function checkedAtSave(
   deadlineMs: number = checkDeadlineMs,
 ): Effect.Effect<CheckedDocument, InvalidInput | Unavailable> {
   return pooledJob('check', (signal) => pool.check({ ...job, deadlineMs, worker: checkWorker }, signal)).pipe(
-    Effect.flatMap((outcome) => issuesOf(job, outcome, deadlineMs)),
+    Effect.flatMap((outcome) => issuesOf(job, outcome, { deadlineMs, waits: busyWaitsOf(pool) })),
   );
 }

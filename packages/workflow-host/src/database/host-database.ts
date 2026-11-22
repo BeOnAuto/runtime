@@ -1,4 +1,4 @@
-import type { ConnectionPorts, LedgerStreams, ReadRows, Statement } from '@on.auto/ledger';
+import type { ConnectionPorts, Dialect, LedgerStreams, ReadRows, Statement } from '@on.auto/ledger';
 import { Data, Effect, Schema } from 'effect';
 
 export class DatabaseFailed extends Data.TaggedError('database_failed')<{ readonly detail: string }> {}
@@ -6,6 +6,7 @@ export class DatabaseFailed extends Data.TaggedError('database_failed')<{ readon
 export type ReadStatement = (statement: Statement) => Effect.Effect<readonly unknown[], DatabaseFailed>;
 
 export interface HostDatabase {
+  readonly dialect: Dialect;
   readonly store: LedgerStreams;
   readonly content: ConnectionPorts['content'];
   readonly appendWith: ConnectionPorts['appendWith'];
@@ -47,8 +48,9 @@ function consistentReadsOn(connection: ConnectionPorts): HostDatabase['readConsi
 }
 
 export function hostDatabaseOn(connection: ConnectionPorts): HostDatabase {
-  const { sharedClock, mostBoundValues } = connection;
+  const { dialect, sharedClock, mostBoundValues } = connection;
   return {
+    dialect,
     store: connection.streams,
     content: connection.content,
     appendWith: connection.appendWith,

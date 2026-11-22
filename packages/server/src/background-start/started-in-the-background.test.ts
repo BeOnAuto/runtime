@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,7 +7,7 @@ import { endWithTheTest } from '@on.auto/operations/testing';
 import { Function } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { until } from '../testing/waiting/until.ts';
+import { aLineToTheTest } from '../testing/processes/lines-to-the-test.ts';
 import { startInBackgroundOf } from './background-process.ts';
 
 const recordingEntry = fileURLToPath(new URL('../testing/entries/record-background-start.ts', import.meta.url));
@@ -50,9 +50,7 @@ describe('starting the runtime in the background', () => {
       arguments: ['start', '--background', '--instance', started.instance],
       directory: runtimeHome,
     });
-    await until(() => {
-      expect(readFileSync(join(runtimeHome, 'runtime.log'), 'utf8')).toBe('started in the background\n');
-    });
+    expect(readFileSync(join(runtimeHome, 'runtime.log'), 'utf8')).toBe('started in the background\n');
     expect(logged).toEqual([
       `Auto Runtime was started in the background as process ${String(started.pid)}, instance ${started.instance}`,
       `Auto Runtime, process ${String(started.pid)}, ended`,
@@ -64,19 +62,18 @@ describe('starting the runtime in the background', () => {
 
 describe('the handle of a runtime started in the background', () => {
   it('signals the runtime it started while it runs, and knows when it ended', async () => {
+    const line = await aLineToTheTest();
     const started = startInBackgroundOf({
       execPath: process.execPath,
       execArgv: [],
       entry: stayingEntry,
       home,
-      environment: testEnvironment,
+      environment: { ...testEnvironment, ...line.environment },
       report: Function.constVoid,
       log: Function.constVoid,
     })();
     endWithTheTest(Number(started.pid));
-    await until(() => {
-      expect(existsSync(join(home, '.auto-runtime', 'started.json'))).toBe(true);
-    });
+    await line.said('started', started.ended);
 
     const living = started.endedAt();
     const signalled = started.signal('SIGTERM');
