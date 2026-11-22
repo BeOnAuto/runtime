@@ -1,6 +1,7 @@
 name: google-ads
 title: Google Ads
 description: Query Google Ads accounts with its query language, list the customers and report fields you can reach, and create or change campaign budgets, campaigns, ad groups and ad group criteria such as keywords.
+summary: Lets your playbooks report on Google Ads accounts and change campaigns, budgets and ad groups.
 website: https://developers.google.com/google-ads/api/docs/get-started/introduction
 type: openapi
 document: documents/google-ads.openapi.json
@@ -13,7 +14,8 @@ marks:
     - googleads.googleAdsFields.search
 placeholders:
   manager_id:
-    description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.
+    title: Manager account customer ID
+    description: 'The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens.'
     pattern: '^[0-9]{10}$'
     example: '1234567890'
     required: false

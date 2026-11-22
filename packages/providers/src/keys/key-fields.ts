@@ -105,7 +105,7 @@ export function stepsSchemaOf(mostPages: number) {
     ),
   }).annotate({
     description:
-      'For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
+      "For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions; for authorization, the steps of making the organization's own OAuth client, shown where the connection goes under it",
   });
 }
 
@@ -177,12 +177,12 @@ export const keyWayFields = {
   ),
   key_page: Schema.optionalKey(
     keyFields.key_page(
-      'For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file',
+      "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file; for authorization, of the page where a person makes the organization's own OAuth client",
     ),
   ),
   key_page_title: Schema.optionalKey(
     buttonLabel(
-      'For secret, client_credentials and jwt_bearer, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
+      'For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
     ),
   ),
   steps: Schema.optionalKey(StepsSchema),

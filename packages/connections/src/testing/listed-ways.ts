@@ -13,6 +13,15 @@ const waysOf = Schema.decodeUnknownSync(
   }),
 );
 
+const providersOf = Schema.decodeUnknownSync(
+  Schema.Struct({ output: Schema.Struct({ providers: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) }) }),
+);
+
+export async function providersListedOf(entry: unknown) {
+  const h = harness({ providers: providerListOf(providerOf(entry)) });
+  return providersOf(await h.call(operationNamed(h.operations, 'list_providers'), ada)).output.providers;
+}
+
 export async function waysListedOf(entry: unknown) {
   const h = harness({ providers: providerListOf(providerOf(entry)) });
   const answer = await h.call(operationNamed(h.operations, 'list_providers'), ada);

@@ -1,6 +1,7 @@
 name: x
 title: X
 description: Read who you are at X, create, edit and delete posts, and read a user's posts, their mentions and the posts of the last seven days a search matches, as yourself, through the X API, under your organization's own OAuth client, which X bills for each call.
+summary: Lets your playbooks read posts and mentions on X, and create and delete posts.
 website: https://docs.x.com/fundamentals/developer-apps
 type: openapi
 document: documents/x.openapi.json
@@ -19,4 +20,16 @@ credentials:
       users.read: Read the profiles of every account the X account can see, protected accounts among them.
       offline.access: Keep access to X when nobody is signed in.
     oauth_client: required
+    key_page: https://console.x.com
+    key_page_title: Open X's developer console
+    steps:
+      key_page:
+        title: Create an app at X
+        instructions: |-
+          X bills your company for each call.
+
+          - Select **Create App**, and enter a name, a description and a use case.
+          - As the app type, choose **Web App** or **Automated App / Bot**, so that X gives the app a Client Secret.
+          - Add the redirect URL below to the app's callback URLs.
+          - On the app's **Keys and Tokens** page, copy the Client ID and Client Secret. X shows them once.
     description: Sign in to X and allow posting as you, under your organization's own OAuth client.

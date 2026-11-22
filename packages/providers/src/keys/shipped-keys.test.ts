@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Result } from 'effect';
+import { Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -85,6 +85,18 @@ describe('the ways of a key of the shipped providers', () => {
       ['github', undefined, []],
       ['profound', undefined, []],
       ['slack-bot', 'auth_test', [['app_level_token', 'Slack app-level token', undefined, 'xapp-…', '^xapp-.+$']]],
+    ]);
+  });
+});
+
+const [, bufferKey] = Option.getOrThrow(Option.fromNullishOr(waysOfAKey.find(([provider]) => provider === 'buffer')));
+
+describe('the way of a key of Buffer', () => {
+  it('decodes with the page where the key is made and the label of the button that opens it, and takes a service account', () => {
+    expect([bufferKey.key_page, bufferKey.key_page_title === undefined, bufferKey.account_types]).toEqual([
+      'https://publish.buffer.com/settings/api',
+      false,
+      ['service', 'personal'],
     ]);
   });
 });

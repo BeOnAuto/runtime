@@ -1,6 +1,7 @@
 name: google-analytics
 title: Google Analytics
 description: Run Google Analytics 4 reports, pivot, batch and realtime reports, check which dimensions and metrics go together, read a property's metadata, and create and read audience exports, for any property you can read.
+summary: Lets your playbooks run reports on your Google Analytics properties.
 website: https://developers.google.com/analytics/devguides/reporting/data/v1
 type: openapi
 document: documents/google-analytics.openapi.json

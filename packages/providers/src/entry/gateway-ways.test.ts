@@ -101,6 +101,25 @@ describe('a way of consent through a gateway beside what the runtime’s own cli
   });
 });
 
+const ofTheOrganizationsOwnClient: readonly (readonly [string, unknown])[] = [
+  ['key_page', 'https://messages.example.com/apps'],
+  ['key_page_title', 'Open the apps of Messages'],
+  ['client_id_title', 'App ID'],
+  ['steps', { key_page: { title: 'Create an app at Messages', instructions: 'Select **New app**.' } }],
+  ['refresh_token_expires_in', 3600],
+];
+
+describe('a way of consent through a gateway beside how the organization’s own OAuth client is made', () => {
+  it.each(ofTheOrganizationsOwnClient)(
+    'refuses %s, since the gateway makes the consent with its own client',
+    (field, value) => {
+      expect(problemsOfTheWay({ ...throughAGateway, [field]: value }).map(([path]) => path)).toEqual([
+        `/credentials/0/${field}`,
+      ]);
+    },
+  );
+});
+
 function problemsOfTheGateway(refused: Readonly<Record<string, unknown>>) {
   return problemsOfTheWay({ ...throughAGateway, gateway: refused });
 }

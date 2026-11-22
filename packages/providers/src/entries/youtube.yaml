@@ -1,6 +1,7 @@
 name: youtube
 title: YouTube
 description: Read a YouTube channel's details, its videos and their statistics, and its playlists and their items.
+summary: Lets your playbooks read a YouTube channel's videos, playlists and statistics.
 website: https://developers.google.com/youtube/v3
 type: openapi
 document: documents/youtube.openapi.json
@@ -15,4 +16,17 @@ credentials:
       access_type: offline
       prompt: consent
     clients: [registered]
+    key_page: https://console.developers.google.com/auth/clients
+    key_page_title: Open Google Auth Platform's clients
+    steps:
+      key_page:
+        title: Create an OAuth client at Google
+        instructions: |-
+          - Use a project where the **YouTube Data API v3** is turned on.
+          - If you see **Google Auth platform not configured yet**, select **Get Started** and follow its steps. Under **Audience**, select **Internal**, so that only members of your organization can sign in.
+          - Select **Create client**. In **Application type**, select **Web application**.
+          - Under **Authorized redirect URIs**, select **Add URI** and add the redirect URL below.
+          - Select **Create**. Copy the client ID and the client secret now: Google shows the full secret only once. You enter both in step 2.
+
+          If the account that manages the channel is outside your organization, select **External** and publish the app. While the app is in **Testing**, Google ends each sign-in after seven days.
     description: Sign in to Google and allow YouTube to be read.

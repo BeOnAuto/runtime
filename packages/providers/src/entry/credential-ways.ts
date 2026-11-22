@@ -31,6 +31,7 @@ export const wayFields = {
   gateway: GatewaySchema,
   permissions: PermissionsSchema,
   account_types: AccountTypesSchema,
+  refresh_token_expires_in: Schema.Int.check(Schema.isGreaterThan(0)),
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization', 'jwt_bearer']);
@@ -72,6 +73,12 @@ const CredentialWayFieldsSchema = Schema.Struct({
   gateway: Schema.optionalKey(wayFields.gateway),
   permissions: Schema.optionalKey(wayFields.permissions),
   account_types: Schema.optionalKey(wayFields.account_types),
+  refresh_token_expires_in: Schema.optionalKey(
+    wayFields.refresh_token_expires_in.annotate({
+      description:
+        'For authorization, how long the provider keeps a refresh token, in seconds, a whole number above 0, after which the person signs in again; it states what the provider imposes, and Auto enforces nothing from it',
+    }),
+  ),
   ...ownValueFields,
   ...assertionFields,
   ...keyWayFields,
@@ -105,6 +112,7 @@ const everyField: readonly Field[] = [
   'gateway',
   'permissions',
   'account_types',
+  'refresh_token_expires_in',
   'placeholders',
   'base_url',
   'subject',
@@ -159,6 +167,11 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'gateway',
       'permissions',
       'account_types',
+      'key_page',
+      'key_page_title',
+      'client_id_title',
+      'steps',
+      'refresh_token_expires_in',
       ...ownValues,
     ],
   },

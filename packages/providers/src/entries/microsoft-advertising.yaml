@@ -1,6 +1,7 @@
 name: microsoft-advertising
 title: Microsoft Advertising
 description: Read Microsoft Advertising accounts, campaigns, ad groups, ads, keywords and performance for the accounts you can reach, through Microsoft's Advertising MCP server.
+summary: Lets your playbooks read Microsoft Advertising accounts, campaigns, ads, keywords and performance.
 website: https://learn.microsoft.com/en-us/advertising/guides/mcp-setup?view=bingads-13
 type: mcp
 url: https://partner.api.bingads.microsoft.com/ext/mcp/vnext?toolSetNames=OpenBeta

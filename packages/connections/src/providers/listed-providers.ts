@@ -96,19 +96,19 @@ export const ListedWaySchema = Schema.Struct({
   key_page: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'The https page where a person makes the key, the client or the key file. Given for a secret, client_credentials or jwt_bearer way whose entry names one.',
+        "The https page where a person makes the key, the client or the key file, or, for authorization, the organization's own OAuth client. Given for a way whose entry names one.",
     }),
   ),
   key_page_title: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'For secret, client_credentials and jwt_bearer, the label of the button that opens the key page, where the entry gives one; left out otherwise',
+        'For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
   ),
   client_id_title: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        "For client_credentials, the label of the field the person gives the client's ID in, as the service names it, where the entry gives one.",
+        "For client_credentials and authorization, the label of the field the person gives the client's ID in, as the service names it, where the entry gives one.",
     }),
   ),
   steps: Schema.optionalKey(
@@ -119,7 +119,13 @@ export const ListedWaySchema = Schema.Struct({
       connected: Schema.optionalKey(ListedStepSchema),
     }).annotate({
       description:
-        'For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key; connected, what the person does once the connection is connected',
+        "For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it",
+    }),
+  ),
+  refresh_token_expires_in: Schema.optionalKey(
+    wayFields.refresh_token_expires_in.annotate({
+      description:
+        'For authorization, how long the provider keeps a refresh token, in seconds, after which the person signs in again, where the entry states it; left out otherwise. Auto enforces nothing from it.',
     }),
   ),
   app_credentials: Schema.optionalKey(
@@ -172,6 +178,12 @@ const ProviderSchema = Schema.Struct({
   name: Schema.String.annotate({ description: "The provider's name, the default name of a connection to it" }),
   title: Schema.String.annotate({ description: 'What a person reads' }),
   description: Schema.String,
+  summary: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'What playbooks can do through it, in one sentence a person reads under its title where they connect it, where the entry gives one; left out otherwise',
+    }),
+  ),
   website: Schema.String.annotate({ description: 'Where a person reads about the server and makes a credential' }),
   type: ConnectionTypeSchema,
   credentials: Schema.Array(ListedWaySchema),

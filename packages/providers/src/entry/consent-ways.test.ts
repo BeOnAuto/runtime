@@ -225,3 +225,26 @@ describe('the codes with which the token endpoint of a way of consent ends it', 
     ]);
   });
 });
+
+describe('how long the provider of a way of consent keeps its refresh token', () => {
+  it('is a whole number of seconds above 0', () => {
+    expect([consentAs({ refresh_token_expires_in: 1 }), consentAs({ refresh_token_expires_in: 1_209_600 })]).toEqual([
+      [],
+      [],
+    ]);
+  });
+
+  it('is refused at 0, as a fraction, and on a way of another kind', () => {
+    const onASecret = { ...aKey, refresh_token_expires_in: 3600 };
+
+    expect([
+      consentAs({ refresh_token_expires_in: 0 }).map(([path]) => path),
+      consentAs({ refresh_token_expires_in: 1.5 }).map(([path]) => path),
+      problemsOf({ ...tracker, credentials: [onASecret] }).map(([path]) => path),
+    ]).toEqual([
+      ['/credentials/0/refresh_token_expires_in'],
+      ['/credentials/0/refresh_token_expires_in'],
+      ['/credentials/0/refresh_token_expires_in'],
+    ]);
+  });
+});

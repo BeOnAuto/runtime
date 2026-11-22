@@ -1,6 +1,7 @@
 name: profound
 title: Profound
 description: Read how your brand appears in AI answers, its visibility, citations, sentiment and prompts, and the traffic AI agents send to your site, through Profound's MCP server.
+summary: Lets your playbooks read how your brand appears in AI answers, and the traffic AI agents send to your site, in Profound.
 website: https://docs.tryprofound.com/mcp/overview
 type: mcp
 url: https://mcp.tryprofound.com/mcp

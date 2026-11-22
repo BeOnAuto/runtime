@@ -1,6 +1,7 @@
 name: onedrive
 title: OneDrive, SharePoint and Excel
 description: List and search OneDrive, read file details, list folders, read Excel worksheets, ranges and tables, add worksheets and table rows, and list a SharePoint site's drives, as the person who connects, through Microsoft Graph. It fetches no file's bytes, but answers may carry a link that downloads one.
+summary: Lets your playbooks find files in OneDrive and SharePoint, and read and add to Excel workbooks.
 website: https://learn.microsoft.com/en-us/graph/auth-v2-user
 type: openapi
 document: documents/onedrive.openapi.json

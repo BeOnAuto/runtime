@@ -1,6 +1,7 @@
 name: google-docs
 title: Google Docs
 description: Read Google Docs documents and update their content.
+summary: Lets your playbooks read and update Google Docs documents.
 website: https://developers.google.com/workspace/docs/api/reference/rest
 type: openapi
 document: documents/google-docs.openapi.json

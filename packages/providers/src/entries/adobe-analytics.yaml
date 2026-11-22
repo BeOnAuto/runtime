@@ -1,6 +1,7 @@
 name: adobe-analytics
 title: Adobe Analytics
 description: Run Adobe Analytics reports and top-item reports, read report suites, dimensions, metrics, segments, calculated metrics, date ranges and projects, and create segments, through the Analytics 2.0 API.
+summary: Lets your playbooks run Adobe Analytics reports and read and create segments.
 website: https://developer.adobe.com/analytics-apis/docs/2.0/
 type: openapi
 document: documents/adobe-analytics.openapi.json
@@ -12,7 +13,8 @@ marks:
     - runReport
 placeholders:
   global_company_id:
-    description: Your global company ID, which https://analytics.adobe.io/discovery/me answers.
+    title: Global company ID
+    description: The ID Adobe Analytics shows under Admin, All admin, Company settings, API Access.
     pattern: '^[A-Za-z0-9]{1,64}$'
     example: testco0
 credentials:
@@ -38,4 +40,14 @@ credentials:
       additional_info.job_function: Read the job function in the Adobe profile of the account.
       offline_access: Keep access to Adobe Analytics when nobody is signed in.
     clients: [registered]
+    key_page: https://console.adobe.io
+    key_page_title: Open Adobe Developer Console
+    steps:
+      key_page:
+        title: Create a credential at Adobe
+        instructions: |-
+          - Select **Create new project**, then **Add API**.
+          - Select **Adobe Analytics**, then **Next**.
+          - Choose **OAuth User**, with an **OAuth Web App credential**.
+          - Enter the redirect URL below as the **Default redirect URI**.
     description: Sign in with your Adobe ID and allow Adobe Analytics.

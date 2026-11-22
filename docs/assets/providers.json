@@ -76,7 +76,7 @@
       "placeholders": [
         {
           "name": "global_company_id",
-          "description": "Your global company ID, which https://analytics.adobe.io/discovery/me answers.",
+          "description": "The ID Adobe Analytics shows under Admin, All admin, Company settings, API Access.",
           "required": true
         }
       ],
@@ -198,7 +198,7 @@
       "placeholders": [
         {
           "name": "region",
-          "description": "The region of your advertiser account, which sets the host of the Amazon Ads API and the Login with Amazon hosts a person signs in at and the tokens come from.",
+          "description": "The region your Amazon Ads account advertises in.",
           "required": true,
           "choices": [
             {
@@ -217,7 +217,7 @@
         },
         {
           "name": "account_id",
-          "description": "The ID of the Amazon Ads advertiser account the connection acts on, which QueryAdvertiserAccount lists; leave it empty to connect without one and list the accounts.",
+          "description": "The ID of the Amazon Ads account playbooks work in. Without one, playbooks can only list your accounts.",
           "required": false
         }
       ],
@@ -299,7 +299,7 @@
       "placeholders": [
         {
           "name": "region",
-          "description": "The region of your advertiser account, which sets the host of the Amazon Ads MCP server.",
+          "description": "The region your Amazon Ads account advertises in.",
           "required": true,
           "choices": [
             {
@@ -427,7 +427,7 @@
           "kind": "secret",
           "description": "Buffer API key",
           "key_page": "https://publish.buffer.com/settings/api",
-          "instructions": "Make a key in Buffer at [Settings, API](https://publish.buffer.com/settings/api): open the **Personal Access** tab, select **+ New Key** under **Keys**, name the key, leave every permission ticked, choose when it expires and select **Generate API Key**. Only the owner of a Buffer organization can make one, and the key reaches your whole Buffer account. Copy it when Buffer shows it."
+          "instructions": "- Sign in to Buffer as the account the key belongs to. For a service account, that is the account your company added to its Buffer organization.\n- In [Settings, API](https://publish.buffer.com/settings/api), open the **Personal Access** tab and select **+ New Key** under **Keys**.\n- Name the key and leave every permission ticked.\n- Choose when it expires. Buffer allows a year at most. When the key ends, reconnect with a new one.\n- Select **Generate API Key** and copy the key.\n\nThe key reaches the Buffer organizations that account has access to."
         }
       ],
       "placeholders": [],
@@ -807,7 +807,7 @@
       "placeholders": [
         {
           "name": "manager_id",
-          "description": "The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.",
+          "description": "The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens.",
           "required": false
         }
       ],
@@ -1896,7 +1896,7 @@
       "placeholders": [
         {
           "name": "manager_id",
-          "description": "The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.",
+          "description": "The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens.",
           "required": false
         }
       ],

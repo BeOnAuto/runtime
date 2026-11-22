@@ -1,6 +1,7 @@
 name: apollo-graphos-agent-services
 title: Apollo GraphOS Agent Services
 description: Lets your playbooks use the services your company connected in Apollo GraphOS Agent Services, under the rules your company set there. Connecting it takes the address of your company's GraphOS Agent Services and the API key of a client registered in Apollo.
+summary: Lets your playbooks use the services your company connected in Apollo, under the rules your company set there.
 website: https://www.apollographql.com/docs/graphos-agent-services
 type: mcp
 url: '{mcp_address}'

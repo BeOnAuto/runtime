@@ -1,6 +1,7 @@
 name: google-sheets
 title: Google Sheets
 description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change their sheets, ranges and properties.
+summary: Lets your playbooks read and update Google Sheets spreadsheets.
 website: https://developers.google.com/workspace/sheets/api/reference/rest
 type: openapi
 document: documents/google-sheets.openapi.json

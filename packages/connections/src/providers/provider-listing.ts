@@ -221,7 +221,7 @@ function appCredentialsListedOf(provider: Provider, way: CredentialWay, listing:
 }
 
 function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): readonly ListedProvider[] {
-  const { name, title, description, website, type, replaces } = provider.entry;
+  const { name, title, description, summary, website, type, replaces } = provider.entry;
   const replaced = replaces === undefined ? {} : { replaces: replacedNamesOf(listing.providers, provider.entry) };
   const offering = offeringOf(provider, listing);
   const ways = waysInOrderOf(provider, listing)
@@ -252,6 +252,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
           name,
           title,
           description,
+          ...(summary === undefined ? {} : { summary }),
           website,
           type,
           credentials: ways,

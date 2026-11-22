@@ -96,14 +96,13 @@ describe('the example of a way of a key', () => {
 });
 
 describe('the fields that say how a key is made', () => {
-  it('stand on a way of a key alone', () => {
+  it('stand on a way of a key alone, but for the page where a way of consent’s own client is made', () => {
     const [consent] = drive.credentials;
     const keyHelp = { instructions: 'Sign in.', key_page: 'https://accounts.drive.example.com', example: 'drv_…' };
     const takenByConsent = 'an authorization way takes issuer, scope, says, parameters';
 
     expect(problemsOf({ ...drive, credentials: [{ ...consent, ...keyHelp }] }).map(([path]) => path)).toEqual([
       '/credentials/0/instructions',
-      '/credentials/0/key_page',
       '/credentials/0/example',
     ]);
     expect(problemsOf({ ...drive, credentials: [{ ...consent, pattern: '^drv_.+$' }] })).toEqual([

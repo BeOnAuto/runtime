@@ -127,10 +127,18 @@ const labels: readonly (readonly [string, Fields, string])[] = [
 ];
 
 describe('the labels a way and a placeholder give a person', () => {
-  it('take a client id’s label on a way of client credentials alone', () => {
+  it('take a client id’s label on a way of client credentials and on a way of consent, and on no other', () => {
     const labelled = { ...signingInToMail, client_id_title: 'Application ID' };
+    const aKeyLabelled = {
+      kind: 'secret',
+      in: 'header',
+      name: 'X-Mail-Key',
+      ...keyMadeAt('admin.mail.example.com'),
+      client_id_title: 'Application ID',
+    };
 
-    expect(pathsOf(problemsOf({ ...mail, credentials: [labelled, asTheCompanysApp] }))).toEqual([
+    expect(pathsOf(problemsOf({ ...mail, credentials: [labelled, asTheCompanysApp] }))).toEqual([]);
+    expect(pathsOf(problemsOf({ ...mail, credentials: [aKeyLabelled, asTheCompanysApp] }))).toEqual([
       '/credentials/0/client_id_title',
     ]);
   });

@@ -1,4 +1,4 @@
-import { ledgers, tracker } from '@on.auto/providers/testing';
+import { drive, ledgers, tracker } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { waysListedOf } from '../testing/listed-ways.ts';
@@ -24,5 +24,26 @@ describe('a provider whose way is a key, as the page lists it', () => {
     const [declared] = await waysListedOf({ ...ledgers, credentials: [{ ...client, key_page: keyPage, ...words }] });
 
     expect(declared).toMatchObject({ kind: 'client_credentials', key_page: keyPage, ...words });
+  });
+});
+
+describe('a provider whose way is a way of consent, as the page lists it', () => {
+  it('gives the page where the organization’s own OAuth client is made, its labels, its steps and how long the provider keeps a refresh token, where its entry gives them', async () => {
+    const [consent] = drive.credentials;
+    const madeAtDrive = {
+      key_page: 'https://console.drive.example.com/clients',
+      client_id_title: 'Application ID',
+      refresh_token_expires_in: 1_209_600,
+      ...words,
+    };
+    const [declared] = await waysListedOf({ ...drive, credentials: [{ ...consent, ...madeAtDrive }] });
+    const [undeclared] = await waysListedOf(drive);
+
+    expect(declared).toMatchObject({ kind: 'authorization', ...madeAtDrive });
+    expect(undeclared).toMatchObject({ kind: 'authorization' });
+    expect(undeclared).not.toHaveProperty('key_page');
+    expect(undeclared).not.toHaveProperty('client_id_title');
+    expect(undeclared).not.toHaveProperty('steps');
+    expect(undeclared).not.toHaveProperty('refresh_token_expires_in');
   });
 });

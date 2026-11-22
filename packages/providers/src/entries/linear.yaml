@@ -1,12 +1,13 @@
 name: linear
 title: Linear
 description: Find, create and update Linear issues, projects and comments, in the workspace the person who connects chooses, as that person, through Linear's MCP server.
+summary: Lets your playbooks find, create and update issues, projects and comments in Linear.
 website: https://linear.app/docs/mcp
 type: mcp
 url: https://mcp.linear.app/mcp
 credentials:
   - kind: authorization
-    account_types: [personal]
+    account_types: [service, personal]
     issuer: https://mcp.linear.app
     scope: read write
     says:

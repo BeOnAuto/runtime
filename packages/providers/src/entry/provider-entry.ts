@@ -15,6 +15,8 @@ const { type, url, document, base_url, headers, query_params, request_id, marks,
 
 const mostDescriptionCharacters = 300;
 
+const mostSummaryCharacters = 120;
+
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
 const ProviderTypeSchema = type.schema.pick(['mcp', 'openapi']);
@@ -34,6 +36,12 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   description: NamedSchema.check(Schema.isMaxLength(mostDescriptionCharacters)).annotate({
     description: 'What a function may do through it, in one or two sentences of at most 300 characters',
   }),
+  summary: Schema.optionalKey(
+    NamedSchema.check(Schema.isMaxLength(mostSummaryCharacters)).annotate({
+      description:
+        'What playbooks can do through it, in one sentence of at most 120 characters, which a person reads under its title where they connect it; description stays what an agent reads',
+    }),
+  ),
   website: Schema.String.annotate({
     description: 'The https page where a person reads about the server and makes a credential',
   }),
@@ -82,6 +90,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
 export const entryProse: readonly string[] = [
   'title',
   'description',
+  'summary',
   'says',
   'for',
   'instructions',

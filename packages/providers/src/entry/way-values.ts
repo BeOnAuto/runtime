@@ -22,6 +22,6 @@ export const ownValueFields = {
 export const clientIdTitleField = Schema.optionalKey(
   Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostClientIdTitleCharacters)).annotate({
     description:
-      "For client_credentials, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters",
+      "For client_credentials and authorization, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters",
   }),
 );

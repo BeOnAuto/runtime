@@ -1,6 +1,7 @@
 name: search-ads-360
 title: Search Ads 360
 description: Run Search Ads 360 reports with its query language, and list the accounts, report fields and custom columns you can read.
+summary: Lets your playbooks run Search Ads 360 reports.
 website: https://developers.google.com/search-ads/reporting/overview
 type: openapi
 document: documents/search-ads-360.openapi.json
@@ -12,7 +13,8 @@ marks:
     - searchads360.searchAds360Fields.search
 placeholders:
   manager_id:
-    description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.
+    title: Manager account customer ID
+    description: 'The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens.'
     pattern: '^[0-9]{10}$'
     example: '1234567890'
     required: false
@@ -27,4 +29,17 @@ credentials:
       access_type: offline
       prompt: consent
     clients: [registered]
+    key_page: https://console.developers.google.com/auth/clients
+    key_page_title: Open Google Auth Platform's clients
+    steps:
+      key_page:
+        title: Create an OAuth client at Google
+        instructions: |-
+          - Use a project where the **Search Ads 360 Reporting API** is turned on.
+          - If you see **Google Auth platform not configured yet**, select **Get Started** and follow its steps. Under **Audience**, select **Internal**, so that only members of your organization can sign in.
+          - Select **Create client**. In **Application type**, select **Web application**.
+          - Under **Authorized redirect URIs**, select **Add URI** and add the redirect URL below.
+          - Select **Create**. Copy the client ID and the client secret now: Google shows the full secret only once. You enter both in step 2.
+
+          If the person who signs in is outside your organization, select **External** and publish the app. While the app is in **Testing**, Google ends each sign-in after seven days.
     description: Sign in to Google and allow Search Ads 360 reporting.

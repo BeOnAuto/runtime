@@ -1,6 +1,7 @@
 name: gmail
 title: Gmail
 description: Search and read Gmail threads and their messages, and list drafts and labels. It drafts, labels and sends no mail, since it asks the scope that reads alone. Google classifies its scope, gmail.readonly, as restricted.
+summary: Lets your playbooks search and read mail in Gmail.
 website: https://developers.google.com/workspace/gmail/api/reference/rest
 type: openapi
 document: documents/gmail.openapi.json

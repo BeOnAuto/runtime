@@ -1,6 +1,7 @@
 name: hubspot
 title: HubSpot
 description: Read and change contacts, companies, deals, tickets, line items, products, activities, campaigns, segments and landing pages, and read invoices, owners and conversations, as the person who connects, through HubSpot's MCP server, which gives this runtime no blog or website tools.
+summary: Lets your playbooks read and update contacts, companies, deals and tickets in HubSpot.
 website: https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server
 type: mcp
 url: https://mcp.hubspot.com
@@ -9,4 +10,14 @@ credentials:
     account_types: [personal]
     issuer: https://mcp.hubspot.com
     clients: [registered]
+    key_page: https://app.hubspot.com/l/mcp-auth-apps/
+    key_page_title: Open HubSpot
+    steps:
+      key_page:
+        title: Create an MCP connector at HubSpot
+        instructions: |-
+          - In the main navigation bar, select **Development**, then **MCP Connectors** in the left sidebar.
+          - Select **Create MCP connector**.
+          - Enter a **Name**, and paste the redirect URL below as the **Redirect URL**.
+          - Select **Create**. The connector's page shows its client ID and client secret.
     description: Sign in to HubSpot, choose an account and allow access.

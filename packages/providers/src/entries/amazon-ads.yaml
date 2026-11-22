@@ -1,6 +1,7 @@
 name: amazon-ads
 title: Amazon Ads
 description: Read and change Amazon Ads campaigns, ad groups and targets, read ads, advertiser accounts and recommendations, and request reports. A connection without an advertiser account lists the accounts, and one with an account acts on it. A report's file is a download a call does not fetch.
+summary: Lets your playbooks read and change Amazon Ads campaigns and request reports.
 website: https://advertising.amazon.com/API/docs/en-us/guides/onboarding/overview
 type: openapi
 document: documents/amazon-ads.openapi.json
@@ -19,7 +20,8 @@ marks:
     - AdsApiv1RetrieveReport
 placeholders:
   region:
-    description: The region of your advertiser account, which sets the host of the Amazon Ads API and the Login with Amazon hosts a person signs in at and the tokens come from.
+    title: Region
+    description: The region your Amazon Ads account advertises in.
     choices:
       - value: na
         title: North America
@@ -40,13 +42,14 @@ placeholders:
           sign_in_host: apac.account.amazon.com
           token_host: api.amazon.co.jp
   account_id:
-    description: The ID of the Amazon Ads advertiser account the connection acts on, which QueryAdvertiserAccount lists; leave it empty to connect without one and list the accounts.
+    title: Advertiser account ID
+    description: The ID of the Amazon Ads account playbooks work in. Without one, playbooks can only list your accounts.
     pattern: '^[A-Za-z0-9._-]{1,128}$'
     example: amzn1.ads-account.g.26eqvvnjl03bvzcsjv6yp81x
     required: false
 credentials:
   - kind: authorization
-    account_types: [personal]
+    account_types: [service, personal]
     issuer: https://lwa.amazon.com
     authorization_endpoint: https://{sign_in_host}/ap/oa
     token_endpoint: https://{token_host}/auth/o2/token
@@ -54,4 +57,23 @@ credentials:
     says:
       advertising::campaign_management: Read and manage the campaigns, ad groups, ads, targets and reports of Amazon Ads advertiser accounts.
     clients: [registered]
+    key_page: https://developer.amazon.com/loginwithamazon/console/site/lwa/overview.html
+    key_page_title: Open Amazon's developer console
+    steps:
+      key_page:
+        title: Create an app at Amazon
+        instructions: |-
+          - Under **Login with Amazon**, select **Create a New Security Profile**.
+          - Under **Web Settings**, select **Edit** and add the redirect URL below to **Allowed Return URLs**.
+          - Select **Show Client ID and Client Secret**. You enter both in step 3.
+      pages:
+        - title: Ask Amazon for access to its Ads API
+          instructions: |-
+            - Apply as a **Direct Advertiser**, signed in with the Amazon account that created the app.
+            - Amazon reviews the request. This can take up to a business day.
+            - When Amazon approves it, assign the access to the app.
+
+            You can close this page and come back when Amazon has approved it.
+          page: https://advertising.amazon.com/partner-network/register-api
+          page_title: Open Amazon's request form
     description: Sign in with Amazon and allow Amazon Ads campaign management.

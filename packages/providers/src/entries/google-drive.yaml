@@ -1,6 +1,7 @@
 name: google-drive
 title: Google Drive
 description: Searches, lists and reads every file of the person's Google Drive, text included, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and saves text as a file, Doc or Sheet, creates folders and copies files, writing only files Auto creates, through drive.file.
+summary: Lets your playbooks search and read files in Google Drive, and save new ones.
 website: https://developers.google.com/workspace/drive/api/reference/rest/v3
 type: openapi
 document: documents/google-drive.openapi.json

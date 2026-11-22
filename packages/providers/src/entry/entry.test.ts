@@ -7,6 +7,23 @@ import { agentServerAddress, agents, asARegisteredClient } from '../testing/own-
 
 const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['revoked'] };
 
+describe('the one sentence of an entry', () => {
+  it('is taken of 1 to 120 characters, beside the description, and left out where the entry gives none', () => {
+    expect([
+      problemsOf({ ...tracker, summary: 'a'.repeat(120) }),
+      problemsOf({ ...tracker, summary: 'a' }),
+      problemsOf(tracker),
+    ]).toEqual([[], [], []]);
+  });
+
+  it('is refused empty and past 120 characters', () => {
+    expect([
+      problemsOf({ ...tracker, summary: '' }).map(([path]) => path),
+      problemsOf({ ...tracker, summary: 'a'.repeat(121) }).map(([path]) => path),
+    ]).toEqual([['/summary'], ['/summary']]);
+  });
+});
+
 describe('the failure codes of an entry', () => {
   it('are taken for an HTTP API, with their pointers into the answer and each code once, and for no MCP server', () => {
     expect(problemsOf({ ...ledgers, failure_codes: failureCodes })).toEqual([]);

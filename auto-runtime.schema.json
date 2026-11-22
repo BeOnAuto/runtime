@@ -542,6 +542,12 @@
                 "maxLength": 300,
                 "description": "What a function may do through it, in one or two sentences of at most 300 characters"
               },
+              "summary": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "description": "What playbooks can do through it, in one sentence of at most 120 characters, which a person reads under its title where they connect it; description stays what an agent reads"
+              },
               "website": {
                 "type": "string",
                 "description": "The https page where a person reads about the server and makes a credential"
@@ -1904,6 +1910,11 @@
                       "minItems": 1,
                       "description": "The kinds of account at the service that a connection made this way may act as, on a way with delegated permissions. service is an account the company made for automations. personal is the account of the person who connects. Both when it is left out."
                     },
+                    "refresh_token_expires_in": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "description": "For authorization, how long the provider keeps a refresh token, in seconds, a whole number above 0, after which the person signs in again; it states what the provider imposes, and Auto enforces nothing from it"
+                    },
                     "placeholders": {
                       "type": "object",
                       "additionalProperties": {
@@ -1996,11 +2007,11 @@
                     },
                     "key_page": {
                       "type": "string",
-                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file"
+                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file; for authorization, of the page where a person makes the organization's own OAuth client"
                     },
                     "key_page_title": {
                       "type": "string",
-                      "description": "For secret, client_credentials and jwt_bearer, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
+                      "description": "For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
                       "minLength": 1,
                       "maxLength": 40
                     },
@@ -2105,7 +2116,7 @@
                         }
                       },
                       "additionalProperties": false,
-                      "description": "For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions"
+                      "description": "For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions; for authorization, the steps of making the organization's own OAuth client, shown where the connection goes under it"
                     },
                     "example": {
                       "type": "string",
@@ -2178,7 +2189,7 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 40,
-                      "description": "For client_credentials, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters"
+                      "description": "For client_credentials and authorization, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters"
                     },
                     "description": {
                       "type": "string",

@@ -1,6 +1,7 @@
 name: slack-bot
 title: Slack Bot
 description: Read channels, conversation history, threads, people and reactions, and post and update messages and add reactions as the bot of a Slack app installed in your workspace, through the Slack Web API.
+summary: Lets your playbooks read channels and threads and post messages in Slack, as the bot of your own Slack app.
 website: https://docs.slack.dev/apis/web-api/
 type: openapi
 document: documents/slack.openapi.json
