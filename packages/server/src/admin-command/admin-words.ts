@@ -17,6 +17,8 @@ export const adminHelp: readonly string[] = [
   'admin grant-admin <email>  Make a person who has signed in an Admin, for when every Admin has left',
   'admin reset-setup          Start setup over, for when the first sign-in tied this server to the wrong organization. Signs everyone out',
   'admin register-client      Register this server with the identity provider again, for when its registration there was deleted',
+  "admin delete-chat member <account> <member>  Delete everything this server keeps that a member of a chat app wrote, and their link to Auto, for when they ask for it to be deleted. <account> is the ID of the account the chat app's connection is for, and <member> the member's ID in it",
+  'admin delete-chat conversation <account> <conversation> [<thread>]  Delete what this server keeps of a conversation with Auto in a chat app, or of one of its threads, by their IDs in the account, for when someone asks for it to be deleted',
 ];
 
 export const whereTheAdminCommandsRun =
@@ -97,3 +99,41 @@ export const clientGivenBySetting =
   'OIDC_CLIENT_ID gives the client this server signs people in as, so there is nothing to register. If that client was deleted, register Auto with the identity provider by hand again, then set OIDC_CLIENT_ID together with OIDC_CLIENT_SECRET or OIDC_CLIENT_SECRET_FILE.';
 
 export const noOneSignsIn = 'This server signs no one in, since PUBLIC_URL is not set. There is nothing to register.';
+
+export const chatDeletionAsked =
+  "Say what to delete: admin delete-chat member <account> <member> for what one member wrote, or admin delete-chat conversation <account> <conversation> [<thread>] for a conversation or one of its threads. <account> is the ID of the account the chat app's connection is for.";
+
+export function chatTablesNotOpened(words: string): string {
+  return `The command could not open the chat tables: ${words}`;
+}
+
+export interface ChatMemberNamed {
+  readonly account: string;
+  readonly member: string;
+}
+
+export function memberChatDeleted({ account, member }: ChatMemberNamed): string {
+  return `Deleted everything this server kept that the member ${member} in the account ${account} wrote, each thread or conversation without threads that only they wrote in, with Auto's answers there, and their link to Auto. Where someone else also wrote in a thread, Auto's answers there are kept, including its answers to this member.`;
+}
+
+export function noChatOfMember({ account, member }: ChatMemberNamed): string {
+  return `This server keeps nothing that the member ${member} in the account ${account} wrote, and no link of theirs to Auto, so nothing was deleted.`;
+}
+
+export interface ChatConversationNamed {
+  readonly account: string;
+  readonly conversation: string;
+  readonly thread?: string | undefined;
+}
+
+export function chatConversationDeleted({ account, conversation, thread }: ChatConversationNamed): string {
+  return thread === undefined
+    ? `Deleted what this server kept of the conversation ${conversation} in the account ${account}, in every thread of it.`
+    : `Deleted the messages this server kept of the thread ${thread} of the conversation ${conversation} in the account ${account}.`;
+}
+
+export function noChatConversation({ account, conversation, thread }: ChatConversationNamed): string {
+  return thread === undefined
+    ? `This server keeps nothing of the conversation ${conversation} in the account ${account}, so nothing was deleted.`
+    : `This server keeps no messages of the thread ${thread} of the conversation ${conversation} in the account ${account}, so nothing was deleted.`;
+}

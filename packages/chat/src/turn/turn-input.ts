@@ -4,7 +4,7 @@ export const MOST_TURN_INPUT_TOKENS = 2_000_000;
 
 export const MOST_REQUEST_INPUT_TOKENS = 180_000;
 
-const BYTES_A_TOKEN = 1;
+export const BYTES_A_TOKEN = 1;
 
 const utf8 = new TextEncoder();
 

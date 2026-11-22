@@ -8,6 +8,7 @@ COPY packages/server/package.json packages/server/
 COPY packages/access-control/package.json packages/access-control/
 COPY packages/activity/package.json packages/activity/
 COPY packages/api/package.json packages/api/
+COPY packages/chat/package.json packages/chat/
 COPY packages/playbooks/package.json packages/playbooks/
 COPY packages/config/package.json packages/config/
 COPY packages/connections/package.json packages/connections/
@@ -63,6 +64,7 @@ COPY docs/reference/*-format.md docs/reference/render-*.md docs/reference/templa
 COPY packages/access-control/src packages/access-control/src
 COPY packages/activity/src packages/activity/src
 COPY packages/api/src packages/api/src
+COPY packages/chat/src packages/chat/src
 COPY packages/playbooks/src packages/playbooks/src
 COPY packages/config/src packages/config/src
 COPY packages/connections/src packages/connections/src

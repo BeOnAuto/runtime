@@ -46,6 +46,7 @@
     "@on.auto/access-control": "workspace:*",
     "@on.auto/activity": "workspace:*",
     "@on.auto/api": "workspace:*",
+    "@on.auto/chat": "workspace:*",
     "@on.auto/computation": "workspace:*",
     "@on.auto/config": "workspace:*",
     "@on.auto/connections": "workspace:*",

@@ -740,6 +740,9 @@ importers:
 
   packages/chat:
     dependencies:
+      '@on.auto/api':
+        specifier: workspace:*
+        version: link:../api
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations
@@ -1332,6 +1335,9 @@ importers:
       '@on.auto/api':
         specifier: workspace:*
         version: link:../api
+      '@on.auto/chat':
+        specifier: workspace:*
+        version: link:../chat
       '@on.auto/computation':
         specifier: workspace:*
         version: link:../../capabilities/computation

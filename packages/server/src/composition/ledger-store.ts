@@ -1,4 +1,4 @@
-import type { AppendObserver, AppendSignal, LedgerServices } from '@on.auto/ledger';
+import type { AppendObserver, AppendSignal, ConnectionPorts, LedgerServices } from '@on.auto/ledger';
 import { authStoreOpened, type AuthStore } from '@on.auto/openid-connect';
 import { Effect, Layer } from 'effect';
 
@@ -100,10 +100,11 @@ export async function ledgerOpenedAtStart(
 export async function signInOpened(
   runtime: Parameters<typeof ledgerConnectionIn>[0] & Parameters<typeof admissionIn>[0],
   settings: Parameters<typeof signInStoreRefusalExplained>[1],
-): Promise<AuthStore & AdmissionOpened> {
+): Promise<AuthStore & AdmissionOpened & { readonly connection: ConnectionPorts }> {
   try {
-    const store = await authStoreOpened(await ledgerConnectionIn(runtime));
-    return { ...store, ...admissionIn(runtime) };
+    const connection = await ledgerConnectionIn(runtime);
+    const store = await authStoreOpened(connection);
+    return { ...store, ...admissionIn(runtime), connection };
   } catch (failure) {
     throw signInStoreRefusalExplained(failure, settings);
   }

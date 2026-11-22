@@ -1,5 +1,5 @@
 import { makeAppRuntime, type AppRuntime } from '@on.auto/api';
-import { ledgerLayout } from '@on.auto/ledger';
+import { ledgerLayout, type ConnectionPorts } from '@on.auto/ledger';
 import type { Ledger } from '@on.auto/operations';
 import { Layer } from 'effect';
 
@@ -22,6 +22,7 @@ export interface Opened {
   readonly settings: Settings;
   readonly runtime: AppRuntime<Ledger>;
   readonly database: LedgerAtStart['database'];
+  readonly connection: ConnectionPorts;
   readonly signIn: Pick<SignIn, 'providerRows' | 'peopleRows' | 'clientRegistrationsWith'>;
 }
 
@@ -39,7 +40,8 @@ async function openedWith(settings: Settings, shippedFiles: ShippedFiles): Promi
   const services = made.computation.closedLastOf(dispatcherServicesOver(ledgerLayer));
   const runtime = await makeAppRuntime(services.pipe(Layer.provideMerge(serverLogs(settings))));
   try {
-    return { settings, runtime, database, signIn: await signInOpened(runtime, settings) };
+    const signIn = await signInOpened(runtime, settings);
+    return { settings, runtime, database, connection: signIn.connection, signIn };
   } catch (failure) {
     await runtime.dispose();
     throw failure;

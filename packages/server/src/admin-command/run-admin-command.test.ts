@@ -225,7 +225,7 @@ describe('the admin commands', () => {
     const refused = await asAProcess();
 
     expect([answered.code, answered.stdout.trim().split('\n').length]).toEqual([0, 2]);
-    expect([refused.code, refused.stdout, refused.stderr.trim().split('\n').length]).toEqual([1, '', 5]);
+    expect([refused.code, refused.stdout, refused.stderr.trim().split('\n').length]).toEqual([1, '', 7]);
     expect(await contextsOf(LEDGER_FILE, 'setup_reopened')).toEqual([{ by: 'command' }]);
   });
 });

@@ -1,6 +1,7 @@
 import type { ModelMessage, ModelRequest, ModelResult, ToolDefinition } from '@on.auto/reasoning';
 import { Function } from 'effect';
 
+import type { MemoryRows, Remembered, RememberedRow } from '../memory/memory-rows.ts';
 import type { ChatModel, ConversationMessage, ModelAnswered } from '../model/chat-model.ts';
 import type { ToolReply } from '../tools/directory-calls.ts';
 import type { Waits } from '../turn/call-bounds.ts';
@@ -170,6 +171,26 @@ export function manualClock() {
     }
   };
   return { now: () => state.at, waits, advance, pending };
+}
+
+export interface MemoryRowsInMemory extends MemoryRows {
+  readonly kept: () => readonly RememberedRow[];
+}
+
+export function memoryRowsInMemory(...earlier: readonly Remembered[]): MemoryRowsInMemory {
+  const rows: RememberedRow[] = [];
+  const keep = (remembered: readonly Remembered[]): void => {
+    rows.push(...remembered.map((row, index) => ({ ...row, sequence: rows.length + index + 1 })));
+  };
+  keep(earlier);
+  return {
+    newest: (most) => Promise.resolve(rows.slice(Math.max(0, rows.length - most))),
+    appended: (remembered) => {
+      keep(remembered);
+      return Promise.resolve();
+    },
+    kept: () => [...rows],
+  };
 }
 
 export function stalling() {

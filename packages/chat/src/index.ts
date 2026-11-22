@@ -21,6 +21,27 @@ export {
   type ToldOfTheRole,
   type TurnTold,
 } from './instructions/conversation-instructions.ts';
+export {
+  conversationWithin,
+  keptAfter,
+  memoryWindow,
+  turnRemembered,
+  UNADDRESSED,
+  type Earlier,
+  type TurnOutcome,
+  type TurnTaken,
+} from './memory/conversation-memory.ts';
+export {
+  conversationBytesWithin,
+  INSTRUCTIONS_ALLOWANCE_BYTES,
+  MEMORY_BOUNDS,
+  MOST_CONVERSATION_BYTES,
+  MOST_REMEMBERED_ROWS,
+  MOST_THREAD_MESSAGES,
+  type BudgetParts,
+  type MemoryBounds,
+} from './memory/memory-bounds.ts';
+export type { Author, MemoryRows, Remembered, RememberedRow } from './memory/memory-rows.ts';
 export type { ChatModel, ConversationMessage, ModelAnswered } from './model/chat-model.ts';
 export {
   MOST_ANSWER_BYTES_READ,

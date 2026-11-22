@@ -1,0 +1,16 @@
+{
+  "layout": 1,
+  "made": [
+    "CREATE TABLE chat_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)",
+    "INSERT INTO chat_layout (layout) VALUES (1)",
+    "CREATE TABLE chat_arrivals (connection TEXT NOT NULL, account TEXT NOT NULL, conversation TEXT NOT NULL, message TEXT NOT NULL, kind TEXT NOT NULL, state TEXT NOT NULL, arrived_at BIGINT NOT NULL, PRIMARY KEY (connection, account, conversation, message))",
+    "CREATE INDEX chat_arrivals_taken ON chat_arrivals (arrived_at) WHERE state = 'taken'",
+    "CREATE TABLE chat_conversations (id TEXT NOT NULL PRIMARY KEY, connection TEXT NOT NULL, account TEXT NOT NULL, conversation TEXT NOT NULL, thread TEXT NOT NULL, key_id TEXT NOT NULL, lease_holder TEXT, leased_until BIGINT, started_at BIGINT NOT NULL, UNIQUE (connection, account, conversation, thread))",
+    "CREATE TABLE chat_messages (conversation_id TEXT NOT NULL, sequence INTEGER NOT NULL, author TEXT NOT NULL, sender TEXT, text_sealed TEXT NOT NULL, written_at BIGINT NOT NULL, PRIMARY KEY (conversation_id, sequence))",
+    "CREATE INDEX chat_messages_by_sender ON chat_messages (sender)",
+    "CREATE TABLE chat_links (account TEXT NOT NULL, member TEXT NOT NULL, person TEXT NOT NULL, linked_at BIGINT NOT NULL, PRIMARY KEY (account, member))",
+    "CREATE INDEX chat_links_by_person ON chat_links (person)",
+    "CREATE TABLE chat_link_starts (account TEXT NOT NULL, member TEXT NOT NULL, secret TEXT NOT NULL, person TEXT, PRIMARY KEY (account, member))",
+    "CREATE INDEX chat_link_starts_by_secret ON chat_link_starts (secret)"
+  ]
+}

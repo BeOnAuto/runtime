@@ -4,6 +4,7 @@ import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { shippedRoots } from '../server-options/shipped-roots.ts';
 import { settingsAtStart } from '../settings/shipped-settings.ts';
 import { noCommandIn, refused, type Said } from './admin-words.ts';
+import { chatDeletedBy } from './delete-chat.ts';
 import { adminGrantedBy } from './grant-admin.ts';
 import { withTheLedgerOpened, type Opened, type Opening } from './opened-for-a-command.ts';
 import { clientRegisteredBy } from './register-client.ts';
@@ -43,6 +44,7 @@ const verbs: Readonly<Record<string, Verb>> = {
     takes: 0,
     answer: ({ settings, requests, open }) => clientRegisteredBy(settings, requests, open),
   },
+  'delete-chat': { takes: 4, answer: ({ open, given }) => chatDeletedBy(given, open) },
 };
 
 function verbAsked([name = '', ...given]: readonly string[]): Verb | undefined {
