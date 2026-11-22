@@ -18,11 +18,11 @@ export async function signInAndStoresOpened(
   ownOrigin: () => string,
 ) {
   const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
-  const opened = await storesAndConnectionsOf(runtime, settings, { database, loadAws }, ownOrigin);
+  const { linkCodeKey, ...opened } = await storesAndConnectionsOf(runtime, settings, { database, loadAws }, ownOrigin);
   const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
   return {
     opened,
-    signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets },
+    signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets, linkCodeKey },
     members: settings.signIn === undefined ? [] : memberOperationsOver(signIn, settings.signIn.publicUrl),
   };
 }

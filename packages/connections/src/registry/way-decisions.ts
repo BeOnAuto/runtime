@@ -31,6 +31,7 @@ export interface OfferedWay extends ActingWay {
 export interface WayAsked {
   readonly credential: ActingWay;
   readonly account_type?: AccountType | undefined;
+  readonly placeholders?: Readonly<Record<string, string>> | undefined;
 }
 
 type Connection = KeptConnection['connection'];
@@ -107,29 +108,56 @@ function keptWithItsWay(connection: Connection, { account_type: given }: WayChoi
     : [{ type: 'connection_account_type_set', data: { connection: connection.id, account_type: given } }];
 }
 
-function chosenAnotherWay(connection: Connection, command: WayChoice, way: OfferedWay): readonly ConnectionEvent[] {
-  const { credential, says, account_type: given } = command;
-  const accountType = given ?? accountTypeWhereNoneIsGiven(accountTypesOf(way));
-  return [
-    {
-      type: 'connection_way_chosen',
-      data: {
-        connection: connection.id,
-        credential,
-        ...(accountType === undefined ? {} : { account_type: accountType }),
-        says,
-      },
+function valuesOf({ placeholders, base_url: baseUrl }: WayChoice) {
+  return {
+    ...(placeholders === undefined ? {} : { placeholders }),
+    ...(baseUrl === undefined ? {} : { base_url: baseUrl }),
+  };
+}
+
+function sameValues(left: Readonly<Record<string, string>>, right: Readonly<Record<string, string>>): boolean {
+  const named = Object.keys(left);
+  return named.length === Object.keys(right).length && named.every((name) => right[name] === left[name]);
+}
+
+function holdsItsValues({ placeholders, entry }: Connection, { placeholders: given, base_url: baseUrl }: WayChoice) {
+  return (
+    (given === undefined || sameValues(placeholders ?? {}, given)) &&
+    (baseUrl === undefined || baseUrl === (entry.base_url ?? null))
+  );
+}
+
+function wayChosen(connection: Connection, command: WayChoice, accountType: AccountType | undefined): ConnectionEvent {
+  const { credential, says } = command;
+  return {
+    type: 'connection_way_chosen',
+    data: {
+      connection: connection.id,
+      credential,
+      ...(accountType === undefined ? {} : { account_type: accountType }),
+      says,
+      ...valuesOf(command),
     },
-  ];
+  };
+}
+
+function keptAccountTypeOf({ account_type: kept }: Connection, { account_type: given }: WayChoice) {
+  return given ?? kept ?? undefined;
 }
 
 function decideWayChoice(command: WayChoice & CommandMetadata, registry: Registry, providers: ProviderList): Decision {
   return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
-    Result.map(wayChosenOf(kept, command, providers), (way) =>
-      isTheWayAsked(kept.connection.credential, way)
-        ? keptWithItsWay(kept.connection, command)
-        : chosenAnotherWay(kept.connection, command, way),
-    ),
+    Result.map(wayChosenOf(kept, command, providers), (way): readonly ConnectionEvent[] => {
+      const { connection } = kept;
+      if (!isTheWayAsked(connection.credential, way)) {
+        return [
+          wayChosen(connection, command, command.account_type ?? accountTypeWhereNoneIsGiven(accountTypesOf(way))),
+        ];
+      }
+      return holdsItsValues(connection, command)
+        ? keptWithItsWay(connection, command)
+        : [wayChosen(connection, command, keptAccountTypeOf(connection, command))];
+    }),
   );
 }
 

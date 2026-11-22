@@ -43,11 +43,43 @@ interface SigningOut {
   readonly script: string;
 }
 
+export interface LinkChoices {
+  readonly allowAt: string;
+  readonly denyAt: string;
+  readonly tryAgainAt: string;
+}
+
+export interface ServiceNamed {
+  readonly service: string;
+  readonly app: string;
+}
+
+export interface LinkAllowAsked extends Pick<LinkChoices, 'allowAt' | 'denyAt'> {
+  readonly service: string;
+  readonly memberName: string;
+  readonly accountName: string;
+}
+
+export type LinkShown =
+  | { readonly allow: LinkAllowAsked }
+  | { readonly unnamed: { readonly service: string; readonly tryAgainAt: string } }
+  | { readonly code: ServiceNamed & { readonly code: string } }
+  | { readonly denied: ServiceNamed }
+  | { readonly ended: true };
+
+export interface AccountLinking {
+  readonly opened: (value: string) => Promise<boolean>;
+  readonly allowShown: (value: string, choices: LinkChoices) => Promise<LinkShown>;
+  readonly allowed: (value: string, person: string) => Promise<LinkShown>;
+  readonly denied: (value: string) => Promise<LinkShown>;
+}
+
 export type PageShown =
   | { readonly allow: AllowAsked }
   | { readonly signingOut: SigningOut }
   | { readonly notOpen: { readonly client: string | undefined } }
   | { readonly invitationEnded: true }
+  | { readonly link: LinkShown }
   | { readonly refused: SignInRefusal; readonly tryAgainAt: string | undefined };
 
 export interface SignInPage {

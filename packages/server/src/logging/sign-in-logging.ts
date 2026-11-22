@@ -82,9 +82,9 @@ export function logSignInFailed(issuer: string, failure: string): Effect.Effect<
   ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, failure }));
 }
 
-export function logNameUnread(issuer: string, person: string, failure: string): Effect.Effect<void> {
+export function logUserInfoUnread(issuer: string, person: string, failure: string): Effect.Effect<void> {
   return Effect.logWarning(
-    `The name of a person signing in could not be read from the UserInfo endpoint of the identity provider at ${issuer}: ${failure}`,
+    `The name of a person signing in, or whether their email address is verified, could not be read from the UserInfo endpoint of the identity provider at ${issuer}: ${failure}`,
   ).pipe(Effect.annotateLogs({ oidc_issuer: issuer, person, failure }));
 }
 
@@ -148,7 +148,7 @@ export interface ClientsReport {
 }
 
 interface TokensReport {
-  readonly nameUnread: (person: string, failure: string) => void;
+  readonly userInfoUnread: (person: string, failure: string) => void;
   readonly notRevoked: (failure: string) => void;
 }
 
@@ -187,8 +187,8 @@ export function signInReportTo(logged: (log: Effect.Effect<void>) => void, issue
     firstAdmin: (person) => {
       logged(logFirstAdmin(defaultOrg, person));
     },
-    nameUnread: (person, failure) => {
-      logged(logNameUnread(issuer, person, failure));
+    userInfoUnread: (person, failure) => {
+      logged(logUserInfoUnread(issuer, person, failure));
     },
     notRevoked: (failure) => {
       logged(logRefreshTokenNotRevoked(issuer, failure));

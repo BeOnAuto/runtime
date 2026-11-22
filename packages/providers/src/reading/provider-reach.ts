@@ -10,8 +10,8 @@ import type { Provider, ProviderList } from './provider-list.ts';
 const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 export function hostAlternativesOf({ entry, address }: Provider, way: CredentialWay): readonly (readonly string[])[] {
-  const addresses = [address, ...wayAddresses.flatMap((field) => way[field] ?? [])];
-  return setCombinationsOf(entry.placeholders ?? {}).map((placed) =>
+  const addresses = [way.base_url ?? address, ...wayAddresses.flatMap((field) => way[field] ?? [])];
+  return setCombinationsOf({ ...entry.placeholders, ...way.placeholders }).map((placed) =>
     addresses.map((each) => hostTemplateOf(each, (name) => placed.get(name))),
   );
 }

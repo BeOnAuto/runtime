@@ -79,9 +79,10 @@ function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPoli
 }
 
 function listedPlaceholderOf([name, placeholder]: readonly [string, Placeholder]): ListedPlaceholder {
-  const { description, pattern, example, required = true, choices } = placeholder;
+  const { title: label, description, pattern, example, required = true, choices } = placeholder;
   return {
     name,
+    ...(label === undefined ? {} : { title: label }),
     description,
     ...(pattern === undefined ? {} : { pattern }),
     ...(example === undefined ? {} : { example }),
@@ -90,10 +91,12 @@ function listedPlaceholderOf([name, placeholder]: readonly [string, Placeholder]
   };
 }
 
-function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
-  return Object.entries(entry.placeholders ?? {}).map((each: readonly [string, Placeholder]) =>
-    listedPlaceholderOf(each),
-  );
+function listedPlaceholdersOf(placeholders: Readonly<Record<string, Placeholder>> = {}) {
+  return Object.entries(placeholders).map((each: readonly [string, Placeholder]) => listedPlaceholderOf(each));
+}
+
+function wayPlaceholdersOf({ placeholders }: CredentialWay) {
+  return placeholders === undefined ? {} : { placeholders: listedPlaceholdersOf(placeholders) };
 }
 
 interface OAuthClientOffered {
@@ -173,10 +176,18 @@ function isUnderTheOrgsOAuthClientAlone(provider: Provider, way: CredentialWay, 
   return oauthClientOfferedOf(provider, way, listing)?.oauth_client === 'required';
 }
 
+function asksValuesOfItsOwn({ placeholders }: CredentialWay): boolean {
+  return placeholders !== undefined;
+}
+
 export function waysInOrderOf(provider: Provider, listing: Listing): readonly CredentialWay[] {
   const { credentials } = provider.entry;
-  const alone = credentials.filter((way) => isUnderTheOrgsOAuthClientAlone(provider, way, listing));
-  return [...credentials.filter((way) => !alone.includes(way)), ...alone];
+  const ofItsOwnValues = credentials.filter((way) => asksValuesOfItsOwn(way));
+  const alone = credentials.filter(
+    (way) => !ofItsOwnValues.includes(way) && isUnderTheOrgsOAuthClientAlone(provider, way, listing),
+  );
+  const later = [...alone, ...ofItsOwnValues];
+  return [...credentials.filter((way) => !later.includes(way)), ...later];
 }
 
 export function oauthClientForOf(
@@ -247,8 +258,9 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
       listedWayOf({
-        ...Struct.omit(way, ['app_credentials', 'test', 'permissions', 'account_types']),
+        ...Struct.omit(way, ['app_credentials', 'test', 'permissions', 'account_types', 'placeholders']),
         ...actingOf(way),
+        ...wayPlaceholdersOf(way),
         ...appCredentialsListedOf(provider, way, listing),
         scopes: scopesSaidBy(way),
         more: moreSaidBy(way),
@@ -265,7 +277,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
           website,
           type,
           credentials: ways,
-          placeholders: placeholdersOf(provider),
+          placeholders: listedPlaceholdersOf(provider.entry.placeholders),
           ...replaced,
         },
       ];

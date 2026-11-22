@@ -1,0 +1,51 @@
+import { Schema } from 'effect';
+
+import { ProviderEntrySchema, type ProviderEntry } from '../entry/provider-entry.ts';
+
+const decodeEntry = Schema.decodeUnknownSync(ProviderEntrySchema);
+
+export const signingInToMail = {
+  kind: 'authorization',
+  account_types: ['service', 'personal'],
+  issuer: 'https://login.mail.example.com/common',
+  scope: 'mail.readwrite',
+  says: { 'mail.readwrite': 'Read and send the mail of the account.' },
+  description: 'Sign in to Mail and allow Auto to read and send your mail.',
+} as const;
+
+export const asTheCompanysApp = {
+  kind: 'client_credentials',
+  issuer: 'https://login.mail.example.com/{tenant}',
+  scope: 'mail.all',
+  says: { 'mail.all': 'Read and send the mail of the mailboxes the app reaches.' },
+  placeholders: {
+    tenant: {
+      title: 'Directory ID',
+      description: 'The ID of your directory at Mail.',
+      pattern: '^[0-9a-f]{8}$',
+      example: '0a1b2c3d',
+    },
+    mailbox: {
+      title: 'Mailbox',
+      description: 'The mailbox the app works in.',
+      pattern: '^[^@\\s]+@[^@\\s]+$',
+      example: 'robot@acme.example.com',
+    },
+  },
+  base_url: 'https://api.mail.example.com/v1/mailboxes/{mailbox}',
+  key_page: 'https://admin.mail.example.com/apps',
+  key_page_title: 'Open the apps of Mail',
+  client_id_title: 'Application ID',
+  description: 'The ID and secret of an app your company registers at Mail.',
+} as const;
+
+export const mail: ProviderEntry = decodeEntry({
+  name: 'mail',
+  title: 'Mail',
+  description: 'Read and send the mail of one mailbox.',
+  website: 'https://developer.mail.example.com',
+  type: 'openapi',
+  document: 'https://mail.example.com/openapi.json',
+  base_url: 'https://api.mail.example.com/v1/self',
+  credentials: [signingInToMail, asTheCompanysApp],
+});

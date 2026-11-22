@@ -25,4 +25,10 @@ export const ChoosingTheWaySchema = Schema.Struct({
         'service when the connection will act as an account the company made for automations. personal when it will act as the account of the person who connects it. Left out when another way is chosen, it is personal if the way takes personal accounts, and otherwise the type the way takes. Left out for the way the connection already has, the type stays as it is.',
     }),
   ),
+  placeholders: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description:
+        "The values the way asks for, by name, as list_providers lists them in the way's placeholders. Give every one of them. Left out for the way the connection already has, its values stay as they are.",
+    }),
+  ),
 });

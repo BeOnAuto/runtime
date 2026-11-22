@@ -90,6 +90,7 @@ export const entryProse: readonly string[] = [
   'for',
   'instructions',
   'key_page_title',
+  'client_id_title',
   'example',
 ];
 
@@ -124,6 +125,17 @@ function typeIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   ];
 }
 
+const baseUrlOfAnMcpWay =
+  "Expected no base_url: an mcp provider's calls go to its url, and a way's base_url is where the calls of an openapi provider go";
+
+function wayBaseUrlIssuesOf({ type: typed, credentials }: ProviderEntry): readonly EntryIssue[] {
+  return typed === 'mcp'
+    ? credentials.flatMap(({ base_url: baseUrl }, index) =>
+        baseUrl === undefined ? [] : [{ path: ['credentials', index, 'base_url'], issue: baseUrlOfAnMcpWay }],
+      )
+    : [];
+}
+
 function markedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   return markIssuesOf(entry.marks).map(({ path, detail }) => ({ path: ['marks', ...path], issue: detail }));
 }
@@ -155,6 +167,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...aliasIssuesOf(entry),
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
+    ...wayBaseUrlIssuesOf(entry),
     ...repeatedWayIssuesOf(entry.credentials),
     ...testIssuesOf(entry),
     ...markedIssuesOf(entry),

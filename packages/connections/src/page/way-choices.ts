@@ -18,12 +18,13 @@ export function defineChooseWay(services: Choosing) {
     name: 'choose_way',
     title: 'Choose way',
     description: [
-      'Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, and the account type where that way acts as an account.',
+      'Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, the values that way asks for, and the account type where that way acts as an account.',
       'The connection keeps its id, its name, its playbooks and its link.',
       "A sign-in started and the organization's own OAuth client given for the way it had before are dropped.",
       'When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes.',
-      'Choosing the way the connection already has changes only its account type, where one is given, and otherwise records nothing.',
-      "A way the connection's provider or server does not offer is refused as invalid_input, and so is an account type the way does not take.",
+      "Choosing the way the connection already has with other values records the choice again: a sign-in started and the organization's own OAuth client given are dropped, and the account type stays as it is unless one is given.",
+      'Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing.',
+      "A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for.",
       'A connection that is connected or broken is refused as conflict.',
       "A way the operator's rules do not allow is refused as forbidden.",
       'On a runtime that signs people in, only the person who added the connection may choose.',
@@ -34,16 +35,19 @@ export function defineChooseWay(services: Choosing) {
     inputSchema: ChoosingTheWaySchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input'],
-    handle: Effect.fnUntraced(function* ({ id, token, credential, account_type: accountType }) {
+    handle: Effect.fnUntraced(function* ({ id, token, credential, account_type: accountType, placeholders }) {
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
-      const asked = { credential, ...(accountType === undefined ? {} : { account_type: accountType }) };
+      const asked = {
+        credential,
+        ...(accountType === undefined ? {} : { account_type: accountType }),
+        ...(placeholders === undefined ? {} : { placeholders }),
+      };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
       const chosen = yield* credentialChosenFor(kept, asked, services);
       const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'choose_way',
         ...use,
-        credential: chosen.credential,
-        says: chosen.says,
+        ...chosen,
         ...(accountType === undefined ? {} : { account_type: accountType }),
       });
       yield* releasedClientsForgottenOf(before, after, services);

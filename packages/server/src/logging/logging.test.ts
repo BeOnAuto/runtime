@@ -35,7 +35,7 @@ import {
   logClientNotRegistered,
   logClientRegistered,
   logClientRegisteredElsewhereFirst,
-  logNameUnread,
+  logUserInfoUnread,
   logRefreshTokenNotRevoked,
   logRequiredClaimSet,
   logSetupReopened,
@@ -262,10 +262,10 @@ describe("the logs of a sign-in through the company's identity provider", () => 
     ]);
   });
 
-  it('warn of a name that could not be read, by the person’s id alone, and of a refresh token that could not be revoked, by the issuer and the failure', async () => {
+  it('warn of what the UserInfo endpoint could not be read for, by the person’s id alone, and of a refresh token that could not be revoked, by the issuer and the failure', async () => {
     const lines = await linesLoggedBy(
       Effect.andThen(
-        logNameUnread(companySignIn.issuer, 'a-person-id', 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'),
+        logUserInfoUnread(companySignIn.issuer, 'a-person-id', 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'),
         logRefreshTokenNotRevoked(companySignIn.issuer, 'invalid_client'),
       ),
     );
@@ -284,7 +284,7 @@ describe("the logs of a sign-in through the company's identity provider", () => 
       logged.push(log);
     }, companySignIn.issuer);
     report.registeredElsewhereFirst('client-3', 'client-4');
-    report.nameUnread('a-person-id', 'OAUTH_WWW_AUTHENTICATE_CHALLENGE');
+    report.userInfoUnread('a-person-id', 'OAUTH_WWW_AUTHENTICATE_CHALLENGE');
     report.notRevoked('invalid_client');
     report.addressNotForgotten();
 

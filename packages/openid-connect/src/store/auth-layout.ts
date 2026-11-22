@@ -1,9 +1,10 @@
 import { statement, type Dialect, type Statement } from '@on.auto/ledger';
 import { Data, Schema } from 'effect';
 
+import { addressesVerified } from '../people/stored-people-rows.ts';
 import type { AuthDatabase } from './auth-database.ts';
 
-export const authLayout = 4;
+export const authLayout = 5;
 
 export const authTablePrefix = 'auth_';
 
@@ -28,6 +29,7 @@ export const authLayoutSteps: readonly AuthLayoutStep[] = [
     ],
   },
   { layout: 4, statements: [] },
+  { layout: 5, statements: addressesVerified },
 ];
 
 export interface AuthLayoutCarrying {

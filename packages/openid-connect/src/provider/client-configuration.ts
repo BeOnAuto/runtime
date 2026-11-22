@@ -15,8 +15,8 @@ import {
 import type { RelyingPartyClient } from './client-registration.ts';
 import { providerMetadataOf, type ClientAuthenticationMethod } from './provider-metadata.ts';
 import { boundedFetchOf, providerAnswerSeconds, type ProviderRequests } from './provider-requests.ts';
-import { tokensHeldBy, type EndpointsDeclared, type TokensHeld } from './sign-in-tokens.ts';
-import { textClaim } from './standard-claims.ts';
+import { tokensHeldBy, type EndpointsDeclared, type IdTokenRead, type TokensHeld } from './sign-in-tokens.ts';
+import { carriesTheVerification, textClaim } from './standard-claims.ts';
 
 export const leewaySeconds = 60;
 
@@ -68,6 +68,15 @@ function checksOf({ state, nonce, codeVerifier }: PendingChecks) {
   return { pkceCodeVerifier: codeVerifier, expectedState: state, expectedNonce: nonce, idTokenExpected: true };
 }
 
+function idTokenReadOf(claims: unknown): IdTokenRead {
+  const { email } = textClaim(claims, 'email');
+  return {
+    subject: String(Reflect.get(new Object(claims), 'sub')),
+    named: textClaim(claims, 'name').name !== undefined,
+    ...(email === undefined || carriesTheVerification(claims) ? {} : { addressUnverified: email }),
+  };
+}
+
 function signInsOf(
   configuration: Readonly<Configuration>,
   redirectUri: string,
@@ -82,11 +91,7 @@ function signInsOf(
         checksOf(pending),
       );
       const claims = tokens.claims();
-      const read = {
-        subject: String(Reflect.get(new Object(claims), 'sub')),
-        named: textClaim(claims, 'name').name !== undefined,
-      };
-      return { claims, held: tokensHeldBy(configuration, declares, tokens, read) };
+      return { claims, held: tokensHeldBy(configuration, declares, tokens, idTokenReadOf(claims)) };
     },
   };
 }

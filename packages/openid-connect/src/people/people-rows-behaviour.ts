@@ -58,6 +58,24 @@ function keepingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
   });
 }
 
+function verifyingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
+  describe(`the people kept ${name}, their addresses verified or not`, () => {
+    it('keep whether the address of the last sign-in was verified, a later sign-in that does not say so leaving it unverified', async () => {
+      const rows = await rowsOf();
+      const signedIn = { person: ada, emailAddress: 'ada@example.com', updatedAt: signedInAt };
+      await rows.kept({ ...signedIn, emailVerified: true });
+      const verified = await rows.found(ada);
+
+      await rows.kept({ ...signedIn, updatedAt: signedInAt + anHour });
+
+      expect([verified, await rows.found(ada)]).toEqual([
+        { ...signedIn, emailVerified: true, joinedAt: signedInAt },
+        { ...signedIn, joinedAt: signedInAt, updatedAt: signedInAt + anHour },
+      ]);
+    });
+  });
+}
+
 function findingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
   describe(`the people kept ${name}, found and forgotten`, () => {
     it('forget a person deleted, and no one else', async () => {
@@ -75,5 +93,6 @@ function findingBehaviour({ name, rowsOf }: PeopleRowsEntry): void {
 
 export function peopleRowsBehaviour(entry: PeopleRowsEntry): void {
   keepingBehaviour(entry);
+  verifyingBehaviour(entry);
   findingBehaviour(entry);
 }

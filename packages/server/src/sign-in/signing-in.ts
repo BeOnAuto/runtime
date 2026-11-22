@@ -8,7 +8,11 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
 import { fieldOfEachFactIn, rowsOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { testComposition, type TestComposition } from '../testing/servers/test-compositions.ts';
+import {
+  testComposition,
+  type TestComposition,
+  type TestCompositionParts,
+} from '../testing/servers/test-compositions.ts';
 import { providerOverHttps } from './issuer-over-https.ts';
 
 export const subject = 'AItOawmwtWwcT0k51BayewNvutrJUqsvl6qs7A4';
@@ -41,6 +45,7 @@ export interface SigningInAs {
   readonly settings?: Environment;
   readonly registersItself?: boolean;
   readonly byDefault?: boolean;
+  readonly servedAlso?: TestCompositionParts['servedAlso'];
 }
 
 function environmentOf(provider: FakeProvider, port: number, registersItself: boolean): Environment {
@@ -52,8 +57,8 @@ function environmentOf(provider: FakeProvider, port: number, registersItself: bo
 
 export const claimOfTheDefault = 'tenant';
 
-function optionsOf(provider: FakeProvider, byDefault: boolean): TestComposition {
-  const composition = testComposition();
+function optionsOf(provider: FakeProvider, byDefault: boolean, servedAlso: SigningInAs['servedAlso']): TestComposition {
+  const composition = testComposition(servedAlso === undefined ? {} : { servedAlso });
   return byDefault
     ? {
         ...composition,
@@ -83,13 +88,14 @@ export async function signingIn({
   settings = {},
   registersItself = false,
   byDefault = false,
+  servedAlso,
 }: SigningInAs = {}): Promise<Running> {
   const provider = await providerOverHttps('/tenant/v2.0', options);
   const port = await aPortNothingListensOn();
   const ledger = temporaryLedger();
   const given = byDefaultIn(environmentOf(provider, port, registersItself), byDefault);
   const environment = { ...given, ...settings, LEDGER_FILE: ledger.fileName };
-  const serverOptions = optionsOf(provider, byDefault);
+  const serverOptions = optionsOf(provider, byDefault, servedAlso);
   const running = { server: await startServer(environment, serverOptions) };
   onTestFinished(async () => {
     await running.server.stop();

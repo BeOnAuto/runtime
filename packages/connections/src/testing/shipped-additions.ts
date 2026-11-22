@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   additionOfProvider,
   holdsAClientId,
+  type CredentialWay,
   readProviders,
   type Placeholder,
   type Provider,
@@ -50,17 +51,17 @@ function givenOf(given: readonly Given[], [name, placeholder]: readonly [string,
   );
 }
 
-function examplesOf({ entry }: Provider): readonly Given[] {
-  return Object.entries(entry.placeholders ?? {}).reduce<readonly Given[]>(
+function examplesOf({ entry }: Provider, way: CredentialWay): readonly Given[] {
+  return Object.entries({ ...entry.placeholders, ...way.placeholders }).reduce<readonly Given[]>(
     (given, placeholder: readonly [string, Placeholder]) => givenOf(given, placeholder),
     [{}],
   );
 }
 
 function additionsOf(provider: Provider): readonly ProviderAddition[] {
-  return provider.entry.credentials.flatMap(({ kind }) =>
-    examplesOf(provider).map((placeholders) =>
-      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind })),
+  return provider.entry.credentials.flatMap((way) =>
+    examplesOf(provider, way).map((placeholders) =>
+      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind: way.kind })),
     ),
   );
 }

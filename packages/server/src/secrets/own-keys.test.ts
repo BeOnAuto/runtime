@@ -269,7 +269,7 @@ function closingCounted(store: SecretStore) {
 }
 
 describe('the start of a server that reads the keys it keeps for itself', () => {
-  it('closes its secret store before it fails, and leaves it open once it has the key of a retry and the key of the addresses of content', async () => {
+  it('closes its secret store before it fails, and leaves it open once it has the key of a retry, the key of the addresses of content and the key of the codes that link an account', async () => {
     const refusing = recordingCustodian();
     refusing.refuse();
     const failing = closingCounted(storeOver(memoryRows({ now }), refusing));
@@ -277,13 +277,15 @@ describe('the start of a server that reads the keys it keeps for itself', () => 
 
     const failed = ownKeysOf(await aRuntime(), failing.counted, fromTheEnvironment);
     await expect(failed).rejects.toThrow('cannot be kept under the key that SECRETS_KEY holds');
-    const { retryStateKeys, contentAddressKey } = await ownKeysOf(
+    const { retryStateKeys, contentAddressKey, linkCodeKey } = await ownKeysOf(
       await aRuntime(),
       answering.counted,
       fromTheEnvironment,
     );
 
     expect([failing.closes.made, answering.closes.made]).toEqual([1, 0]);
-    expect([bytesOf(retryStateKeys.current), bytesOf(contentAddressKey)].map(({ length }) => length)).toEqual([32, 32]);
+    expect(
+      [bytesOf(retryStateKeys.current), bytesOf(contentAddressKey), bytesOf(linkCodeKey)].map(({ length }) => length),
+    ).toEqual([32, 32, 32]);
   });
 });

@@ -26,7 +26,7 @@ function admittingThrough(invitations: Admitting['invitations'], reported: (what
     },
     invitations,
     report: {
-      nameUnread: Function.constVoid,
+      userInfoUnread: Function.constVoid,
       notRevoked: Function.constVoid,
       addressNotForgotten: () => {
         reported('addressNotForgotten');

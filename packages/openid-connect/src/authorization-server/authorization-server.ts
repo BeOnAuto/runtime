@@ -10,7 +10,7 @@ import {
   type PersonClaims,
   type ServersPages,
 } from './configuration.ts';
-import type { InteractionSignIn, SignInPages } from './interaction-pages.ts';
+import type { AccountLinking, InteractionSignIn, SignInPages } from './interaction-pages.ts';
 import { interactionsOf, notOpen, type InteractionModels } from './interactions.ts';
 import { answeredPathsOf } from './paths.ts';
 import type { ProviderRows } from './provider-rows.ts';
@@ -29,6 +29,7 @@ export interface AuthorizationServerParts {
   readonly pages: SignInPages;
   readonly signInCallbackPath: string;
   readonly now?: () => number;
+  readonly linking?: AccountLinking;
 }
 
 export interface IssuedAccessToken {
@@ -190,6 +191,7 @@ function providerOf(issuer: string, configured: (models: ProviderModels) => Conf
     interactionFound: (uid) => provider.Interaction.find(uid, { ignoreExpiration: true }),
     clientNameOf: async (clientId) => (await provider.Client.find(clientId))?.clientName,
     grantFound: (grantId) => provider.Grant.find(grantId),
+    codeFound: (value) => provider.AuthorizationCode.find(value),
     grantMade: (accountId, clientId) => new provider.Grant({ accountId, clientId }),
     accessTokenFound: (value) => provider.AccessToken.find(value),
   };
@@ -203,16 +205,16 @@ export function authorizationServerOf(
   parts: AuthorizationServerParts,
 ): AuthorizationServer {
   const { issuer, studio } = settings;
-  const { middleware, signIn, pages, signInCallbackPath, now = Date.now } = parts;
+  const { middleware, signIn, pages, signInCallbackPath, now = Date.now, linking } = parts;
   const { provider, models } = providerOf(issuer, (made) =>
-    configurationOf(settings, { ...parts, now }, pagesOf(pages, made)),
+    configurationOf(settings, { ...parts, now, linking: linking !== undefined }, pagesOf(pages, made)),
   );
   provider.use(behindItsPublicAddress(issuer, middleware));
-  provider.use(interactionsOf({ models, signIn, pages, signInCallbackPath }));
+  provider.use(interactionsOf({ issuer, models, signIn, pages, signInCallbackPath, linking }));
   const handled = provider.callback();
   return {
     issuer,
-    answers: answeredPathsOf(signInCallbackPath),
+    answers: answeredPathsOf(signInCallbackPath, linking !== undefined),
     listener: (request, response) => {
       void handled(request, response);
     },
@@ -222,8 +224,13 @@ export function authorizationServerOf(
 
 export type { AuthorizationServerSettings, PersonClaims, StudioClient } from './configuration.ts';
 export type {
+  AccountLinking,
   AllowAsked,
   InteractionSignIn,
+  LinkAllowAsked,
+  LinkChoices,
+  LinkShown,
+  ServiceNamed,
   InvitationOpened,
   NotStarted,
   PageShown,

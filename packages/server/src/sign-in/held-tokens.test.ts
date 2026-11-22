@@ -42,8 +42,8 @@ function admittedBy(requiredClaim?: RequiredClaim): Admitted {
     },
     requiredClaim,
     report: {
-      nameUnread: (id, failure) => {
-        reported.push(['nameUnread', id, failure]);
+      userInfoUnread: (id, failure) => {
+        reported.push(['userInfoUnread', id, failure]);
       },
       notRevoked: (failure) => {
         reported.push(['notRevoked', failure]);
@@ -64,8 +64,8 @@ interface Holding {
 function holding(released: TokensReleased, value?: string): Holding {
   const asked: boolean[] = [];
   const held = {
-    released: (nameAsked: boolean) => {
-      asked.push(nameAsked);
+    released: (askedNow: boolean) => {
+      asked.push(askedNow);
       return Promise.resolve(released);
     },
   };
@@ -74,9 +74,12 @@ function holding(released: TokensReleased, value?: string): Holding {
 }
 
 describe("the provider's tokens a sign-in holds, at the callback", () => {
-  it('are released once the required claim is decided, asking for the name only of a person who carries it, who is kept with it, and releasing a refused person’s all the same', async () => {
+  it('are released once the required claim is decided, asking for the name and the verification only of a person who carries it, who is kept with them, and releasing a refused person’s all the same', async () => {
     const { admitting, kept } = admittedBy({ claim: 'tenant', requiredValue: 'acme' });
-    const [refused, carrying] = [holding({}, 'another'), holding({ name: 'Ada Lovelace' }, 'acme')];
+    const [refused, carrying] = [
+      holding({}, 'another'),
+      holding({ name: 'Ada Lovelace', email_verified: true }, 'acme'),
+    ];
 
     const answered = [
       await admittedAfter(admitting, refused.signedInWith, 1),
@@ -88,19 +91,21 @@ describe("the provider's tokens a sign-in holds, at the callback", () => {
       { signedIn, person, enrolled: 'enrolment' },
     ]);
     expect([...refused.asked, ...carrying.asked]).toEqual([false, true]);
-    expect(kept).toEqual([{ person, name: 'Ada Lovelace', emailAddress: 'ada@example.com', updatedAt: 2 }]);
+    expect(kept).toEqual([
+      { person, name: 'Ada Lovelace', emailAddress: 'ada@example.com', emailVerified: true, updatedAt: 2 },
+    ]);
   });
 
-  it('report a name that could not be read by the person’s id alone, and a refresh token that could not be revoked, and the person is admitted with the claims of their ID Token', async () => {
+  it('report what the UserInfo endpoint could not be read for by the person’s id alone, and a refresh token that could not be revoked, and the person is admitted with the claims of their ID Token', async () => {
     const { admitting, kept, reported } = admittedBy();
-    const released = { nameUnread: 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED', notRevoked: 'invalid_client' };
+    const released = { userInfoUnread: 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED', notRevoked: 'invalid_client' };
 
     const answered = await admittedAfter(admitting, holding(released).signedInWith, 1);
 
     expect(answered).toEqual({ signedIn, person, enrolled: 'enrolment' });
     expect(kept).toEqual([{ person, emailAddress: 'ada@example.com', updatedAt: 1 }]);
     expect(reported).toEqual([
-      ['nameUnread', person, 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'],
+      ['userInfoUnread', person, 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED'],
       ['notRevoked', 'invalid_client'],
     ]);
   });

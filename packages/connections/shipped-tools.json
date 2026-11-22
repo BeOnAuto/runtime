@@ -207,6 +207,20 @@
     "me.messages.message.reply": "a93188ae20b8e8be0b12f062dce5225d5a980f73664d064b2463d149321a7dbc",
     "me.events.event.cancel": "65ef321e55da3f4ba578961fd933276d21ba4597e93705d012bcd488b82b2387"
   },
+  "outlook, client_credentials": {
+    "me.ListMessages": "63c0122dd648419fbb759721b3ac8c721ce6754afc5cdf0413a67c2a7f0e252b",
+    "me.CreateMessages": "1355a6a151763e659705987cdab7e527c4c8107c05a8d61027ddf9d5bd0c7919",
+    "me.GetMessages": "8aa39daa51f6530de00ab9db1030f087a7fb911bc3fc1439ba8e04aac1d5b6b1",
+    "me.ListMailFolders": "e7c80c851e38182b7b84a5cff6ce47d0b648d41976ed950fb116f67ec3289b9b",
+    "me.ListCalendarView": "011d70d01c5732e1a44108cbd94111473131eab7de88967d2ca13f36bf717523",
+    "me.ListEvents": "a5732d5e0f5363f858c61ba693ea822c2db4f9954809c2f924a76a6415fa9969",
+    "me.CreateEvents": "58b86cb6304ccefa4a900a3b54e89e4a79b493c3d4e9647f45ed915a36701774",
+    "me.GetEvents": "2e4354b2c8ca455f7fdb10fae6fe7b052d002968ac38ef68b17578c564ea2537",
+    "me.UpdateEvents": "63e30e575d5844fda1afb92adb86f5c59017aa408c40d5f86d46720b3061a225",
+    "me.sendMail": "16a153b71573aa54cc26929c3c66c4d7f883fd82810ba1c5a21cfa153b319e04",
+    "me.messages.message.reply": "a93188ae20b8e8be0b12f062dce5225d5a980f73664d064b2463d149321a7dbc",
+    "me.events.event.cancel": "65ef321e55da3f4ba578961fd933276d21ba4597e93705d012bcd488b82b2387"
+  },
   "search-ads-360, authorization": {
     "searchads360.customers.searchAds360.search": "3a123955c5e912d6b859cd4688bfb4095f1c87e9895585af91ad5de488ec0971",
     "searchads360.customers.listAccessibleCustomers": "0768a6f0f454be70479fb83839d0cacde5c72fe6b24e097d0d25b3354c88ae01",

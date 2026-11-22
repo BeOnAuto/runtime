@@ -129,6 +129,8 @@ export const ConnectionEventSchema = Schema.Union([
       credential: RecordedCredentialSchema,
       account_type: Schema.optionalKey(AccountTypeSchema),
       says: Schema.Record(Schema.String, Schema.String),
+      placeholders: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+      base_url: Schema.optionalKey(Schema.NullOr(Schema.String)),
     }),
     ActedContextSchema,
   ),

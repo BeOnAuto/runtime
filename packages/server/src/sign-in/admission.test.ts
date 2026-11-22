@@ -21,7 +21,7 @@ const setupUnasked: Setup = { requiredClaimSet: () => Promise.reject(new Error('
 
 const quiet = Function.constVoid;
 
-const unreported: Admitting['report'] = { nameUnread: quiet, notRevoked: quiet, addressNotForgotten: quiet };
+const unreported: Admitting['report'] = { userInfoUnread: quiet, notRevoked: quiet, addressNotForgotten: quiet };
 
 const quietly = { invitations: { forgotten: () => Promise.resolve() }, report: unreported };
 

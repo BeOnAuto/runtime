@@ -1,0 +1,80 @@
+import { Result } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '../index.ts';
+import { providerOf } from '../testing/fixture-providers.ts';
+import { asTheCompanysApp, mail, signingInToMail } from '../testing/own-app-providers.ts';
+
+const anyWords: unknown = expect.any(String);
+
+const theCompanysValues = { tenant: '0a1b2c3d', mailbox: 'robot@acme.example.com' };
+
+function added(given: GivenToProvider) {
+  return Result.getOrThrow(additionOfProvider(mail, given));
+}
+
+function refused(given: GivenToProvider) {
+  return Result.getOrThrow(Result.flip(additionOfProvider(mail, given)));
+}
+
+describe('a way that asks values of its own', () => {
+  it('is added with them in its issuer and its base_url, which takes the place of the provider’s', () => {
+    expect(added({ kind: 'client_credentials', placeholders: theCompanysValues })).toMatchObject({
+      entry: { base_url: 'https://api.mail.example.com/v1/mailboxes/robot@acme.example.com' },
+      credential: { kind: 'client_credentials', issuer: 'https://login.mail.example.com/0a1b2c3d' },
+      placeholders: theCompanysValues,
+      permissions: 'application',
+    });
+  });
+
+  it('leaves another way of the provider as it was, asking none of them', () => {
+    expect(added({})).toMatchObject({
+      entry: { base_url: 'https://api.mail.example.com/v1/self' },
+      credential: { kind: 'authorization', issuer: 'https://login.mail.example.com/common' },
+      placeholders: {},
+    });
+  });
+
+  it('reaches the hosts of its own base_url and issuer, where another way reaches the provider’s', () => {
+    const mailboxHost = { description: 'The host of the mailbox', pattern: '^[a-z]{1,8}$', example: 'eu' };
+    const elsewhere = {
+      ...asTheCompanysApp,
+      base_url: 'https://{mailbox_host}/v1/mailboxes/{mailbox}',
+      placeholders: { ...asTheCompanysApp.placeholders, mailbox_host: mailboxHost },
+    };
+    const provider = providerOf({ ...mail, credentials: [signingInToMail, elsewhere] });
+
+    expect(provider.entry.credentials.map((way) => hostAlternativesOf(provider, way))).toEqual([
+      [['api.mail.example.com', 'login.mail.example.com']],
+      [['{mailbox_host}', 'login.mail.example.com']],
+    ]);
+  });
+});
+
+const asTheApp = { kind: 'client_credentials' } as const;
+
+const refusals: readonly (readonly [string, GivenToProvider, readonly string[]])[] = [
+  ['a value it asks is left out', { ...asTheApp, placeholders: { tenant: '0a1b2c3d' } }, ['/placeholders/mailbox']],
+  ['its value is given for another way', { placeholders: { tenant: '0a1b2c3d' } }, ['/placeholders/tenant']],
+  [
+    'a value misses its pattern',
+    { ...asTheApp, placeholders: { ...theCompanysValues, tenant: '0A1B2C3D' } },
+    ['/placeholders/tenant'],
+  ],
+  [
+    'a value would move the address',
+    { ...asTheApp, placeholders: { ...theCompanysValues, mailbox: 'robot@acme.example.com/../x' } },
+    ['/placeholders/mailbox'],
+  ],
+  [
+    'the provider takes no way of the kind asked',
+    { kind: 'secret', placeholders: theCompanysValues },
+    ['/placeholders/tenant', '/placeholders/mailbox', '/credential/kind'],
+  ],
+];
+
+describe('the values of a way that asks values of its own', () => {
+  it.each(refusals)('are refused where %s', (_case, given, pointers) => {
+    expect(refused(given)).toEqual(pointers.map((pointer) => ({ pointer, detail: anyWords })));
+  });
+});

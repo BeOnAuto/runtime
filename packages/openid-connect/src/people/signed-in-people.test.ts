@@ -43,4 +43,17 @@ describe('what a sign-in keeps of the person', () => {
       { person: id, updatedAt: 2 },
     ]);
   });
+
+  it('marks the address verified only where the sign-in said so of an address it gave', () => {
+    const person = { issuer: 'https://login.example.com/acme', subject: '248289761001' };
+    const id = '83f8bacd8d76fa75e99f5c9f61599419c6647d9aebe50b453a89da169899d6e1';
+
+    expect([
+      personSignedInOf(person, { email: 'ada@example.com', email_verified: true }, 1),
+      personSignedInOf(person, { email_verified: true }, 2),
+    ]).toEqual([
+      { person: id, emailAddress: 'ada@example.com', emailVerified: true, updatedAt: 1 },
+      { person: id, updatedAt: 2 },
+    ]);
+  });
 });

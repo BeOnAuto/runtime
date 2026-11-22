@@ -1,6 +1,6 @@
 name: outlook
 title: Outlook
-description: List, search and read Outlook mail and mail folders, send mail, reply and make drafts, and read the calendar between two dates and read, create, update and cancel events, as the person who connects, through Microsoft Graph.
+description: List, search and read Outlook mail and mail folders, send mail, reply and make drafts, and read the calendar between two dates and read, create, update and cancel events, in one mailbox, through Microsoft Graph.
 website: https://learn.microsoft.com/en-us/graph/auth-v2-user
 type: openapi
 document: documents/outlook.openapi.json
@@ -20,3 +20,38 @@ credentials:
       offline_access: Keep access to Outlook mail and calendars when nobody is signed in.
     clients: [registered]
     description: Sign in with your work account and allow access to your mail and calendar. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for mail and calendar.
+  - kind: client_credentials
+    issuer: https://login.microsoftonline.com/{tenant}/v2.0
+    scope: https://graph.microsoft.com/.default
+    says:
+      https://graph.microsoft.com/.default: Act with the Microsoft Graph application permissions an administrator granted to the app.
+    placeholders:
+      tenant:
+        title: Directory (tenant) ID
+        description: The ID on the Overview page of the app you registered at Microsoft.
+        pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        example: aaaabbbb-0000-cccc-1111-dddd2222eeee
+      mailbox:
+        title: Mailbox
+        description: The app reads and sends mail in this mailbox, and manages its calendar.
+        pattern: '^[^@\s]+@[^@\s]+$'
+        example: automation@acme.com
+    base_url: https://graph.microsoft.com/v1.0/users/{mailbox}
+    key_page: https://go.microsoft.com/fwlink/?linkid=2083908
+    key_page_title: Open Microsoft's app registrations
+    client_id_title: Application (client) ID
+    steps:
+      key_page:
+        title: Register an app at Microsoft
+        instructions: |-
+          In Microsoft's app registrations, select **New registration**, name the app, choose **Single tenant only** and select **Register**. Then, on the app's page:
+
+          - Under **API permissions**, select **Add a permission**, **Microsoft Graph** and **Application permissions**. Tick `Mail.ReadWrite`, `Mail.Send` and `Calendars.ReadWrite`, and select **Add permissions**.
+          - Select **Grant admin consent** and confirm. This needs the Privileged Role Administrator role.
+          - Under **Certificates & secrets**, select **New client secret**, choose when it expires and select **Add**. Copy its **Value** now: Microsoft shows it only once. When it expires, reconnect with a new secret.
+
+          Admin consent lets the app reach every mailbox in your organization. To let it reach only some, skip admin consent and follow [Limit which mailboxes the app can reach](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac).
+      key:
+        title: Enter the app's details here
+        instructions: On the app's **Overview** page, copy the **Directory (tenant) ID** and the **Application (client) ID**. Paste them here with the client secret's value, and name the mailbox the app works in.
+    description: The ID and secret of an app your company registers with Microsoft. The app works in the one mailbox you name.

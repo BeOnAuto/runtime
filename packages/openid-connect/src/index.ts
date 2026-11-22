@@ -42,7 +42,7 @@ export {
 export type { TokensHeld, TokensReleased } from './provider/sign-in-tokens.ts';
 export type { StandardClaims } from './provider/standard-claims.ts';
 export type { ProviderRows } from './authorization-server/provider-rows.ts';
-export { invitationPath } from './authorization-server/paths.ts';
+export { accountLinkPath, invitationPath } from './authorization-server/paths.ts';
 export { everyoneSignedOut, personSignedOut } from './authorization-server/signed-out.ts';
 export { AuthLayoutRefused } from './store/auth-layout.ts';
 export { authStoreOpened, type AuthStore } from './store/auth-store.ts';

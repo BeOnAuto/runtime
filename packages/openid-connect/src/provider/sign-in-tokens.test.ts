@@ -34,8 +34,8 @@ function heldIn(finished: FinishedSignIn): TokensHeld | undefined {
   return 'held' in finished ? finished.held : undefined;
 }
 
-function releasedBy(finished: FinishedSignIn, nameAsked: boolean): Promise<TokensReleased | undefined> {
-  return Promise.resolve(heldIn(finished)?.released(nameAsked));
+function releasedBy(finished: FinishedSignIn, asked: boolean): Promise<TokensReleased | undefined> {
+  return Promise.resolve(heldIn(finished)?.released(asked));
 }
 
 function answeredAt(
@@ -89,10 +89,49 @@ describe('the name of a person, at the UserInfo endpoint the provider declares',
       await releasedBy(await finishedThrough(numbered), true),
       await releasedBy(await finishedThrough(refusing, {}, anotherBearer), true),
     ]).toEqual([
-      { nameUnread: 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED' },
+      { userInfoUnread: 'OAUTH_JSON_ATTRIBUTE_COMPARISON_FAILED' },
       {},
-      { nameUnread: 'OAUTH_WWW_AUTHENTICATE_CHALLENGE' },
+      { userInfoUnread: 'OAUTH_WWW_AUTHENTICATE_CHALLENGE' },
     ]);
+  });
+});
+
+describe('whether the address of a person is verified', () => {
+  it('is taken from the ID Token only where it holds the boolean true', async () => {
+    const provider = fakeProvider(issuer);
+    const address = { name: 'Ada', email: 'ada@example.com' };
+
+    const finished = await Promise.all(
+      [true, 'true', 1, false].map((verified) => finishedThrough(provider, { ...address, email_verified: verified })),
+    );
+
+    expect(finished).toEqual([
+      { signedIn: { issuer, subject }, claims: { ...address, email_verified: true } },
+      { signedIn: { issuer, subject }, claims: address },
+      { signedIn: { issuer, subject }, claims: address },
+      { signedIn: { issuer, subject }, claims: address },
+    ]);
+  });
+
+  it('is read at the UserInfo endpoint only where the ID Token gives an address and does not say, and counts only for that address', async () => {
+    const same = fakeProvider(issuer, { userInfo: { email: 'ada@example.com', email_verified: true } });
+    const another = fakeProvider(issuer, { userInfo: { email: 'another@example.com', email_verified: true } });
+    const saidAs = fakeProvider(issuer, { userInfo: { email: 'ada@example.com', email_verified: 'true' } });
+    const address = { name: 'Ada', email: 'ada@example.com' };
+
+    const released = [
+      await releasedBy(await finishedThrough(same, address), true),
+      await releasedBy(await finishedThrough(another, address), true),
+      await releasedBy(await finishedThrough(saidAs, address), true),
+    ];
+    const answered = [
+      await finishedThrough(same, { ...address, email_verified: false }),
+      await finishedThrough(same, { name: 'Ada' }),
+    ];
+
+    expect(released).toEqual([{ email_verified: true }, {}, {}]);
+    expect(answered.map((finished) => heldIn(finished))).toEqual([undefined, undefined]);
+    expect(same.userInfoReads()).toBe(1);
   });
 });
 
@@ -132,7 +171,7 @@ describe('a refresh token the provider sends unasked', () => {
 
     expect([await releasedBy(finished, true), await releasedBy(await finishedThrough(slow, {}, late), true)]).toEqual([
       { notRevoked: 'invalid_client' },
-      { nameUnread: lateness, notRevoked: lateness },
+      { userInfoUnread: lateness, notRevoked: lateness },
     ]);
     expect(withdrawn.tokensRevoked()).toEqual([]);
   });

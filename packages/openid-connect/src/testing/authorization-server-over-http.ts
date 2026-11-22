@@ -6,6 +6,7 @@ import type { ConnectionPorts } from '@on.auto/ledger';
 import {
   authorizationServerOf,
   signingKeyOf,
+  type AccountLinking,
   type ApiMiddleware,
   type AuthorizationServer,
   type AuthorizationServerParts,
@@ -62,7 +63,7 @@ function testPageOf(page: PageShown): SignInPage {
         html: `<!doctype html>${page.signingOut.form}<script>${page.signingOut.script}</script>`,
         headers: {},
       }
-    : { status: 'allow' in page ? 200 : 403, html: '<!doctype html><p>page</p>', headers: {} };
+    : { status: 'allow' in page || 'link' in page ? 200 : 403, html: '<!doctype html><p>page</p>', headers: {} };
 }
 
 function pagesInto(shown: (page: PageShown) => void): SignInPages {
@@ -114,6 +115,7 @@ export interface ServedWith {
   readonly claimsOf?: AuthorizationServerParts['claimsOf'];
   readonly rowsOver?: (rows: ProviderRows) => ProviderRows;
   readonly onLoopback?: boolean;
+  readonly linking?: AccountLinking;
 }
 
 const servedSettings = {
@@ -131,6 +133,7 @@ export async function servedOverHttp({
   claimsOf = () => Promise.resolve({ name: 'Ada Lovelace', email: 'ada@example.test' }),
   rowsOver = (rows) => rows,
   onLoopback = false,
+  linking,
 }: ServedWith = {}): Promise<ServedOverHttp> {
   const { store, connection, close } = await authStoreInMemory();
   const { providerRows, signingKeyRows } = store;
@@ -145,6 +148,7 @@ export async function servedOverHttp({
       pagesShown.push(page);
     }),
     signInCallbackPath,
+    ...(linking === undefined ? {} : { linking }),
   });
   const http = createServer((request, response) => {
     if (server.answers(new URL(String(request.url), issuer).pathname)) {

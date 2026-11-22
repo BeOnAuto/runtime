@@ -80,6 +80,7 @@ describe.skipIf(skipped)(`Two servers that start at once on one ledger in Postgr
     expect(recorded.map(({ message_type, purpose }) => [message_type, purpose])).toEqual([
       ['own_key_kept', 'retry_state'],
       ['own_key_kept', 'content_address'],
+      ['own_key_kept', 'link_code'],
     ]);
     expect(kept.map(({ id }) => String(id))).toEqual(recorded.map(({ secret_id }) => String(secret_id)).toSorted());
   });

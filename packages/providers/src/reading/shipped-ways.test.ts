@@ -59,7 +59,7 @@ const hostsOfTheWays = [
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['mcp.notion.com', 'mcp.notion.com']]],
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
-  [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
+  [[['graph.microsoft.com', microsoft, microsoft, microsoft]], [['graph.microsoft.com', microsoft]]],
   [[['mcp.posthog.com', 'oauth.posthog.com']]],
   [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
   [[['searchads360.googleapis.com', google]]],

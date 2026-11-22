@@ -143,8 +143,9 @@ function placedValues(written: Placed, entry: ProviderEntry, values: Values): Pl
   );
 }
 
-function serverOf(entry: ProviderEntry, values: Values): ProviderConnectionEntry {
-  const { url, document, base_url: baseUrl, headers, query_params: query, request_id: requestId } = entry;
+function serverOf(entry: ProviderEntry, way: CredentialWay, values: Values): ProviderConnectionEntry {
+  const { url, document, headers, query_params: query, request_id: requestId } = entry;
+  const baseUrl = way.base_url ?? entry.base_url;
   return {
     ...(url === undefined ? {} : { url: placedText(url, values) }),
     ...(document === undefined ? {} : { document: placedText(document, values) }),
@@ -167,22 +168,26 @@ function perConnectionOf({
   };
 }
 
+function placingIssuesOf(provider: ProviderEntry, placeholders: Placed): readonly Issue[] {
+  return Result.getFailure(valuesOf(provider, undefined, placeholders)).pipe(
+    Option.getOrElse((): readonly Issue[] => []),
+  );
+}
+
 export function additionOfProvider(
   provider: ProviderEntry,
   given: GivenToProvider,
 ): Result.Result<ProviderAddition, readonly Issue[]> {
   const placeholders = given.placeholders ?? {};
-  const way = chosenWayOf(provider, given);
-  return Result.match(valuesOf(provider, placeholders), {
-    onFailure: (placing) =>
-      Result.fail([...placing, ...Result.getFailure(way).pipe(Option.getOrElse((): readonly Issue[] => []))]),
-    onSuccess: (values) =>
-      Result.flatMap(way, (offered) => {
+  return Result.match(chosenWayOf(provider, given), {
+    onFailure: (refused) => Result.fail([...placingIssuesOf(provider, placeholders), ...refused]),
+    onSuccess: (offered) =>
+      Result.flatMap(valuesOf(provider, offered, placeholders), (values) => {
         const oauthClient = given.oauthClientFor?.(offered);
         return Result.map(chosenOf(provider.name, offered, oauthClient), (chosen) => ({
           name: given.name ?? provider.name,
           type: provider.type,
-          entry: { ...serverOf(provider, values), ...perConnectionOf(given) },
+          entry: { ...serverOf(provider, chosen, values), ...perConnectionOf(given) },
           credential: credentialOf(chosen, values, oauthClient),
           provider: provider.name,
           placeholders,

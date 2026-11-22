@@ -19,9 +19,41 @@ import {
   shippedToolsText,
 } from '../testing/shipped-additions.ts';
 
+const ToolsByWaySchema = Schema.fromJsonString(
+  Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.String)),
+);
+
+type ToolsOfAWay = readonly [string, Readonly<Record<string, string>>];
+
+type ToolsOfAProvider = readonly [string | undefined, readonly ToolsOfAWay[]];
+
+function providerOfTheWay([way]: ToolsOfAWay): string | undefined {
+  return way.split(', ')[0];
+}
+
+function toolSetsOf([provider, ways]: ToolsOfAProvider) {
+  return [provider, new Set(ways.map(([, tools]: ToolsOfAWay) => JSON.stringify(tools))).size];
+}
+
+function toolSetsOfEachProvider(byWay: Readonly<Record<string, Readonly<Record<string, string>>>>) {
+  const byProvider = Map.groupBy(Object.entries(byWay), (way: ToolsOfAWay) => providerOfTheWay(way));
+  return [...byProvider]
+    .filter(([, ways]: ToolsOfAProvider) => ways.length > 1)
+    .map((provider: ToolsOfAProvider) => toolSetsOf(provider));
+}
+
 describe('the tools every shipped document offers, by the way of each provider', () => {
   it('are committed as the bridge derives them, each tool by the digest of what an agent is listed; pnpm --filter @on.auto/connections shipped-tools writes them again', async () => {
     expect(readFileSync(shippedToolsFile, 'utf8')).toBe(await shippedToolsText());
+  });
+
+  it('are the same tools, by name and by what an agent is listed, for every way of one provider, wherever a way sends its calls', async () => {
+    const byWay = Schema.decodeUnknownSync(ToolsByWaySchema)(await shippedToolsText());
+
+    expect(toolSetsOfEachProvider(byWay)).toEqual([
+      ['adobe-analytics', 1],
+      ['outlook', 1],
+    ]);
   });
 });
 

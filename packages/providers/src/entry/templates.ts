@@ -6,6 +6,11 @@ export interface TemplatedField {
   readonly path: readonly string[];
   readonly text: string;
   readonly holds: Holding;
+  readonly way?: number;
+}
+
+export interface WayParts extends WayAddresses {
+  readonly base_url?: string;
 }
 
 interface ServerPart {
@@ -14,7 +19,7 @@ interface ServerPart {
   readonly base_url?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly query_params?: Readonly<Record<string, string>>;
-  readonly credentials?: readonly WayAddresses[];
+  readonly credentials?: readonly WayParts[];
 }
 
 export interface Marked {
@@ -36,11 +41,15 @@ function markerOf(position: number): string {
   return `placeholder${String(position)}marker`;
 }
 
+const wayFieldsHoldingAnAddress = [...wayAddresses, 'base_url'] as const;
+
 function wayAddressesOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
   return credentials.flatMap((way, index) =>
-    wayAddresses.flatMap((field): readonly TemplatedField[] => {
+    wayFieldsHoldingAnAddress.flatMap((field): readonly TemplatedField[] => {
       const text = way[field];
-      return text === undefined ? [] : [{ path: ['credentials', String(index), field], text, holds: 'address' }];
+      return text === undefined
+        ? []
+        : [{ path: ['credentials', String(index), field], text, holds: 'address', way: index }];
     }),
   );
 }

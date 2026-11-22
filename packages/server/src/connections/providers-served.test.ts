@@ -141,7 +141,6 @@ function signingInAt(issuers: string): readonly string[] {
 }
 
 const atGoogle = signingInAt('https://accounts.google.com');
-
 const atMicrosoft = signingInAt('https://login.microsoftonline.com/');
 
 function waysExpected(
@@ -156,7 +155,6 @@ function waysExpected(
 }
 
 const underTheOrgsOAuthClientAlone = `authorization offered ${alone}`;
-
 const waysWithoutAClient = {
   'adobe-analytics': ['client_credentials offered', underTheOrgsOAuthClientAlone],
   'adobe-analytics-mcp': ['authorization offered'],
@@ -170,6 +168,7 @@ const waysWithoutAClient = {
   linear: ['authorization offered'],
   linkedin: [underTheOrgsOAuthClientAlone],
   notion: ['authorization offered'],
+  outlook: [underTheOrgsOAuthClientAlone, 'client_credentials offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: [underTheOrgsOAuthClientAlone],
@@ -192,6 +191,7 @@ const waysWithAClient = {
   linear: ['authorization offered'],
   linkedin: ['authorization offered'],
   notion: ['authorization offered'],
+  outlook: ['authorization offered', 'client_credentials offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization offered'],

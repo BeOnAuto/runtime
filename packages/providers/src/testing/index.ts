@@ -26,3 +26,4 @@ export {
   whichSpace,
   whoItActsAsThroughATool,
 } from './event-destinations.ts';
+export { asTheCompanysApp, mail, signingInToMail } from './own-app-providers.ts';

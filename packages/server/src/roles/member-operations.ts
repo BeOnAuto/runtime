@@ -4,6 +4,7 @@ import { Caller, NotFound, OrgWriter, defineHttpOperation, defineQuery } from '@
 import { counted } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
+import type { AccountLinks } from '../account-linking/account-links.ts';
 import { invitationOperationsOf } from './invitation-operations.ts';
 import { joiningOperations } from './joining-operations.ts';
 import { NothingAsked, actorOf, forgottenOnceEnded, inApprovedWords, writtenNow } from './member-changes.ts';
@@ -24,7 +25,7 @@ import {
 export const noSuchMember = 'This organization has no such member.';
 
 const signInsNotEndedMessage =
-  'A member was removed and their sign-ins could not be ended now; each is refused while they hold no role, and ends as it expires';
+  'A member was removed and their sign-ins, or the accounts at other services linked to them, could not be ended now; each is refused while they hold no role, and a sign-in ends as it expires';
 
 const mostListed = 500;
 
@@ -152,6 +153,17 @@ export function memberOperationsOf(kept: MembersKept) {
   ] as const;
 }
 
+const noLinks: Pick<AccountLinks, 'personForgotten'> = { personForgotten: () => Promise.resolve() };
+
+export function signedOutWithTheirLinks(
+  providerRows: Parameters<typeof personSignedOut>[0],
+  links: Pick<AccountLinks, 'personForgotten'>,
+): MembersKept['signedOut'] {
+  return async (person) => {
+    await Promise.all([personSignedOut(providerRows, person), links.personForgotten(person)]);
+  };
+}
+
 export function memberOperationsOver(
   {
     peopleRows,
@@ -159,11 +171,12 @@ export function memberOperationsOver(
     invitationAddresses,
   }: Pick<AuthStore, 'peopleRows' | 'providerRows' | 'invitationAddresses'>,
   publicUrl: string,
+  links: Pick<AccountLinks, 'personForgotten'> = noLinks,
 ) {
   return memberOperationsOf({
     people: peopleRows,
     invitations: invitationAddresses,
-    signedOut: (person) => personSignedOut(providerRows, person),
+    signedOut: signedOutWithTheirLinks(providerRows, links),
     publicUrl,
   });
 }

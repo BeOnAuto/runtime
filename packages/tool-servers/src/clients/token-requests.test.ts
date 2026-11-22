@@ -131,3 +131,46 @@ describe('discovery from the issuer', () => {
     expect([issuer.tokenRequests(), server.tokenRequests()]).toEqual([0, 0]);
   });
 });
+
+const tenantPath = '/aaaabbbb-0000-cccc-1111-dddd2222eeee/v2.0';
+
+const graphDefault = 'https://graph.example.com/.default';
+
+function issuerOfATenant(changes: Partial<ClientRegistration> = {}): FakeMcpServer {
+  return served({ issuerPath: tenantPath, openIdConnect: true, ...changes });
+}
+
+function fromTheIssuerOf(issuer: FakeMcpServer) {
+  return { discovery: 'from_the_issuer', serverUrl: `${issuer.origin}/v1.0/users/robot@acme.example.com` } as const;
+}
+
+describe('a token asked by client credentials of an issuer with a path in its address', () => {
+  it('is asked at the token endpoint the issuer’s own configuration names, once until it nears its end, with no secret in an address', async () => {
+    const issuer = issuerOfATenant();
+    const asking = askingFetch();
+    const auth = secretAuth(issuer, { issuer: `${issuer.origin}${tenantPath}`, scope: graphDefault });
+    const { source, clock, minted } = sourceOf(issuer, auth, asking.fetch, fromTheIssuerOf(issuer));
+
+    const first = await source.token();
+    const again = await source.token();
+    clock.now += 3_540_001;
+    const renewed = await source.token();
+
+    expect(asking.urls()).toContain(`${issuer.origin}${tenantPath}/.well-known/openid-configuration`);
+    expect(asking.bodies()).toMatchObject([
+      { grant_type: 'client_credentials', scope: graphDefault },
+      { grant_type: 'client_credentials', scope: graphDefault },
+    ]);
+    expect([again, issuer.tokenRequests(), minted.map(([, token]) => token)]).toEqual([first, 2, [first, renewed]]);
+    expect(asking.urls().filter((url) => url.includes(clientSecret))).toEqual([]);
+  });
+
+  it('is never asked where the configuration at that address names another issuer, as RFC 8414 requires', async () => {
+    const issuer = issuerOfATenant({ issuer: 'https://login.example.com/another-tenant/v2.0' });
+    const auth = secretAuth(issuer, { issuer: `${issuer.origin}${tenantPath}`, scope: graphDefault });
+    const { source } = sourceOf(issuer, auth, inProcessFetch, fromTheIssuerOf(issuer));
+
+    await expect(source.token()).rejects.toBeInstanceOf(IssuerMismatchError);
+    expect(issuer.tokenRequests()).toBe(0);
+  });
+});

@@ -13520,7 +13520,7 @@
       "put": {
         "operationId": "choose_way",
         "summary": "Choose way",
-        "description": "Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, and the account type where that way acts as an account. The connection keeps its id, its name, its playbooks and its link. A sign-in started and the organization's own OAuth client given for the way it had before are dropped. When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes. Choosing the way the connection already has changes only its account type, where one is given, and otherwise records nothing. A way the connection's provider or server does not offer is refused as invalid_input, and so is an account type the way does not take. A connection that is connected or broken is refused as conflict. A way the operator's rules do not allow is refused as forbidden. On a runtime that signs people in, only the person who added the connection may choose.",
+        "description": "Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, the values that way asks for, and the account type where that way acts as an account. The connection keeps its id, its name, its playbooks and its link. A sign-in started and the organization's own OAuth client given for the way it had before are dropped. When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes. Choosing the way the connection already has with other values records the choice again: a sign-in started and the organization's own OAuth client given are dropped, and the account type stays as it is unless one is given. Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing. A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for. A connection that is connected or broken is refused as conflict. A way the operator's rules do not allow is refused as forbidden. On a runtime that signs people in, only the person who added the connection may choose.",
         "tags": [
           "connections"
         ],
@@ -13591,6 +13591,13 @@
                       "personal"
                     ],
                     "description": "service when the connection will act as an account the company made for automations. personal when it will act as the account of the person who connects it. Left out when another way is chosen, it is personal if the way takes personal accounts, and otherwise the type the way takes. Left out for the way the connection already has, the type stays as it is."
+                  },
+                  "placeholders": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "The values the way asks for, by name, as list_providers lists them in the way's placeholders. Give every one of them. Left out for the way the connection already has, its values stay as they are."
                   }
                 },
                 "required": [
@@ -17076,6 +17083,10 @@
                                 "type": "string",
                                 "description": "For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise"
                               },
+                              "client_id_title": {
+                                "type": "string",
+                                "description": "For client_credentials, the label of the field the person gives the client's ID in, as the service names it, where the entry gives one."
+                              },
                               "steps": {
                                 "type": "object",
                                 "properties": {
@@ -17180,6 +17191,60 @@
                                 },
                                 "description": "For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, where this runtime can use them; left out where it takes none"
                               },
+                              "placeholders": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "title": {
+                                      "type": "string",
+                                      "description": "The label of the field the person gives the value in, where the entry gives one."
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    },
+                                    "pattern": {
+                                      "type": "string"
+                                    },
+                                    "example": {
+                                      "type": "string"
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "choices": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "value": {
+                                            "type": "string"
+                                          },
+                                          "title": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "value",
+                                          "title"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "description",
+                                    "required"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "A value that differs per connection, which the person gives when they connect"
+                                },
+                                "description": "The values this way asks for beside the provider's placeholders, which add_connection and choose_way take in placeholders. Left out where the way asks for none."
+                              },
                               "offered": {
                                 "type": "boolean",
                                 "description": "Whether a person may connect the provider this way here"
@@ -17206,6 +17271,10 @@
                             "properties": {
                               "name": {
                                 "type": "string"
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "The label of the field the person gives the value in, where the entry gives one."
                               },
                               "description": {
                                 "type": "string"

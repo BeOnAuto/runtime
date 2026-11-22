@@ -159,7 +159,7 @@ describe('the words of the groups of scopes a way of consent may add', () => {
     expect(problemsOf({ ...ledgers, credentials: [credentialsWithMore] })).toEqual([
       [
         '/credentials/0/more',
-        'Expected no more: a client_credentials way takes issuer, scope, says, key_page, key_page_title, and steps',
+        'Expected no more: a client_credentials way takes issuer, scope, says, key_page, key_page_title, client_id_title, steps, placeholders, and base_url',
       ],
     ]);
     expect(problemsOf({ ...drive, credentials: [scopeless] })).toEqual([

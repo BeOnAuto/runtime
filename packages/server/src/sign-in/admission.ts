@@ -155,19 +155,19 @@ async function requiredClaimNotCarried(
 async function claimsOnceReleased(
   report: AdmissionReport,
   { signedIn, claims, held }: SignedInWith,
-  nameAsked: boolean,
+  asked: boolean,
 ): Promise<StandardClaims> {
   if (held === undefined) {
     return claims;
   }
-  const { name, nameUnread, notRevoked } = await held.released(nameAsked);
-  if (nameUnread !== undefined) {
-    report.nameUnread(personIdOf(signedIn), nameUnread);
+  const { userInfoUnread, notRevoked, ...released } = await held.released(asked);
+  if (userInfoUnread !== undefined) {
+    report.userInfoUnread(personIdOf(signedIn), userInfoUnread);
   }
   if (notRevoked !== undefined) {
     report.notRevoked(notRevoked);
   }
-  return name === undefined ? claims : { ...claims, name };
+  return { ...claims, ...released };
 }
 
 async function acceptedForgotten(

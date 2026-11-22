@@ -61,11 +61,15 @@ function methodsOf({
   return methodsOfAuthentication.filter((method) => !refused.has(method));
 }
 
+function issuerOf(origin: string, { issuer, issuerPath = '' }: ClientRegistration): string {
+  return issuer ?? `${origin}${issuerPath}`;
+}
+
 function metadataOf(origin: string, registration: ClientRegistration) {
   const at = endpointsOriginOf(origin, registration);
   const methods = methodsOf(registration);
   return {
-    issuer: registration.issuer ?? origin,
+    issuer: issuerOf(origin, registration),
     authorization_endpoint: `${at}/authorize`,
     token_endpoint: `${at}/token`,
     revocation_endpoint: `${at}/revoke`,
@@ -112,11 +116,15 @@ function documentRoutesOf(origin: string, registration: ClientRegistration): rea
     ...(authorizationServers.length === 0 ? {} : { authorization_servers: authorizationServers }),
     ...(registration.protectedScopes === undefined ? {} : { scopes_supported: registration.protectedScopes }),
   };
+  const { issuerPath = '' } = registration;
   return [
     [resourceMetadataPathOf(registration), () => Promise.resolve(json(resource))],
     registration.openIdConnect === true
-      ? ['/.well-known/openid-configuration', () => Promise.resolve(json({ ...metadata, ...openIdFields(origin) }))]
-      : ['/.well-known/oauth-authorization-server', () => Promise.resolve(json(metadata))],
+      ? [
+          `${issuerPath}/.well-known/openid-configuration`,
+          () => Promise.resolve(json({ ...metadata, ...openIdFields(origin) })),
+        ]
+      : [`/.well-known/oauth-authorization-server${issuerPath}`, () => Promise.resolve(json(metadata))],
   ];
 }
 
@@ -133,7 +141,7 @@ async function formOf(request: Readonly<Request>): Promise<URLSearchParams> {
 export function fakeAuthorization(origin: string, registration: ClientRegistration): FakeAuthorization {
   const clients = fakeClients(registration);
   const tokens = fakeTokens(registration);
-  const grants = fakeGrants(registration.issuer ?? origin, registration, clients, tokens);
+  const grants = fakeGrants(issuerOf(origin, registration), registration, clients, tokens);
   let requested = 0;
   const grantsByType: ReadonlyMap<string, Granted> = new Map([
     ['client_credentials', grants.clientCredentials],

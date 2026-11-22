@@ -68,6 +68,8 @@ export interface WayChoice extends LinkUse {
   readonly credential: RecordedCredential;
   readonly says: Readonly<Record<string, string>>;
   readonly account_type?: AccountType;
+  readonly placeholders?: Readonly<Record<string, string>>;
+  readonly base_url?: string | null;
 }
 
 export interface ClientGiving extends LinkUse {

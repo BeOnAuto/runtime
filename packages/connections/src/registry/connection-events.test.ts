@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer';
 import { createHash } from 'node:crypto';
 
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
@@ -9,6 +8,7 @@ import { actingAsAnAccount, keptWaysOfAServer, requested, wayChosenAgain } from 
 import { heldAppCredentials } from '../testing/app-credential-facts.ts';
 import { givenItsEvents, identifiedByTheRuntime, identifiedInItsAccount } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
+import { wayChosenWithItsValues } from '../testing/way-value-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
@@ -249,7 +249,7 @@ const givenItsDocument: readonly (typeof ConnectionEventSchema.Type)[] = [
       entry: { base_url: 'https://api.ledgers.example.com/v1' },
       document: {
         sha256: createHash('sha256').update(documentText).digest('hex'),
-        bytes: Buffer.byteLength(documentText),
+        bytes: new TextEncoder().encode(documentText).byteLength,
         tool_count: 1,
       },
       credential: {
@@ -281,6 +281,7 @@ describe('the facts of the registry of connections', () => {
       '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
       '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
       '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
+      '0.72.0': wayChosenWithItsValues,
     },
   });
 });

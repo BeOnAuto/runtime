@@ -1329,6 +1329,12 @@
                 "additionalProperties": {
                   "type": "object",
                   "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "description": "The label of the field a person gives the value in, in at most 40 characters"
+                    },
                     "description": {
                       "type": "string",
                       "minLength": 1
@@ -1535,6 +1541,66 @@
                       "minItems": 1,
                       "description": "The kinds of account at the service that a connection made this way may act as, on a way with delegated permissions. service is an account the company made for automations. personal is the account of the person who connects. Both when it is left out."
                     },
+                    "placeholders": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 40,
+                            "description": "The label of the field a person gives the value in, in at most 40 characters"
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "pattern": {
+                            "type": "string"
+                          },
+                          "example": {
+                            "type": "string"
+                          },
+                          "required": {
+                            "type": "boolean"
+                          },
+                          "choices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "sets": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                }
+                              },
+                              "required": ["value", "title"],
+                              "additionalProperties": false
+                            },
+                            "minItems": 1
+                          }
+                        },
+                        "required": ["description"],
+                        "additionalProperties": false
+                      },
+                      "description": "The values a connection made this way takes beside the provider's, by name, asked only when this way is chosen: each written as a placeholder of the provider is, and held in this way's addresses or its base_url"
+                    },
+                    "base_url": {
+                      "type": "string",
+                      "description": "For openapi, the https URL the calls of a connection made this way go to, in place of the provider's base_url and of the server its document names, each {name} in it a placeholder"
+                    },
                     "instructions": {
                       "type": "string",
                       "description": "For secret, how a person makes the key, in Markdown without HTML of at most 1,000 characters: where it is made, the plan or role it needs, the permissions it needs and its format",
@@ -1684,6 +1750,12 @@
                       "required": ["tool"],
                       "additionalProperties": false,
                       "description": "For secret, the tool that checks a key: a tool that needs no arguments and is marked reads, which the runtime calls once with the key a person gives before it keeps anything; a key the service refuses is refused, and where the call ends any other way than in a result the runtime keeps nothing and answers that the key could not be checked"
+                    },
+                    "client_id_title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "description": "For client_credentials, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters"
                     },
                     "description": {
                       "type": "string",

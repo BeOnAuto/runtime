@@ -53,6 +53,7 @@ export function signInServingOf(signIn?: CompanySignIn): SignInServingOf | undef
         signIn: interactionSignInOf(signingIn),
         pages: signInPagesOf(pageStyle),
         signInCallbackPath: callbackPath,
+        ...signingIn.linked,
       },
     );
     return {

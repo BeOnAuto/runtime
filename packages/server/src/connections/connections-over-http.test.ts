@@ -799,7 +799,7 @@ describe('connections in aws parameter store', () => {
       });
       expect(removed).toMatchObject({ status: 200, body: { status: 'removed' } });
       expect(parameterStore.parameter(parameter)).toBeUndefined();
-      expect(ownKeys).toHaveLength(2);
+      expect(ownKeys).toHaveLength(3);
       expect(log).not.toBe('');
       expect(
         [value, crmKeyInParameterStore, ...ownKeys, awsCredentials.accessKeyId, awsCredentials.secretAccessKey].filter(

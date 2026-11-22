@@ -12,6 +12,7 @@ export interface ClientRegistration {
   readonly publicKey?: string;
   readonly expiresInSeconds: number | null;
   readonly issuer?: string;
+  readonly issuerPath?: string;
   readonly authorizationServers?: readonly string[];
   readonly protectedResource?: string;
   readonly resourceMetadataPath?: string;

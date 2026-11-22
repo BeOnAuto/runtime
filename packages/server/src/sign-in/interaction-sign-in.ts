@@ -16,6 +16,7 @@ import type {
 } from '@on.auto/openid-connect/authorization-server';
 import type { Effect } from 'effect';
 
+import { linkingOf, type Linked, type LinkingServed } from '../account-linking/account-linking.ts';
 import { signInReportTo, type SignInReport } from '../logging/sign-in-logging.ts';
 import { invitationOf } from '../roles/invitation-links.ts';
 import { admittedAfter, firstSignInNoticed, type Admitting, type Enrolling } from './admission.ts';
@@ -23,7 +24,7 @@ import { asItsClient, issuerOf, type AsItsClient, type ClientsServed, type Compa
 
 export type Logged = (log: Effect.Effect<void>) => void;
 
-export interface SignInStore {
+export interface SignInStore extends LinkingServed {
   readonly peopleRows?: PeopleRows;
   readonly invitationAddresses?: InvitationAddresses;
   readonly enrolling?: Enrolling;
@@ -34,6 +35,10 @@ export interface SignInStore {
 export interface SigningIn extends Admitting, AsItsClient {
   readonly report: SignInReport;
   readonly studioOpenedAt: string;
+}
+
+export interface SigningInAndLinking extends SigningIn {
+  readonly linked: Linked;
 }
 
 type SignedIn = Extract<FinishedSignIn, { readonly signedIn: unknown }>;
@@ -137,7 +142,7 @@ export interface SigningInParts {
 export async function signingInOf(
   signIn: CompanySignIn,
   { logged, served, studioOpenedAt }: SigningInParts,
-): Promise<SigningIn> {
+): Promise<SigningInAndLinking> {
   const report = signInReportTo(logged, issuerOf(signIn));
   const { requiredClaim } = signIn;
   const enrolling = keptIn(served.enrolling);
@@ -151,6 +156,7 @@ export async function signingInOf(
     enrolling,
     setup: keptIn(served.setup),
     report,
+    linked: linkingOf(served),
     ...(await asItsClient(signIn, { registrations, report })),
   };
 }

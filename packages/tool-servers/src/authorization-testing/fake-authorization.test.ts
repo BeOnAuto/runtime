@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeMcpAnswers, type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import { fakeMcpInProcess } from '../testing/index.ts';
+import { fakeMcpInProcess, inProcessFetch } from '../testing/index.ts';
 import {
   asTheClient,
   basic,
@@ -88,4 +88,27 @@ describe('a fake whose token endpoint takes public clients alone', () => {
     expect(statuses).toEqual([200, 401, 401, 401]);
     expect((await metadataOf(open))['token_endpoint_auth_methods_supported']).toEqual(['none']);
   });
+});
+
+const placesOfTheMetadata: readonly (readonly [string, Partial<ClientRegistration>, string])[] = [
+  ['RFC 8414 places its metadata', {}, '/.well-known/oauth-authorization-server/tenant-1/v2.0'],
+  [
+    'OpenID Connect Discovery places its configuration',
+    { openIdConnect: true },
+    '/tenant-1/v2.0/.well-known/openid-configuration',
+  ],
+];
+
+describe('a fake whose issuer has a path in its address, as an authorization server of one tenant has', () => {
+  it.each(placesOfTheMetadata)(
+    'answers where %s for that issuer, naming the issuer with its path, and nowhere else',
+    async (_case, changes, path) => {
+      const fake = servedTakingPublicClientsAlone({ issuerPath: '/tenant-1/v2.0', ...changes });
+      const named = await inProcessFetch(`${fake.origin}${path}`);
+      const atTheRoot = await inProcessFetch(`${fake.origin}/.well-known/oauth-authorization-server`);
+
+      expect([named.status, atTheRoot.ok]).toEqual([200, false]);
+      expect(await named.json()).toMatchObject({ issuer: `${fake.origin}/tenant-1/v2.0` });
+    },
+  );
 });

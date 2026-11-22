@@ -2,6 +2,7 @@ export interface PersonRow {
   readonly person: string;
   readonly name?: string;
   readonly emailAddress?: string;
+  readonly emailVerified?: true;
   readonly joinedAt: number;
   readonly updatedAt: number;
 }

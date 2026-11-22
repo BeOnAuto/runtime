@@ -7,6 +7,7 @@ import {
   type KoaContextWithOIDC,
 } from 'oidc-provider';
 
+import { linkingClientId, linkingClientOf } from './account-linking.ts';
 import { hashedAdapterOf } from './hashed-adapter.ts';
 import { authorizationServerRoutes, interactionAddressOf } from './paths.ts';
 import type { ProviderRows } from './provider-rows.ts';
@@ -56,6 +57,7 @@ export interface ConfigurationParts {
   readonly signingKey: SigningKey;
   readonly claimsOf: (accountId: string) => Promise<PersonClaims | undefined>;
   readonly now: () => number;
+  readonly linking: boolean;
 }
 
 export interface ServersPages {
@@ -116,6 +118,10 @@ async function studiosGrant(ctx: KoaContextWithOIDC, found: Grant | undefined, a
 function existingGrantOf(studioClientId: string) {
   return async (ctx: KoaContextWithOIDC): Promise<Grant | undefined> => {
     const clientId = String(ctx.oidc.client?.clientId);
+    const consentJustGiven = ctx.oidc.result?.consent?.grantId;
+    if (clientId === linkingClientId) {
+      return consentJustGiven === undefined ? undefined : ctx.oidc.provider.Grant.find(consentJustGiven);
+    }
     const grantId = grantIdIn(ctx, clientId);
     const found = grantId === undefined ? undefined : await ctx.oidc.provider.Grant.find(grantId);
     const accountId = ctx.oidc.session?.accountId;
@@ -180,9 +186,9 @@ function lifetimesOf(now: () => number): Configuration['ttl'] {
   };
 }
 
-function clientsOf(studio: StudioClient): Configuration {
+function clientsOf({ issuer, studio }: AuthorizationServerSettings, linking: boolean): Configuration {
   return {
-    clients: [studioClientOf(studio)],
+    clients: [studioClientOf(studio), ...(linking ? [linkingClientOf(issuer)] : [])],
     responseTypes: ['code'],
     clientAuthMethods: ['none'],
     clientDefaults: {
@@ -256,7 +262,7 @@ function featuresOf(
 
 export function configurationOf(
   settings: AuthorizationServerSettings,
-  { rows, signingKey, claimsOf, now }: ConfigurationParts,
+  { rows, signingKey, claimsOf, now, linking }: ConfigurationParts,
   pages: ServersPages,
 ): Configuration {
   return {
@@ -274,7 +280,7 @@ export function configurationOf(
       policy: promptsOf(),
       url: (_ctx, interaction) => interactionAddressOf(interaction.uid),
     },
-    ...clientsOf(settings.studio),
+    ...clientsOf(settings, linking),
     ...tokensOf(now),
     ...accountsOf(claimsOf),
     renderError: pages.renderError,

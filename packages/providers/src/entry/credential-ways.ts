@@ -8,6 +8,7 @@ import { consentEndpoints, consentIssuesOf } from './consent-fields.ts';
 import { endingIssuesOf } from './ending-codes.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
+import { clientIdTitleField, ownValueFields } from './way-values.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
@@ -71,7 +72,9 @@ const CredentialWayFieldsSchema = Schema.Struct({
   gateway: Schema.optionalKey(wayFields.gateway),
   permissions: Schema.optionalKey(wayFields.permissions),
   account_types: Schema.optionalKey(wayFields.account_types),
+  ...ownValueFields,
   ...keyWayFields,
+  client_id_title: clientIdTitleField,
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -101,12 +104,17 @@ const everyField: readonly Field[] = [
   'gateway',
   'permissions',
   'account_types',
+  'placeholders',
+  'base_url',
   ...keyFieldNames,
   'key_page_title',
+  'client_id_title',
   'steps',
   'app_credentials',
   'test',
 ];
+
+const ownValues: readonly Field[] = ['placeholders', 'base_url'];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   secret: {
@@ -121,9 +129,13 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'test',
       'permissions',
       'account_types',
+      ...ownValues,
     ],
   },
-  client_credentials: { required: ['issuer'], optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps'] },
+  client_credentials: {
+    required: ['issuer'],
+    optional: ['scope', 'says', 'key_page', 'key_page_title', 'client_id_title', 'steps', ...ownValues],
+  },
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
@@ -140,6 +152,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'gateway',
       'permissions',
       'account_types',
+      ...ownValues,
     ],
   },
 };

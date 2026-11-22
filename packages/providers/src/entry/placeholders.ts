@@ -1,7 +1,4 @@
-import { placeholderNamePattern } from '@on.auto/config';
 import { Schema } from 'effect';
-
-import { waysHoldingAClientId } from './credential-ways.ts';
 
 export const clientIdPlaceholder = 'client_id';
 
@@ -22,7 +19,14 @@ const ChoiceSchema = Schema.Struct({
 
 export type Choice = typeof ChoiceSchema.Type;
 
+const mostTitleCharacters = 40;
+
 const PlaceholderFieldsSchema = Schema.Struct({
+  title: Schema.optionalKey(
+    NamedSchema.check(Schema.isMaxLength(mostTitleCharacters)).annotate({
+      description: 'The label of the field a person gives the value in, in at most 40 characters',
+    }),
+  ),
   description: NamedSchema,
   pattern: Schema.optionalKey(Schema.String),
   example: Schema.optionalKey(Schema.String),
@@ -102,15 +106,6 @@ const PlaceholderSchema = PlaceholderFieldsSchema.check(
 );
 
 export const PlaceholdersSchema = Schema.Record(Schema.String, PlaceholderSchema);
-
-export function nameIssueOf(name: string): string | undefined {
-  if (name === clientIdPlaceholder) {
-    return `Expected another name: {client_id} is the client id of a ${waysHoldingAClientId} way, never asked`;
-  }
-  return placeholderNamePattern.test(name)
-    ? undefined
-    : 'Expected the name of a placeholder: a lowercase letter, then lowercase letters, digits and underscores';
-}
 
 export function isRequired({ required = true }: Placeholder): boolean {
   return required;

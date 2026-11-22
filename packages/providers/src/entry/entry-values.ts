@@ -3,7 +3,7 @@ import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Schema } from 'effect';
 
 import { setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
-import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayAddresses } from './templates.ts';
+import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayParts } from './templates.ts';
 
 interface Written {
   readonly url?: string;
@@ -16,8 +16,9 @@ interface Written {
   readonly credentials: readonly WrittenWay[];
 }
 
-interface WrittenWay extends WayAddresses {
+interface WrittenWay extends WayParts {
   readonly parameters?: Readonly<Record<string, string>>;
+  readonly placeholders?: Readonly<Record<string, Placeholder>>;
 }
 
 type EntryIssue = Schema.FilterIssue;
@@ -77,6 +78,7 @@ function serverPartOf({
       definedOf({
         parameters: way.parameters,
         ...Object.fromEntries(wayAddresses.map((field) => [field, way[field]])),
+        base_url: way.base_url,
       }),
     ),
   });
@@ -99,12 +101,18 @@ function referenceIssuesOf(written: Written): readonly EntryIssue[] {
   ];
 }
 
-function credentialIssuesOf(written: Written): readonly EntryIssue[] {
-  const { placeholders = {} } = written;
+function placeholderProblemsOf(placeholders: Readonly<Record<string, Placeholder>>, pointer: string) {
   const names = [...Object.keys(placeholders), ...setNamesOfEach(placeholders)];
+  return credentialProblems('placeholders', asJson(placeholders), pointer, names);
+}
+
+function credentialIssuesOf(written: Written): readonly EntryIssue[] {
   const pointers = [
     ...credentialProblems('', serverPartOf(written), '', wayAddresses),
-    ...credentialProblems('placeholders', asJson(placeholders), '/placeholders', names),
+    ...placeholderProblemsOf(written.placeholders ?? {}, '/placeholders'),
+    ...written.credentials.flatMap(({ placeholders = {} }, index) =>
+      placeholderProblemsOf(placeholders, `/credentials/${String(index)}/placeholders`),
+    ),
   ].map(({ pointer }) => pointer);
   return issuesAt(pointers, heldCredential);
 }
@@ -131,15 +139,32 @@ function isALocalDocument({ path, text }: TemplatedField): boolean {
   return path[0] === 'document' && isADocumentBesideTheEntries(text);
 }
 
+interface Judged {
+  readonly combinations: readonly Placed[];
+  readonly fields: readonly TemplatedField[];
+}
+
+function judgedOf(written: Written): readonly Judged[] {
+  const { placeholders, credentials } = written;
+  const fields = templatedFieldsOf(written).filter((field) => field.holds === 'address' && !isALocalDocument(field));
+  return [
+    { combinations: setCombinationsOf(placeholders ?? {}), fields: fields.filter(({ way }) => way === undefined) },
+    ...credentials.map((way, index) => ({
+      combinations: setCombinationsOf({ ...placeholders, ...way.placeholders }),
+      fields: fields.filter((field) => field.way === index),
+    })),
+  ];
+}
+
 function addressIssuesOf(written: Written): readonly EntryIssue[] {
-  const combinations = setCombinationsOf(written.placeholders ?? {});
-  return templatedFieldsOf(written)
-    .filter((field) => field.holds === 'address' && !isALocalDocument(field))
-    .filter(({ text }) => !combinations.every((placed) => isWrittenOutUpToItsHost(text, placed)))
-    .map(({ path }) => ({
-      path,
-      issue: path[0] === 'document' ? documentElsewhere : pinnedTemplateShape,
-    }));
+  return judgedOf(written).flatMap(({ combinations, fields }) =>
+    fields
+      .filter(({ text }) => !combinations.every((placed) => isWrittenOutUpToItsHost(text, placed)))
+      .map(({ path }) => ({
+        path,
+        issue: path[0] === 'document' ? documentElsewhere : pinnedTemplateShape,
+      })),
+  );
 }
 
 export function writtenIssuesOf(written: Written): readonly EntryIssue[] {

@@ -16,6 +16,22 @@ const ListedStepSchema = Schema.Struct({
   instructions: Schema.String.annotate({ description: 'What the person does in the step, in Markdown' }),
 });
 
+const ListedPlaceholderSchema = Schema.Struct({
+  name: Schema.String,
+  title: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'The label of the field the person gives the value in, where the entry gives one.',
+    }),
+  ),
+  description: Schema.String,
+  pattern: Schema.optionalKey(Schema.String),
+  example: Schema.optionalKey(Schema.String),
+  required: Schema.Boolean,
+  choices: Schema.optionalKey(Schema.Array(Schema.Struct({ value: Schema.String, title: Schema.String }))),
+}).annotate({ description: 'A value that differs per connection, which the person gives when they connect' });
+
+export type ListedPlaceholder = typeof ListedPlaceholderSchema.Type;
+
 const OAuthClientChoiceSchema = Schema.Literals(['optional', 'required']);
 
 export type OAuthClientChoice = typeof OAuthClientChoiceSchema.Type;
@@ -83,6 +99,12 @@ export const ListedWaySchema = Schema.Struct({
         'For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
   ),
+  client_id_title: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "For client_credentials, the label of the field the person gives the client's ID in, as the service names it, where the entry gives one.",
+    }),
+  ),
   steps: Schema.optionalKey(
     Schema.Struct({
       key_page: Schema.optionalKey(ListedStepSchema),
@@ -121,6 +143,12 @@ export const ListedWaySchema = Schema.Struct({
         'For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, where this runtime can use them; left out where it takes none',
     }),
   ),
+  placeholders: Schema.optionalKey(
+    Schema.Array(ListedPlaceholderSchema).annotate({
+      description:
+        "The values this way asks for beside the provider's placeholders, which add_connection and choose_way take in placeholders. Left out where the way asks for none.",
+    }),
+  ),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(
     Schema.String.annotate({
@@ -132,17 +160,6 @@ export const ListedWaySchema = Schema.Struct({
 export type ListedWay = typeof ListedWaySchema.Type;
 
 export const listedWayOf = Schema.decodeUnknownSync(ListedWaySchema);
-
-const ListedPlaceholderSchema = Schema.Struct({
-  name: Schema.String,
-  description: Schema.String,
-  pattern: Schema.optionalKey(Schema.String),
-  example: Schema.optionalKey(Schema.String),
-  required: Schema.Boolean,
-  choices: Schema.optionalKey(Schema.Array(Schema.Struct({ value: Schema.String, title: Schema.String }))),
-}).annotate({ description: 'A value that differs per connection, which the person gives when they connect' });
-
-export type ListedPlaceholder = typeof ListedPlaceholderSchema.Type;
 
 const ProviderSchema = Schema.Struct({
   name: Schema.String.annotate({ description: "The provider's name, the default name of a connection to it" }),

@@ -12,13 +12,14 @@ export function personIdOf({ issuer, subject }: SignedInPerson): string {
 
 export function personSignedInOf(
   person: SignedInPerson,
-  { name, email }: StandardClaims,
+  { name, email, email_verified }: StandardClaims,
   updatedAt: number,
 ): PersonSignedIn {
   return {
     person: personIdOf(person),
     ...(name === undefined ? {} : { name }),
     ...(email === undefined ? {} : { emailAddress: email }),
+    ...(email === undefined || email_verified === undefined ? {} : { emailVerified: email_verified }),
     updatedAt,
   };
 }

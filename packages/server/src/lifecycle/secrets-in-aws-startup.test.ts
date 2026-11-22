@@ -216,7 +216,11 @@ describe('a server that moves its secrets into AWS Parameter Store, as it starts
         holding: { keptBy: 'aws-parameter-store', held: `${prefix}/${data.secret_id}:1` },
       })),
     );
-    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual(['retry_state', 'content_address']);
+    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual([
+      'retry_state',
+      'content_address',
+      'link_code',
+    ]);
   });
 });
 

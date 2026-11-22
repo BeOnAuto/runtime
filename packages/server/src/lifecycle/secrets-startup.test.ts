@@ -202,8 +202,12 @@ describe('the keys the runtime keeps for itself as the server starts', () => {
     const ownKeys = await ownKeysIn(fileName);
     const written = ownKeys.flatMap((ownKey) => [ownKey, Buffer.from(ownKey, 'base64').toString('hex')]);
 
-    expect(ownKeys.map((ownKey) => Buffer.from(ownKey, 'base64').length)).toEqual([32, 32]);
-    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual(['retry_state', 'content_address']);
+    expect(ownKeys.map((ownKey) => Buffer.from(ownKey, 'base64').length)).toEqual([32, 32, 32]);
+    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual([
+      'retry_state',
+      'content_address',
+      'link_code',
+    ]);
     expect(secretsIn(`${first}${next}`, written)).toEqual([]);
   });
 

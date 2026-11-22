@@ -5,6 +5,8 @@ import { namesTheLoopback } from '@on.auto/identity';
 import type { AllowAsked, PageShown, SignInPages, SignInRefusal } from '@on.auto/openid-connect/authorization-server';
 import { html } from 'hono/html';
 
+import { linkPageShownBy } from '../account-linking/link-pages.ts';
+
 type Page = Promise<string>;
 
 interface Refusal {
@@ -77,10 +79,10 @@ function aboutTheClientOf({ client, publishedAt, deliveredTo }: AllowAsked): rea
     : publishedAtOf(client, publishedAt, delivery);
 }
 
-function documentOf(style: PageStyle, body: string): string {
+function documentOf(style: PageStyle, body: string, head = ''): string {
   return [
     '<!doctype html><html lang="en"><head>',
-    style.head(''),
+    style.head(head),
     '</head><body><main>',
     body,
     '</main></body></html>',
@@ -116,6 +118,7 @@ interface Shown {
   readonly status: number;
   readonly body: Page;
   readonly headers: Readonly<Record<string, string>>;
+  readonly head?: string;
 }
 
 type SigningOut = Extract<PageShown, { readonly signingOut: unknown }>['signingOut'];
@@ -150,6 +153,9 @@ function bodyShownOf(style: PageStyle, shown: PageShown): Shown {
   if ('signingOut' in shown) {
     return signingOutShownBy(style, shown.signingOut);
   }
+  if ('link' in shown) {
+    return linkPageShownBy(style, shown.link);
+  }
   if ('invitationEnded' in shown) {
     const { status } = invitationEnded;
     return { status, body: refusalPageOf(invitationEnded), headers: style.readOnlyHeaders };
@@ -160,7 +166,7 @@ function bodyShownOf(style: PageStyle, shown: PageShown): Shown {
 
 export function signInPagesOf(style: PageStyle): SignInPages {
   return async (shown) => {
-    const { status, body, headers } = bodyShownOf(style, shown);
-    return { status, html: documentOf(style, await body), headers };
+    const { status, body, headers, head } = bodyShownOf(style, shown);
+    return { status, html: documentOf(style, await body, head), headers };
   };
 }

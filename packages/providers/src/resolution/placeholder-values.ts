@@ -3,6 +3,7 @@ import type { Issue } from '@on.auto/operations';
 import { alternatives, listed } from '@on.auto/phrasing';
 import { JsonPointer, Option, Result } from 'effect';
 
+import type { CredentialWay } from '../entry/credential-ways.ts';
 import { isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress, marked, templatedFieldsOf, type TemplatedField } from '../entry/templates.ts';
@@ -53,14 +54,20 @@ function valueIssueOf(name: string, placeholder: Placeholder, value: string): st
     : `Expected one of ${alternatives(choices.map((choice) => choice.value))}`;
 }
 
-function unknownIssuesOf(provider: string, placeholders: Placeholders, given: Given): readonly Issue[] {
+function ofAnotherWay({ credentials }: ProviderEntry, name: string): boolean {
+  return credentials.some(({ placeholders = {} }) => Object.hasOwn(placeholders, name));
+}
+
+function unknownIssuesOf(entry: ProviderEntry, placeholders: Placeholders, given: Given): readonly Issue[] {
   const declared = Object.keys(placeholders);
-  const takes = declared.length === 0 ? 'it takes none' : `it takes ${listed(declared)}`;
+  const taken = declared.length === 0 ? 'none' : listed(declared);
   return Object.keys(given)
     .filter((name) => !Object.hasOwn(placeholders, name))
     .map((name) => ({
       pointer: pointerOf(name),
-      detail: `The provider ${provider} has no placeholder ${name}; ${takes}`,
+      detail: ofAnotherWay(entry, name)
+        ? `The provider ${entry.name} takes ${name} only for another way to connect; this way takes ${taken}`
+        : `The provider ${entry.name} has no placeholder ${name}; it takes ${taken}`,
     }));
 }
 
@@ -132,14 +139,22 @@ export function placedText(text: string, { given, placed }: Values): string {
   return placeholdersReplaced(text, (name) => placed.get(name) ?? given.get(name) ?? `{${name}}`);
 }
 
-export function valuesOf(entry: ProviderEntry, given: Given): Result.Result<Values, readonly Issue[]> {
-  const { placeholders = {} } = entry;
-  const issues = [...unknownIssuesOf(entry.name, placeholders, given), ...declaredIssuesOf(placeholders, given)];
+function placeholdersOfTheWay(entry: ProviderEntry, way: CredentialWay | undefined): Placeholders {
+  return { ...entry.placeholders, ...way?.placeholders };
+}
+
+export function valuesOf(
+  entry: ProviderEntry,
+  way: CredentialWay | undefined,
+  given: Given,
+): Result.Result<Values, readonly Issue[]> {
+  const placeholders = placeholdersOfTheWay(entry, way);
+  const issues = [...unknownIssuesOf(entry, placeholders, given), ...declaredIssuesOf(placeholders, given)];
   if (issues.length > 0) {
     return Result.fail(issues);
   }
   const values = { given: new Map(Object.entries(given)), placed: setOfTheChosen(placeholders, given) };
-  const placing = templatedFieldsOf(entry)
+  const placing = templatedFieldsOf({ ...entry, credentials: way === undefined ? [] : [way] })
     .filter(({ holds, text }) => holds === 'address' && isAddress(text))
     .flatMap((field) => fieldIssuesOf(field, values));
   const once = [

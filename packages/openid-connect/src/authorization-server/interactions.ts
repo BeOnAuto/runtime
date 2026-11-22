@@ -1,6 +1,7 @@
 import { Predicate } from 'effect';
 import { errors, type InteractionResults, type KoaContextWithOIDC, type Provider } from 'oidc-provider';
 
+import { isLinking, linkAllowAsked, linkAnswered, type LinkingModels, type LinksServed } from './account-linking.ts';
 import { redirectedTo, shown, signInCookieAttributes } from './answering.ts';
 import type { InteractionSignIn, PageShown, SignInOutcome, SignInPages, SignInRefusal } from './interaction-pages.ts';
 import { invitationCarriedAndCleared, invitationOpened, invitationSecretIn } from './invitation-link.ts';
@@ -20,7 +21,7 @@ const selectAccount = 'select_account';
 
 const consentPrompt = 'consent';
 
-export interface InteractionModels {
+export interface InteractionModels extends LinkingModels {
   readonly detailsOf: (ctx: KoaContextWithOIDC) => Promise<Interaction>;
   readonly resultOf: (ctx: KoaContextWithOIDC, result: InteractionResults, merged: boolean) => Promise<string>;
   readonly interactionFound: (uid: string) => Promise<Interaction | undefined>;
@@ -30,10 +31,12 @@ export interface InteractionModels {
 }
 
 export interface InteractionsServed {
+  readonly issuer: string;
   readonly models: InteractionModels;
   readonly signIn: InteractionSignIn;
   readonly pages: SignInPages;
   readonly signInCallbackPath: string;
+  readonly linking: LinksServed['linking'] | undefined;
 }
 
 type Next = () => Promise<unknown>;
@@ -74,8 +77,15 @@ export async function notOpen(
   uid: string,
 ): Promise<void> {
   const interaction = await served.models.interactionFound(uid);
-  const client = interaction === undefined ? undefined : await clientNamed(served.models, interaction.params);
+  const client =
+    interaction === undefined || isLinking(interaction.params)
+      ? undefined
+      : await clientNamed(served.models, interaction.params);
   await shown(ctx, served.pages, { notOpen: { client } });
+}
+
+function linksOf({ issuer, models, pages, linking }: InteractionsServed): LinksServed | undefined {
+  return linking === undefined ? undefined : { issuer, models, pages, linking };
 }
 
 function asksToSelectAnAccount(ctx: KoaContextWithOIDC, interaction: Interaction): boolean {
@@ -104,7 +114,12 @@ async function allowAsked(
   served: InteractionsServed,
   interaction: Interaction,
 ): Promise<void> {
-  const { params } = interaction;
+  const { params, uid } = interaction;
+  const linksServed = linksOf(served);
+  if (linksServed !== undefined && isLinking(params)) {
+    await linkAllowAsked(ctx, linksServed, { uid, state: params['state'] });
+    return;
+  }
   await shown(ctx, served.pages, {
     allow: {
       client: await clientNamed(served.models, params),
@@ -265,6 +280,11 @@ export function interactionsOf(served: InteractionsServed): (ctx: KoaContextWith
   return (ctx, next) => {
     if (ctx.method === 'GET' && ctx.path === served.signInCallbackPath) {
       return signInCallbackAnswered(ctx, served);
+    }
+    const linksServed = linksOf(served);
+    const linked = linksServed === undefined ? undefined : linkAnswered(ctx, linksServed);
+    if (linked !== undefined) {
+      return linked;
     }
     const secret = ctx.method === 'GET' ? invitationSecretIn(ctx.path) : undefined;
     if (secret !== undefined) {

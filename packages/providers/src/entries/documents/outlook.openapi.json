@@ -3,11 +3,11 @@
   "info": {
     "title": "Outlook mail and calendar over Microsoft Graph",
     "version": "v1.0",
-    "description": "Twelve operations of Microsoft Graph v1.0 on the mail and the calendar of the person who connected, translated from Microsoft's OpenAPI description, which names no permission for any operation, with an oauth2 scheme at the endpoints of Microsoft's authorization server for work accounts. Each operation says only that it answers, since Microsoft's answers reach most of the schemas of Microsoft Graph."
+    "description": "Twelve operations of Microsoft Graph v1.0 on the mail and the calendar of one mailbox, the signed-in person's at the server it names and a named mailbox at a base address under /users, translated from Microsoft's OpenAPI description, which names no permission for any operation, with an oauth2 scheme at the endpoints of Microsoft's authorization server for work accounts. Each operation says only that it answers, since Microsoft's answers reach most of the schemas of Microsoft Graph."
   },
   "servers": [
     {
-      "url": "https://graph.microsoft.com/v1.0"
+      "url": "https://graph.microsoft.com/v1.0/me"
     }
   ],
   "security": [
@@ -16,7 +16,7 @@
     }
   ],
   "paths": {
-    "/me/messages": {
+    "/messages": {
       "get": {
         "tags": ["me.message"],
         "operationId": "me.ListMessages",
@@ -114,7 +114,7 @@
         }
       }
     },
-    "/me/messages/{message-id}": {
+    "/messages/{message-id}": {
       "get": {
         "tags": ["me.message"],
         "operationId": "me.GetMessages",
@@ -165,7 +165,7 @@
         }
       }
     },
-    "/me/mailFolders": {
+    "/mailFolders": {
       "get": {
         "tags": ["me.mailFolder"],
         "summary": "List mailFolders",
@@ -249,7 +249,7 @@
         }
       }
     },
-    "/me/calendarView": {
+    "/calendarView": {
       "get": {
         "tags": ["me.event"],
         "summary": "List calendarView",
@@ -343,7 +343,7 @@
         }
       }
     },
-    "/me/events": {
+    "/events": {
       "get": {
         "tags": ["me.event"],
         "summary": "List events",
@@ -439,7 +439,7 @@
         }
       }
     },
-    "/me/events/{event-id}": {
+    "/events/{event-id}": {
       "get": {
         "tags": ["me.event"],
         "summary": "Get event",
@@ -534,7 +534,7 @@
         ]
       }
     },
-    "/me/sendMail": {
+    "/sendMail": {
       "post": {
         "tags": ["me.user.Actions"],
         "summary": "Invoke action sendMail",
@@ -554,7 +554,7 @@
         }
       }
     },
-    "/me/messages/{message-id}/reply": {
+    "/messages/{message-id}/reply": {
       "post": {
         "tags": ["me.message"],
         "summary": "Invoke action reply",
@@ -611,7 +611,7 @@
         ]
       }
     },
-    "/me/events/{event-id}/cancel": {
+    "/events/{event-id}/cancel": {
       "post": {
         "tags": ["me.event"],
         "summary": "Invoke action cancel",

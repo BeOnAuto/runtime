@@ -1,4 +1,4 @@
-import { entryServing } from './connection-entry.ts';
+import { entryServing, type ConnectionEntry } from './connection-entry.ts';
 import type { AccountTypeSet, PlaybooksSet, RecordedConnectionEvent, WayChosen } from './connection-events.ts';
 import { scopesSaid, type RecordedConnection } from './connection.ts';
 
@@ -21,12 +21,22 @@ export function isASetting(event: RecordedConnectionEvent): event is Setting {
   return typesOfSettings.has(event.type);
 }
 
+function entryAt(entry: ConnectionEntry, baseUrl: string | null | undefined): ConnectionEntry {
+  if (baseUrl === undefined) {
+    return entry;
+  }
+  const { base_url: _replaced, ...elsewhere } = entry;
+  return baseUrl === null ? elsewhere : { ...elsewhere, base_url: baseUrl };
+}
+
 function wayChosenAfter<Kept extends Settable>(kept: Kept, { data }: WayChosen): Kept {
-  const { credential, account_type: accountType, says } = data;
+  const { credential, account_type: accountType, says, placeholders, base_url: baseUrl } = data;
   return {
     ...kept,
     connection: {
       ...kept.connection,
+      ...(placeholders === undefined ? {} : { placeholders }),
+      entry: entryAt(kept.connection.entry, baseUrl),
       credential,
       account_type: accountType ?? null,
       asked_scopes: scopesSaid(credential.scope, says),

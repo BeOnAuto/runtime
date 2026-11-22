@@ -1,5 +1,5 @@
 {
-  "layout": 4,
+  "layout": 5,
   "catalog": [
     {
       "name": "auth_invitations",
@@ -27,7 +27,7 @@
     },
     {
       "name": "auth_people",
-      "sql": "CREATE TABLE auth_people (person TEXT NOT NULL PRIMARY KEY, name TEXT, email_address TEXT, joined_at BIGINT NOT NULL, updated_at BIGINT NOT NULL)"
+      "sql": "CREATE TABLE auth_people (person TEXT NOT NULL PRIMARY KEY, name TEXT, email_address TEXT, joined_at BIGINT NOT NULL, updated_at BIGINT NOT NULL, email_verified BOOLEAN)"
     },
     {
       "name": "auth_signing_key",

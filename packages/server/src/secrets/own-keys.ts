@@ -23,7 +23,7 @@ import { keyHeldBy } from './secrets-logging.ts';
 
 export const ownKeysStream = 'runtime/own-keys';
 
-const OwnKeyPurposeSchema = Schema.Literals(['retry_state', 'content_address']);
+const OwnKeyPurposeSchema = Schema.Literals(['retry_state', 'content_address', 'link_code']);
 
 type OwnKeyPurpose = typeof OwnKeyPurposeSchema.Type;
 
@@ -200,9 +200,14 @@ export function contentAddressKeyKeptBy(
   return ownKeyKeptBy(services, { purpose: 'content_address', kept });
 }
 
+function linkCodeKeyKeptBy(services: OwnKeyServices, kept: SecretsKept): Effect.Effect<OwnKey, OwnKeyUnavailable> {
+  return ownKeyKeptBy(services, { purpose: 'link_code', kept });
+}
+
 export interface OwnKeysRead {
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: OwnKey;
+  readonly linkCodeKey: OwnKey;
 }
 
 export async function ownKeysOf(
@@ -216,6 +221,7 @@ export async function ownKeysOf(
       Effect.all({
         retryStateKeys: retryStateKeysKeptBy(services, kept),
         contentAddressKey: contentAddressKeyKeptBy(services, kept),
+        linkCodeKey: linkCodeKeyKeptBy(services, kept),
       }),
     );
   } catch (failure) {
