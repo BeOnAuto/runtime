@@ -127,6 +127,64 @@ export const EventMappingSchema = Schema.Struct({
     "One kind of delivery that is an event, and the fields of the delivery that hold the event's ID, time, place and data.",
 });
 
+export const ChatMappingSchema = Schema.Struct({
+  kind: Schema.Literals(['mention', 'direct_message', 'ambient']).annotate({
+    description:
+      'What kind of message it is: mention, a message that names the app; direct_message, a message written to the app alone; ambient, a message the app can read that does not name it. Auto takes an ambient message only where it is a reply in a thread.',
+  }),
+  when: ConditionsSchema.annotate({
+    description:
+      'Which deliveries are a message of this kind. Each key is a runtime expression into a field of the delivery, and its value lists the values that field may equal. Every condition must hold. Put null in a list to let a field that is missing or null pass.',
+  }),
+  id: ExpressionSchema.annotate({
+    description: "Where a delivery holds the message's ID within its conversation, as a runtime expression.",
+  }),
+  conversation: ExpressionSchema.annotate({
+    description: 'Where a delivery names the conversation the message was written in, such as a channel.',
+  }),
+  thread: Schema.optionalKey(
+    ExpressionSchema.annotate({
+      description:
+        'Where a delivery names the first message of the thread the message was written in, when it was written in one.',
+    }),
+  ),
+  sender: ExpressionSchema.annotate({ description: 'Where a delivery names the person who wrote the message.' }),
+  account: Schema.optionalKey(
+    Schema.Array(ExpressionSchema).check(Schema.isMinLength(1)).annotate({
+      description:
+        'Where a delivery names the account of the person who wrote the message, such as their workspace: one or more runtime expressions, read in order, the first that holds text naming it.',
+    }),
+  ),
+  text: ExpressionSchema.annotate({ description: 'Where a delivery holds the words of the message.' }),
+  time: Schema.optionalKey(
+    ExpressionSchema.annotate({
+      description:
+        'Where a delivery says when the message was written, in seconds since the epoch or as an RFC 3339 date-time.',
+    }),
+  ),
+  automatic: Schema.optionalKey(
+    WhereItAppliesSchema.annotate({
+      description:
+        'How to tell that an app or a bot wrote the message: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is no message a person wrote.',
+    }),
+  ),
+  changed: Schema.optionalKey(
+    WhereItAppliesSchema.annotate({
+      description:
+        'How to tell that a delivery reports no new message, such as an edit or a deletion: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is no message.',
+    }),
+  ),
+  shared: Schema.optionalKey(
+    ExpressionSchema.annotate({
+      description:
+        'Where a delivery says whether the conversation is shared with another organization, as a runtime expression into a field that is false where it is not. Where the field is missing, the conversation is taken as shared.',
+    }),
+  ),
+}).annotate({
+  description:
+    'One kind of message a person writes where the app reads, and the fields of the delivery that hold the message.',
+});
+
 export const HandshakeSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
     description: 'The arrival with which the service checks the address, as filter.when names an arrival',

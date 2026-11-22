@@ -105,6 +105,34 @@ describe('the conversations parts of the shipped providers', () => {
   });
 });
 
+function chatOf({ entry }: Pick<Provider, 'entry'>): NonNullable<Provider['entry']['chat']> {
+  return Option.getOrThrow(Option.fromNullishOr(entry.chat));
+}
+
+describe('the chat parts of the shipped providers', () => {
+  it('are written for Slack as a bot alone, and name only operations of its document: those that post act, those that read only read', () => {
+    const chatting = shipped.providers.filter(({ entry }) => entry.chat !== undefined);
+    const [slack] = chatting.map((provider) => [chatOf(provider), marksOfTheDocument(provider)] as const);
+    const [chat, marks] = Option.getOrThrow(Option.fromNullishOr(slack));
+    const tools = [
+      chat.answer.tool,
+      chat.answer.replace.tool,
+      chat.ephemeral?.tool,
+      chat.thread.tool,
+      chat.sender.tool,
+    ];
+
+    expect(chatting.map(({ entry }) => entry.name)).toEqual(['slack-bot']);
+    expect(tools.map((tool) => [tool, marks.get(String(tool))])).toEqual([
+      ['chat_postMessage', 'acts'],
+      ['chat_update', 'acts'],
+      ['chat_postEphemeral', 'acts'],
+      ['conversations_replies', 'reads'],
+      ['users_info', 'reads'],
+    ]);
+  });
+});
+
 function chatLimitedTo(readLimit: Readonly<Record<string, unknown>>) {
   const chat = Schema.decodeUnknownSync(ProviderEntrySchema)({
     ...tracker,

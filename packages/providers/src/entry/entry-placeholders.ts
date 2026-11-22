@@ -7,10 +7,16 @@ import {
   clientIdPlaceholder,
   isAnAddress,
   isRequired,
+  PlaceholdersSchema,
   setNamesOfEach,
   type Placeholder,
 } from './placeholders.ts';
 import { namesIn, templatedFieldsOf, type TemplatedField, type WayParts } from './templates.ts';
+
+export const EntryPlaceholdersSchema = PlaceholdersSchema.annotate({
+  description:
+    'The values that differ from one connection to the next, by name: each a description with a pattern and an example, or with choices',
+});
 
 type Placeholders = Readonly<Record<string, Placeholder>>;
 

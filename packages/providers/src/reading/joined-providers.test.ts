@@ -2,6 +2,7 @@ import { Result, Schema, SchemaIssue } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { AddedProviderEntrySchema, joinedProviders, ProviderEntrySchema, type ProviderEntry } from '../index.ts';
+import { chatOverASocket } from '../testing/chat-destinations.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
 import {
   aPost,
@@ -137,5 +138,10 @@ describe('a provider whoever runs the runtime adds whose service sends', () => {
       '/events/destinations/0/events',
     ]);
     expect(Result.isSuccess(Schema.decodeUnknownResult(ProviderEntrySchema)(reporting))).toBe(true);
+  });
+
+  it('is refused a chat, at the top of the entry and on its destination, which only an entry the runtime ships declares', () => {
+    expect(addedProblemsOf(chatOverASocket).map(([path]) => path)).toEqual(['/chat', '/events/destinations/0/chat']);
+    expect(Result.isSuccess(Schema.decodeUnknownResult(ProviderEntrySchema)(chatOverASocket))).toBe(true);
   });
 });

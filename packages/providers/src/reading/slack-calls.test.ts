@@ -48,6 +48,7 @@ const calls: readonly Called[] = [
     tool: 'assistant_threads_setStatus',
     input: { body: { channel_id: channel, thread_ts: ts, status: 'is thinking', loading_messages: ['Thinking…'] } },
   },
+  { tool: 'chat_postEphemeral', input: { body: { channel, user: 'U012AB3CD', text: 'Only you see this.' } } },
 ];
 
 const sentByEach: readonly Sent[] = [
@@ -68,6 +69,7 @@ const sentByEach: readonly Sent[] = [
     '',
     JSON.stringify({ channel_id: channel, thread_ts: ts, status: 'is thinking', loading_messages: ['Thinking…'] }),
   ],
+  ['POST', '/v1/chat.postEphemeral', '', JSON.stringify({ channel, user: 'U012AB3CD', text: 'Only you see this.' })],
 ];
 
 const readingOnInWords: unknown = expect.stringMatching(
@@ -186,19 +188,19 @@ describe('the Slack Bot provider', () => {
     ]);
   });
 
-  it('offers the bot its twelve methods as tools, those that read marked read-only and those that post, update, react or show a status not', async () => {
+  it('offers the bot its thirteen methods as tools, those that read marked read-only and those that post, update, react or show a status not', async () => {
     const [listed] = await Effect.runPromise(listedBy(await asTheBot()));
+    const acting = new Set([
+      'chat_postMessage',
+      'chat_update',
+      'reactions_add',
+      'assistant_threads_setStatus',
+      'chat_postEphemeral',
+    ]);
 
     expect(listed).toMatchObject({
       name: 'slack-bot',
-      tools: calls.map(({ tool }) => ({
-        name: tool,
-        annotations: {
-          readOnlyHint: !['chat_postMessage', 'chat_update', 'reactions_add', 'assistant_threads_setStatus'].includes(
-            tool,
-          ),
-        },
-      })),
+      tools: calls.map(({ tool }) => ({ name: tool, annotations: { readOnlyHint: !acting.has(tool) } })),
     });
   });
 

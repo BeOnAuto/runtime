@@ -56,6 +56,56 @@ conversations:
       - enterprise_is_restricted
       - org_login_required
       - accesslimited
+chat:
+  answer:
+    tool: chat_postMessage
+    with:
+      body:
+        channel: '{{ conversation }}'
+        thread_ts: '{{ thread | default: id }}'
+        text: '{{ message }}'
+    sent: /ts
+    replace:
+      tool: chat_update
+      with:
+        body:
+          channel: '{{ conversation }}'
+          ts: '{{ sent.id }}'
+          text: '{{ message }}'
+  ephemeral:
+    tool: chat_postEphemeral
+    with:
+      body:
+        channel: '{{ conversation }}'
+        user: '{{ sender }}'
+        thread_ts: '{{ thread | default: id }}'
+        text: '{{ message }}'
+  thread:
+    tool: conversations_replies
+    with:
+      channel: '{{ conversation }}'
+      ts: '{{ thread | default: id }}'
+    read:
+      list: /messages
+      order: oldest_first
+      each:
+        id: /ts
+        sender: /user
+        text: /text
+        time: /ts
+        automatic: /bot_id
+  sender:
+    tool: users_info
+    with:
+      user: '{{ sender }}'
+    email: /user/profile/email
+    email_verified: /user/is_email_confirmed
+    account: /user/team_id
+    active:
+      /user/deleted: [false, null]
+      /user/is_bot: [false, null]
+      /user/is_invited_user: [false, null]
+      /user/is_stranger: [false, null]
 events:
   types:
     - type: com.slack.message
@@ -134,6 +184,57 @@ events:
           automatic: $message.payload#/payload/event/bot_id
           changed: $message.payload#/payload/event/hidden
           actor: $message.payload#/payload/event/bot_id
+      chat:
+        - kind: mention
+          when:
+            '$message.payload#/type': [events_api]
+            '$message.payload#/payload/type': [event_callback]
+            '$message.payload#/payload/event/type': [app_mention]
+            '$message.payload#/payload/event/subtype': [null]
+          id: $message.payload#/payload/event/ts
+          conversation: $message.payload#/payload/event/channel
+          thread: $message.payload#/payload/event/thread_ts
+          sender: $message.payload#/payload/event/user
+          account: ['$message.payload#/payload/event/user_team', '$message.payload#/payload/event/team']
+          text: $message.payload#/payload/event/text
+          time: $message.payload#/payload/event/ts
+          automatic: $message.payload#/payload/event/bot_id
+          changed: $message.payload#/payload/event/hidden
+          shared: $message.payload#/payload/is_ext_shared_channel
+        - kind: direct_message
+          when:
+            '$message.payload#/type': [events_api]
+            '$message.payload#/payload/type': [event_callback]
+            '$message.payload#/payload/event/type': [message]
+            '$message.payload#/payload/event/channel_type': [im]
+            '$message.payload#/payload/event/subtype': [null]
+          id: $message.payload#/payload/event/ts
+          conversation: $message.payload#/payload/event/channel
+          thread: $message.payload#/payload/event/thread_ts
+          sender: $message.payload#/payload/event/user
+          account: ['$message.payload#/payload/event/user_team', '$message.payload#/payload/event/team']
+          text: $message.payload#/payload/event/text
+          time: $message.payload#/payload/event/ts
+          automatic: $message.payload#/payload/event/bot_id
+          changed: $message.payload#/payload/event/hidden
+          shared: $message.payload#/payload/is_ext_shared_channel
+        - kind: ambient
+          when:
+            '$message.payload#/type': [events_api]
+            '$message.payload#/payload/type': [event_callback]
+            '$message.payload#/payload/event/type': [message]
+            '$message.payload#/payload/event/channel_type': [channel, group]
+            '$message.payload#/payload/event/subtype': [null]
+          id: $message.payload#/payload/event/ts
+          conversation: $message.payload#/payload/event/channel
+          thread: $message.payload#/payload/event/thread_ts
+          sender: $message.payload#/payload/event/user
+          account: ['$message.payload#/payload/event/user_team', '$message.payload#/payload/event/team']
+          text: $message.payload#/payload/event/text
+          time: $message.payload#/payload/event/ts
+          automatic: $message.payload#/payload/event/bot_id
+          changed: $message.payload#/payload/event/hidden
+          shared: $message.payload#/payload/is_ext_shared_channel
       connection:
         account: $message.payload#/payload/team_id
 credentials:

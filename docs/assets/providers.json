@@ -1996,6 +1996,10 @@
         {
           "name": "assistant_threads_setStatus",
           "mark": "acts"
+        },
+        {
+          "name": "chat_postEphemeral",
+          "mark": "acts"
         }
       ],
       "handles_money": false

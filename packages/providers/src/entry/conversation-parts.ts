@@ -1,10 +1,8 @@
-import type { RenderClock } from '@on.auto/definitions/template';
-import { pointerIssues, templatesIssues, textAt, type TemplateSet } from '@on.auto/definitions/tool-blocks';
+import { pointerIssues, textAt, type TemplateSet } from '@on.auto/definitions/tool-blocks';
 import { ClientSourceSchema, type AnsweredOnce, type CalledOnce, type ServerEntrySchema } from '@on.auto/tool-servers';
-import { isToolName, toolNameShape } from '@on.auto/tool-servers/policy';
-import { JsonPointer, Option, Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
-const ArgumentsSchema = Schema.Record(Schema.String, Schema.Json);
+import { ArgumentsSchema, argumentIssuesOver, issuesOf, noLines, toolIssues, type Placed } from './part-checks.ts';
 
 const variablesRead = 'to, sent.conversation, sent.id, message, reply.id and reply.to';
 
@@ -98,37 +96,8 @@ export const conversationTemplates: TemplateSet = {
 
 type PartIssue = Schema.FilterIssue;
 
-interface Placed {
-  readonly pointer: string;
-  readonly detail: string;
-}
-
-const noLines: ReadonlyMap<string, number> = new Map();
-
-const checkedOn: RenderClock = () => performance.now();
-
-function pathOf(pointer: string): readonly string[] {
-  return pointer
-    .split('/')
-    .slice(1)
-    .map((token) => JsonPointer.unescapeToken(token));
-}
-
-function issuesOf(placed: readonly Placed[]): readonly PartIssue[] {
-  return placed.map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
-}
-
-function toolIssues(pointer: string, tool: string): readonly Placed[] {
-  return isToolName(tool) ? [] : [{ pointer, detail: `Expected ${toolNameShape}` }];
-}
-
 function argumentIssues(pointer: string, written: Conversations['reply']['with']): readonly Placed[] {
-  return templatesIssues(conversationTemplates, written, {
-    lines: noLines,
-    pointer,
-    inputSchema: undefined,
-    clock: checkedOn,
-  });
+  return argumentIssuesOver(conversationTemplates, pointer, written);
 }
 
 type FailureCodes = NonNullable<(typeof ServerEntrySchema)['Type']['failure_codes']>;

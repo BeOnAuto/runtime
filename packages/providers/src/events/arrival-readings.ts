@@ -118,7 +118,7 @@ function isOneOf(value: unknown, values: readonly (string | null)[]): boolean {
   return (value ?? null) === null ? values.includes(null) : typeof value === 'string' && values.includes(value);
 }
 
-function holds(arrival: Arrival, when: Conditions): boolean {
+export function holds(arrival: Arrival, when: Conditions): boolean {
   const conditions = Object.entries(when);
   return (
     conditions.length > 0 &&
@@ -128,7 +128,7 @@ function holds(arrival: Arrival, when: Conditions): boolean {
   );
 }
 
-function applies(arrival: Arrival, declared: string | Conditions | undefined): boolean {
+export function applies(arrival: Arrival, declared: string | Conditions | undefined): boolean {
   if (declared === undefined) {
     return false;
   }

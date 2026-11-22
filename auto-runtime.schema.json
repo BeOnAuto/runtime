@@ -748,6 +748,179 @@
                 "additionalProperties": false,
                 "description": "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies"
               },
+              "chat": {
+                "type": "object",
+                "properties": {
+                  "answer": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that posts a message in the thread of a person's message, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                      },
+                      "sent": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the tool answered, to the id of the message it posted"
+                      },
+                      "replace": {
+                        "type": "object",
+                        "properties": {
+                          "tool": {
+                            "type": "string",
+                            "description": "The tool that replaces the words of a message Auto posted, named as the server lists it"
+                          },
+                          "with": {
+                            "type": "object",
+                            "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts, and over sent.id as well, the message Auto posted"
+                          }
+                        },
+                        "required": ["tool", "with"],
+                        "additionalProperties": false,
+                        "description": "How Auto turns a message it posted, such as one that says it is working, into its answer"
+                      }
+                    },
+                    "required": ["tool", "with", "sent", "replace"],
+                    "additionalProperties": false,
+                    "description": "How Auto posts its answer in the thread of a person's message"
+                  },
+                  "ephemeral": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that posts a line only one person sees, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                      }
+                    },
+                    "required": ["tool", "with"],
+                    "additionalProperties": false,
+                    "description": "How Auto posts a line that only the person who wrote the message sees, where the provider has such a message"
+                  },
+                  "thread": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that reads the messages of a thread, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                      },
+                      "read": {
+                        "type": "object",
+                        "properties": {
+                          "list": {
+                            "type": "string",
+                            "description": "A JSON Pointer into what the tool answered, to the thread's messages"
+                          },
+                          "order": {
+                            "type": "string",
+                            "enum": ["oldest_first", "newest_first"],
+                            "description": "The order the tool lists them in"
+                          },
+                          "each": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "A JSON Pointer within each message to its identity"
+                              },
+                              "sender": {
+                                "type": "string",
+                                "description": "A JSON Pointer within each message to who wrote it"
+                              },
+                              "text": {
+                                "type": "string",
+                                "description": "A JSON Pointer within each message to its words"
+                              },
+                              "time": {
+                                "type": "string",
+                                "description": "A JSON Pointer within each message to when it was written: RFC 3339 text, or seconds since the epoch"
+                              },
+                              "automatic": {
+                                "type": "string",
+                                "description": "A JSON Pointer within each message to what it holds only when an app posted it"
+                              }
+                            },
+                            "required": ["id", "sender", "text"],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": ["list", "order", "each"],
+                        "additionalProperties": false,
+                        "description": "Where, in what the tool answered, the thread's messages are"
+                      }
+                    },
+                    "required": ["tool", "with", "read"],
+                    "additionalProperties": false,
+                    "description": "How Auto reads the messages of the thread a person wrote in"
+                  },
+                  "sender": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that reads a person at the service, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                      },
+                      "email": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the tool answered, to the person's email address"
+                      },
+                      "email_verified": {
+                        "type": "string",
+                        "description": "A JSON Pointer to the boolean that is true where the service confirmed that the address is the person's; left out where the service gives only addresses it confirmed"
+                      },
+                      "account": {
+                        "type": "string",
+                        "description": "A JSON Pointer to the id of the account the person belongs to, such as a workspace"
+                      },
+                      "active": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "boolean"
+                                  }
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "minItems": 1
+                        },
+                        "description": "Conditions on what the tool answered that hold only for an active person of the account, and not for one who was deactivated, has not joined yet or is an app: each a JSON Pointer with the values it may equal, every one of which holds. Put null among the values to let a field that is missing or null pass"
+                      }
+                    },
+                    "required": ["tool", "with", "email"],
+                    "additionalProperties": false,
+                    "description": "How Auto reads the person who wrote a message, to know who they are"
+                  }
+                },
+                "required": ["answer", "thread", "sender"],
+                "additionalProperties": false,
+                "description": "How Auto answers a person who writes to it where the provider's app reads, for a provider whose destination says under chat which messages a person wrote. Only a provider that ships with the runtime can declare it"
+              },
               "renders": {
                 "type": "string",
                 "minLength": 1,
@@ -1314,6 +1487,128 @@
                           },
                           "minItems": 1,
                           "description": "Which deliveries are events the service reports. A delivery is the event of the first item it matches. Only a provider that ships with the runtime can declare them."
+                        },
+                        "chat": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": ["mention", "direct_message", "ambient"],
+                                "description": "What kind of message it is: mention, a message that names the app; direct_message, a message written to the app alone; ambient, a message the app can read that does not name it. Auto takes an ambient message only where it is a reply in a thread."
+                              },
+                              "when": {
+                                "type": "object",
+                                "additionalProperties": {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "minItems": 1
+                                },
+                                "description": "Which deliveries are a message of this kind. Each key is a runtime expression into a field of the delivery, and its value lists the values that field may equal. Every condition must hold. Put null in a list to let a field that is missing or null pass."
+                              },
+                              "id": {
+                                "type": "string",
+                                "description": "Where a delivery holds the message's ID within its conversation, as a runtime expression."
+                              },
+                              "conversation": {
+                                "type": "string",
+                                "description": "Where a delivery names the conversation the message was written in, such as a channel."
+                              },
+                              "thread": {
+                                "type": "string",
+                                "description": "Where a delivery names the first message of the thread the message was written in, when it was written in one."
+                              },
+                              "sender": {
+                                "type": "string",
+                                "description": "Where a delivery names the person who wrote the message."
+                              },
+                              "account": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 1,
+                                "description": "Where a delivery names the account of the person who wrote the message, such as their workspace: one or more runtime expressions, read in order, the first that holds text naming it."
+                              },
+                              "text": {
+                                "type": "string",
+                                "description": "Where a delivery holds the words of the message."
+                              },
+                              "time": {
+                                "type": "string",
+                                "description": "Where a delivery says when the message was written, in seconds since the epoch or as an RFC 3339 date-time."
+                              },
+                              "automatic": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 1
+                                    }
+                                  }
+                                ],
+                                "description": "How to tell that an app or a bot wrote the message: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is no message a person wrote."
+                              },
+                              "changed": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "minItems": 1
+                                    }
+                                  }
+                                ],
+                                "description": "How to tell that a delivery reports no new message, such as an edit or a deletion: a runtime expression into a field that holds a value only then, or conditions written like those in when. Such a delivery is no message."
+                              },
+                              "shared": {
+                                "type": "string",
+                                "description": "Where a delivery says whether the conversation is shared with another organization, as a runtime expression into a field that is false where it is not. Where the field is missing, the conversation is taken as shared."
+                              }
+                            },
+                            "required": ["kind", "when", "id", "conversation", "sender", "text"],
+                            "additionalProperties": false,
+                            "description": "One kind of message a person writes where the app reads, and the fields of the delivery that hold the message."
+                          },
+                          "minItems": 1,
+                          "description": "Which deliveries are messages a person wrote where the app reads, and of which kind. A delivery is the message of the first item it matches. Only a provider that ships with the runtime can declare them."
                         },
                         "connection": {
                           "type": "object",

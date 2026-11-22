@@ -3,11 +3,11 @@ import { Schema } from 'effect';
 
 import { EventsSchema } from '../events/event-destinations.ts';
 import { eventIssuesOf } from '../events/event-entries.ts';
+import { chatIssuesOf, ChatSchema } from './chat-parts.ts';
 import { conversationIssuesOf, ConversationsSchema } from './conversation-parts.ts';
 import { CredentialWaySchema, repeatedWayIssuesOf } from './credential-ways.ts';
-import { placementIssuesOf } from './entry-placeholders.ts';
+import { EntryPlaceholdersSchema, placementIssuesOf } from './entry-placeholders.ts';
 import { isADocumentBesideTheEntries, writtenIssuesOf } from './entry-values.ts';
-import { PlaceholdersSchema } from './placeholders.ts';
 import { aliasIssuesOf, AliasesSchema, ReplacesSchema, replacedIssuesOf } from './provider-names.ts';
 
 const { type, url, document, base_url, headers, query_params, request_id, marks, failure_codes } =
@@ -63,6 +63,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
       'For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate',
   }),
   conversations: Schema.optionalKey(ConversationsSchema),
+  chat: Schema.optionalKey(ChatSchema),
   renders: Schema.optionalKey(
     NamedSchema.annotate({
       description:
@@ -70,12 +71,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     }),
   ),
   events: Schema.optionalKey(EventsSchema),
-  placeholders: Schema.optionalKey(
-    PlaceholdersSchema.annotate({
-      description:
-        'The values that differ from one connection to the next, by name: each a description with a pattern and an example, or with choices',
-    }),
-  ),
+  placeholders: Schema.optionalKey(EntryPlaceholdersSchema),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
       'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization or jwt_bearer, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
@@ -174,6 +170,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...markedIssuesOf(entry),
     ...codedIssuesOf(entry),
     ...conversationIssuesOf(entry.conversations, entry.failure_codes),
+    ...chatIssuesOf(entry.chat, entry.events),
     ...eventIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
@@ -194,7 +191,22 @@ function eventsOfAnAddedProvider(field: string): string {
   return `Expected no ${field}: only a provider that ships with the runtime can declare the events its service reports, because an event would start workflows with what its delivery carries. A provider added in the configuration file can only tell Auto to read the replies now`;
 }
 
-function addedIssuesOf({ document: written, credentials, events }: ProviderEntry): readonly EntryIssue[] {
+const chatOfAnAddedProvider =
+  'Expected no chat: only a provider that ships with the runtime can declare a chat, because what a person writes there would have Auto act through the connection. A provider added in the configuration file can only tell Auto to read the replies now';
+
+function chatsOfAnAddedProvider({ chat, events }: ProviderEntry): readonly EntryIssue[] {
+  return [
+    ...(chat === undefined ? [] : [{ path: ['chat'], issue: chatOfAnAddedProvider }]),
+    ...(events?.destinations ?? []).flatMap((destination, index) =>
+      destination.chat === undefined
+        ? []
+        : [{ path: ['events', 'destinations', index, 'chat'], issue: chatOfAnAddedProvider }],
+    ),
+  ];
+}
+
+function addedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
+  const { document: written, credentials, events } = entry;
   return [
     ...(isADocumentBesideTheEntries(written) ? [{ path: ['document'], issue: documentByItsAddress }] : []),
     ...credentials.flatMap(({ gateway }, index) =>
@@ -211,6 +223,7 @@ function addedIssuesOf({ document: written, credentials, events }: ProviderEntry
         ? []
         : [{ path: ['events', 'destinations', index, 'events'], issue: eventsOfAnAddedProvider('events') }],
     ),
+    ...chatsOfAnAddedProvider(entry),
   ];
 }
 

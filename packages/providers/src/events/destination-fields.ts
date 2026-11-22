@@ -3,6 +3,7 @@ import { Schema } from 'effect';
 
 import { ValueNameSchema } from '../keys/key-fields.ts';
 import {
+  ChatMappingSchema,
   ConnectionSchema,
   EventMappingSchema,
   FilterSchema,
@@ -53,6 +54,12 @@ export const DestinationFieldsSchema = Schema.Struct({
         'Which deliveries are events the service reports. A delivery is the event of the first item it matches. Only a provider that ships with the runtime can declare them.',
     }),
   ),
+  chat: Schema.optionalKey(
+    Schema.Array(ChatMappingSchema).check(Schema.isMinLength(1)).annotate({
+      description:
+        'Which deliveries are messages a person wrote where the app reads, and of which kind. A delivery is the message of the first item it matches. Only a provider that ships with the runtime can declare them.',
+    }),
+  ),
   connection: Schema.optionalKey(ConnectionSchema),
   kind: Schema.optionalKey(
     Schema.Literals(['azure-event-hubs', 'google-cloud-pubsub', 'amazon-eventbridge']).annotate({
@@ -82,7 +89,7 @@ export type Destination = typeof DestinationFieldsSchema.Type;
 
 export type DestinationIssue = Schema.FilterIssue;
 
-type Field = Exclude<keyof Destination, 'type' | 'filter' | 'events'>;
+type Field = Exclude<keyof Destination, 'type' | 'filter' | 'events' | 'chat'>;
 
 type Shape = 'webhook per subscription' | 'webhook per app' | 'queue per subscription' | 'queue per app' | 'websocket';
 

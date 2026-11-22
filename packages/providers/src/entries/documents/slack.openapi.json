@@ -3,7 +3,7 @@
   "info": {
     "title": "Slack Web API",
     "version": "2026-11-04",
-    "description": "Twelve Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the bot token (xoxb-) of an app installed in the workspace is sent as Authorization: Bearer."
+    "description": "Thirteen Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the bot token (xoxb-) of an app installed in the workspace is sent as Authorization: Bearer."
   },
   "externalDocs": {
     "url": "https://docs.slack.dev/apis/web-api"
@@ -842,6 +842,62 @@
                   }
                 },
                 "required": ["channel_id", "thread_ts", "status"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["chat:write"]
+          }
+        ]
+      }
+    },
+    "/chat.postEphemeral": {
+      "post": {
+        "operationId": "chat_postEphemeral",
+        "description": "Posts a message in a channel that only one person there sees. Slack does not keep it: the person no longer sees it once they reload Slack or open it on another device.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/chat.postEphemeral"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "description": "The ID of the channel to post in."
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "The ID of the person who sees the message. They must be in the channel."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The words of the message, plain or formatted with mrkdwn."
+                  },
+                  "thread_ts": {
+                    "type": "string",
+                    "description": "The timestamp of a thread's first message, to post the message in that thread."
+                  }
+                },
+                "required": ["channel", "user", "text"],
                 "additionalProperties": false
               }
             }

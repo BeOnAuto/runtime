@@ -113,18 +113,18 @@ function whereItAppliesIssuesOf(
     : expressionIssuesAt(path, declared, place);
 }
 
-function eventPlaceOf(destination: Destination): ExpressionPlace {
+function readPlaceOf(destination: Destination, what: string): ExpressionPlace {
   return transportOf(destination) === 'request'
     ? {
         transport: 'request',
         sources: ['body'],
-        because: 'since an event is read from the body alone, which the proof covers',
+        because: `since ${what} is read from the body alone, which the proof covers`,
       }
-    : {
-        transport: 'message',
-        sources: ['payload'],
-        because: "since an event is read from the message's payload alone",
-      };
+    : { transport: 'message', sources: ['payload'], because: `since ${what} is read from the message's payload alone` };
+}
+
+function eventPlaceOf(destination: Destination): ExpressionPlace {
+  return readPlaceOf(destination, 'an event');
 }
 
 const unprovenEvents =
@@ -185,6 +185,43 @@ function eventIssuesOf(destination: Destination): readonly DestinationIssue[] {
   ];
 }
 
+type DeclaredChat = NonNullable<Destination['chat']>[number];
+
+const placesOfAChatMessage: readonly ('id' | 'conversation' | 'thread' | 'sender' | 'text' | 'time' | 'shared')[] = [
+  'id',
+  'conversation',
+  'thread',
+  'sender',
+  'text',
+  'time',
+  'shared',
+];
+
+function chatMappingIssuesOf(destination: Destination, declared: DeclaredChat, index: number) {
+  const at = ['chat', index];
+  const place = readPlaceOf(destination, 'what a person wrote');
+  return [
+    ...conditionIssuesOf([...at, 'when'], declared.when, place),
+    ...placesOfAChatMessage.flatMap((field) => expressionIssuesAt([...at, field], declared[field], place)),
+    ...(declared.account ?? []).flatMap((part, each) => expressionIssuesAt([...at, 'account', each], part, place)),
+    ...whereEachApplies.flatMap((field) => whereItAppliesIssuesOf([...at, field], declared[field], place)),
+  ];
+}
+
+const unprovenChat =
+  'Expected chat only on a websocket, or on a webhook whose verify proves every byte of the body, as standard-webhooks does, and as hmac does where it signs {payload}. A secret or a signed token in a header proves who sent a delivery but not that its body is theirs, and nothing proves what a queue holds, so Auto cannot know that a person wrote what such a destination delivers';
+
+function chatIssuesOf(destination: Destination): readonly DestinationIssue[] {
+  const { chat } = destination;
+  if (chat === undefined) {
+    return [];
+  }
+  return [
+    ...chat.flatMap((declared, index) => chatMappingIssuesOf(destination, declared, index)),
+    ...(isProvenWhole(destination) ? [] : [{ path: ['chat'], issue: unprovenChat }]),
+  ];
+}
+
 const onlyAnHmacKeys =
   "Expected hmac only where the destination's proof is hmac, whose hash, encoding and secret key it";
 
@@ -232,6 +269,7 @@ export function arrivalIssuesOf(destination: Destination): readonly DestinationI
     ...filterIssuesOf(destination),
     ...replyIssuesOf(destination),
     ...eventIssuesOf(destination),
+    ...chatIssuesOf(destination),
     ...handshakeIssuesOf(destination),
     ...connectionIssuesOf(destination),
     ...openIssuesOf(destination),
