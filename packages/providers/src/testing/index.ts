@@ -18,6 +18,7 @@ export {
   appLevelToken,
   cardMoved,
   ofEachSubscription,
+  ofTheApp,
   overASocket,
   overASocketCarryingReplies,
   overTheBoardsSocket,

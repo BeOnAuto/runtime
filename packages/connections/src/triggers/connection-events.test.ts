@@ -1,73 +1,11 @@
-import type { PlaybookAddress } from '@on.auto/operations';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
-import type { ToolServer } from '@on.auto/tool-servers';
-import { Effect, Function } from 'effect';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { addedFact, recordedIn, registryOf } from '../testing/loop-registries.ts';
-import { shipped } from '../testing/shipped-additions.ts';
-import { connectionEventsOver, servedConnectionOf } from './connection-events.ts';
+import { servedConnectionOf } from './connection-events.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
-
-const reporter = shipped.providers.find(({ entry }) => entry.events?.types !== undefined);
-
-const declared = reporter?.entry.events?.types ?? [];
-
-const provider = reporter?.entry.name ?? null;
-
-const listed = { type: 'mcp', record_content: false, playbooks: ['alpha'], tools: [] } as const;
-
-const servers: readonly ToolServer[] = [
-  { ...listed, name: 'reports', connection: 'c-1', provider },
-  {
-    ...listed,
-    name: 'mended',
-    connection: 'c-2',
-    provider,
-    unavailable: 'The connection is broken',
-    because: 'connection_broken',
-  },
-  { ...listed, name: 'by-hand', connection: 'c-3', provider: null },
-  { ...listed, name: 'in-the-file', provider },
-];
-
-function listing() {
-  const asked: string[] = [];
-  const listServers = (playbook: PlaybookAddress, named: string) =>
-    Effect.sync(() => {
-      asked.push(`${playbook.playbook}/${named}`);
-      return servers.filter(({ name }) => name === named);
-    });
-  return { listServers, asked: () => [...asked] };
-}
-
-describe('what a connection reports, for the triggers of a playbook it serves', () => {
-  it('is what its provider’s entry declares, whether it is broken, what the playbook’s workflows listen to through it, and that this runtime hears none of it yet', async () => {
-    const { listServers, asked } = listing();
-    const listened = [
-      { workflow: 'on-items', connection: 'reports', type: 'opened' },
-      { workflow: 'on-boards', connection: 'mended', type: 'closed', subject: 'board-1' },
-    ];
-    const events = connectionEventsOver(listServers, Effect.succeed(shipped), () => Effect.succeed(listened));
-
-    const reportings = await Effect.runPromise(
-      Effect.forEach(['reports', 'mended', 'by-hand', 'in-the-file', 'unknown'], (name) =>
-        events.reportingOf(alpha, name),
-      ),
-    );
-
-    expect(declared).not.toEqual([]);
-    expect(reportings).toEqual([
-      { broken: false, types: declared, heard: Function.constUndefined, listenedBy: [listened[0]] },
-      { broken: true, types: declared, heard: Function.constUndefined, listenedBy: [listened[1]] },
-      { broken: false, types: [], heard: Function.constUndefined, listenedBy: [] },
-      undefined,
-      undefined,
-    ]);
-    expect(asked()).toEqual(['alpha/reports', 'alpha/mended', 'alpha/by-hand', 'alpha/in-the-file', 'alpha/unknown']);
-  });
-});
 
 const opened = 'com.example.ticket.opened';
 
@@ -95,6 +33,24 @@ const reporting = providersOf({
 
 const reported = [{ type: opened, subject: 'board-7' }, { type: opened }, { type: 'com.example.ticket.closed' }];
 
+const ada = { id: 'person:ada', name: 'Ada' };
+
+function connectedFact(connection: string) {
+  return { type: 'connection_connected', data: { connection, connected_by: ada } } as const;
+}
+
+const brokenFact = {
+  type: 'connection_broken',
+  data: { connection: 'connection-1', kind: 'credential_refused', reason: 'Refused' },
+} as const;
+
+const recordedWhile = {
+  pending: [],
+  broken: [connectedFact('connection-1'), brokenFact],
+  connected: [connectedFact('connection-1')],
+  'connected again after it broke': [connectedFact('connection-1'), brokenFact, connectedFact('connection-1')],
+} as const;
+
 async function servedOver() {
   const registry = await registryOf([
     '2026-11-20T08:00:00.000Z',
@@ -103,6 +59,10 @@ async function servedOver() {
       addedFact('connection-2', 'notes', null),
       addedFact('connection-3', 'sales-tracker', 'tracker', { playbooks: ['sales'] }),
       addedFact('connection-4', 'gone', 'tracker'),
+      connectedFact('connection-1'),
+      connectedFact('connection-2'),
+      connectedFact('connection-3'),
+      connectedFact('connection-4'),
       { type: 'connection_removed', data: { connection: 'connection-4' } },
     ],
   ]);
@@ -138,6 +98,23 @@ describe('the connection an event a delivery carries is taken in through', () =>
         topicsThrough('acme', 'billing'),
       ]),
     ).toEqual(['not served', 'not served', 'not served', 'not served']);
+  });
+
+  it.each([
+    ['pending', false],
+    ['broken', false],
+    ['connected', true],
+    ['connected again after it broke', true],
+  ] as const)('is served only while connected: for a connection %s, %s', async (state, served) => {
+    const registry = await registryOf([
+      '2026-11-20T08:00:00.000Z',
+      [addedFact('connection-1', 'tracker', 'tracker'), ...recordedWhile[state]],
+    ]);
+    const servedOf = servedConnectionOf({ registry, providers: reporting });
+
+    const answer = await Effect.runPromise(servedOf({ ...alpha, connection: 'tracker' }));
+
+    expect(answer !== undefined).toBe(served);
   });
 });
 

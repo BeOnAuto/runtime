@@ -104,9 +104,9 @@ describe.each(prepared)('the filters of a view on $name instances', ({ context }
     });
   });
 
-  it('take an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true', () => {
+  it('take an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true, which takes a person’s too', () => {
     expect([eachTaking(context, reported), eachTaking(context, { ...reported, automatic: true })]).toEqual([
-      [notTaken, taken, notTaken],
+      [notTaken, taken, taken],
       [notTaken, notTaken, taken],
     ]);
   });

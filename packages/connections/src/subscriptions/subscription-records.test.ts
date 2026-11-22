@@ -10,7 +10,7 @@ import {
   eventSubscriptionStreamOf,
   type RecordedEventSubscriptionEvent,
 } from './subscription-facts.ts';
-import { subscriptionRecordsOf, subscriptionsInAPage } from './subscription-records.ts';
+import { recordedSubscriptionAt, subscriptionRecordsOf, subscriptionsInAPage } from './subscription-records.ts';
 import { eventSubscriptions } from './subscription-rows.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -177,5 +177,24 @@ describe('what the record can hold', () => {
     const parts = ['C0123', 'é'.repeat(128), '', 'é'.repeat(129), 'C\u0000'];
 
     expect(parts.map((part) => holds(part))).toEqual([true, true, false, false, false]);
+  });
+});
+
+describe('one subscription read by its key', () => {
+  it('is the row of that key, made or removed, and none where no row of the playbook holds the key', async () => {
+    const { ledger, records } = recordsOver();
+    await at(records.made(alpha, chat, madeThroughAWebhook));
+    await at(records.made(alpha, repository, madeThroughAWebhook));
+    await at(records.removed(alpha, repository));
+
+    const read = await at(
+      Effect.all([
+        recordedSubscriptionAt(ledger, alpha, chat),
+        recordedSubscriptionAt(ledger, alpha, repository),
+        recordedSubscriptionAt(ledger, beta, chat),
+      ]),
+    );
+
+    expect(read).toEqual([{ ...chat, made: madeThroughAWebhook }, repository, undefined]);
   });
 });

@@ -1,4 +1,4 @@
-import type { FinishesLater, RunContext, Standing } from '@on.auto/definitions';
+import type { FinishesLater, RunContext, Standing, StandingRequest } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
 import type { QueuedStartReads, StartAnswer, WorkflowHost } from '@on.auto/workflow-host';
 import { Effect, Random, type Schema } from 'effect';
@@ -22,12 +22,20 @@ const notNow = 'The workflow cannot start now; try again shortly';
 
 const mostSeed = 2_147_483_647;
 
-export function queuedStandingOf({ queued }: Pick<WorkflowStarts, 'queued'>): Standing {
-  return ({ org, definition }) =>
-    Effect.map(queued.queuedStartsOf({ org, definition }), ({ queued: count, nextDueAt }) => ({
-      queued: count,
-      next_queued_start: nextDueAt === null ? null : new Date(nextDueAt).toISOString(),
-    }));
+export function queuedStandingOf(
+  { queued }: Pick<WorkflowStarts, 'queued'>,
+  triggersOf: (request: StandingRequest) => Effect.Effect<readonly Schema.JsonObject[] | undefined>,
+): Standing {
+  return (request) =>
+    Effect.zipWith(
+      queued.queuedStartsOf({ org: request.org, definition: request.definition }),
+      triggersOf(request),
+      ({ queued: count, nextDueAt }, triggers) => ({
+        queued: count,
+        next_queued_start: nextDueAt === null ? null : new Date(nextDueAt).toISOString(),
+        ...(triggers === undefined ? {} : { triggers }),
+      }),
+    );
 }
 
 function finishedLaterOr(answer: StartAnswer): Effect.Effect<FinishesLater, Conflict> {

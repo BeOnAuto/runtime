@@ -64,14 +64,14 @@ describe('an event the connection’s own account caused', () => {
 });
 
 describe('an event another account caused, through a connection that knows the account it acts as', () => {
-  it('is taken as any event is, unmarked, and a trigger that asks for own events alone filters it out', async () => {
+  it('is taken as any event is, unmarked, and a trigger that asks for own events too takes it as well', async () => {
     const { database, workflows, takenIn } = await anIntake(servedActingAs(itsAccount));
     await workflows.saved('mine', { ...onTheBoard, own: true });
 
     const before = await takenIn(arrivalOf(bySomeoneElse));
     await workflows.saved('triage', onTheBoard);
 
-    expect([before, await takenIn(arrivalOf(bySomeoneElse))]).toEqual([nothingTaken('filtered'), taken]);
+    expect([before, await takenIn(arrivalOf(bySomeoneElse))]).toEqual([taken, taken]);
     expect((await recordedIn(database)).map((recorded) => recorded?.data.event)).toEqual([
       { specversion: '1.0', ...ticket, id: 'T-2', source },
     ]);
@@ -147,5 +147,18 @@ describe('an event a made-up entry maps to another shape, whose account is a who
 
     expect(answers).toEqual([nothingTaken('own_not_asked'), taken]);
     expect((await recordedIn(database)).map((recorded) => recorded?.data.event.id)).toEqual(['sheet%2F4/18']);
+  });
+});
+
+describe('an event of a connection, made by a person or by an app or a bot', () => {
+  it.each([
+    { by: 'a person', made: {} },
+    { by: 'an app or a bot', made: { automatic: true } },
+  ] as const)('is taken where $by made it by a trigger that asks for what apps and bots do too', async ({ made }) => {
+    const { database, workflows, takenIn } = await anIntake();
+    await workflows.saved('bots', { ...onTheBoard, automatic: true });
+
+    expect(await takenIn(arrivalOf({ ...ticket, ...made }))).toEqual(taken);
+    expect(await outcomesIn(database)).toEqual([]);
   });
 });

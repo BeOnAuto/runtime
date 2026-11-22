@@ -18,6 +18,14 @@
       "text": "When I paste a student's essay, mark it against my rubric (thesis, evidence, structure and style, each scored 1 to 4) and write two sentences of feedback that a fifteen-year-old will understand."
     },
     {
+      "id": "J3",
+      "shape": "J",
+      "business": "community",
+      "held_out": false,
+      "search": false,
+      "text": "Whenever someone posts in the help channel of our community chat, decide whether our team needs to answer it today, and tell me why in one sentence."
+    },
+    {
       "id": "C1",
       "shape": "C",
       "business": "logistics",

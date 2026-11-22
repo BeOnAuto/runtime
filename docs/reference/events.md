@@ -73,6 +73,7 @@ A filter names the events it takes. Every value except `data` is written out, ne
 | `data`              | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else                                                     |
 
 - An event is taken when it matches any of the filters, and once only, however many it matches.
+- `source` may be a connection's, from `list_connections`, to start from what that connection reports.
 - A filter that names an attribute the event does not have does not match it. A run no reaction started carries no `depth`, and a run no call started no `calldepth`, so a filter for such runs leaves the attribute out.
 - A filter that names `depth`, `calldepth` or `definitionversion` as 0 is refused when its definition is saved.
 - An expression holds unless it returns `false` or `null`.

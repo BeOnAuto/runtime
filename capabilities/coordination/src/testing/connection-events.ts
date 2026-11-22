@@ -1,12 +1,22 @@
 import { Effect } from 'effect';
 
-import type { ConnectionEvents, ConnectionReporting } from '../triggers/connection-triggers.ts';
+import type {
+  ConnectionEvents,
+  ConnectionReporting,
+  StandingAsked,
+  TriggerStanding,
+} from '../triggers/connection-triggers.ts';
 
 export interface AskedConnections extends ConnectionEvents {
   readonly asked: () => readonly string[];
 }
 
-export function connectionsReporting(reportings: Readonly<Record<string, ConnectionReporting>>): AskedConnections {
+const listening: TriggerStanding = { listening: true, notListeningBecause: null, needsReconnecting: false };
+
+export function connectionsReporting(
+  reportings: Readonly<Record<string, ConnectionReporting>>,
+  standingOf: (asked: StandingAsked) => TriggerStanding = () => listening,
+): AskedConnections {
   const asked: string[] = [];
   return {
     reportingOf: (playbook, connection) =>
@@ -14,6 +24,7 @@ export function connectionsReporting(reportings: Readonly<Record<string, Connect
         asked.push(`${playbook.playbook}/${connection}`);
         return Object.hasOwn(reportings, connection) ? reportings[connection] : undefined;
       }),
+    standingOf: (_playbook, standingAsked) => Effect.sync(() => standingOf(standingAsked)),
     asked: () => asked,
   };
 }

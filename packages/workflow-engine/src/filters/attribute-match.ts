@@ -37,6 +37,20 @@ function namesAsWritten<Test>(attributes: readonly FilterAttribute<Test>[], name
 
 export const connectionMarks: readonly string[] = ['automatic', 'own'];
 
+function isAConnections(event: JsonObject): boolean {
+  const source = textField(event, 'source');
+  return source !== undefined && isConnectionSource(source);
+}
+
+function grantsItsMark<Test>(attribute: FilterAttribute<Test>, event: JsonObject): boolean {
+  return (
+    'expected' in attribute &&
+    attribute.expected === true &&
+    connectionMarks.includes(attribute.name) &&
+    isAConnections(event)
+  );
+}
+
 export function mayTake<Test>(attributes: readonly FilterAttribute<Test>[], event: JsonObject): boolean {
   const source = textField(event, 'source');
   if (source === undefined || !isConnectionSource(source)) {
@@ -52,6 +66,11 @@ export function filterMayTake(attributes: JsonObject, event: JsonObject): boolea
   return mayTake(filterAttributesOf(attributes, Function.identity), event);
 }
 
+export function filterTakesAsWritten(attributes: JsonObject, event: JsonObject): boolean {
+  const filter = filterAttributesOf(attributes, Function.identity);
+  return mayTake(filter, event) && filter.every((attribute) => attributeHolds(attribute, event, Function.constFalse));
+}
+
 function actualOf<Test>(attribute: FilterAttribute<Test>, event: JsonObject): Json {
   return field(event, attribute.name) ?? null;
 }
@@ -61,6 +80,9 @@ export function attributeHolds<Test>(
   event: JsonObject,
   verdictOf: Verdict<Test>,
 ): boolean {
+  if (grantsItsMark(attribute, event)) {
+    return true;
+  }
   const actual = actualOf(attribute, event);
   return 'expected' in attribute
     ? jsonEquals(attribute.expected, actual)
@@ -72,6 +94,9 @@ export async function attributeHoldsLater<Test>(
   event: JsonObject,
   verdictOf: (test: Test, actual: Json, source: string) => Promise<Json>,
 ): Promise<boolean> {
+  if (grantsItsMark(attribute, event)) {
+    return true;
+  }
   const actual = actualOf(attribute, event);
   return 'expected' in attribute
     ? jsonEquals(attribute.expected, actual)

@@ -38,7 +38,7 @@ function presentedOf(event: RecordedEventSubscriptionEvent): PresentedFact {
     const { kind, because } = event.data;
     return {
       type: event.type,
-      summary: `The playbook's subscription ${where} failed: ${failedWords[kind]}. Where a function reads replies there, the playbook still looks for them itself, so an answer may be taken later.`,
+      summary: `The playbook's subscription ${where} failed: ${failedWords[kind]}. A workflow whose trigger listens there does not start until the subscription is made. Where a function reads replies there, the playbook still looks for them itself, so an answer may be taken later.`,
       data: { ...key, kind, because },
     };
   }

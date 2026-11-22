@@ -12,7 +12,7 @@ import {
   theRoom,
   theRoomsName,
 } from '../testing/interaction-servers/room-events.ts';
-import { servedNamingTheRoom } from '../testing/interaction-servers/shipped-rooms.ts';
+import { listeningWorkflow, servedNamingTheRoom } from '../testing/interaction-servers/shipped-rooms.ts';
 import { whenSwept } from '../testing/servers/workflow-server.ts';
 import { signingPeopleIn } from '../testing/webhooks/signed-in-rooms.ts';
 import { hookSweptAt } from '../testing/webhooks/swept-hooks.ts';
@@ -47,7 +47,7 @@ function calledOf(rooms: Awaited<ReturnType<typeof roomsServer>>, tool: string) 
 }
 
 describe('a self-hosted runtime that nothing outside can reach, whose workflow’s trigger names a room of a connection whose entry says how to read its name', () => {
-  it('reads the name of the room through the connection’s tool marked reads, arranges nothing, and records the name on the org’s connections', async () => {
+  it('reads the name of the room through the connection’s tool marked reads, arranges nothing, and records the name on the org’s connections, which the workflow’s trigger is then read with, the prefix the entry declares before it', async () => {
     const rooms = await roomsServer();
     const { signingIn, asThePerson } = await signingPeopleIn();
     const { WEBHOOK_URL: _noAddress, ...unreachable } = signingIn;
@@ -59,10 +59,15 @@ describe('a self-hosted runtime that nothing outside can reach, whose workflow�
       (facts) => facts.length > 0,
     );
 
+    const read = await server.call('GET', `${alpha}/definitions/workflow/${listeningWorkflow}`);
+
     expect(named).toEqual([{ subject: theRoom, name: theRoomsName, by: 'runtime' }]);
     expect(rooms.received().map(({ tool, arguments: given }) => [tool, given])).toEqual([
       ['room_info', { room: theRoom }],
     ]);
+    expect(read).toMatchObject({
+      body: { standing: { triggers: [{ reference: '/schedule/on/one', subject_name: `#${theRoomsName}` }] } },
+    });
   });
 });
 

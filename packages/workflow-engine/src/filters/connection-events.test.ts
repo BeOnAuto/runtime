@@ -5,7 +5,7 @@ import type { Json, JsonObject } from '../dsl/json.ts';
 import { freshInstances } from '../instances/fresh-instances.ts';
 import { filterSandboxOf } from '../instances/host-sandboxes.ts';
 import { sandboxModuleOnDisk } from '../pool-testing/test-pools.ts';
-import { filterMayTake } from './attribute-match.ts';
+import { filterMayTake, filterTakesAsWritten } from './attribute-match.ts';
 import { connectionNamedBy, connectionSourcePrefix } from './connection-sources.ts';
 import { hasAttributes, literalFilterOf } from './event-filter.ts';
 import { filterTestingOf, filterVerdictsOf } from './filter-verdicts.ts';
@@ -56,12 +56,12 @@ describe('the source of an event a connection reports', () => {
 });
 
 describe('an event a connection reports, matched by the filters of triggers, listeners and pages', () => {
-  it('is taken only by a filter that names its source as written, and one an app made only where it names automatic: true', async () => {
+  it('is taken only by a filter that names its source as written, one an app made only where it names automatic: true, and one a person made also there', async () => {
     expect([
       await filterVerdictsOf(placed, reported, sandbox, now),
       await filterVerdictsOf(placed, madeByAnApp, sandbox, now),
     ]).toEqual([
-      [false, false, true, false, false, false],
+      [false, false, true, false, true, false],
       [false, false, false, false, true, false],
     ]);
   });
@@ -72,11 +72,11 @@ describe('an event a connection reports, matched by the filters of triggers, lis
     await testing.close();
 
     expect(verdicts).toEqual([
-      [false, false, true, false, false, false],
+      [false, false, true, false, true, false],
       [false, false, false, false, true, false],
     ]);
     expect([listened(reported), listened(madeByAnApp)]).toEqual([
-      [false, false, true, false, false, false],
+      [false, false, true, false, true, false],
       [false, false, false, false, true, false],
     ]);
   });
@@ -90,6 +90,20 @@ describe('a filter written as JSON, as a prediction dataset’s are', () => {
       [false, false, true, false, true, false],
       [false, false, false, false, true, false],
       [true, true, true, true, true, true],
+    ]);
+  });
+});
+
+describe('a filter written as JSON with no expression, as a prediction dataset’s written out are', () => {
+  it('takes an event by the same rules and its attributes as written, a mark written true granting it', () => {
+    expect(
+      [reported, madeByAnApp, published].map((event) =>
+        filters.map((attributes) => filterTakesAsWritten(attributes, event)),
+      ),
+    ).toEqual([
+      [false, false, true, false, true, false],
+      [false, false, false, false, true, false],
+      [true, true, false, false, false, false],
     ]);
   });
 });
@@ -123,7 +137,7 @@ describe('an event the connection’s own account caused, matched by the filters
     const tested = [await testing.verdictsOf(itsOwn, now), await testing.verdictsOf(itsOwnApp, now)];
     await testing.close();
     const expected = [
-      [false, false, true, false, false],
+      [false, false, true, true, false],
       [false, false, false, true, false],
     ];
 
@@ -147,6 +161,63 @@ describe('an event the connection’s own account caused, matched by the filters
     ).toEqual([
       [false, false, true, true, false],
       [true, true, true, true, true],
+    ]);
+  });
+});
+
+const ofTheTrackerMarked = (marks: JsonObject): JsonObject => ({ ...reported, id: 'item-11', ...marks });
+
+const markedTable = [
+  { mark: 'automatic', other: 'own' },
+  { mark: 'own', other: 'automatic' },
+] as const;
+
+function filtering(marks: JsonObject): JsonObject {
+  return { ...ofTheTracker, ...marks };
+}
+
+function takes(attributes: JsonObject, event: JsonObject): boolean {
+  return hasAttributes(event, attributes, Function.constTrue);
+}
+
+describe.each(markedTable)('a mark of a connection’s event, $mark', ({ mark, other }) => {
+  const unmarked = ofTheTrackerMarked({});
+  const marked = ofTheTrackerMarked({ [mark]: true });
+  const markedTwice = ofTheTrackerMarked({ [mark]: true, [other]: true });
+
+  it('is not asked for by a filter that leaves it out, which takes the event without it alone', () => {
+    expect([takes(filtering({}), unmarked), takes(filtering({}), marked)]).toEqual([true, false]);
+  });
+
+  it('is asked for by a filter that writes it true, which takes the event with it and the event without it', () => {
+    expect([takes(filtering({ [mark]: true }), unmarked), takes(filtering({ [mark]: true }), marked)]).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('written false, makes a filter that takes neither', () => {
+    expect([takes(filtering({ [mark]: false }), unmarked), takes(filtering({ [mark]: false }), marked)]).toEqual([
+      false,
+      false,
+    ]);
+  });
+
+  it('beside the other mark on one event, is taken only by a filter that writes both', () => {
+    expect(
+      [{ [mark]: true }, { [other]: true }, { [mark]: true, [other]: true }].map((marks: JsonObject) =>
+        takes(filtering(marks), markedTwice),
+      ),
+    ).toEqual([false, false, true]);
+  });
+
+  it('on an event of any other source, is compared exactly as any attribute is', () => {
+    const onTheLedger = { ...unmarked, source: '/ledger/eu' };
+    const askingTheLedger = { type, source: '/ledger/eu', [mark]: true };
+
+    expect([takes(askingTheLedger, onTheLedger), takes(askingTheLedger, { ...onTheLedger, [mark]: true })]).toEqual([
+      false,
+      true,
     ]);
   });
 });

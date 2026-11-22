@@ -54,6 +54,9 @@ events:
       subject:
         title: Repository
         required: true
+        description: >-
+          The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
+          account needs admin access to it, since GitHub lets only an admin set this up.
       data:
         type: object
         properties:
@@ -77,6 +80,9 @@ events:
       subject:
         title: Repository
         required: true
+        description: >-
+          The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
+          account needs admin access to it, since GitHub lets only an admin set this up.
       data:
         type: object
         properties:
@@ -100,6 +106,9 @@ events:
       subject:
         title: Repository
         required: true
+        description: >-
+          The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
+          account needs admin access to it, since GitHub lets only an admin set this up.
       data:
         type: object
         properties:
@@ -123,6 +132,9 @@ events:
       subject:
         title: Repository
         required: true
+        description: >-
+          The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
+          account needs admin access to it, since GitHub lets only an admin set this up.
       data:
         type: object
         properties:

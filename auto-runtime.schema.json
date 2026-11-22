@@ -956,6 +956,11 @@
                               "type": "boolean",
                               "description": "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject."
                             },
+                            "description": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "How a trigger writes this place, and what must be true there for the service to report it, in a sentence or two an agent is given."
+                            },
                             "name": {
                               "type": "object",
                               "properties": {

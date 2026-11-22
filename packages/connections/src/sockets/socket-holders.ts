@@ -39,7 +39,7 @@ export interface SocketRegistries {
 
 const socketWords = {
   appCredentialRefused: (label: string) =>
-    `The provider refused the ${label} this connection holds, so replies are checked on a timer, not at once. Reconnect the connection to give a new one.`,
+    `The provider refused the ${label} this connection holds, so replies are checked on a timer, not at once, and no workflow starts from its events. Reconnect the connection to give a new one.`,
   unrecorded: (name: string) => `The refusal of an app credential of the connection ${name} could not be recorded`,
 } as const;
 
@@ -51,7 +51,7 @@ function secretIdOf({ appSecretIds }: KeptConnection, credential: string): strin
   return Object.hasOwn(appSecretIds, credential) ? appSecretIds[credential] : undefined;
 }
 
-function labelsOf({ credentials }: ProviderEntry, credential: string): readonly string[] {
+export function labelsOf({ credentials }: ProviderEntry, credential: string): readonly string[] {
   return credentials.flatMap(({ kind, app_credentials: declared = [] }) =>
     kind === 'secret' ? declared.filter(({ name }) => name === credential).map(({ description }) => description) : [],
   );

@@ -53,7 +53,7 @@ export async function toolUsersServedBy(
     toolOperations: toolOperationsOf(tools, { offering, goals, messages }),
     listServers: tools.listServers,
     connections: connectionAccessOf(tools.listServers),
-    connectionEvents: connectionEventsOf(runtime, tools.listServers, settings),
+    connectionEvents: connectionEventsOf(runtime, settings),
     named: tools.named,
     subscriptions: subscriptionsOfTheServer(runtime, settings, {
       tools: { ...tools, ...requestWaysOf(registry.tools) },

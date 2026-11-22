@@ -53,6 +53,11 @@ const hookTools: readonly FakeTool[] = [
     answer: () => ({ content: [], structuredContent: { hook: { id: 'hook-7' } } }),
   },
   {
+    name: 'delete_hook',
+    inputSchema: named(['id']),
+    answer: () => ({ content: [], structuredContent: {} }),
+  },
+  {
     name: 'who_am_i',
     inputSchema: named([]),
     answer: () => ({ content: [], structuredContent: { me: { id: itsAccountInRooms } } }),

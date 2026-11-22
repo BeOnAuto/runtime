@@ -8,13 +8,13 @@ import {
   type RunContext,
 } from '@on.auto/definitions';
 import type { InvalidInput } from '@on.auto/operations';
-import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
 import { runnableDocument, workflowReaderOf, type ReadWorkflow } from '../document/workflow-document.ts';
 import { definitionsNamedIn, summaryOf } from '../document/workflow-summary.ts';
 import { runPresenter } from '../presenting/run-presenter.ts';
 import { queuedStandingOf, started, type WorkflowStarts } from '../runs/run-start.ts';
+import { triggersStandingOf } from '../triggers/trigger-standings.ts';
 import { guideVariablesOf } from './guide-variables.ts';
 import { checkedWhenSaved, type SaveChecks } from './save-checks.ts';
 
@@ -25,7 +25,7 @@ export interface WorkflowAdapterDependencies extends WorkflowStarts, SaveChecks 
 
 export const workflowFacts: DeclaringCapability = { type: 'workflow', facts: { onRuns: [], streams: [runPresenter] } };
 
-const noun: Noun = { one: 'workflow', other: 'workflows' };
+const noun = { one: 'workflow', other: 'workflows' };
 
 function admittedInput(
   { inputSchema }: ReadWorkflow,
@@ -58,6 +58,6 @@ export function makeWorkflowAdapter(dependencies: WorkflowAdapterDependencies): 
     finishesLater: true,
     longestRunOf: () => dependencies.mostDurationMs,
     facts: workflowFacts.facts,
-    standing: queuedStandingOf(dependencies),
+    standing: queuedStandingOf(dependencies, triggersStandingOf(dependencies.connectionEvents)),
   });
 }

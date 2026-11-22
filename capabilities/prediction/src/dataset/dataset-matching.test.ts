@@ -106,7 +106,7 @@ describe('the matching of a page of a dataset', () => {
 });
 
 describe('the matching of a dataset whose filters are written out', () => {
-  it('takes an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true, as its data tests do', async () => {
+  it('takes an event a connection reports only by a filter that names its source, and one an app made only by a filter that also names automatic: true, which takes a person’s too, as its data tests do', async () => {
     const reported = { ...placed.event, source: '/connections/shop' };
     const host = answeredBy(() => Promise.reject(new Error('No page is judged')));
     const writtenOut: DatasetData['events'] = [
@@ -126,7 +126,7 @@ describe('the matching of a dataset whose filters are written out', () => {
       );
 
     expect([await kindsOf({}), await kindsOf({ automatic: true })]).toEqual([
-      ['not_taken', 'taken', 'not_taken'],
+      ['not_taken', 'taken', 'taken'],
       ['not_taken', 'not_taken', 'taken'],
     ]);
     expect(host.asked).toEqual([]);

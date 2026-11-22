@@ -1,7 +1,14 @@
-import type { Conflict, NotFound, PlaybookContext, PlaybookReader, Unavailable } from '@on.auto/operations';
+import {
+  PlaybookContext,
+  type Conflict,
+  type NotFound,
+  type PlaybookAddress,
+  type PlaybookReader,
+  type Unavailable,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Capability } from '../capability/capability.ts';
+import type { Capability, StandingRequest } from '../capability/capability.ts';
 import type { Definition, StoredDefinition } from '../registry/definition.ts';
 import type { DefinitionUser } from '../used-by/user-relations.ts';
 import { usersAnswered, usersToday } from '../used-by/users-of-a-definition.ts';
@@ -35,6 +42,50 @@ function answeredWithItsUsers(
     definition: withUsers(definition, found),
     inHand,
   }));
+}
+
+function standingRequestOf(
+  address: PlaybookAddress,
+  { details, triggers }: Pick<StoredDefinition, 'details' | 'triggers'>,
+  {
+    definition_id: definition,
+    name,
+    version,
+    status,
+  }: Pick<Definition, 'definition_id' | 'name' | 'version' | 'status'>,
+): StandingRequest {
+  return {
+    ...address,
+    definition,
+    name,
+    version,
+    status,
+    ...(details === undefined ? {} : { details }),
+    ...(triggers === undefined ? {} : { triggers }),
+  };
+}
+
+export function withItsStanding(
+  capability: Capability,
+  stored: Pick<StoredDefinition, 'details' | 'triggers'>,
+  definition: Definition,
+): Effect.Effect<Definition, never, PlaybookContext> {
+  return Effect.gen(function* () {
+    const { org, playbook } = yield* PlaybookContext;
+    const standing = yield* capability.standing(standingRequestOf({ org, playbook }, stored, definition));
+    return standing === undefined ? definition : { ...definition, standing };
+  });
+}
+
+export function answeredWithItsStanding(
+  capability: Capability,
+  types: readonly string[],
+  inRegistry: DefinitionInRegistry,
+  answering?: Answering,
+): Effect.Effect<Definition, Unavailable | Conflict, PlaybookReader | PlaybookContext> {
+  return Effect.flatMap(answeredDefinition(capability, types, inRegistry, answering), (definition) =>
+    withItsStanding(capability, inRegistry.stored, definition),
+  );
 }
 
 export function answeredDefinition(

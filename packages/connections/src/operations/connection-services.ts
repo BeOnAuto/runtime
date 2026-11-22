@@ -16,6 +16,7 @@ import type { SocketChecks } from '../page/given-checks.ts';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import type { StartsOfConnections } from '../policy/connection-starts.ts';
 import type { RuntimeAccess } from '../policy/policy-rules.ts';
+import type { EventsReceived } from '../triggers/connection-hearing.ts';
 
 export interface SecretKeeping {
   readonly keep: (value: Redacted.Redacted, endsWith?: string) => Effect.Effect<string, SecretKeepingFailure>;
@@ -45,6 +46,7 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly fetch: typeof globalThis.fetch;
   readonly readOnceThrough: ReadOnceThrough;
   readonly sockets?: SocketChecks;
+  readonly received?: EventsReceived;
 }
 
 export function opensSockets({ sockets }: Pick<ConnectionServices, 'sockets'>): boolean {

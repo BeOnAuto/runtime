@@ -16,12 +16,23 @@ import {
   theRoom,
   theWebhookUrl,
 } from '../testing/interaction-servers/room-events.ts';
-import { postedInARoom, servedListeningInTheRoom } from '../testing/interaction-servers/shipped-rooms.ts';
+import {
+  listeningWorkflow,
+  postedInARoom,
+  servedListeningInTheRoom,
+} from '../testing/interaction-servers/shipped-rooms.ts';
 import { connectionsIn } from '../testing/servers/connected-servers.ts';
 import { connectionsAllowing } from '../testing/servers/loopback-connections.ts';
 import { whenHeld } from '../testing/waiting/until.ts';
 import { signingInWithRooms, signingPeopleIn, tracedWithRooms } from '../testing/webhooks/signed-in-rooms.ts';
-import { hookSweptAt, postedSwept, settledByAReplyRead } from '../testing/webhooks/swept-hooks.ts';
+import {
+  hookRemovedAt,
+  hookSweptAt,
+  postedSwept,
+  runsStartedIn,
+  runsStartedSwept,
+  settledByAReplyRead,
+} from '../testing/webhooks/swept-hooks.ts';
 
 const arrivedLine = '"outcome":"arrived"';
 
@@ -97,6 +108,48 @@ describe('a server given WEBHOOK_URL whose workflow’s trigger names a connecti
       status: 200,
       body: {
         events: [{ type: 'event_published', data: { ...theEvent, subject: theRoom, data: { text } } }],
+      },
+    });
+  });
+});
+
+describe('a workflow saved through the API whose trigger names a connection that reports events, on a server given WEBHOOK_URL', () => {
+  it('is subscribed for with nothing rung first, starts one run for a delivery and none for it sent again, reads as listening, and once paused ends its subscription and reads as paused', async () => {
+    const rooms = await roomsServer();
+    const { signingIn, asThePerson } = await signingPeopleIn();
+    const server = await servedListeningInTheRoom(rooms.url, signingIn, asThePerson, defaultOrg);
+    const workflow = `${alpha}/definitions/workflow/${listeningWorkflow}`;
+    const hook = await hookSweptAt(server, rooms);
+    const listening = await server.call('GET', workflow);
+    const posted = JSON.stringify({ kind: 'posted', room: theRoom, id: 'm-1', text: 'hi', by: 'u-someone' });
+
+    const taken = await takenOnceRecorded(server, hook, posted);
+    const started = await runsStartedSwept(server, alpha);
+    const { pathname, search } = new URL(hook.callback);
+    const sentAgain = await delivered(
+      server,
+      `${pathname}${search}`,
+      signedWith(hook.secret, 'hook-7', posted),
+      posted,
+    );
+    await server.call('POST', `${workflow}/pause`, { body: {} });
+    await hookRemovedAt(server, rooms);
+    const paused = await server.call('GET', workflow);
+    const startedInAll = await runsStartedIn(server, alpha);
+
+    const ofTheRoom = { connection: 'rooms', reference: '/schedule/on/one', speed: 'instant' };
+    expect(listening).toMatchObject({
+      status: 200,
+      body: { standing: { triggers: [{ ...ofTheRoom, listening: true, not_listening_because: null }] } },
+    });
+    expect([taken, sentAgain]).toEqual(['200 ', '200 ']);
+    expect([started, startedInAll]).toEqual([1, 1]);
+    expect(paused).toMatchObject({
+      status: 200,
+      body: {
+        standing: {
+          triggers: [{ ...ofTheRoom, listening: false, not_listening_because: { kind: 'workflow_paused' } }],
+        },
       },
     });
   });

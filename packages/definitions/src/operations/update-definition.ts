@@ -11,7 +11,7 @@ import {
   updatePlainLanguage,
   withUpdatedDefinitions,
 } from '../renaming/update-or-rename.ts';
-import { answeredDefinition } from './definition-reading.ts';
+import { answeredWithItsStanding } from './definition-reading.ts';
 import { noGoalsKept, savedFrom } from './saved-content.ts';
 import { updatedDefinitionSchemaOf, withDefinitionPageInStudio } from './studio-pages.ts';
 
@@ -59,7 +59,7 @@ export function defineUpdateDefinition(
                 savedAgain: [],
               };
         const linked = yield* withDefinitionPageInStudio(
-          yield* answeredDefinition(capability, known.types, updated, {
+          yield* answeredWithItsStanding(capability, known.types, updated, {
             change: 'saved',
             inHand: updated.inHand,
             goals,

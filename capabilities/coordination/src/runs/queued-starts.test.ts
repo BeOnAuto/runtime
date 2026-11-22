@@ -49,7 +49,8 @@ async function playbookQueuing(page: QueuedPage) {
   const { asked, queued } = queueHolding(page);
   const playbook = playbookOn(namingLedger(), [recordingWorkflows(recordingStarts().recording, queued)]);
   const created = await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'flow', source: flow });
-  return { ...playbook, asked, created, listQueuedStarts: defineListQueuedStarts(queued) };
+  const askedAtTheSave = asked.splice(0);
+  return { ...playbook, asked, askedAtTheSave, created, listQueuedStarts: defineListQueuedStarts(queued) };
 }
 
 function idOf(created: Outcome): unknown {
@@ -67,16 +68,16 @@ function aStart(index: number, dueAt: number) {
 const twoQueued: QueuedPage = { starts: [aStart(1, minute + aMinute), aStart(2, minute + 2 * aMinute)], more: true };
 
 describe('a workflow read with get_definition', () => {
-  it('stands with how many of its runs are queued to start and when the first is due, asked of its own id', async () => {
+  it('stands with how many of its runs are queued to start and when the first is due, asked of its own id, as its save answered', async () => {
     const playbook = await playbookQueuing(twoQueued);
 
     const read = await playbook.call(playbook.getDefinition, { type: 'workflow', name: 'flow' });
 
-    expect(read).toMatchObject({
-      status: 'succeeded',
-      output: { standing: { queued: 2, next_queued_start: '2026-10-01T09:01:00.000Z' } },
-    });
-    expect(playbook.asked).toEqual([[{ org: 'acme', definition: idOf(playbook.created) }]]);
+    const standing = { queued: 2, next_queued_start: '2026-10-01T09:01:00.000Z' };
+    expect(read).toMatchObject({ status: 'succeeded', output: { standing } });
+    expect(playbook.created).toMatchObject({ status: 'succeeded', output: { standing } });
+    const ofItsOwnId = [{ org: 'acme', definition: idOf(playbook.created) }];
+    expect([playbook.askedAtTheSave, playbook.asked]).toEqual([[ofItsOwnId], [ofItsOwnId]]);
   });
 
   it('stands with none queued and no time when nothing waits', async () => {

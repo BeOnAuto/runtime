@@ -18,7 +18,7 @@ import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionRecordsOf, type SubscriptionLedger } from './subscription-records.ts';
 import { subscriptionSecretsOf } from './subscription-secrets.ts';
 
-const mostSubscriptionsThroughAConnection = 8;
+export const mostSubscriptionsThroughAConnection = 8;
 
 export interface SubscriptionLoopParts {
   readonly ledger: SubscriptionLedger;

@@ -66,19 +66,31 @@ function shippedWithRoomsAt(url: string, namesTheRoom: boolean): (files: Shipped
 
 const listening = { type: postedInARoom, source: '/connections/rooms', subject: theRoom };
 
+export const listeningWorkflow = 'on-a-post';
+
+const listeningSource = workflowSource(
+  listeningWorkflow,
+  `schedule:\n  on: { one: { with: ${JSON.stringify(listening)} } }\ndo:\n  - noted: { set: { seen: true } }\n`,
+);
+
+/** A workflow whose trigger names the rooms connection, saved through the API as a person's agent saves one. */
+async function savedThroughTheApi({ server }: ListeningInTheRoom, org: string): Promise<void> {
+  await server.call('POST', `/v1/orgs/${org}/playbooks/alpha/definitions/workflow`, {
+    body: { name: listeningWorkflow, source: listeningSource },
+  });
+}
+
 /**
- * A workflow whose trigger names the rooms connection, saved through the ledger as the intake's own tests save one,
- * since no trigger that names a connection can be saved through the API until a connection lists the events it reports.
+ * The same workflow saved through the ledger, as the intake's own tests save one, since the API refuses a trigger whose
+ * event the runtime does not hear, as a runtime that nothing outside can reach does not hear a room's posts.
  */
-function savedListening(ledger: Ledger['Service'], org: string): Promise<void> {
+function savedOnTheLedger({ ledger }: ListeningInTheRoom, org: string): Promise<void> {
   const ada = { id: 'person:ada', name: 'Ada' };
-  const schedule = `schedule:\n  on: { one: { with: ${JSON.stringify(listening)} } }\n`;
-  const source = workflowSource('on-a-post', `${schedule}do:\n  - noted: { set: { seen: true } }\n`);
   const filters = [{ reference: '/schedule/on/one', type: postedInARoom, attributes: listening }];
   const created = {
     type: 'create',
-    name: 'on-a-post',
-    content: { source, triggers: [{ kind: 'event', reference: '/schedule/on', filters }] },
+    name: listeningWorkflow,
+    content: { source: listeningSource, triggers: [{ kind: 'event', reference: '/schedule/on', filters }] },
     created_by: ada,
     definition_id: crypto.randomUUID(),
     by: ada.id,
@@ -100,13 +112,14 @@ export interface ListeningInTheRoom {
 interface Listening {
   readonly org: string;
   readonly namesTheRoom: boolean;
+  readonly saved: (served: ListeningInTheRoom, org: string) => Promise<void>;
 }
 
 async function servedListening(
   roomsUrl: string,
   environment: Readonly<Record<string, string>>,
   parts: ServedParts,
-  { org, namesTheRoom }: Listening,
+  { org, namesTheRoom, saved }: Listening,
 ): Promise<ListeningInTheRoom> {
   const kept = Promise.withResolvers<Ledger['Service']>();
   const ledgerOver = (ledger: Ledger['Service']) => {
@@ -116,9 +129,9 @@ async function servedListening(
   const shipped = { ...parts, ledgerOver, shippedFilesOver: shippedWithRoomsAt(roomsUrl, namesTheRoom) };
   const server = await servingInteractions(roomsDelivery, { ...connectionsOnLoopback, ...environment }, shipped, org);
   await connectedWith(server, { provider: 'rooms' }, roomsKey, connectionsIn(org));
-  const ledger = await kept.promise;
-  await savedListening(ledger, org);
-  return { server, ledger };
+  const served = { server, ledger: await kept.promise };
+  await saved(served, org);
+  return served;
 }
 
 export async function servedListeningInTheRoom(
@@ -127,7 +140,8 @@ export async function servedListeningInTheRoom(
   parts: ServedParts,
   org: string,
 ): Promise<InteractionServer> {
-  return (await servedListening(roomsUrl, environment, parts, { org, namesTheRoom: false })).server;
+  return (await servedListening(roomsUrl, environment, parts, { org, namesTheRoom: false, saved: savedThroughTheApi }))
+    .server;
 }
 
 /**
@@ -140,5 +154,5 @@ export function servedNamingTheRoom(
   parts: ServedParts,
   org: string,
 ): Promise<ListeningInTheRoom> {
-  return servedListening(roomsUrl, environment, parts, { org, namesTheRoom: true });
+  return servedListening(roomsUrl, environment, parts, { org, namesTheRoom: true, saved: savedOnTheLedger });
 }

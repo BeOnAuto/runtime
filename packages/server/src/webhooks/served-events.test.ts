@@ -1,5 +1,5 @@
 import type { ArrivedEvent } from '@on.auto/api';
-import { connectionWake } from '@on.auto/interaction';
+import { connectionWake, type ConnectionWake } from '@on.auto/interaction';
 import { readOnce, theChannel } from '@on.auto/interaction/testing';
 import { Conflict } from '@on.auto/operations';
 import type { ConnectionArrival, TakeIn } from '@on.auto/workflow-host';
@@ -109,6 +109,29 @@ describe('a proven delivery that carries an event, handed on by the server', () 
 
     expect(answers).toEqual(['decided', 'decided', 'decided']);
     expect([notTaken.handed.length, refused.handed.length, unhanded.handed]).toEqual([1, 1, []]);
+  });
+});
+
+describe('a proven reply through a connection the intake refuses, as it refuses one that is broken or pending', () => {
+  it('still makes the conversation it names due, the wake asked before the intake refuses its event', async () => {
+    const asked: string[] = [];
+    const refusing: TakeIn = () =>
+      Effect.sync(() => {
+        asked.push('intake');
+        return { outcome: 'refused' as const };
+      });
+    const wakeNoted =
+      (wake: ConnectionWake): ConnectionWake =>
+      (woken, now) =>
+        Effect.tap(wake(woken, now), () => Effect.sync(() => asked.push('wake')));
+
+    const { before, after, readAt, answer } = await consumedAt(
+      (wake) => handedOnBy(wakeNoted(wake), refusing),
+      wakingAndCarrying,
+    );
+
+    expect(after).toEqual({ ...before, due_at: readAt + fiveSeconds });
+    expect([asked, answer]).toEqual([['wake', 'intake'], 'decided']);
   });
 });
 

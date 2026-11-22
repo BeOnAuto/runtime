@@ -54,7 +54,7 @@ function recordedAt(at: string) {
   };
 }
 
-type Recorded = readonly [string, readonly Decided<RecordedConnectionEvent>[]];
+export type Recorded = readonly [string, readonly Decided<RecordedConnectionEvent>[]];
 
 function appendedTo(registry: Pick<StreamWriter, 'execute'>, [at, facts]: Recorded) {
   return registry.execute(connectionsStreamOfOrg('acme'), recordedAt(at), facts);

@@ -113,6 +113,9 @@ events:
       subject:
         title: Channel
         required: false
+        description: >-
+          The channel's Slack ID, such as C0123ABCD; the connection's tools give it for a channel's name. Slack reports
+          a message only from a channel the app is in, so ask the person to add it there if it is not.
         name:
           tool: conversations_info
           with:
@@ -276,7 +279,9 @@ credentials:
         description: Slack app-level token
         title: Get replies instantly
         instructions: >-
-          Without this, Auto checks for replies on a timer. In Slack, select **Basic Information**, then under
+          With it, Slack tells Auto at once when someone replies to a request or posts a message that starts a
+          workflow. Without it, Auto checks for replies on a timer, and no workflow starts from a message.
+          In Slack, select **Basic Information**, then under
           **App-Level Tokens** select **Generate Token and Scopes**. Enter any name, add the scope `connections:write`,
           select **Generate**, then copy the token and paste it here.
         example: xapp-…

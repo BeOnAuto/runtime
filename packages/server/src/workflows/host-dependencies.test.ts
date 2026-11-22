@@ -43,7 +43,13 @@ import { socketsOfTheServer } from '../sockets/sockets-of-the-server.ts';
 import { subscriptionsOfTheServer } from '../subscriptions/served-subscriptions.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
-import { aCardMovedIn, answeredWith, noSecretsKept } from '../testing/sockets/held-sockets.ts';
+import {
+  aCardMovedIn,
+  answeredWith,
+  connectedAgain,
+  noSecretsKept,
+  theCardMovedAs,
+} from '../testing/sockets/held-sockets.ts';
 import { ServiceSockets } from '../testing/sockets/service-sockets.ts';
 import {
   addedAndConnected,
@@ -452,7 +458,7 @@ const boardsHeld: readonly ConnectionFact[] = [
 
 const onACardMoved = { type: cardMoved.type, source: '/connections/boards' };
 
-/** A workflow whose trigger names the boards connection, saved through the ledger, since no such trigger can be saved through the API yet. */
+/** A workflow whose trigger names the boards connection, saved through the ledger, as the intake's own tests save one. */
 function savedOnACardMoved(ledger: Ledger['Service']): Promise<void> {
   const schedule = `schedule:\n  on: { one: { with: ${JSON.stringify(onACardMoved)} } }\n`;
   const source = workflowSource('on-a-card', `${schedule}do:\n  - noted: { set: { seen: true } }\n`);
@@ -533,5 +539,65 @@ describe('an event that arrives over a socket of a server given no webhook addre
     ]);
     expect(await publishedIn(ledger)).toEqual(takenOnce);
     expect(service.opened).toEqual(['xapp-1']);
+  });
+});
+
+const boardsBroken: ConnectionFact = {
+  type: 'connection_broken',
+  data: { connection: 'connection-1', kind: 'credential_refused', reason: 'Refused' },
+};
+
+const boardsRecordedWhile: Readonly<Record<'pending' | 'broken' | 'connected', readonly ConnectionFact[]>> = {
+  pending: boardsHeld.slice(0, 1),
+  broken: [...boardsHeld, boardsBroken],
+  connected: boardsHeld,
+};
+
+async function anIntakeOfTheBoards(recorded: readonly ConnectionFact[]) {
+  const runtime = await makeAppRuntime(
+    applicationLayer(ledgerLayer({ fileName: ':memory:', ...keptByTheLedgerWith([]) })),
+  );
+  onTestFinished(() => runtime.dispose());
+  const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
+  await connectionsRecorded(ledger, 'acme', recorded);
+  await playbooksCreated(ledger, 'acme', ['alpha']);
+  await savedOnACardMoved(ledger);
+  const takeIn = connectionIntakeServedBy(runtime, {
+    store: await openWorkflowStore(await ledgerConnectionIn(runtime), []),
+    filters: filterSandboxOf(freshInstances(sandboxModule)),
+    providers: boards,
+    now: () => Date.parse('2026-11-20T09:00:00.000Z'),
+  });
+  const delivered = (serial: number) =>
+    Effect.runPromise(
+      takeIn({ playbook: { org: 'acme', playbook: 'alpha' }, connection: 'boards', event: theCardMovedAs(serial) }),
+    );
+  return { ledger, delivered };
+}
+
+describe('an event a delivery proven by a held subscription carries, taken in through a connection in each state', () => {
+  it.each([
+    ['pending', 'refused', 0],
+    ['broken', 'refused', 0],
+    ['connected', 'taken', 1],
+  ] as const)(
+    'starts the workflow whose trigger names it only while it is connected: %s, %s',
+    async (state, outcome, published) => {
+      const { ledger, delivered } = await anIntakeOfTheBoards(boardsRecordedWhile[state]);
+
+      expect(await delivered(7)).toEqual({ outcome });
+      expect(await publishedIn(ledger)).toHaveLength(published);
+    },
+  );
+
+  it('starts it for a delivery after the connection is connected again, having started nothing while it was broken', async () => {
+    const { ledger, delivered } = await anIntakeOfTheBoards([...boardsHeld, boardsBroken]);
+
+    const whileBroken = await delivered(7);
+    await connectionsRecorded(ledger, 'acme', [connectedAgain('connection-1', 'app-2')]);
+    const once = await delivered(8);
+
+    expect([whileBroken, once]).toEqual([{ outcome: 'refused' }, { outcome: 'taken' }]);
+    expect(await publishedIn(ledger)).toMatchObject([{ data: { event: { id: 'B1/8' } } }]);
   });
 });

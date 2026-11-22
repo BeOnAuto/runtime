@@ -13,6 +13,7 @@ import { Option, Schema } from 'effect';
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';
 import { writtenInOf } from '../page/page-lines.ts';
 import { carriesAPage } from '../page/page-yaml.ts';
+import type { EventTrigger, Trigger, TriggerFilter } from '../registry/definition-triggers.ts';
 import { isPlaybookFunctionType, type Definition, type ListedDefinition } from '../registry/definition.ts';
 import { nameInWords } from './in-words.ts';
 
@@ -122,6 +123,35 @@ export function queuedRunsInWords(
   return status === 'paused'
     ? ` ${ofItsRunsQueued(queued)}; ${refusedWhenDue(queued)} is refused when it comes due unless the ${words.nounOf(type).one} is resumed first.`
     : ` ${ofItsRunsQueued(queued)} to start.`;
+}
+
+const whereToSeeItStand = ' `get_definition` shows, under `standing`, whether the app is set to tell Auto yet.';
+
+const notForItsOwn = " It does not start for what the connection's own account does there.";
+
+function filtersOf(triggers: readonly Trigger[]): ReadonlyMap<string, TriggerFilter> {
+  return new Map(
+    triggers
+      .filter((trigger): trigger is EventTrigger => trigger.kind === 'event')
+      .flatMap(({ filters }) => filters)
+      .map((filter) => [filter.reference, filter] as const),
+  );
+}
+
+export function startsInWords({ standing, triggers = [] }: Pick<Definition, 'standing' | 'triggers'>): string {
+  const stood = standing?.triggers ?? [];
+  if (stood.length === 0) {
+    return '';
+  }
+  const filters = filtersOf(triggers);
+  const each = stood.flatMap(({ reference, connection, event }) => {
+    if (event === undefined) {
+      return [];
+    }
+    const asksForItsOwn = filters.get(reference)?.attributes['own'] === true;
+    return [` It starts each time this happens in ${connection}: ${event}.${asksForItsOwn ? '' : notForItsOwn}`];
+  });
+  return `${each.join('')}${whereToSeeItStand}`;
 }
 
 function namesOf(definitions: readonly ListedDefinition[]): string {

@@ -1,15 +1,14 @@
 import {
   enclosedBody,
-  filterMayTake,
+  filterTakesAsWritten,
   type FilterVerdict,
   type MatchedFilter,
   type PageFilters,
   type PageVerdicts,
 } from '@on.auto/workflow-engine';
 import type { PageEvent } from '@on.auto/workflow-host';
-import { Effect, type Schema } from 'effect';
+import { Effect } from 'effect';
 
-import { canonicalJson } from '../data/data-digest.ts';
 import type { DatasetData } from './dataset-data.ts';
 
 type EventMatch =
@@ -40,13 +39,6 @@ export const unjudged: EventMatch = {
 
 function isTested(filter: Filter): boolean {
   return Object.values(filter).some((expected) => enclosedBody(expected) !== undefined);
-}
-
-function holdsLiterally(filter: Filter, event: Schema.JsonObject): boolean {
-  return Object.entries(filter).every(
-    ([name, expected]: readonly [string, Schema.Json]) =>
-      canonicalJson(expected) === canonicalJson(event[name] ?? null),
-  );
 }
 
 function wordsOf({ error }: Extract<FilterVerdict, object>): string {
@@ -81,7 +73,7 @@ interface Placed {
 
 function literalMatchOf(data: DatasetData, { event }: PageEvent): Literal {
   const typed = data.events.filter(({ type }) => type === event.type);
-  if (typed.some((filter) => !isTested(filter) && filterMayTake(filter, event) && holdsLiterally(filter, event))) {
+  if (typed.some((filter) => !isTested(filter) && filterTakesAsWritten(filter, event))) {
     return taken;
   }
   return typed.some((filter) => isTested(filter)) ? 'tested' : notTaken;

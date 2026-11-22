@@ -94,7 +94,13 @@ export {
   type ConnectionTrigger,
   type WaitingRequest,
 } from './subscriptions/subscription-topics.ts';
-export { isLasting, resyncedAfterMs } from './subscriptions/subscription-records.ts';
+export {
+  generationOf,
+  isArranging,
+  isHeldBy,
+  isLasting,
+  resyncedAfterMs,
+} from './subscriptions/subscription-records.ts';
 export {
   SubscriptionCallFailed,
   SubscriptionFailedBecauseSchema,

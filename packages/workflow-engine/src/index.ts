@@ -69,7 +69,7 @@ export { submissionOf } from './engine/submission.ts';
 export type { EnginePorts } from './engine/engine-ports.ts';
 export type { Submission, SweepReport, Wake, WorkflowEngine } from './engine/workflow-engine.ts';
 export { CallKeySchema, callKeyText, type CallKey } from './executor/call-key.ts';
-export { connectionMarks, filterMayTake } from './filters/attribute-match.ts';
+export { connectionMarks, filterMayTake, filterTakesAsWritten } from './filters/attribute-match.ts';
 export { connectionNamedBy, connectionSourcePrefix, isConnectionSource } from './filters/connection-sources.ts';
 export { runtimeAttributeTypes } from './filters/runtime-attributes.ts';
 export {

@@ -60,6 +60,12 @@ const EventTypeFieldsSchema = Schema.Struct({
         description:
           "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject.",
       }),
+      description: Schema.optionalKey(
+        NamedSchema.annotate({
+          description:
+            'How a trigger writes this place, and what must be true there for the service to report it, in a sentence or two an agent is given.',
+        }),
+      ),
       name: Schema.optionalKey(PlaceNameSchema),
     }).annotate({
       description: 'The place an event of this type happens in, such as a channel or a repository.',

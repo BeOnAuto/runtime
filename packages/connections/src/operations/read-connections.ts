@@ -1,32 +1,11 @@
 import { Caller, defineHttpOperation, defineQuery, mayCall, type Runnable } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { ConnectionSchema } from '../registry/connection.ts';
-import { newestFirst, type KeptConnection } from '../registry/registry.ts';
-import { ConnectionIdField, GroupOfMoreSchema, RendersField } from './connection-fields.ts';
-import type { ConnectionServices } from './connection-services.ts';
+import { newestFirst } from '../registry/registry.ts';
+import { ConnectionIdField } from './connection-fields.ts';
 import { connectionsListed } from './connection-words.ts';
-import { moreOfferedTo } from './more-asked.ts';
+import { ListedConnectionSchema, listedOf, type Reading } from './listed-connections.ts';
 import { foundConnection, loadRegistry } from './registry-access.ts';
-import { shownConnections } from './shown-connections.ts';
-
-type Reading = Pick<ConnectionServices, 'secrets' | 'providers' | 'consent' | 'pages'>;
-
-const ListedConnectionSchema = Schema.Struct({
-  ...ConnectionSchema.fields,
-  renders: RendersField,
-  more: Schema.Array(GroupOfMoreSchema).annotate({
-    description:
-      'The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none',
-  }),
-}).annotate({
-  identifier: 'ListedConnection',
-  description: 'A connection, and what it may still be granted beside what it holds',
-});
-
-const listedOf = Effect.fnUntraced(function* (kept: readonly KeptConnection[], reading: Reading) {
-  return yield* moreOfferedTo(yield* shownConnections(reading.secrets, kept), reading);
-});
 
 export function defineListConnections(reading: Reading, managing: Runnable<'org'>) {
   return defineQuery('org', {
@@ -36,6 +15,8 @@ export function defineListConnections(reading: Reading, managing: Runnable<'org'
       'Lists the connections of the org, newest first.',
       'Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted.',
       'Use it to see which tool servers people added, and whether the person approved one add_connection added.',
+      'Each also lists, under `event_types`, the events it reports once it is connected.',
+      "To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`.",
     ].join(' '),
     route: { method: 'GET', path: '/connections' },
     inputSchema: Schema.Struct({

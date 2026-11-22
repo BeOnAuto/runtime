@@ -51,8 +51,9 @@ export interface StandingRequest {
   readonly definition: string;
   readonly name: string;
   readonly version: number;
-  readonly status: 'active' | 'retired';
+  readonly status: 'active' | 'paused' | 'retired';
   readonly details?: Schema.JsonObject;
+  readonly triggers?: readonly Trigger[];
 }
 
 export type Standing = (request: StandingRequest) => Effect.Effect<Schema.JsonObject | undefined>;

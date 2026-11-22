@@ -1,5 +1,6 @@
 import {
   isBoundedPart,
+  rowKeyColumn,
   type PlaybookAddress,
   type ProjectedKeyedRow,
   type ProjectionAdvancer,
@@ -54,6 +55,23 @@ export function heldRowsOf(
     }
     return held;
   });
+}
+
+export function recordedSubscriptionAt(
+  ledger: HeldRowsReader,
+  playbook: PlaybookAddress,
+  key: SubscriptionKey,
+): Effect.Effect<RecordedSubscription | undefined> {
+  const atItsKey = { column: rowKeyColumn, equals: eventSubscriptionIdOf(key) };
+  return Effect.map(
+    ledger.readProjectedRows(eventSubscriptionsName, playbook, {
+      where: [atItsKey],
+      orderBy: [],
+      order: 'asc',
+      limit: 1,
+    }),
+    ([found]) => (found === undefined ? undefined : recordedSubscriptionOf(found.row)),
+  );
 }
 
 function recordedBy(

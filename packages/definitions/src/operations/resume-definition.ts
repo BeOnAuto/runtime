@@ -3,11 +3,11 @@ import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
-import { definitionWordsFor } from '../plain-language/definition-words.ts';
+import { definitionWordsFor, startsInWords } from '../plain-language/definition-words.ts';
 import { hasTriggers } from '../registry/definition-triggers.ts';
 import { definitionSchemaOf } from '../registry/definition.ts';
 import { DefinitionNameField } from './definition-fields.ts';
-import { answeredDefinition } from './definition-reading.ts';
+import { answeredWithItsStanding } from './definition-reading.ts';
 import { recordInRegistry } from './registry-access.ts';
 
 const description = [
@@ -34,13 +34,13 @@ export function defineResumeDefinition(capabilities: readonly Capability[], goal
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
         const resumed = yield* recordInRegistry(capability, { type: 'resume', name, blanksRefused: goals });
-        return yield* answeredDefinition(capability, known.types, resumed, { change: 'resumed', goals });
+        return yield* answeredWithItsStanding(capability, known.types, resumed, { change: 'resumed', goals });
       }),
       plainLanguage: {
         task: `resume a ${words.kinds}`,
         attempt: ({ type, name }) => `resume ${words.named(type, name)}`,
         outcome: (definition) =>
-          `Resumed ${words.named(definition.type, definition.name)}. It can be run again${hasTriggers(definition) ? triggersAgain : ''}.`,
+          `Resumed ${words.named(definition.type, definition.name)}. It can be run again${hasTriggers(definition) ? triggersAgain : ''}.${startsInWords(definition)}`,
       },
     }),
   );

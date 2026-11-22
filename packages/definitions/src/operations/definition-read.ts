@@ -1,4 +1,4 @@
-import { Conflict, InvalidInput, PlaybookContext, type NotFound } from '@on.auto/operations';
+import { Conflict, InvalidInput, type NotFound } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -7,7 +7,7 @@ import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import { stagedDefinitionRead, type DefinitionReadAt } from '../read-model-staging/staged-reads.ts';
 import { isRetired, type StoredDefinition } from '../registry/definition.ts';
-import { withTheTextsRead } from './definition-reading.ts';
+import { withItsStanding, withTheTextsRead } from './definition-reading.ts';
 import { overOf, runOfThePage, runWithSample, sampleTakenFromText, viewsRead } from './page-runs.ts';
 
 interface DefinitionAsked {
@@ -106,24 +106,14 @@ const withItsTriggersSince = Effect.fnUntraced(function* (read: ReadOn) {
 const readOn = Effect.fnUntraced(function* (capability: Capability, read: ReadOn, { pages, asked, readIn }: Asking) {
   const { stored } = read;
   const { operation, refusedWithoutAPage } = readIn;
-  const { name, render = false, sample_output: given, run_id: runId } = asked;
+  const { render = false, sample_output: given, run_id: runId } = asked;
   const reading = { pages, type: capability.type, stored };
   const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
   const sample = typeof given === 'string' ? yield* sampleTakenFromText(operation, stored, given) : given;
   const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
-  const definition = yield* withItsTriggersSince(read);
-  const { org, playbook } = yield* PlaybookContext;
-  const standing = yield* capability.standing({
-    org,
-    playbook,
-    definition: stored.definition_id,
-    name,
-    version: definition.version,
-    status: isRetired(definition) ? 'retired' : 'active',
-    ...(stored.details === undefined ? {} : { details: stored.details }),
-  });
+  const definition = yield* withItsStanding(capability, stored, yield* withItsTriggersSince(read));
   const page = yield* pageRead(reading, result, run);
-  return { ...definition, ...(standing === undefined ? {} : { standing }), ...page };
+  return { ...definition, ...page };
 });
 
 interface Asking {

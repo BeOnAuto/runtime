@@ -6252,7 +6252,7 @@
       "get": {
         "operationId": "list_connections",
         "summary": "List connections",
-        "description": "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added.",
+        "description": "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`.",
         "tags": [
           "connections"
         ],
@@ -6951,6 +6951,65 @@
                             "description": "A group of scopes a later consent may add"
                           },
                           "description": "The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none"
+                        },
+                        "source": {
+                          "type": "string",
+                          "description": "Write this as the `source` of a trigger's filter to start a workflow from this connection's events."
+                        },
+                        "event_types": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "Write this as the filter's `type`."
+                              },
+                              "title": {
+                                "type": "string",
+                                "description": "What happened, in words to say to the person"
+                              },
+                              "subject": {
+                                "type": "object",
+                                "properties": {
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "required": {
+                                    "type": "boolean"
+                                  },
+                                  "description": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "title",
+                                  "required"
+                                ],
+                                "additionalProperties": false,
+                                "description": "The place the event happens in, such as a channel: what it is called, whether the filter must name one, and how to write it as the filter's `subject`."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when the workflow starts as it happens"
+                              },
+                              "data": {
+                                "type": "object",
+                                "description": "The JSON Schema of the event's `data`, for a condition on what happened"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "title",
+                              "speed",
+                              "data"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "The events this connection reports, each of which can start a workflow. The list is empty when it reports none or is not connected."
                         }
                       },
                       "required": [
@@ -6977,7 +7036,9 @@
                         "signing_secret",
                         "account",
                         "app_credentials",
-                        "more"
+                        "more",
+                        "source",
+                        "event_types"
                       ],
                       "additionalProperties": false,
                       "description": "A connection, and what it may still be granted beside what it holds"
@@ -7711,6 +7772,65 @@
                         "description": "A group of scopes a later consent may add"
                       },
                       "description": "The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none"
+                    },
+                    "source": {
+                      "type": "string",
+                      "description": "Write this as the `source` of a trigger's filter to start a workflow from this connection's events."
+                    },
+                    "event_types": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "Write this as the filter's `type`."
+                          },
+                          "title": {
+                            "type": "string",
+                            "description": "What happened, in words to say to the person"
+                          },
+                          "subject": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string"
+                              },
+                              "required": {
+                                "type": "boolean"
+                              },
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "required"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The place the event happens in, such as a channel: what it is called, whether the filter must name one, and how to write it as the filter's `subject`."
+                          },
+                          "speed": {
+                            "type": "string",
+                            "enum": [
+                              "instant"
+                            ],
+                            "description": "`instant` when the workflow starts as it happens"
+                          },
+                          "data": {
+                            "type": "object",
+                            "description": "The JSON Schema of the event's `data`, for a condition on what happened"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "title",
+                          "speed",
+                          "data"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The events this connection reports, each of which can start a workflow. The list is empty when it reports none or is not connected."
                     }
                   },
                   "required": [
@@ -7737,7 +7857,9 @@
                     "signing_secret",
                     "account",
                     "app_credentials",
-                    "more"
+                    "more",
+                    "source",
+                    "event_types"
                   ],
                   "additionalProperties": false,
                   "description": "A connection, and what it may still be granted beside what it holds"
@@ -19781,6 +19903,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -20811,6 +21006,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -21413,6 +21681,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -22055,6 +22396,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -22741,6 +23155,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -23311,6 +23798,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -23881,6 +24441,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -24451,6 +25084,79 @@
                             }
                           ],
                           "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                        },
+                        "triggers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "reference": {
+                                "type": "string",
+                                "description": "Where the document names the filter, as a JSON pointer"
+                              },
+                              "connection": {
+                                "type": "string",
+                                "description": "The connection this trigger starts from, by name"
+                              },
+                              "event": {
+                                "type": "string",
+                                "description": "What happens there to start it, in words to say to the person"
+                              },
+                              "subject_name": {
+                                "type": "string",
+                                "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                              },
+                              "speed": {
+                                "type": "string",
+                                "enum": [
+                                  "instant"
+                                ],
+                                "description": "`instant` when it starts as it happens"
+                              },
+                              "listening": {
+                                "type": "boolean",
+                                "description": "Whether the app is set to tell Auto about this event now"
+                              },
+                              "not_listening_because": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string"
+                                      },
+                                      "detail": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "detail"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                              },
+                              "needs_reconnecting": {
+                                "type": "boolean",
+                                "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                              }
+                            },
+                            "required": [
+                              "reference",
+                              "connection",
+                              "speed",
+                              "listening",
+                              "not_listening_because",
+                              "needs_reconnecting"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                         }
                       },
                       "allOf": [
@@ -28486,6 +29192,79 @@
                                 }
                               ],
                               "description": "The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued"
+                            },
+                            "triggers": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "reference": {
+                                    "type": "string",
+                                    "description": "Where the document names the filter, as a JSON pointer"
+                                  },
+                                  "connection": {
+                                    "type": "string",
+                                    "description": "The connection this trigger starts from, by name"
+                                  },
+                                  "event": {
+                                    "type": "string",
+                                    "description": "What happens there to start it, in words to say to the person"
+                                  },
+                                  "subject_name": {
+                                    "type": "string",
+                                    "description": "The name the app gives the place it listens in, such as \"#support\", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it."
+                                  },
+                                  "speed": {
+                                    "type": "string",
+                                    "enum": [
+                                      "instant"
+                                    ],
+                                    "description": "`instant` when it starts as it happens"
+                                  },
+                                  "listening": {
+                                    "type": "boolean",
+                                    "description": "Whether the app is set to tell Auto about this event now"
+                                  },
+                                  "not_listening_because": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string"
+                                          },
+                                          "detail": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "detail"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening"
+                                  },
+                                  "needs_reconnecting": {
+                                    "type": "boolean",
+                                    "description": "Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link"
+                                  }
+                                },
+                                "required": [
+                                  "reference",
+                                  "connection",
+                                  "speed",
+                                  "listening",
+                                  "not_listening_because",
+                                  "needs_reconnecting"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "description": "For a workflow whose trigger starts from a connection, how each such filter stands now"
                             }
                           },
                           "allOf": [

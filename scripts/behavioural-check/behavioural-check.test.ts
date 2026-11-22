@@ -37,7 +37,7 @@ await test('the briefs hold each shape, and a shape asked in two lines of busine
 
   assert.deepEqual(
     shapes.map((shape) => of(shape).length),
-    [2, 2, 2, 2, 1, 1],
+    [3, 2, 2, 2, 1, 1],
   );
   assert.deepEqual(
     shapes.map((shape) => of(shape).filter(({ held_out: heldOut }) => heldOut).length),

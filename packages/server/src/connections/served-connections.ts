@@ -15,7 +15,7 @@ import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stor
 import { licenseServedBy, type ServedLicense } from '../licensing/served-license.ts';
 import { ownKeysOf, secretsKeptBy, type OwnKeysRead } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
-import { accessOf, policyServedAt, socketsOpenedAt } from './connection-policies.ts';
+import { accessOf, eventsReceivedAt, policyServedAt, socketsOpenedAt } from './connection-policies.ts';
 
 interface ServedConnectionOperations {
   readonly connections: ConnectionOperations;
@@ -53,6 +53,7 @@ type ServingSettings = Pick<
   | 'registeredClients'
   | 'license'
   | 'toolCalls'
+  | 'receiving'
 >;
 
 interface Composed {
@@ -81,6 +82,7 @@ function connectionServicesOf(
     fetch: outboundFetch,
     readOnceThrough,
     sockets: socketChecksOver(opens),
+    received: eventsReceivedAt(settings.receiving),
   };
 }
 

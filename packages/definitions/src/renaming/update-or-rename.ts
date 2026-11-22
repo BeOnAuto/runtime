@@ -9,7 +9,7 @@ import {
   definitionNameFieldOf,
   diagramFieldOf,
 } from '../operations/definition-fields.ts';
-import { definitionWordsFor, pageWords, whatItDoes } from '../plain-language/definition-words.ts';
+import { definitionWordsFor, pageWords, startsInWords, whatItDoes } from '../plain-language/definition-words.ts';
 import type { Definition } from '../registry/definition.ts';
 import type { NamedDefinition } from '../used-by/called-definitions.ts';
 import {
@@ -98,7 +98,7 @@ export function updatePlainLanguage(capabilities: readonly Capability[]) {
       to === undefined ? `update ${words.named(type, name)}` : renameAttempt(words, { type, name }, to),
     outcome: (definition: Definition & UpdatedDefinitions, { name, new_name: to }: UpdateAsked) =>
       to === undefined
-        ? `Updated ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} The change applies from its next run.${pageWords(definition)}`
+        ? `Updated ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} The change applies from its next run.${startsInWords(definition)}${pageWords(definition)}`
         : renameOutcome(
             words,
             { type: definition.type, name: definition.name, from: name },

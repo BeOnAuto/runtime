@@ -1,4 +1,4 @@
-import { reachesUnder, type ConnectionServices, type RuntimeAccess } from '@on.auto/connections';
+import { reachesUnder, type ConnectionServices, type EventsReceived, type RuntimeAccess } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
 import type { OpensASocket } from '@on.auto/providers';
 
@@ -23,4 +23,8 @@ export function socketsOpenedAt(settings: PolicySettings): OpensASocket {
     reaches: reachesUnder(policyServedAt(settings)),
     mostRequestBytes: settings.toolCalls.mostRequestBytes,
   });
+}
+
+export function eventsReceivedAt({ overHttp, webhookUrl }: Settings['receiving']): EventsReceived {
+  return { perSubscription: overHttp && webhookUrl !== undefined, perApp: false, socket: true };
 }

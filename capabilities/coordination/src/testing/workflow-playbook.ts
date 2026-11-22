@@ -24,7 +24,11 @@ const isStarted = Schema.is(StartedSchema);
 
 export async function workflowPlaybook({
   goals = false,
-}: { readonly goals?: boolean } = {}): Promise<WorkflowPlaybook> {
+  connectionEvents = connectionsReporting({}),
+}: {
+  readonly goals?: boolean;
+  readonly connectionEvents?: Parameters<typeof makeWorkflowAdapter>[0]['connectionEvents'];
+} = {}): Promise<WorkflowPlaybook> {
   const ledger = namingLedger();
   const nested = playbookOn(ledger, [echo]);
   const settlements = hostSettlementsOn();
@@ -34,7 +38,7 @@ export async function workflowPlaybook({
       runs: host,
       queued: noneQueued,
       check: testExpressionCheck,
-      connectionEvents: connectionsReporting({}),
+      connectionEvents,
       mostDurationMs,
       longestCallMs: 660_000,
       names: testPlaybookNames,

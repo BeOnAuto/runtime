@@ -1,5 +1,6 @@
 import { firstReadWaitMs } from '@on.auto/interaction/testing';
 import type { FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
+import { Schema } from 'effect';
 
 import { hookMadeAt, type MadeHook } from '../interaction-servers/room-events.ts';
 import type { ReasoningServer } from '../servers/reasoning-server.ts';
@@ -7,6 +8,8 @@ import { isStarted, whenSwept } from '../servers/workflow-server.ts';
 import { ownClockOf, type SteppedServerClock } from '../waiting/stepped-server-clock.ts';
 
 type SteppedServer = Pick<ReasoningServer, 'call'> & { readonly clock?: SteppedServerClock };
+
+const StartedSchema = Schema.Struct({ events: Schema.Array(Schema.Unknown) });
 
 /**
  * The webhook the server arranged at the rooms service. A subscription round runs on the server's next sweep after its
@@ -19,6 +22,30 @@ export async function hookSweptAt(server: SteppedServer, rooms: FakeMcpServer): 
     (count) => count > 0,
   );
   return hookMadeAt(rooms);
+}
+
+/** The hook the server removed at the rooms service, as a round after a change of its triggers does. */
+export async function hookRemovedAt(server: SteppedServer, rooms: FakeMcpServer): Promise<void> {
+  await whenSwept(
+    server,
+    () => rooms.received().filter(({ tool }) => tool === 'delete_hook').length,
+    (count) => count > 0,
+  );
+}
+
+/** How many runs the playbook at the path records started, as its list of `run_started` events says. */
+export async function runsStartedIn(server: SteppedServer, playbook: string): Promise<number> {
+  const { body } = await server.call('GET', `${playbook}/events?type=run_started`);
+  return Schema.decodeUnknownSync(StartedSchema)(body).events.length;
+}
+
+/** The runs the playbook's triggers started, once one is: the sweeps that start them are stepped. */
+export function runsStartedSwept(server: SteppedServer, playbook: string): Promise<number> {
+  return whenSwept(
+    server,
+    () => runsStartedIn(server, playbook),
+    (started) => started > 0,
+  );
 }
 
 /** The request's post in the room, which the server sends from a run its sweep starts: its sweeps are stepped. */

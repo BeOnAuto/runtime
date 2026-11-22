@@ -363,7 +363,7 @@ describe('reactions over mcp', () => {
   });
 
   describe('a connection’s events, over MCP', () => {
-    it('refuse a workflow whose trigger names a connection this runtime does not receive from, and an event published under a connection’s source', async () => {
+    it('refuse a workflow whose trigger names a connection that is not connected yet, and an event published under a connection’s source', async () => {
       const seen = await onAlphaReactions(async (session) => {
         await server.call('POST', '/v1/orgs/acme/connections', { body: { provider: 'github' } });
         const onIssues = await session.callTool('create_definition', {
@@ -380,7 +380,7 @@ describe('reactions over mcp', () => {
       const refused = refusalOf(problemIn(seen.onIssues));
       expect(refused.reason).toBe('invalid_input');
       expect(
-        refused.errors.map(({ pointer, detail }) => [pointer, detail.includes('/schedule/on/one/with/type')]),
+        refused.errors.map(({ pointer, detail }) => [pointer, detail.includes('/schedule/on/one/with/source')]),
       ).toEqual([['/source', true]]);
       expect({ isError: seen.asAConnection.isError, problem: problemIn(seen.asAConnection) }).toMatchObject({
         isError: true,

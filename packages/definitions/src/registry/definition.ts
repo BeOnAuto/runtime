@@ -107,12 +107,41 @@ const listedDefinitionWithGoalsFields = {
   details: Schema.optionalKey(DetailsWithGoalsSchema),
 };
 
+const TriggerStandingSchema = Schema.Struct({
+  reference: Schema.String.annotate({ description: 'Where the document names the filter, as a JSON pointer' }),
+  connection: Schema.String.annotate({ description: 'The connection this trigger starts from, by name' }),
+  event: Schema.optionalKey(
+    Schema.String.annotate({ description: 'What happens there to start it, in words to say to the person' }),
+  ),
+  subject_name: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The name the app gives the place it listens in, such as "#support", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it.',
+    }),
+  ),
+  speed: Schema.Literal('instant').annotate({ description: '`instant` when it starts as it happens' }),
+  listening: Schema.Boolean.annotate({ description: 'Whether the app is set to tell Auto about this event now' }),
+  not_listening_because: Schema.NullOr(Schema.Struct({ kind: Schema.String, detail: Schema.String })).annotate({
+    description:
+      'Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening',
+  }),
+  needs_reconnecting: Schema.Boolean.annotate({
+    description:
+      'Whether the connection must be reconnected before this trigger can start again; `reconnect_connection` gives the link',
+  }),
+});
+
 const StandingField = Schema.StructWithRest(
   Schema.Struct({
     queued: Schema.optionalKey(Schema.Int.annotate({ description: 'How many of its runs are queued to start' })),
     next_queued_start: Schema.optionalKey(
       Schema.NullOr(Schema.String).annotate({
         description: 'The earliest time the next of them can start, in ISO 8601 UTC, or null when none is queued',
+      }),
+    ),
+    triggers: Schema.optionalKey(
+      Schema.Array(TriggerStandingSchema).annotate({
+        description: 'For a workflow whose trigger starts from a connection, how each such filter stands now',
       }),
     ),
   }),
