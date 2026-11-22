@@ -1,7 +1,14 @@
 export type { ConversationLedger, ConversationParts } from './conversations/conversation-parts.ts';
 export { conversations, conversationsName } from './conversations/conversation-rows.ts';
 export { conversationsDue } from './conversations/conversations-due.ts';
-export { connectionWake, type ConnectionWake, type WakeParts, type WokenConnection } from './wakes/connection-wakes.ts';
+export {
+  connectionWake,
+  playbooksWaitingIn,
+  type ConnectionWake,
+  type PlaybooksWaiting,
+  type WakeParts,
+  type WokenConnection,
+} from './wakes/connection-wakes.ts';
 export {
   replyDelivery,
   type DeliveredReplies,

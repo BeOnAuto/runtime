@@ -1,6 +1,8 @@
 import {
   addressOfTheRow,
   everyDefinitionOf,
+  playbookRowsOf,
+  type PlaybookAddress,
   type ProjectedAddress,
   type ProjectedKeyedRow,
   type ProjectionAdvancer,
@@ -24,7 +26,11 @@ export interface WokenConnection {
 
 export type ConnectionWake = (woken: WokenConnection, now: number) => Effect.Effect<void>;
 
-export interface WakeParts {
+interface ReadParts {
+  readonly ledger: Pick<ProjectionReader, 'readProjectedRows'>;
+}
+
+export interface WakeParts extends ReadParts {
   readonly ledger: Pick<ProjectionReader, 'readProjectedRows'> & ProjectionAdvancer;
 }
 
@@ -85,8 +91,8 @@ function rowsNamedBy(requests: readonly ProjectedKeyedRow[]): readonly NamedRow[
   return [...new Map(named.map((row: NamedRow) => [JSON.stringify(row), row])).values()];
 }
 
-function rowsOfTheConversation(parts: WakeParts, org: string, conversation: string) {
-  const requests = parts.ledger.readProjectedRows(openRequestsName, everyDefinitionOf({ org }), {
+function requestsOpenIn({ ledger }: ReadParts, org: string, conversation: string) {
+  return ledger.readProjectedRows(openRequestsName, everyDefinitionOf({ org }), {
     where: [
       { column: 'open', equals: true },
       { column: 'sent_conversation', equals: conversation },
@@ -95,6 +101,10 @@ function rowsOfTheConversation(parts: WakeParts, org: string, conversation: stri
     order: 'asc',
     limit: wakeBounds.conversations,
   });
+}
+
+function rowsOfTheConversation(parts: WakeParts, org: string, conversation: string) {
+  const requests = requestsOpenIn(parts, org, conversation);
   return Effect.flatMap(requests, (rows) =>
     Effect.map(
       Effect.forEach(rowsNamedBy(rows), ({ address, key }) => rowNamed(parts, address, key)),
@@ -141,6 +151,21 @@ function broughtForward(parts: WakeParts, { waiting, floorMs }: Paced, dueAt: nu
         ],
       })
     : Effect.void;
+}
+
+export type PlaybooksWaiting = (org: string, conversation: string) => Effect.Effect<readonly PlaybookAddress[]>;
+
+function eachOnce(playbooks: readonly PlaybookAddress[]): readonly PlaybookAddress[] {
+  return [
+    ...new Map(playbooks.map((playbook) => [JSON.stringify([playbook.org, playbook.playbook]), playbook])).values(),
+  ];
+}
+
+export function playbooksWaitingIn(parts: ReadParts): PlaybooksWaiting {
+  return (org, conversation) =>
+    Effect.map(requestsOpenIn(parts, org, conversation), (rows) =>
+      eachOnce(playbookRowsOf(openRequestsName, rows).map(({ playbook }) => ({ org, playbook }))),
+    );
 }
 
 export function connectionWake(parts: WakeParts): ConnectionWake {

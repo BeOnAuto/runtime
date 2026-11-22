@@ -8,8 +8,10 @@ import {
   listInteractionsAbout,
   makeInteractionFunctionAdapter,
   openRequestsName,
+  replyDelivery,
   requestsAskingAbout,
   requestsDue,
+  type ReplyDelivery,
   type RequestsDue,
 } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
@@ -20,10 +22,15 @@ import { Effect } from 'effect';
 import type { Settings } from '../settings/settings.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 
+interface RecordedInteraction {
+  readonly dueWork: readonly RequestsDue[];
+  readonly delivered: ReplyDelivery;
+}
+
 export interface ServedInteraction {
   readonly capability: Capability;
   readonly operations: readonly PlaybookOperation[];
-  readonly dueWorkOf: (record: RecordWork) => readonly RequestsDue[];
+  readonly recordedBy: (record: RecordWork) => RecordedInteraction;
   readonly askedAbout: AskedAbout;
 }
 
@@ -59,7 +66,10 @@ export function interactionServedBy(
       answerInteraction,
       results ? listInteractionsAbout({ about: thingsAskedAbout, setAside: requestsSetAside }) : listInteractions,
     ],
-    dueWorkOf: (record) => [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
+    recordedBy: (record) => ({
+      dueWork: [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
+      delivered: replyDelivery({ ledger, tools, record }),
+    }),
     askedAbout: askedAboutServed,
   };
 }

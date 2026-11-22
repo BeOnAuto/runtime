@@ -74,6 +74,13 @@ events:
           '$message.payload#/payload/event/type': [message]
         conversation: $message.payload#/payload/event/channel
         automatic: $message.payload#/payload/event/bot_id
+        reply:
+          id: $message.payload#/payload/event/ts
+          sender: $message.payload#/payload/event/user
+          text: $message.payload#/payload/event/text
+          to: $message.payload#/payload/event/thread_ts
+          time: $message.payload#/payload/event/ts
+          changed: $message.payload#/payload/event/hidden
       events:
         - type: com.slack.message
           when:

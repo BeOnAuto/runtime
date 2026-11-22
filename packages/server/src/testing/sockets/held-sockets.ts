@@ -5,6 +5,7 @@ import {
   cardMoved,
   ledgers,
   overASocket,
+  overASocketCarryingReplies,
   overTheBoardsSocket,
   providersOf,
   trackerOverASocket,
@@ -26,8 +27,9 @@ const [aKey] = trackerOverASocket.credentials;
 
 /**
  * Made-up entries whose connections hold a socket: the tracker's and the ledgers', which report no event and say
- * nothing of who a connection is, and the boards', of another shape, which maps a card moved to an event, names the
- * space a message is in, and says how to ask who a connection is and which space it is in.
+ * nothing of who a connection is; the boards', of another shape, which maps a card moved to an event, names the
+ * space a message is in, and says how to ask who a connection is and which space it is in; and the chats', whose
+ * messages carry the reply a person writes in the thread of a message.
  */
 export const socketProviders = providersOf(
   { ...trackerOverASocket, events: { destinations: [overASocket] } },
@@ -44,15 +46,21 @@ export const socketProviders = providersOf(
     title: 'Boards',
     events: { types: [cardMoved], identity: whichSpace, destinations: [overTheBoardsSocket] },
   },
+  { ...trackerOverASocket, name: 'chats', title: 'Chats', events: { destinations: [overASocketCarryingReplies] } },
 );
 
-export function heldBy(connection: string, appSecretId?: string, provider = 'tracker'): readonly Fact[] {
+export function heldBy(
+  connection: string,
+  appSecretId?: string,
+  provider = 'tracker',
+  name = `chat-${connection}`,
+): readonly Fact[] {
   return [
     {
       type: 'connection_added',
       data: {
         connection,
-        name: `chat-${connection}`,
+        name,
         server_type: 'mcp',
         provider,
         placeholders: null,
@@ -86,6 +94,28 @@ export function inSpace(connection: string, appSecretId: string, space?: string)
           },
         ];
   return [...heldBy(connection, appSecretId, 'boards'), ...identified];
+}
+
+/**
+ * The connection named chat, through which a request of the interaction's chat harness is sent, holding the app
+ * credential that opens the chats socket, recorded in a workspace if given.
+ */
+export function chatIn(workspace?: string): readonly Fact[] {
+  const identified: readonly Fact[] =
+    workspace === undefined
+      ? []
+      : [
+          {
+            type: 'connection_identified',
+            data: {
+              connection: 'connection-chat',
+              connected_at: connectedAt,
+              user: { id: 'B0CHAT' },
+              account: { id: workspace },
+            },
+          },
+        ];
+  return [...heldBy('connection-chat', 'chats', 'chats', 'chat'), ...identified];
 }
 
 /** The connection connected again, holding the app credential that opens the boards socket. */

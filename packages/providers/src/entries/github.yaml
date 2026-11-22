@@ -30,6 +30,21 @@ credentials:
       write access. An organization that requires approval keeps the token pending, reading public resources alone,
       until an organization administrator approves it. The token starts with `github_pat_`.
     key_page: https://github.com/settings/personal-access-tokens/new
+    key_page_title: Open GitHub's key page
+    steps:
+      key_page:
+        title: Create a key at GitHub
+        instructions: |-
+          - Under **Resource owner**, choose the account or organization that owns the repositories.
+          - Under **Repository access**, choose **Only select repositories** and pick the ones your playbooks use.
+          - Under **Permissions**, set **Contents** to read-only.
+          - Set **Issues** and **Pull requests** to read and write.
+          - Under **Expiration**, choose how long the token lasts. When it ends, reconnect with a new token.
+
+          If the organization that owns the repositories requires approval, GitHub keeps the token pending until an owner of that organization approves it. Until then, the token can read only what is public on GitHub.
+      key:
+        title: Paste the key here
+        instructions: On GitHub's page, select **Generate token**, then copy the token and paste it here.
     example: github_pat_…
     pattern: ^github_pat_.+$
 events:

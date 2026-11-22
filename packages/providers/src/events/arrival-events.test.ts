@@ -14,6 +14,7 @@ import {
 } from '../testing/event-destinations.ts';
 import { providersOf } from '../testing/fixture-providers.ts';
 import { arrivalReadingOf, type Arrival, type ArrivalReading } from './arrival-readings.ts';
+import { millisecondsSinceTheEpochOf } from './event-times.ts';
 
 type Fields = Readonly<Record<string, Schema.Json>>;
 
@@ -188,6 +189,19 @@ describe('the time of an event', () => {
       undefined,
       undefined,
     ]);
+  });
+});
+
+describe('a time a delivery names, in milliseconds since the epoch, as a reply’s is taken', () => {
+  it.each([
+    ['seconds since the epoch, written as text', '1763629200.5', 1_763_629_200_500],
+    ['seconds since the epoch, as a number', 1_763_629_200, 1_763_629_200_000],
+    ['an RFC 3339 date-time', '2025-11-20T09:00:00.250Z', 1_763_629_200_250],
+    ['an RFC 3339 date-time with an offset', '2025-11-20T10:00:00+01:00', 1_763_629_200_000],
+    ['neither', 'yesterday', undefined],
+    ['nothing', undefined, undefined],
+  ] as const)('is the instant it names as %s, and none otherwise', (_, time, taken) => {
+    expect(millisecondsSinceTheEpochOf(time)).toBe(taken);
   });
 });
 

@@ -41,7 +41,9 @@ async function forecasterServedOn(
   return foldedBeforeItRuns({ capability, folders, database });
 }
 
-interface WakingParts extends Pick<SocketsServing, 'store' | 'opens'> {
+interface WakingParts extends Pick<SocketsServing, 'opens'> {
+  readonly projections: Pick<SocketsServing, 'store'>;
+  readonly recorded: Pick<SocketsServing, 'delivered'>;
   readonly subscriptions: Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptions'];
   readonly tools: Pick<SocketsServing, 'secrets'> & { readonly now?: SocketsServing['now'] };
   readonly computation: Pick<ServedWiring['computation'], 'pool'>;
@@ -50,7 +52,7 @@ interface WakingParts extends Pick<SocketsServing, 'store' | 'opens'> {
 function wakeUpsOf(
   runtime: ServingRuntime,
   settings: ServedSettings,
-  { subscriptions, tools, computation, store, opens }: WakingParts,
+  { subscriptions, tools, computation, projections: { store }, opens, recorded: { delivered } }: WakingParts,
 ): readonly ReturnType<typeof socketsOfTheServer>[] {
   const following = subscriptions.wakeUpsOver({ streams: store.database.store });
   const sockets = {
@@ -58,6 +60,7 @@ function wakeUpsOf(
     opens,
     secrets: tools.secrets,
     identities: subscriptions.identities,
+    delivered,
     filters: computation.pool.evaluations.filters,
     now: tools.now ?? Date.now,
   };
@@ -80,10 +83,10 @@ export async function functionsServedBy(
   const toolCapabilities = [reasoning.capability, lookup, interaction.capability];
   const capabilities = [...toolCapabilities, computing, forecaster, generation.capability];
   const { facts, names, record } = factsComposedOf(runtime, capabilities);
-  const ownDueWork = [...interaction.dueWorkOf(subscriptions.recording(record)), subscriptions.dueWork];
+  const recorded = interaction.recordedBy(subscriptions.recording(record));
   const lists = await servedWithTheGoalsEngine(
     { ...tools, goals: tools.results, runtime, database: projections.store.database, pool: computation.pool },
-    [...ownDueWork, ...dueWork, ...generation.dueWork],
+    [...recorded.dueWork, subscriptions.dueWork, ...dueWork, ...generation.dueWork],
     [...toolOperations.inPlaybook, ...interaction.operations, ...operations],
   );
   return {
@@ -106,7 +109,7 @@ export async function functionsServedBy(
       capabilityOperations: [generation],
       dueWork: lists.dueWork,
       consumers: [...lists.consumers, subscriptions.consumer],
-      wakeUps: wakeUpsOf(runtime, settings, { store: projections.store, opens, subscriptions, tools, computation }),
+      wakeUps: wakeUpsOf(runtime, settings, { projections, opens, subscriptions, tools, computation, recorded }),
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

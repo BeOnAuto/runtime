@@ -2,12 +2,13 @@ import { Effect } from 'effect';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { conversationRowFrom } from '../conversations/conversation-rows.ts';
-import { chatHarness, conversationRows, recordsOf, type ChatHarness } from '../testing/chat-harness.ts';
+import { answerInteraction } from '../requests/answer-interaction.ts';
+import { answererId, chatHarness, conversationRows, recordsOf, type ChatHarness } from '../testing/chat-harness.ts';
 import { threadDocument, threadReplies } from '../testing/documents.ts';
-import { alpha } from '../testing/interaction-harness.ts';
+import { alpha, beta } from '../testing/interaction-harness.ts';
 import { threadOfTheChannelReplies } from '../testing/reading-documents.ts';
 import { readOnce, theChannel } from '../testing/woken-conversations.ts';
-import { connectionWake } from './connection-wakes.ts';
+import { connectionWake, playbooksWaitingIn } from './connection-wakes.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
 
@@ -201,6 +202,36 @@ describe('a wake that names the conversation an arrival is about', () => {
       [0, 5],
       [5, 5],
       [10, 5],
+    ]);
+  });
+});
+
+describe('the playbooks a request waits in, in a conversation', () => {
+  it('are each playbook with a request open there, once however many it holds, and none once they are answered or for another conversation or org', async () => {
+    const playbook = await chatHarness();
+    const other = playbook.inPlaybook(beta);
+    await other.define('approve-brief', threadDocument());
+    await inTurn(threeRuns.slice(0, 2), (run) => playbook.askInThread(run));
+    await inTurn(threeRuns.slice(2), (run) =>
+      other.ask('approve-brief', { team: 'sales', owner: answererId, campaign: 'Spring' }, run),
+    );
+    await playbook.performDue(Date.now());
+    const waitingIn = playbooksWaitingIn({ ledger: playbook.ledger.service });
+    const waiting = async (org: string, conversation: string) =>
+      (await Effect.runPromise(waitingIn(org, conversation))).toSorted((one, another) =>
+        one.playbook.localeCompare(another.playbook),
+      );
+    const before = [await waiting(alpha.org, theChannel), await waiting(alpha.org, '#approvals-marketing')];
+
+    await inTurn(threeRuns.slice(0, 2), (run) =>
+      playbook.call(answerInteraction, { run_id: run, answer: { choice: 'reject' } }),
+    );
+
+    expect([...before, await waiting('umbrella', theChannel), await waiting(alpha.org, theChannel)]).toEqual([
+      [alpha, beta],
+      [],
+      [],
+      [beta],
     ]);
   });
 });

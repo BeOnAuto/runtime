@@ -1,5 +1,4 @@
 import { appCredentialRefused, connectionsStream } from '@on.auto/connections';
-import type { ConnectionWake } from '@on.auto/interaction';
 import type { StreamSignal } from '@on.auto/ledger';
 import { orgOfStreamPrefix } from '@on.auto/operations';
 import { activePlaybooksOf } from '@on.auto/playbooks';
@@ -23,12 +22,12 @@ import {
   type SocketMember,
   type WantedSocket,
 } from './socket-registries.ts';
+import { replyTakenBy, type CarriedReply, type ArrivalParts } from './socket-replies.ts';
 
 type ArrivalEvent = NonNullable<ArrivalReading['event']>;
 
-export interface SocketParts extends RegistryParts {
+export interface SocketParts extends RegistryParts, ArrivalParts {
   readonly opens: OpensASocket;
-  readonly wake: ConnectionWake;
   readonly takeIn: TakeIn;
   readonly identities: IdentityParts['identities'];
   readonly appended: StreamSignal;
@@ -78,6 +77,7 @@ class SocketSet {
   readonly #parts: SocketParts;
   readonly #registries: ReturnType<typeof registriesOf>;
   readonly #owed: ReturnType<typeof owedIdentitiesOf>;
+  readonly #replyTaken: ReturnType<typeof replyTakenBy>;
   readonly #sockets: ReturnType<typeof background>;
   readonly #running = new Map<string, Held>();
   readonly #wokenAt = new Map<string, number>();
@@ -87,6 +87,7 @@ class SocketSet {
     this.#parts = parts;
     this.#registries = registriesOf(parts);
     this.#owed = owedIdentitiesOf({ registry: parts.registries.registry, identities: parts.identities });
+    this.#replyTaken = replyTakenBy(parts.replies);
     this.#sockets = background(parts.context);
   }
 
@@ -151,7 +152,7 @@ class SocketSet {
       opens: this.#parts.opens,
       arrived: ({ reading }) => {
         const present = members();
-        return Effect.andThen(this.#wokenBy(present, reading), this.#takenIn(present, reading));
+        return Effect.andThen(this.#repliedOrWoken(present, reading), this.#takenIn(present, reading));
       },
       opened: Effect.suspend(() => this.#wokenEach(members())),
       ended: (end) => this.#endedAs(held.current(), end),
@@ -168,9 +169,23 @@ class SocketSet {
     });
   }
 
-  #wokenBy(members: readonly SocketMember[], { wake }: ArrivalReading): Effect.Effect<void> {
-    const conversation = wake?.conversation;
-    return conversation === undefined ? Effect.void : this.#wokenEach(members, conversation);
+  #repliedOrWoken(members: readonly SocketMember[], { wake }: ArrivalReading): Effect.Effect<void> {
+    if (wake?.conversation === undefined) {
+      return Effect.void;
+    }
+    const { conversation, reply } = wake;
+    if (reply === undefined) {
+      return this.#wokenEach(members, conversation);
+    }
+    return Effect.flatMap(Clock.currentTimeMillis, (now) =>
+      Effect.flatMap(this.#untakenBy(members, { conversation, reply, now }), (untaken) =>
+        this.#wokenEach(untaken, conversation),
+      ),
+    );
+  }
+
+  #untakenBy(members: readonly SocketMember[], carried: CarriedReply): Effect.Effect<readonly SocketMember[]> {
+    return Effect.filter(members, (member) => Effect.map(this.#replyTaken(member, carried), (taken) => !taken));
   }
 
   #takenIn(members: readonly SocketMember[], { event, connection }: ArrivalReading): Effect.Effect<void> {

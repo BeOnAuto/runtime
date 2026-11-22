@@ -26,7 +26,7 @@ const aPersonsMessage = {
   ts: '1763629200.000100',
 };
 
-function slacksEventOf(event: Fields): ArrivalReading['event'] {
+function slacksReadingOf(event: Fields): ArrivalReading | undefined {
   const payload = {
     team_id: 'T0WORKSPACE',
     api_app_id: 'A0APP',
@@ -36,7 +36,11 @@ function slacksEventOf(event: Fields): ArrivalReading['event'] {
   const envelope = { envelope_id: 'dbdd0ef3-1543-4f94-bfb4-133d0e6c1545', type: 'events_api', payload };
   return overSlacksSocket === undefined
     ? undefined
-    : arrivalReadingOf(overSlacksSocket, { transport: 'message', payload: envelope }).event;
+    : arrivalReadingOf(overSlacksSocket, { transport: 'message', payload: envelope });
+}
+
+function slacksEventOf(event: Fields): ArrivalReading['event'] {
+  return slacksReadingOf(event)?.event;
 }
 
 const inTheThread = { thread_ts: '1763629100.000200' };
@@ -98,5 +102,35 @@ describe('the account that did what a message Slack’s Socket Mode sends report
       identified: { id: '/bot_id' },
       account: '/team_id',
     });
+  });
+});
+
+describe('the reply a message Slack’s Socket Mode sends carries, as the shipped slack-bot reads it', () => {
+  it('is a person’s message in a thread: who wrote it, its words, the message it answers, its id and time, and the workspace', () => {
+    const reply = {
+      account: 'T0WORKSPACE',
+      id: '1763629200.000100',
+      sender: 'U0PERSON',
+      text: 'The build is red',
+      to: '1763629100.000200',
+      time: '1763629200.000100',
+    };
+
+    expect([
+      slacksReadingOf(inTheThread)?.wake,
+      slacksReadingOf({ subtype: 'thread_broadcast', ...inTheThread })?.wake,
+    ]).toEqual([
+      { conversation: 'C0SUPPORT', reply },
+      { conversation: 'C0SUPPORT', reply },
+    ]);
+  });
+
+  it.each([
+    ['an app posted', { bot_id: 'B0APP', ...inTheThread }],
+    ['that is an edit', { subtype: 'message_changed', hidden: true, ...inTheThread }],
+    ['that is a deletion', { subtype: 'message_deleted', hidden: true, ...inTheThread }],
+    ['in no thread', {}],
+  ] as const)('is none for a message %s', (_, event) => {
+    expect(slacksReadingOf(event)?.wake?.reply).toBeUndefined();
   });
 });

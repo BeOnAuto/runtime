@@ -134,6 +134,17 @@ export const overASocket = {
   connection: { account: '$message.payload#/payload/team_id', user: '$message.payload#/payload/event/user' },
 };
 
+export const aReplyOverASocket = {
+  id: '$message.payload#/payload/event/ts',
+  sender: '$message.payload#/payload/event/user',
+  text: '$message.payload#/payload/event/text',
+  to: '$message.payload#/payload/event/thread_ts',
+  time: '$message.payload#/payload/event/ts',
+  changed: '$message.payload#/payload/event/hidden',
+};
+
+export const overASocketCarryingReplies = carrying(overASocket, aReplyOverASocket);
+
 export const cardMoved = {
   type: 'com.example.boards.card.moved',
   title: 'A card is moved',

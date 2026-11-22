@@ -59,16 +59,22 @@ type DeliveredReply = NonNullable<Destination['filter']['reply']>;
 
 const placesOfAReply: readonly (keyof DeliveredReply)[] = ['id', 'sender', 'text', 'to', 'time', 'changed'];
 
-const fromTheBody = 'since a reply is read from the body alone, which the proof covers';
-
 function replyPlaceOf(destination: Destination): ExpressionPlace {
   return transportOf(destination) === 'request'
-    ? { transport: 'request', sources: ['body'], because: fromTheBody }
-    : { transport: 'message', sources: ['payload'], because: fromTheBody };
+    ? {
+        transport: 'request',
+        sources: ['body'],
+        because: 'since a reply is read from the body alone, which the proof covers',
+      }
+    : { transport: 'message', sources: ['payload'], because: "since a reply is read from the message's payload alone" };
+}
+
+function provesAReply({ type, verify }: Destination): boolean {
+  return type === 'websocket' || (verify !== undefined && provesTheBodyAndATime(verify));
 }
 
 const unproven =
-  'Expected reply only where verify proves every byte of the body and a time, as standard-webhooks does, and hmac where it signs {payload} and a timestamp: a secret or a signed token in a header proves who sent a delivery, not that its body is theirs, so such a destination only makes Auto read';
+  'Expected reply only on a websocket, or on a webhook whose verify proves every byte of the body and a time, as standard-webhooks does, and as hmac does where it signs {payload} and a timestamp. A secret or a signed token in a header proves who sent a delivery but not that its body is theirs, and nothing proves what a queue holds, so such a destination can only tell Auto to read the replies now';
 
 const unowned =
   'Expected reply only beside connection, where a delivery names the account it happened in, so that a reply is taken only for the connections made in it';
@@ -77,7 +83,7 @@ const unplaced =
   "Expected reply only beside conversation, where a delivery names the conversation the reply was posted in, since a message's id may be unique only within its conversation, so that a reply is taken only for the request sent there as the message it answers";
 
 function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
-  const { filter, verify, connection } = destination;
+  const { filter, connection } = destination;
   const { reply } = filter;
   if (reply === undefined) {
     return [];
@@ -85,7 +91,7 @@ function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const place = replyPlaceOf(destination);
   return [
     ...placesOfAReply.flatMap((field) => expressionIssuesAt(['filter', 'reply', field], reply[field], place)),
-    ...(verify !== undefined && provesTheBodyAndATime(verify) ? [] : [{ path: ['filter', 'reply'], issue: unproven }]),
+    ...(provesAReply(destination) ? [] : [{ path: ['filter', 'reply'], issue: unproven }]),
     ...(connection === undefined ? [{ path: ['filter', 'reply'], issue: unowned }] : []),
     ...(filter.conversation === undefined ? [{ path: ['filter', 'reply'], issue: unplaced }] : []),
   ];

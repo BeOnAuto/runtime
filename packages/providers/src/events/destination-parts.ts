@@ -33,7 +33,7 @@ const DeliveredReplySchema = Schema.Struct({
   ),
 }).annotate({
   description:
-    "Where a delivery carries the person's reply, each in its body, so that Auto takes the reply as it arrives, by the rule a reading takes one by: only where verify proves every byte of the body and a time and connection names the account, and only in an entry the runtime ships",
+    "Where a delivery holds the person's reply, so that Auto takes the reply as it arrives, without reading the conversation first. Only an entry that ships with the runtime can declare it: in a provider added in the configuration file it is refused.",
 });
 
 export const FilterSchema = Schema.Struct({

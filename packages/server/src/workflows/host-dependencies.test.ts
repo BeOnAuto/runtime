@@ -511,6 +511,7 @@ describe('an event that arrives over a socket of a server given no webhook addre
         secrets: { read: () => Effect.succeed(appCredential) },
         opens: service.opens,
         identities,
+        delivered: () => Effect.die('a reply was delivered'),
         filters: filterSandboxOf(freshInstances(sandboxModule)),
         now: () => Date.parse('2026-11-20T09:00:00.000Z'),
       },

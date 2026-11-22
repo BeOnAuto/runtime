@@ -19,6 +19,7 @@ export {
   cardMoved,
   ofEachSubscription,
   overASocket,
+  overASocketCarryingReplies,
   overTheBoardsSocket,
   throughItsTools,
   trackerOverASocket,

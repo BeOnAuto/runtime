@@ -287,7 +287,7 @@ describe('the messages of Slack’s Socket Mode, as the shipped slack-bot reads 
 
   it('wake for a person’s message in a conversation, and for nothing else the socket sends', () => {
     expect([
-      readOverSlacksSocket(anEnvelope({ ...aPersonsMessage, thread_ts: '1.1', text: 'approve' })),
+      readOverSlacksSocket(anEnvelope({ ...aPersonsMessage, text: 'approve' })),
       readOverSlacksSocket(anEnvelope({ ...aPersonsMessage, bot_id: 'B0APP' })),
       readOverSlacksSocket(anEnvelope({ type: 'reaction_added', user: 'U0PERSON' })),
       readOverSlacksSocket({ type: 'hello', num_connections: 1 }),

@@ -2,7 +2,7 @@ import { ConnectionEventSchema, connectionsStreamOfOrg, eventSubscriptions } fro
 import { wakesHeard } from '@on.auto/interaction/testing';
 import { streamSignalOf } from '@on.auto/ledger';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Redacted, Result, type Context } from 'effect';
+import { Effect, Function, Redacted, Result, type Context } from 'effect';
 
 import { socketWakeUpOf, type SocketParts } from '../../sockets/served-sockets.ts';
 import { subscriptionsServedBy } from '../../subscriptions/served-subscriptions.ts';
@@ -18,6 +18,8 @@ import {
 import { ServiceSockets } from './service-sockets.ts';
 
 type TakeIn = SocketParts['takeIn'];
+
+type SocketReplies = SocketParts['replies'];
 
 type Arrival = Parameters<TakeIn>[0];
 
@@ -50,6 +52,12 @@ function stateOf<State>({ state }: { readonly state: State }): State {
 
 const taken: ReturnType<TakeIn> = Effect.succeed({ outcome: 'taken' });
 
+const noRequestWaits: SocketReplies = {
+  waitingIn: Function.constant(Effect.succeed([])),
+  awaited: Function.constant(Effect.die('a reply was asked about')),
+  delivered: Function.constant(Effect.die('a reply was delivered')),
+};
+
 /**
  * The socket set of a server over a ledger in memory: the registries of its orgs, the playbooks of each, the wakes
  * and the intake it hands each message to, each kept in order, and the service asked who a connection is.
@@ -66,6 +74,7 @@ export class SocketsOverALedger extends ServiceSockets {
   readonly lateBy = new Map<string, number>();
   readonly #orgs = new Set<string>();
   #intake: readonly ReturnType<TakeIn>[] = [];
+  #replies: SocketReplies = noRequestWaits;
   #raised = 0;
   #listingFails = false;
 
@@ -80,6 +89,11 @@ export class SocketsOverALedger extends ServiceSockets {
   /** The intake answers each arrival in turn as given, and takes each one after them. */
   readonly takesInAs = (...answers: readonly ReturnType<TakeIn>[]): void => {
     this.#intake = answers;
+  };
+
+  /** The reply a message carries is taken by these, given before the sockets start, where no request waits otherwise. */
+  readonly takesRepliesBy = (replies: SocketReplies): void => {
+    this.#replies = replies;
   };
 
   readonly handedTo = (): readonly (readonly [string, string, string])[] =>
@@ -121,6 +135,7 @@ export class SocketsOverALedger extends ServiceSockets {
               Effect.sync(() => this.happened.push('woken')),
               this.wakes.wake(woken, now),
             ),
+      replies: this.#replies,
       takeIn: this.#takeIn,
       identities: this.#identities.identities,
       appended: this.appended,

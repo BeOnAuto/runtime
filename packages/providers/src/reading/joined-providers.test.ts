@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 import { AddedProviderEntrySchema, joinedProviders, ProviderEntrySchema, type ProviderEntry } from '../index.ts';
 import { decodedEntry } from '../testing/entry-problems.ts';
-import { aPost, aReply, carrying, mapping, ofTheApp, postTypes } from '../testing/event-destinations.ts';
+import {
+  aPost,
+  aReply,
+  carrying,
+  mapping,
+  ofTheApp,
+  overASocketCarryingReplies,
+  postTypes,
+  trackerOverASocket,
+} from '../testing/event-destinations.ts';
 import { fixtureProviders, ledgers, metrics, tracker } from '../testing/fixture-providers.ts';
 
 const decodeAdded = Schema.decodeUnknownResult(AddedProviderEntrySchema, { errors: 'all', onExcessProperty: 'error' });
@@ -106,15 +115,18 @@ function sending(destination: unknown) {
 
 describe('a provider whoever runs the runtime adds whose service sends', () => {
   it('makes Auto read, and is refused a reply its deliveries carry, which only an entry the runtime ships declares', () => {
-    expect([sending(ofTheApp), sending(carrying(ofTheApp, aReply))]).toEqual([
-      [],
-      [
-        [
-          '/events/destinations/0/filter/reply',
-          'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read',
-        ],
-      ],
-    ]);
+    const refused = [
+      '/events/destinations/0/filter/reply',
+      'Expected no reply: only an entry the runtime ships declares one, since a reply a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read',
+    ];
+    const overItsSocket = { ...trackerOverASocket, events: { destinations: [overASocketCarryingReplies] } };
+
+    expect([
+      sending(ofTheApp),
+      sending(carrying(ofTheApp, aReply)),
+      addedProblemsOf(overItsSocket),
+      Result.isSuccess(Schema.decodeUnknownResult(ProviderEntrySchema)(overItsSocket)),
+    ]).toEqual([[], [refused], [refused], true]);
   });
 
   it('is refused the events its service reports, which only an entry the runtime ships declares, as a shipped entry is not', () => {

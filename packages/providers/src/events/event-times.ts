@@ -1,4 +1,4 @@
-import { isTime } from '@on.auto/definitions/event-time';
+import { instantOf, isTime } from '@on.auto/definitions/event-time';
 
 const secondsSinceTheEpoch = /^(?<whole>\d{1,15})(?:\.(?<fraction>\d+))?$/u;
 
@@ -20,4 +20,9 @@ export function eventTimeOf(value: unknown): string | undefined {
     return value;
   }
   return typeof value === 'string' || typeof value === 'number' ? writtenAsATime(String(value)) : undefined;
+}
+
+export function millisecondsSinceTheEpochOf(value: unknown): number | undefined {
+  const time = eventTimeOf(value);
+  return time === undefined ? undefined : Number(instantOf(time)) * 1000;
 }
