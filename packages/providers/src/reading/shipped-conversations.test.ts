@@ -50,8 +50,8 @@ function marksOfTheDocument({ entry }: Pick<Provider, 'entry'>): ReadonlyMap<str
   return new Map([...Object.values(paths).flatMap((item) => markedByMethod(item)), ...markedReads]);
 }
 
-function toolsOf({ reply, react }: Conversations): readonly string[] {
-  return [reply.tool, ...(react === undefined ? [] : [react.tool])];
+function toolsOf({ reply, react, typing }: Conversations): readonly string[] {
+  return [reply.tool, ...[react, typing].flatMap((part) => (part === undefined ? [] : [part.tool]))];
 }
 
 function shippedPart(name: string): Conversations {
@@ -78,6 +78,7 @@ describe('the conversations parts of the shipped providers', () => {
       ['chats.CreateMessages', 'acts'],
       ['chat_postMessage', 'acts'],
       ['reactions_add', 'acts'],
+      ['assistant_threads_setStatus', 'acts'],
     ]);
   });
 
@@ -94,6 +95,7 @@ describe('the conversations parts of the shipped providers', () => {
       tell: 'all',
       reply: { tool: 'chat_postMessage', sent: '/ts' },
       react: { tool: 'reactions_add' },
+      typing: { tool: 'assistant_threads_setStatus' },
     });
     expect([null, 'zoom', 'unknown'].map((provider: string | null) => conversationsOf(shipped, provider))).toEqual([
       undefined,

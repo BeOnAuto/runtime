@@ -1,26 +1,21 @@
-import { playbooksWaitingIn, replyAwaited, replyDelivery } from '@on.auto/interaction';
-import {
-  answererId,
-  chatConversations,
-  chatHarness,
-  recordsOf,
-  theChannel,
-  threadDocument,
-  threadRepliesTelling,
-  type ChatHarness,
-} from '@on.auto/interaction/testing';
+import { answererId, recordsOf, theChannel, type ChatHarness } from '@on.auto/interaction/testing';
+import type { CalledOnce } from '@on.auto/tool-servers';
 import { Effect, type Context } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { chatIn } from '../testing/sockets/held-sockets.ts';
 import { inTestTime, settled } from '../testing/sockets/in-test-time.ts';
+import {
+  askedRun,
+  repliesWaiting,
+  secondsAfter,
+  statusesAnswering,
+  T0,
+  type RepliesWaiting,
+} from '../testing/sockets/replies-waiting.ts';
 import { SocketsOverALedger } from '../testing/sockets/sockets-over-a-ledger.ts';
 import type { SocketReplies } from './socket-replies.ts';
-
-const T0 = Date.parse('2026-11-22T09:00:00.000Z');
-
-const askedRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91';
 
 const appCredential = 'xapp-chats';
 
@@ -33,42 +28,24 @@ interface Written {
   readonly hidden?: boolean;
 }
 
-/** Seconds after T0, as a chat writes a message's id and time. */
-function secondsAfter(seconds: number): string {
-  return `${T0 / 1000 + seconds}.000100`;
-}
-
-interface Waiting {
-  readonly playbook: ChatHarness;
-  readonly thread: string;
+interface Waiting extends RepliesWaiting {
   readonly server: SocketsOverALedger;
   readonly written: (written?: Written) => object;
 }
 
-/** A request of the chat harness sent at T0 through the connection named chat, and the sockets of a server beside it. */
-async function waitingForAReply(): Promise<Waiting> {
-  vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(T0);
-  const playbook = await chatHarness({
-    conversations: chatConversations,
-    document: threadDocument({ replies: threadRepliesTelling() }),
-  });
-  await playbook.askInThread(askedRun);
-  await playbook.performDue(T0);
-  const thread = playbook.chat.posted()[0]?.ts ?? '';
-  const ledger = playbook.ledger.service;
+/**
+ * A request of the chat harness sent at T0 through the connection named chat, and the sockets of a server beside it,
+ * which show a working status through tools answering as given.
+ */
+async function waitingForAReply(...answers: readonly Effect.Effect<CalledOnce>[]): Promise<Waiting> {
+  const waiting = await repliesWaiting(...answers);
   const server = new SocketsOverALedger();
-  server.takesRepliesBy({
-    waitingIn: playbooksWaitingIn({ ledger }),
-    awaited: replyAwaited({ ledger }),
-    delivered: replyDelivery({ ledger, tools: playbook.chat, record: playbook.record }),
-  });
+  server.takesRepliesBy(waiting.replies);
   return {
-    playbook,
-    thread,
+    ...waiting,
     server,
     written: ({
-      thread: inThread = thread,
+      thread: inThread = waiting.thread,
       user = answererId,
       team = 'T1',
       text = 'approve',
@@ -216,6 +193,7 @@ describe('a reply that arrives over a socket before the account of its connectio
       waitingIn: () => Effect.die(new Error('the ledger is down')),
       awaited: () => Effect.die('a reply was asked about'),
       delivered: () => Effect.die('a reply was delivered'),
+      tools: statusesAnswering(Effect.die('a working status was shown')).tools,
     };
     waiting.server.takesRepliesBy(failing);
     const logged: string[] = [];
@@ -240,5 +218,21 @@ describe('a reply that arrives over a socket, through to its run', () => {
     await waiting.playbook.performDue(T0 + 60_000);
 
     expect(await waiting.playbook.runOf(askedRun)).toMatchObject({ output: { status: 'succeeded' } });
+  });
+});
+
+describe('a reply that arrives over a socket, a request waiting for it', () => {
+  it('asks the service of its connection once to show that Auto is working, under the thread of the request', async () => {
+    const waiting = await waitingForAReply();
+
+    await arrivedThrough(waiting.server, [waiting.written()], 'T1');
+
+    expect(waiting.statuses.asked()).toEqual([
+      {
+        at: ['acme', 'alpha', 'chat'],
+        tool: 'set_status',
+        input: { channel: theChannel, thread: waiting.thread, to: theChannel, status: 'is working' },
+      },
+    ]);
   });
 });

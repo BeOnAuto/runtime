@@ -5,7 +5,7 @@ import { renderedArguments, textAt } from '@on.auto/definitions/tool-blocks';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { answerDocument, toolBounds, type CalledOnce } from '@on.auto/tool-servers';
 import { describedAccess, fakeApiInProcess, patientTiming } from '@on.auto/tool-servers/testing';
-import { Effect, Option, Result, type Schema } from 'effect';
+import { Effect, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -14,6 +14,8 @@ import {
   providerNamed,
   providersShippedRoots,
   readProviders,
+  typingShownThrough,
+  type Conversations,
   type ProviderEntry,
 } from '../index.ts';
 
@@ -35,10 +37,13 @@ interface Seen {
   readonly body: string;
 }
 
+type Typing = NonNullable<Conversations['typing']>;
+
 interface Reached {
   readonly seen: () => readonly (readonly [string, string, string])[];
   readonly answerNextWith: (body: string) => void;
   readonly called: (tool: string, written: Readonly<Record<string, Schema.Json>>) => Promise<CalledOnce>;
+  readonly shown: (typing: Typing) => Promise<string>;
 }
 
 function inputOf(written: Readonly<Record<string, Schema.Json>>) {
@@ -49,6 +54,15 @@ function inputOf(written: Readonly<Record<string, Schema.Json>>) {
 function schemeKeyOf({ credentials }: ProviderEntry): string | undefined {
   const [way] = credentials;
   return way?.kind === 'secret' && way.in === 'security' ? way.name : undefined;
+}
+
+type Access = Awaited<ReturnType<typeof describedAccess>>['access'];
+
+function shownThrough(access: Access, connection: string, failureCodes: ProviderEntry['failure_codes']) {
+  const repliedIn = { to: 'ada', sent: { conversation: 'C0123', id: '1699.1' }, reply: { id: '1699.2', to: '1699.1' } };
+  const through = { callOnce: access.callOnce, mostRequestBytesTo: () => toolBounds.requestBytes };
+  const asked = { org: 'acme', playbook: 'alpha', connection, failureCodes, repliedIn };
+  return (typing: Typing) => Effect.runPromise(typingShownThrough(through, { ...asked, typing }));
 }
 
 async function reachedThrough(name: string): Promise<Reached> {
@@ -95,6 +109,7 @@ async function reachedThrough(name: string): Promise<Reached> {
           meta: {},
         }),
       ),
+    shown: shownThrough(access, name, entry.failure_codes),
   };
 }
 
@@ -148,5 +163,42 @@ describe('a line and a mark through the shipped parts', () => {
     slack.answerNextWith('{"ok":false,"error":"channel_not_found"}');
 
     expect(postedId(await slack.called(reply.tool, reply.with), reply.sent)).toBeUndefined();
+  });
+});
+
+function typingOf(name: string): Typing {
+  return Option.getOrThrow(Option.fromNullishOr(conversationsOf(shipped, name)?.typing));
+}
+
+const decodeBody = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Record(Schema.String, Schema.Json)));
+
+describe('a working status through the shipped part', () => {
+  it('reaches Slack as the status of the thread a reply is in, with the words of the entry and nothing else, shown where Slack answers ok', async () => {
+    const slack = await reachedThrough('slack-bot');
+    slack.answerNextWith('{"ok":true}');
+
+    const shown = await slack.shown(typingOf('slack-bot'));
+    const bodies = slack.seen().map(([, , body]) => decodeBody(body));
+
+    expect([shown, slack.seen().map(([method, path]) => [method, path])]).toEqual([
+      'shown',
+      [['POST', '/v1/assistant.threads.setStatus']],
+    ]);
+    expect(bodies).toEqual([expect.objectContaining({ channel_id: 'C0123', thread_ts: '1699.1' })]);
+    expect(bodies.map((body) => Object.keys(body).toSorted())).toEqual([
+      ['channel_id', 'loading_messages', 'status', 'thread_ts'],
+    ]);
+  });
+
+  it.each([
+    ['an error of its own that the entry lists', 'feature_disabled', 'refused'],
+    ['a lacking scope, which the entry lists whole', 'missing_scope', 'refused'],
+    ['a refused token, every code of which the entry lists', 'invalid_auth', 'refused'],
+    ['an error of its own that the entry does not list', 'channel_not_found', 'failed'],
+  ] as const)('where Slack answers %s, %s, is read as %s', async (_, code, read) => {
+    const slack = await reachedThrough('slack-bot');
+    slack.answerNextWith(JSON.stringify({ ok: false, error: code }));
+
+    expect(await slack.shown(typingOf('slack-bot'))).toBe(read);
   });
 });

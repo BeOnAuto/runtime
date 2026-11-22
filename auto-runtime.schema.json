@@ -677,6 +677,30 @@
                     "additionalProperties": false,
                     "description": "How a person's message is marked"
                   },
+                  "typing": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that shows that Auto is working, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over to, sent.conversation, sent.id, message, reply.id and reply.to"
+                      },
+                      "refused": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "description": "The codes the tool answers when the service does not show this sign for the account at all, such as for a scope the credential lacks or a feature that is turned off"
+                      }
+                    },
+                    "required": ["tool", "with"],
+                    "additionalProperties": false,
+                    "description": "How the provider shows a person that Auto is working on their reply"
+                  },
                   "read_limit": {
                     "type": "object",
                     "properties": {

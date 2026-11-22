@@ -172,7 +172,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...testIssuesOf(entry),
     ...markedIssuesOf(entry),
     ...codedIssuesOf(entry),
-    ...conversationIssuesOf(entry.conversations),
+    ...conversationIssuesOf(entry.conversations, entry.failure_codes),
     ...eventIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),

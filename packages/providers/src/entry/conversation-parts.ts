@@ -1,8 +1,8 @@
 import type { RenderClock } from '@on.auto/definitions/template';
-import { pointerIssues, templatesIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
-import { ClientSourceSchema } from '@on.auto/tool-servers';
+import { pointerIssues, templatesIssues, textAt, type TemplateSet } from '@on.auto/definitions/tool-blocks';
+import { ClientSourceSchema, type AnsweredOnce, type CalledOnce, type ServerEntrySchema } from '@on.auto/tool-servers';
 import { isToolName, toolNameShape } from '@on.auto/tool-servers/policy';
-import { JsonPointer, Schema } from 'effect';
+import { JsonPointer, Option, Schema } from 'effect';
 
 const ArgumentsSchema = Schema.Record(Schema.String, Schema.Json);
 
@@ -27,6 +27,19 @@ const ReactSchema = Schema.Struct({
     description: "The tool that marks a person's message with a reaction, named as the server lists it",
   }),
   with: ArgumentsSchema.annotate({ description: `Its arguments, ${writtenAsDeliverIs}` }),
+});
+
+const TypingSchema = Schema.Struct({
+  tool: Schema.String.annotate({
+    description: 'The tool that shows that Auto is working, named as the server lists it',
+  }),
+  with: ArgumentsSchema.annotate({ description: `Its arguments, ${writtenAsDeliverIs}` }),
+  refused: Schema.optionalKey(
+    Schema.Array(Schema.String).check(Schema.isMinLength(1)).annotate({
+      description:
+        'The codes the tool answers when the service does not show this sign for the account at all, such as for a scope the credential lacks or a feature that is turned off',
+    }),
+  ),
 });
 
 const ReadLimitSchema = Schema.Struct({
@@ -54,6 +67,9 @@ export const ConversationsSchema = Schema.Struct({
   }),
   reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
   react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),
+  typing: Schema.optionalKey(
+    TypingSchema.annotate({ description: 'How the provider shows a person that Auto is working on their reply' }),
+  ),
   read_limit: Schema.optionalKey(ReadLimitSchema),
   automatic: Schema.optionalKey(
     Schema.String.annotate({
@@ -115,11 +131,60 @@ function argumentIssues(pointer: string, written: Conversations['reply']['with']
   });
 }
 
-export function conversationIssuesOf(conversations: Conversations | undefined): readonly PartIssue[] {
+type FailureCodes = NonNullable<(typeof ServerEntrySchema)['Type']['failure_codes']>;
+
+type Typing = NonNullable<Conversations['typing']>;
+
+const refusedAt = '/conversations/typing/refused';
+
+const refusedWords = {
+  uncoded:
+    'Expected failure_codes in the entry as well, since they say where a failed answer gives the code that refused lists',
+  partly: (kind: string) =>
+    `Expected every code failure_codes lists under ${kind}, or none of them, since Auto learns only that a call failed as ${kind}, not which of those codes it was`,
+} as const;
+
+function codeListsOf(codes: FailureCodes): ReadonlyMap<string, readonly string[]> {
+  return new Map(
+    Object.entries(codes).flatMap(([kind, listed]: readonly [string, string | readonly string[]]) =>
+      typeof listed === 'string' ? [] : [[kind, listed] as const],
+    ),
+  );
+}
+
+function partlyListed(refused: readonly string[], codes: FailureCodes): readonly Placed[] {
+  return [...codeListsOf(codes)].flatMap(([kind, listed]: readonly [string, readonly string[]]) => {
+    const among = listed.filter((code) => refused.includes(code)).length;
+    return among === 0 || among === listed.length ? [] : [{ pointer: refusedAt, detail: refusedWords.partly(kind) }];
+  });
+}
+
+function refusedIssues({ refused }: Typing, codes: FailureCodes | undefined): readonly Placed[] {
+  if (refused === undefined) {
+    return [];
+  }
+  return codes === undefined ? [{ pointer: refusedAt, detail: refusedWords.uncoded }] : partlyListed(refused, codes);
+}
+
+function typingIssues(typing: Typing | undefined, codes: FailureCodes | undefined): readonly Placed[] {
+  if (typing === undefined) {
+    return [];
+  }
+  return [
+    ...toolIssues('/conversations/typing/tool', typing.tool),
+    ...argumentIssues('/conversations/typing/with', typing.with),
+    ...refusedIssues(typing, codes),
+  ];
+}
+
+export function conversationIssuesOf(
+  conversations: Conversations | undefined,
+  codes: FailureCodes | undefined,
+): readonly PartIssue[] {
   if (conversations === undefined) {
     return [];
   }
-  const { reply, react, automatic } = conversations;
+  const { reply, react, typing, automatic } = conversations;
   return issuesOf([
     ...toolIssues('/conversations/reply/tool', reply.tool),
     ...argumentIssues('/conversations/reply/with', reply.with),
@@ -133,5 +198,31 @@ export function conversationIssuesOf(conversations: Conversations | undefined): 
           ...toolIssues('/conversations/react/tool', react.tool),
           ...argumentIssues('/conversations/react/with', react.with),
         ]),
+    ...typingIssues(typing, codes),
   ]);
+}
+
+const decodeAnswer = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
+
+function codeAnsweredIn(text: string, pointer: string): string | undefined {
+  const answer = decodeAnswer(text);
+  return Option.isSome(answer) ? textAt(answer.value, pointer) : undefined;
+}
+
+function isAListedCode(called: AnsweredOnce, refused: readonly string[], codes: FailureCodes): boolean {
+  const code = called.outcome === 'tool_error' ? codeAnsweredIn(called.detail, codes.code) : undefined;
+  return code !== undefined && refused.includes(code);
+}
+
+function isAListedFailure(called: AnsweredOnce, refused: readonly string[], codes: FailureCodes): boolean {
+  const kind = 'because' in called ? called.because : undefined;
+  const listed = kind === undefined ? undefined : codeListsOf(codes).get(kind);
+  return listed !== undefined && listed.every((code) => refused.includes(code));
+}
+
+export function isRefusedForTheAccount(called: CalledOnce, { refused = [] }: Typing, codes?: FailureCodes): boolean {
+  if (called.kind === 'unopened' || codes === undefined) {
+    return false;
+  }
+  return isAListedCode(called, refused, codes) || isAListedFailure(called, refused, codes);
 }

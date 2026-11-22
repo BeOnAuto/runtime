@@ -14,6 +14,12 @@ const anotherRun = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7e';
 
 const someoneElse = 'U0SOMEONEELSE';
 
+const theParty = '#approvals-sales';
+
+function awaitedFrom(party: string, typing: boolean) {
+  return { awaited: true, typing, party };
+}
+
 const ofTheRequest: PlaceOfTheReplies = { playbook: alpha, connection: 'chat', conversation: theChannel };
 
 interface Replied {
@@ -76,16 +82,15 @@ describe('whether the typing indicator is shown for a reply', () => {
   it('is, for the answerer’s reply to a request that still takes replies and tells a line for a reply taken and for one refused', async () => {
     const delivering = await deliveringTo();
 
-    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual({ awaited: true, typing: true });
+    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual(awaitedFrom(theParty, true));
   });
 
   it('is not, for a reply of anyone else, which may be told nothing', async () => {
     const delivering = await deliveringTo();
 
-    expect(await awaitedIn(delivering, { sender: someoneElse, to: delivering.thread })).toEqual({
-      awaited: true,
-      typing: false,
-    });
+    expect(await awaitedIn(delivering, { sender: someoneElse, to: delivering.thread })).toEqual(
+      awaitedFrom(theParty, false),
+    );
   });
 
   it('is not, for a reply the run refused already, which is passed over and told nothing, while a new reply of the answerer is', async () => {
@@ -96,17 +101,14 @@ describe('whether the typing indicator is shown for a reply', () => {
     expect([
       await awaitedIn(delivering, { id: maybe.id, to: delivering.thread }),
       await awaitedIn(delivering, { id: '1700000000.000901', to: delivering.thread }),
-    ]).toEqual([
-      { awaited: true, typing: false },
-      { awaited: true, typing: true },
-    ]);
+    ]).toEqual([awaitedFrom(theParty, false), awaitedFrom(theParty, true)]);
   });
 
   it('is not, once the request was answered by a reply, since no request waits for the answerer any more', async () => {
     const delivering = await deliveringTo();
     await delivering.delivered([delivering.written('approve')]);
 
-    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual({ awaited: true, typing: false });
+    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual(awaitedFrom(theParty, false));
   });
 
   it('is not, where the function tells refusals alone, since a reply taken is told nothing', async () => {
@@ -115,6 +117,6 @@ describe('whether the typing indicator is shown for a reply', () => {
       document: threadDocument({ replies: threadRepliesTelling('  tell: refusals') }),
     });
 
-    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual({ awaited: true, typing: false });
+    expect(await awaitedIn(delivering, { to: delivering.thread })).toEqual(awaitedFrom(theParty, false));
   });
 });

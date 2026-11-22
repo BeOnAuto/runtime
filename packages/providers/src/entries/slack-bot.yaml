@@ -29,6 +29,33 @@ conversations:
         channel: '{{ sent.conversation }}'
         timestamp: '{{ reply.id }}'
         name: white_check_mark
+  typing:
+    tool: assistant_threads_setStatus
+    with:
+      body:
+        channel_id: '{{ sent.conversation }}'
+        thread_ts: '{{ reply.to }}'
+        status: is thinking
+        loading_messages:
+          - Thinking…
+    refused:
+      - missing_scope
+      - not_allowed_token_type
+      - feature_disabled
+      - unknown_method
+      - method_deprecated
+      - deprecated_endpoint
+      - access_denied
+      - no_permission
+      - not_authed
+      - invalid_auth
+      - token_expired
+      - token_revoked
+      - account_inactive
+      - team_access_not_granted
+      - enterprise_is_restricted
+      - org_login_required
+      - accesslimited
 events:
   types:
     - type: com.slack.message

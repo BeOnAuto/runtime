@@ -26,6 +26,7 @@ export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provid
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
 export { arrivalReadingOf, type Arrival, type ArrivalReading } from './events/arrival-readings.ts';
 export { millisecondsSinceTheEpochOf } from './events/event-times.ts';
+export { typingShownThrough } from './events/typing-calls.ts';
 export { presentedProofOf, type PresentedProof } from './events/presented-proofs.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export {

@@ -1960,6 +1960,10 @@
         {
           "name": "reactions_get",
           "mark": "reads"
+        },
+        {
+          "name": "assistant_threads_setStatus",
+          "mark": "acts"
         }
       ],
       "handles_money": false

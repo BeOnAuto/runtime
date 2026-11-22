@@ -57,6 +57,7 @@ export interface IdentitiesReading {
 export interface ServedSubscriptions extends SubscriptionRounds {
   readonly wakeUpsOver: (listening: ChangesListening) => readonly WakeUpWith[];
   readonly identities: IdentitiesReading;
+  readonly tools: ThroughTheConnection;
 }
 
 export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubscriptions {
@@ -72,6 +73,7 @@ export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubs
     ...rounds,
     wakeUpsOver: connectionChangesWakeUpsOf({ ledger, asked: rounds.asked, arrangesAWay }),
     identities: { connectionsOf: ports.connectionsOf, read: identitiesReadOf(ports) },
+    tools: serving.tools,
   };
 }
 

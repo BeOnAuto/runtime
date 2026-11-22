@@ -240,7 +240,8 @@
     "chat_postMessage": "d72ec54e1968f462a4868eed082e4b18cb39d197b3181335894658951a0bbef8",
     "chat_update": "b72fe99c8f0fb29d05057b0ecd7116704b66a7eeb2e43e9f9d03a9ac003bf606",
     "reactions_add": "a28af3a9f44d1b6fb6207067a4fe9e1ed279f6ad1cd64a0cde74901972457211",
-    "reactions_get": "0d1c8e77b69eb03ebb35dd4497c5ab3d0515a5c18d06d5fe9fd8ab669506f7f6"
+    "reactions_get": "0d1c8e77b69eb03ebb35dd4497c5ab3d0515a5c18d06d5fe9fd8ab669506f7f6",
+    "assistant_threads_setStatus": "73a6850a675e943e14c93c567a1f10498ae3d43546d7808a3ea41186878ead7f"
   },
   "x, authorization": {
     "getUsersMe": "ab476f0ba7189af4a5b7feb4c6af0f83d9cce98173de783e793f6011b77cf3fb",

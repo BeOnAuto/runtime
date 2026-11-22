@@ -3,7 +3,7 @@
   "info": {
     "title": "Slack Web API",
     "version": "2026-11-04",
-    "description": "Eleven Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the bot token (xoxb-) of an app installed in the workspace is sent as Authorization: Bearer."
+    "description": "Twelve Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the bot token (xoxb-) of an app installed in the workspace is sent as Authorization: Bearer."
   },
   "externalDocs": {
     "url": "https://docs.slack.dev/apis/web-api"
@@ -803,6 +803,65 @@
         "security": [
           {
             "bot_token": ["reactions:read"]
+          }
+        ]
+      }
+    },
+    "/assistant.threads.setStatus": {
+      "post": {
+        "operationId": "assistant_threads_setStatus",
+        "description": "Shows a status under a thread, to tell people the app is working on a reply there. Slack shows the status after the app's name, and removes it when the app posts in the thread or after two minutes. An empty status removes it.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/assistant.threads.setStatus"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel_id": {
+                    "type": "string",
+                    "description": "The ID of the channel the thread is in."
+                  },
+                  "thread_ts": {
+                    "type": "string",
+                    "description": "The timestamp of the thread's first message."
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "The words Slack shows after the app's name, such as \"is thinking\". An empty string removes the status."
+                  },
+                  "loading_messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Lines Slack shows in turn while the status is up, at most 10."
+                  }
+                },
+                "required": ["channel_id", "thread_ts", "status"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["chat:write"]
           }
         ]
       }

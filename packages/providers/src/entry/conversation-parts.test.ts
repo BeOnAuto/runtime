@@ -176,3 +176,55 @@ describe('the read limit of a conversations part', () => {
     ]);
   });
 });
+
+const typing = {
+  tool: 'set_status',
+  with: { channel: '{{ sent.conversation }}', thread: '{{ reply.to }}', to: '{{ to }}', status: 'is working' },
+};
+
+const codes = {
+  succeeded: '/ok',
+  code: '/error',
+  key_refused: ['invalid_auth', 'token_revoked'],
+  scope_lacking: ['missing_scope'],
+  rate_limited: ['ratelimited'],
+} as const;
+
+function pathsRefused(entry: unknown): readonly string[] {
+  return problemsOf(entry).map(([path]) => path);
+}
+
+function apiTyping(refused: unknown, failureCodes: unknown) {
+  const coded = failureCodes === undefined ? {} : { failure_codes: failureCodes };
+  return { ...messages, ...coded, conversations: { tell: 'all', reply, typing: { ...typing, refused } } };
+}
+
+describe('the typing part of a conversations part', () => {
+  it('is taken with a tool and its arguments, and with the codes of a service that shows no sign beside failure codes', () => {
+    expect([
+      pathsRefused({ ...tracker, conversations: { tell: 'all', reply, react, typing } }),
+      pathsRefused(apiTyping(['feature_disabled'], codes)),
+      pathsRefused(apiTyping(['feature_disabled', 'invalid_auth', 'token_revoked', 'missing_scope'], codes)),
+    ]).toEqual([[], [], []]);
+    expect(decodedEntry({ ...tracker, conversations: { tell: 'all', reply, typing } }).conversations?.typing).toEqual(
+      typing,
+    );
+  });
+
+  it('refuses a tool that is no tool name, and an argument that reads what a conversation does not have, each at its place', () => {
+    expect(
+      pathsRefused({
+        ...tracker,
+        conversations: { tell: 'all', reply, typing: { tool: 'set status', with: { text: '{{ input.note }}' } } },
+      }),
+    ).toEqual(['/conversations/typing/tool', '/conversations/typing/with/text']);
+  });
+
+  it.each([
+    ['no code at all', [], codes],
+    ['codes where the entry says not where a failed answer names its code', ['feature_disabled'], undefined],
+    ['some of the codes of a refused key and not the others', ['invalid_auth'], codes],
+  ] as const)('refuses %s, at the codes', (_, refused, failureCodes) => {
+    expect(pathsRefused(apiTyping(refused, failureCodes))).toEqual(['/conversations/typing/refused']);
+  });
+});

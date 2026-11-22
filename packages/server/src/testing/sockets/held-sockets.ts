@@ -1,6 +1,6 @@
 import type { ConnectionEventSchema } from '@on.auto/connections';
 import type { Decided } from '@on.auto/operations';
-import type { ThroughTheConnection } from '@on.auto/providers';
+import { eventDestinationOf, providerFoundBy, type ThroughTheConnection } from '@on.auto/providers';
 import {
   cardMoved,
   ledgers,
@@ -12,8 +12,10 @@ import {
   whichSpace,
 } from '@on.auto/providers/testing';
 import type { CalledOnce } from '@on.auto/tool-servers';
-import { Effect, Function, Struct } from 'effect';
+import { Effect, Function, Option, Struct } from 'effect';
 import { TestClock } from 'effect/testing';
+
+import type { SocketMember } from '../../sockets/socket-registries.ts';
 
 export type Fact = Decided<typeof ConnectionEventSchema.Type>;
 
@@ -25,11 +27,27 @@ export const connectedAt = '2026-11-19T08:00:00.000Z';
 
 const [aKey] = trackerOverASocket.credentials;
 
+const typingWith = {
+  channel: '{{ sent.conversation }}',
+  thread: '{{ reply.to }}',
+  to: '{{ to }}',
+  status: 'is working',
+};
+
+/** How the chats entry replies in a conversation, and shows a person that Auto is working on their reply. */
+const chatsConversations = {
+  tell: 'all',
+  reply: { tool: 'post_message', with: { channel: '{{ sent.conversation }}', text: '{{ message }}' }, sent: '/ts' },
+  typing: { tool: 'set_status', with: typingWith },
+};
+
 /**
  * Made-up entries whose connections hold a socket: the tracker's and the ledgers', which report no event and say
  * nothing of who a connection is; the boards', of another shape, which maps a card moved to an event, names the
- * space a message is in, and says how to ask who a connection is and which space it is in; and the chats', whose
- * messages carry the reply a person writes in the thread of a message.
+ * space a message is in, and says how to ask who a connection is and which space it is in; the chats', whose
+ * messages carry the reply a person writes in the thread of a message, and which shows that Auto is working on it;
+ * and the chats' over an HTTP API, whose failed answers name a code, and which lists the codes of a service that shows
+ * no working status in an account: one it answers as an error, and every code of a refused key.
  */
 export const socketProviders = providersOf(
   { ...trackerOverASocket, events: { destinations: [overASocket] } },
@@ -46,8 +64,50 @@ export const socketProviders = providersOf(
     title: 'Boards',
     events: { types: [cardMoved], identity: whichSpace, destinations: [overTheBoardsSocket] },
   },
-  { ...trackerOverASocket, name: 'chats', title: 'Chats', events: { destinations: [overASocketCarryingReplies] } },
+  {
+    ...trackerOverASocket,
+    name: 'chats',
+    title: 'Chats',
+    events: { destinations: [overASocketCarryingReplies] },
+    conversations: chatsConversations,
+  },
+  {
+    ...Struct.omit(ledgers, ['headers', 'placeholders']),
+    name: 'chats-api',
+    title: 'Chats API',
+    base_url: 'https://api.chats.example.com/v1',
+    credentials: [aKey],
+    failure_codes: failureCodes,
+    conversations: {
+      ...chatsConversations,
+      typing: { tool: 'set_status', with: typingWith, refused: ['feature_disabled', 'invalid_auth'] },
+    },
+  },
 );
+
+const chatsSocket = Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(socketProviders, 'chats', 'websocket')));
+
+/** The connection named chat, through which the chat harness sends its request, of an entry, in a workspace. */
+export function chatMemberIn(workspace: string, provider: string): SocketMember {
+  const codes = Option.getOrThrow(Option.fromNullishOr(providerFoundBy(socketProviders, provider))).entry.failure_codes;
+  return {
+    org: 'acme',
+    holder: {
+      connection: 'connection-chat',
+      name: 'chat',
+      connectedAt,
+      provider,
+      at: 0,
+      destination: chatsSocket,
+      credential: 'app_level_token',
+      label: 'Chat app-level token',
+      secretId: 'chats',
+      account: workspace,
+      identityOwed: false,
+      ...(codes === undefined ? {} : { failureCodes: codes }),
+    },
+  };
+}
 
 export function heldBy(
   connection: string,

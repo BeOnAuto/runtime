@@ -13,13 +13,13 @@ import type { SocketReplies } from './socket-replies.ts';
 export interface SocketsServing
   extends
     Pick<SocketParts, 'secrets' | 'opens' | 'identities'>,
-    Pick<SocketReplies, 'delivered'>,
+    Pick<SocketReplies, 'delivered' | 'tools'>,
     Omit<IntakeServing, 'providers'> {}
 
 export function socketsOfTheServer(
   runtime: AppRuntime<DispatcherServices>,
   { providers }: Pick<Settings, 'providers'>,
-  { store, secrets, opens, identities, delivered, filters, now }: SocketsServing,
+  { store, secrets, opens, identities, delivered, tools, filters, now }: SocketsServing,
 ): (signal: WakeSignal) => HostWakeUp {
   const ledger = runtimeLedger(runtime);
   return socketWakeUpOf({
@@ -28,7 +28,7 @@ export function socketsOfTheServer(
     secrets,
     opens,
     wake: connectionWake({ ledger }),
-    replies: { waitingIn: playbooksWaitingIn({ ledger }), awaited: replyAwaited({ ledger }), delivered },
+    replies: { waitingIn: playbooksWaitingIn({ ledger }), awaited: replyAwaited({ ledger }), delivered, tools },
     takeIn: connectionIntakeServedBy(runtime, { store, filters, providers, now }),
     identities,
     appended: streamAppends,

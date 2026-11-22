@@ -497,7 +497,7 @@ describe('an event that arrives over a socket of a server given no webhook addre
     await playbooksCreated(ledger, 'acme', ['alpha']);
     await savedOnACardMoved(ledger);
     const service = new ServiceSockets();
-    const { identities } = subscriptionsOfTheServer(
+    const { identities, tools } = subscriptionsOfTheServer(
       runtime,
       { providers: boards, receiving: { overHttp: false, webhookUrl: undefined } },
       { tools: inItsSpace, secrets: noSecretsKept },
@@ -512,6 +512,7 @@ describe('an event that arrives over a socket of a server given no webhook addre
         opens: service.opens,
         identities,
         delivered: () => Effect.die('a reply was delivered'),
+        tools,
         filters: filterSandboxOf(freshInstances(sandboxModule)),
         now: () => Date.parse('2026-11-20T09:00:00.000Z'),
       },

@@ -61,6 +61,7 @@ function wakeUpsOf(
     secrets: tools.secrets,
     identities: subscriptions.identities,
     delivered,
+    tools: subscriptions.tools,
     filters: computation.pool.evaluations.filters,
     now: tools.now ?? Date.now,
   };

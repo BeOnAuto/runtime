@@ -103,6 +103,7 @@ interface RepliedTo {
 interface AwaitedReply {
   readonly awaited: boolean;
   readonly typing: boolean;
+  readonly party?: string;
 }
 
 export type ReplyAwaited = (place: PlaceOfTheReplies, reply: RepliedTo) => Effect.Effect<AwaitedReply>;
@@ -126,7 +127,11 @@ export function replyAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited
     Effect.flatMap(candidateSentAs(parts, place, reply.to), (candidate) =>
       candidate === undefined
         ? Effect.succeed(notAwaited)
-        : Effect.map(typingFor(parts, place.playbook, candidate, reply), (typing) => ({ awaited: true, typing })),
+        : Effect.map(typingFor(parts, place.playbook, candidate, reply), (typing) => ({
+            awaited: true,
+            typing,
+            party: candidate.request.row.party,
+          })),
     );
 }
 

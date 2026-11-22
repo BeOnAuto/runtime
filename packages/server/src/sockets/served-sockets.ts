@@ -22,7 +22,7 @@ import {
   type SocketMember,
   type WantedSocket,
 } from './socket-registries.ts';
-import { replyTakenBy, type CarriedReply, type ArrivalParts } from './socket-replies.ts';
+import { repliesTakenBy, type CarriedReply, type ArrivalParts } from './socket-replies.ts';
 
 type ArrivalEvent = NonNullable<ArrivalReading['event']>;
 
@@ -77,7 +77,7 @@ class SocketSet {
   readonly #parts: SocketParts;
   readonly #registries: ReturnType<typeof registriesOf>;
   readonly #owed: ReturnType<typeof owedIdentitiesOf>;
-  readonly #replyTaken: ReturnType<typeof replyTakenBy>;
+  readonly #replies: ReturnType<typeof repliesTakenBy>;
   readonly #sockets: ReturnType<typeof background>;
   readonly #running = new Map<string, Held>();
   readonly #wokenAt = new Map<string, number>();
@@ -87,7 +87,7 @@ class SocketSet {
     this.#parts = parts;
     this.#registries = registriesOf(parts);
     this.#owed = owedIdentitiesOf({ registry: parts.registries.registry, identities: parts.identities });
-    this.#replyTaken = replyTakenBy(parts.replies);
+    this.#replies = repliesTakenBy(parts);
     this.#sockets = background(parts.context);
   }
 
@@ -128,7 +128,7 @@ class SocketSet {
     yield* this.#owed.read(members, startedAt + this.#roundMs);
   });
 
-  readonly stop = (): Effect.Effect<void> => this.#sockets.stop();
+  readonly stop = (): Effect.Effect<void> => Effect.andThen(this.#replies.stop(), this.#sockets.stop());
 
   #started(wanted: WantedSocket): void {
     const held = heldAs(wanted);
@@ -185,7 +185,7 @@ class SocketSet {
   }
 
   #untakenBy(members: readonly SocketMember[], carried: CarriedReply): Effect.Effect<readonly SocketMember[]> {
-    return Effect.filter(members, (member) => Effect.map(this.#replyTaken(member, carried), (taken) => !taken));
+    return Effect.filter(members, (member) => Effect.map(this.#replies.taken(member, carried), (taken) => !taken));
   }
 
   #takenIn(members: readonly SocketMember[], { event, connection }: ArrivalReading): Effect.Effect<void> {
