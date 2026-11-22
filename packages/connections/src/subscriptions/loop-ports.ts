@@ -12,6 +12,7 @@ import {
 import { DateTime, Effect } from 'effect';
 
 import type { SecretKeeping } from '../operations/connection-services.ts';
+import type { ConnectionCommandData } from '../registry/connection-commands.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDeciderOf } from '../registry/registry-decider.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionRecordsOf, type SubscriptionLedger } from './subscription-records.ts';
@@ -43,26 +44,37 @@ function receivesOf({
   return (type) => (type === 'webhook' && receivesOverHttp) || (type === 'websocket' && opensSockets);
 }
 
-function identifiedOf({ registry, providers }: SubscriptionLoopParts): SubscriptionLoopPorts['identified'] {
+type ExecutedByTheRuntime = (org: string, command: ConnectionCommandData) => Effect.Effect<void>;
+
+function executedByTheRuntimeOn({ registry, providers }: SubscriptionLoopParts): ExecutedByTheRuntime {
   const decider = registryDeciderOf(providers);
-  return ({ org }, { id, connected }, { user, account }) =>
+  return (org, command) =>
     Effect.gen(function* () {
-      const identifying = {
-        type: 'identify',
-        connection: id,
-        connected_at: connected,
-        user,
-        ...(account === undefined ? {} : { account }),
-        by: byTheRuntime,
-        at: DateTime.formatIso(yield* DateTime.now),
-      } as const;
-      yield* Effect.orDie(registry.execute(connectionsStreamOfOrg(org), decider, identifying));
+      const at = DateTime.formatIso(yield* DateTime.now);
+      yield* Effect.orDie(registry.execute(connectionsStreamOfOrg(org), decider, { ...command, by: byTheRuntime, at }));
     });
+}
+
+function identifiedOf(executed: ExecutedByTheRuntime): SubscriptionLoopPorts['identified'] {
+  return ({ org }, { id, connected }, { user, account }) =>
+    executed(org, {
+      type: 'identify',
+      connection: id,
+      connected_at: connected,
+      user,
+      ...(account === undefined ? {} : { account }),
+    });
+}
+
+function placeNamedOf(executed: ExecutedByTheRuntime): SubscriptionLoopPorts['placeNamed'] {
+  return ({ org }, { id, connected }, { type, subject, name }) =>
+    executed(org, { type: 'name_place', connection: id, connected_at: connected, event_type: type, subject, name });
 }
 
 export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): SubscriptionLoopPorts {
   const { ledger, registry, waitingIn, triggersIn, tools, secrets, providers } = parts;
   const triggersAsker = triggersAskerOf(triggersIn);
+  const executed = executedByTheRuntimeOn(parts);
   return {
     ...tools,
     callbackOf: callbackOf(parts),
@@ -72,7 +84,8 @@ export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): Subscript
     triggersAsker,
     records: subscriptionRecordsOf(ledger),
     secrets: subscriptionSecretsOf(secrets),
-    identified: identifiedOf(parts),
+    identified: identifiedOf(executed),
+    placeNamed: placeNamedOf(executed),
     mostPerConnection: mostSubscriptionsThroughAConnection,
   };
 }

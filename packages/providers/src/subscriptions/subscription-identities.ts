@@ -36,7 +36,7 @@ function readOf(ports: IdentityPorts, calls: Pick<SubscriptionCalls, 'identify'>
   };
 }
 
-function isPast(deadline: number | undefined): Effect.Effect<number | undefined> {
+export function isPast(deadline: number | undefined): Effect.Effect<number | undefined> {
   if (deadline === undefined) {
     return Effect.undefined;
   }

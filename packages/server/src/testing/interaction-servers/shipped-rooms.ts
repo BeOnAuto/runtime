@@ -12,15 +12,17 @@ import { entryOf, roomsDelivery, roomsKey, signedOverTheBody, theRoom } from './
 
 export const postedInARoom = 'com.example.rooms.message.posted';
 
+const readingTheRoomsName = { tool: 'room_info', with: { room: '{{ subject }}' }, named: '/room/title', prefix: '#' };
+
+const aPostsType = {
+  type: postedInARoom,
+  title: 'A message is posted',
+  subject: { title: 'Room', required: true },
+  data: { type: 'object', properties: { text: { type: 'string' } } },
+};
+
 const reportingPosts = {
-  types: [
-    {
-      type: postedInARoom,
-      title: 'A message is posted',
-      subject: { title: 'Room', required: true },
-      data: { type: 'object', properties: { text: { type: 'string' } } },
-    },
-  ],
+  types: [aPostsType],
   identity: { tool: 'who_am_i', identified: { id: '/me/id' } },
   destinations: [
     {
@@ -42,10 +44,17 @@ const reportingPosts = {
 
 const entries: ShippedFile = { package: '@on.auto/providers', path: 'src/entries' };
 
+/** The events the rooms entry reports, its posts' room named through `room_info` where it says how to read the name. */
+function reportingPostsOf(namesTheRoom: boolean) {
+  return namesTheRoom
+    ? { ...reportingPosts, types: [{ ...aPostsType, subject: { ...aPostsType.subject, name: readingTheRoomsName } }] }
+    : reportingPosts;
+}
+
 /** The rooms entry shipped beside the runtime's own, since only an entry the runtime ships declares events. */
-function shippedWithRoomsAt(url: string): (files: ShippedFiles) => ShippedFiles {
+function shippedWithRoomsAt(url: string, namesTheRoom: boolean): (files: ShippedFiles) => ShippedFiles {
   const beside = shippedFileIn(entries, 'rooms.yaml').path;
-  const entry = JSON.stringify({ ...entryOf('rooms', url, signedOverTheBody), events: reportingPosts });
+  const entry = JSON.stringify({ ...entryOf('rooms', url, signedOverTheBody), events: reportingPostsOf(namesTheRoom) });
   const isTheEntry = (file: ShippedFile) => file.package === entries.package && file.path === beside;
   const isTheEntries = (folder: ShippedFile) => folder.package === entries.package && folder.path === entries.path;
   return (files) => ({
@@ -83,20 +92,53 @@ function savedListening(ledger: Ledger['Service'], org: string): Promise<void> {
  * connection whose entry ships with the runtime and declares, as data, the event a delivery of a post is, who posted it,
  * and the tool that answers which account the connection acts as.
  */
+export interface ListeningInTheRoom {
+  readonly server: InteractionServer;
+  readonly ledger: Ledger['Service'];
+}
+
+interface Listening {
+  readonly org: string;
+  readonly namesTheRoom: boolean;
+}
+
+async function servedListening(
+  roomsUrl: string,
+  environment: Readonly<Record<string, string>>,
+  parts: ServedParts,
+  { org, namesTheRoom }: Listening,
+): Promise<ListeningInTheRoom> {
+  const kept = Promise.withResolvers<Ledger['Service']>();
+  const ledgerOver = (ledger: Ledger['Service']) => {
+    kept.resolve(ledger);
+    return ledger;
+  };
+  const shipped = { ...parts, ledgerOver, shippedFilesOver: shippedWithRoomsAt(roomsUrl, namesTheRoom) };
+  const server = await servingInteractions(roomsDelivery, { ...connectionsOnLoopback, ...environment }, shipped, org);
+  await connectedWith(server, { provider: 'rooms' }, roomsKey, connectionsIn(org));
+  const ledger = await kept.promise;
+  await savedListening(ledger, org);
+  return { server, ledger };
+}
+
 export async function servedListeningInTheRoom(
   roomsUrl: string,
   environment: Readonly<Record<string, string>>,
   parts: ServedParts,
   org: string,
 ): Promise<InteractionServer> {
-  const kept = Promise.withResolvers<Ledger['Service']>();
-  const ledgerOver = (ledger: Ledger['Service']) => {
-    kept.resolve(ledger);
-    return ledger;
-  };
-  const shipped = { ...parts, ledgerOver, shippedFilesOver: shippedWithRoomsAt(roomsUrl) };
-  const server = await servingInteractions(roomsDelivery, { ...connectionsOnLoopback, ...environment }, shipped, org);
-  await connectedWith(server, { provider: 'rooms' }, roomsKey, connectionsIn(org));
-  await savedListening(await kept.promise, org);
-  return server;
+  return (await servedListening(roomsUrl, environment, parts, { org, namesTheRoom: false })).server;
+}
+
+/**
+ * The same server, whose rooms entry also says how to read the name of a room, through `room_info`, and the ledger it
+ * keeps, which the org's connections are read from.
+ */
+export function servedNamingTheRoom(
+  roomsUrl: string,
+  environment: Readonly<Record<string, string>>,
+  parts: ServedParts,
+  org: string,
+): Promise<ListeningInTheRoom> {
+  return servedListening(roomsUrl, environment, parts, { org, namesTheRoom: true });
 }

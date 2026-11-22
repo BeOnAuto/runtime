@@ -85,6 +85,7 @@ export { requestOriginsOf } from './events/event-destinations.ts';
 export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
 export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
 export { identitiesReadOf } from './subscriptions/subscription-identities.ts';
+export { placeNamesReadOf } from './subscriptions/subscription-place-names.ts';
 export {
   requestsAskerOf,
   triggersAskerOf,

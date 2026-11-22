@@ -6,7 +6,7 @@ import { Clock, Effect, Redacted, Result, type Schema } from 'effect';
 import type { Destination } from '../events/destination-fields.ts';
 import { placesTheSecret } from '../events/event-calls.ts';
 import { isAddressedAsWritten, type TopicOfARequest } from './request-addresses.ts';
-import { answeredIn, identifiedIn, renewedIn, requestedIn, subscribedIn } from './subscription-answers.ts';
+import { answeredIn, identifiedIn, placeNameIn, renewedIn, requestedIn, subscribedIn } from './subscription-answers.ts';
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
   HeldSubscription,
@@ -28,7 +28,10 @@ interface Sending {
   readonly call: Call;
   readonly variables: Variables;
   readonly topic: TopicOfARequest;
+  readonly requiredMark?: 'reads';
 }
+
+const mostPlaceNameCharacters = 200;
 
 const millisOfASecond = 1000;
 
@@ -61,11 +64,12 @@ function answeredThrough(
   sending: Sending,
   input: Variables,
 ): Effect.Effect<Schema.Json | undefined, SubscriptionCallFailed> {
-  const { place, call } = sending;
+  const { place, call, requiredMark } = sending;
   if (call.tool !== undefined) {
     const { org, playbook, connection: server } = place;
     const reference = { server, tool: call.tool };
-    const called = through.callOnce({ org, playbook, reference, input, meta: {}, recordContent: false });
+    const marked = requiredMark === undefined ? {} : { requiredMark };
+    const called = through.callOnce({ org, playbook, reference, input, meta: {}, recordContent: false, ...marked });
     return Effect.flatMap(called, answeredIn);
   }
   const request = requestOf(sending, input);
@@ -147,7 +151,10 @@ function subscribedOver<E, R>(
   });
 }
 
-export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls {
+export function subscriptionCallsOf(
+  ports: SubscriptionPorts,
+  mostNameCharacters = mostPlaceNameCharacters,
+): SubscriptionCalls {
   return {
     subscribe: (asked) => {
       const { type } = asked.destination;
@@ -174,5 +181,11 @@ export function subscriptionCallsOf(ports: SubscriptionPorts): SubscriptionCalls
       Effect.flatMap(sentThrough(ports, { place, call: identity, variables: {}, topic: noTopic }), (document) =>
         identifiedIn(document, identity),
       ),
+    name: ({ name, place, subject }) => {
+      const sending = { place, call: name, variables: { subject }, topic: noTopic, requiredMark: 'reads' } as const;
+      return Effect.flatMap(sentThrough(ports, sending), (document) =>
+        placeNameIn(document, name.named, mostNameCharacters),
+      );
+    },
   };
 }

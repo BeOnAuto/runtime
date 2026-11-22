@@ -35,6 +35,7 @@
   "src/registry/0.71.0/connection_request_declined.json": "3bfb5386d3fc7b09b8449b1d66a932968da0b94b3123d47df46a9af70c4a838e",
   "src/registry/0.71.0/connection_requested.json": "68d6e73600c073f93d4d19be221d5ad895adfb7ef4b13ff164869f4f80f7b6d6",
   "src/registry/0.72.0/connection_link_issued.json": "2b1634155134ccf569d806d4bb3835c746343c5f111b68d67f9b1cfce826cee9",
+  "src/registry/0.72.0/connection_place_named.json": "8d05404f0bd836eacccc79123dee8e3551f8aaf2686989371b7eb9c24e83ee7a",
   "src/registry/0.72.0/connection_way_chosen.json": "0e37e163722949a9b237dd510a08590e69f9a83ce2a931989d91e68f081e344d",
   "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
   "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",

@@ -140,6 +140,15 @@ export interface ConnectionIdentification {
   readonly account?: Account;
 }
 
+export interface PlaceNaming {
+  readonly type: 'name_place';
+  readonly connection: string;
+  readonly connected_at: string;
+  readonly event_type: string;
+  readonly subject: string;
+  readonly name: string;
+}
+
 export interface ConnectionReconnection {
   readonly type: 'reconnect';
   readonly connection: string;
@@ -188,12 +197,14 @@ export type ConnectionCommandData =
   | ConnectionBreaking
   | AppCredentialRefusal
   | ConnectionIdentification
+  | PlaceNaming
   | ConnectionReconnection
   | ConnectionReplacement;
 
 export type CommandDecidedApart =
   | AppCredentialRefusal
   | ConnectionIdentification
+  | PlaceNaming
   | AccountTypeSetting
   | WayChoice
   | ConnectionRequest

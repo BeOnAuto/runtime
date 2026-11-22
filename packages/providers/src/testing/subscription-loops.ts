@@ -10,6 +10,7 @@ import type {
   IdentifiedConnection,
   LoopConnection,
   MadeSubscription,
+  NamedPlace,
   Positions,
   Receiving,
   Reconciled,
@@ -187,6 +188,10 @@ interface Identified extends Identification {
   readonly connection: IdentifiedConnection;
 }
 
+interface PlaceNamed extends NamedPlace {
+  readonly connection: IdentifiedConnection;
+}
+
 export interface Loop {
   readonly app: FakeApp;
   readonly records: FakeRecords;
@@ -196,6 +201,8 @@ export interface Loop {
   readonly triggered: Changing<SubscriptionKey>;
   readonly identified: () => readonly Identified[];
   readonly identifies: (identified: Identified) => void;
+  readonly placesNamed: () => readonly PlaceNamed[];
+  readonly namesPlace: (named: PlaceNamed) => void;
 }
 
 export function loopOver(
@@ -204,6 +211,7 @@ export function loopOver(
 ): Loop {
   const held = changing(...connections);
   const identified: Identified[] = [];
+  const named: PlaceNamed[] = [];
   return {
     app: anApp(),
     records: inMemoryRecords(64),
@@ -211,6 +219,10 @@ export function loopOver(
     connections: held,
     askers: asked.map((keys) => changing(...keys)),
     triggered: changing(),
+    placesNamed: () => named,
+    namesPlace: (each) => {
+      named.push(each);
+    },
     identified: () => identified,
     identifies: (each) => {
       identified.push(each);
@@ -251,6 +263,10 @@ export function portsOf(loop: Loop, runtime: Runtime): SubscriptionLoopPorts {
     records: takingAStep(loop.records.records, runtime.stepMs),
     secrets: loop.secrets.secrets,
     identified: identifiedIn(loop),
+    placeNamed: (_playbook, { id, connected }, named) =>
+      Effect.sync(() => {
+        loop.namesPlace({ connection: { id, connected }, ...named });
+      }),
     mostPerConnection: runtime.mostPerConnection ?? 8,
   };
 }

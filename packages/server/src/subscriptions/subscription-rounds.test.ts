@@ -3,7 +3,7 @@ import { connectionTriggerFacts } from '@on.auto/definitions/connection-triggers
 import { requestPlaceFacts } from '@on.auto/interaction';
 import type { PlaybookAddress } from '@on.auto/operations';
 import { memoryLedger } from '@on.auto/operations/testing';
-import { resyncedAfterMs, type Reconciled } from '@on.auto/providers';
+import { resyncedAfterMs, type ConnectionTrigger, type Reconciled } from '@on.auto/providers';
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
@@ -58,14 +58,24 @@ interface Counted extends SubscriptionRounds {
   readonly rounds: readonly PlaybookAddress[];
 }
 
-function roundsOver(ledger: ReturnType<typeof aLedger>, answers: Reconciled = {}, arrangesAWay = false): Counted {
+const noTriggers = () => Effect.succeed([]);
+
+const noNames = { connectionsOf: () => Effect.succeed([]), namesRead: () => Effect.void };
+
+function roundsOver(
+  ledger: ReturnType<typeof aLedger>,
+  answers: Reconciled = {},
+  arrangesAWay = false,
+  triggersIn: (playbook: PlaybookAddress) => Effect.Effect<readonly ConnectionTrigger[]> = noTriggers,
+): Counted {
   const rounds: PlaybookAddress[] = [];
   const loop = (playbook: PlaybookAddress) =>
     Effect.sync(() => {
       rounds.push(playbook);
       return answers;
     });
-  return { rounds, ...subscriptionRoundsOf({ round: subscriptionRoundOf({ loop, ledger }), ledger, arrangesAWay }) };
+  const round = subscriptionRoundOf({ loop, ledger });
+  return { rounds, ...subscriptionRoundsOf({ round, ledger, arrangesAWay, triggersIn, ...noNames }) };
 }
 
 async function asked({ consumer }: SubscriptionRounds, followed: FactFollowed): Promise<readonly string[]> {
@@ -100,14 +110,16 @@ function roundsAskingAgainOnce(
       ledger,
     }),
     ledger,
-    arrangesAWay: false,
+    arrangesAWay: true,
+    triggersIn: noTriggers,
+    ...noNames,
   });
   return rounds;
 }
 
 describe('the facts a round of the subscriptions follows', () => {
   it('are the ends of runs, after which a request no longer waits, each owing its playbook one round', async () => {
-    const rounds = roundsOver(aLedger());
+    const rounds = roundsOver(aLedger(), {}, true);
 
     expect(rounds.consumer.types).toEqual(['run_succeeded', 'run_rejected', 'run_failed', ...connectionTriggerFacts]);
     expect(rounds.consumer.types.filter((type) => !requestPlaceFacts.includes(type))).toEqual(connectionTriggerFacts);
@@ -121,7 +133,7 @@ describe('the facts a round of the subscriptions follows', () => {
   });
 
   it('are also the facts of a workflow’s definition, after which its triggers may name other places, and no fact of another type', async () => {
-    const rounds = roundsOver(aLedger());
+    const rounds = roundsOver(aLedger(), {}, true);
 
     expect(await asked(rounds, savedIn(alpha, 'fact-1', 'workflow'))).toEqual(['fact-1 triage']);
     expect(await asked(rounds, savedIn(beta, 'fact-2', 'reasoning'))).toEqual([]);
@@ -129,7 +141,7 @@ describe('the facts a round of the subscriptions follows', () => {
   });
 
   it('are due as one item a playbook that calls out, performed once, and then owed no more', async () => {
-    const rounds = roundsOver(aLedger());
+    const rounds = roundsOver(aLedger(), {}, true);
     await asked(rounds, followedIn(alpha, 'fact-1'));
     await asked(rounds, followedIn(alpha, 'fact-2'));
 
@@ -177,21 +189,68 @@ describe('a round of the subscriptions due by the record', () => {
   });
 });
 
-describe('the playbooks the rounds want the facts of', () => {
-  it('are every playbook while the runtime arranges a way, and otherwise one that holds a subscription', async () => {
-    const ledger = aLedger();
-    await madeAt(ledger, alpha);
-    const closed = roundsOver(ledger).consumer;
-    const open = roundsOver(ledger, {}, true).consumer;
+const listeningInARoom = ({ playbook }: PlaybookAddress) =>
+  Effect.succeed(playbook === 'gamma' ? [{ connection: 'rooms', type: 'com.example.chat.post', subject: 'C1' }] : []);
 
-    expect(
-      await Promise.all([
-        run(closed.wants('playbook/acme/alpha/')),
-        run(closed.wants('playbook/acme/beta/')),
-        run(closed.wants('org/acme/')),
-        run(open.wants('playbook/acme/beta/')),
-      ]),
-    ).toEqual([true, false, false, true]);
+const roundOf = (playbook: string) => `${JSON.stringify(['acme', playbook])} true`;
+
+describe('the facts that owe a playbook a round where the runtime arranges no way', () => {
+  it.each([
+    ['a playbook that holds a subscription', 'alpha', ['fact-1 ', 'fact-2 triage'], [roundOf('alpha')]],
+    [
+      'a playbook whose active triggers name a connection, whose places a round names',
+      'gamma',
+      ['fact-1 ', 'fact-2 triage'],
+      [roundOf('gamma')],
+    ],
+    ['a playbook that holds neither', 'beta', [], []],
+  ])(
+    'are a run ending and a trigger-changing fact of %s, or none',
+    async (_playbook, playbook, delivered: readonly string[], owed: readonly string[]) => {
+      const ledger = aLedger();
+      await madeAt(ledger, alpha);
+      const rounds = roundsOver(ledger, {}, false, listeningInARoom);
+      const address = { org: 'acme', playbook };
+
+      expect([
+        ...(await asked(rounds, followedIn(address, 'fact-1'))),
+        ...(await asked(rounds, savedIn(address, 'fact-2', 'workflow'))),
+      ]).toEqual(delivered);
+      expect(await performedAt(rounds, nine - minute)).toEqual(owed);
+    },
+  );
+});
+
+function readsCountedOf(ledger: ReturnType<typeof aLedger>, told: (read: string) => void): ReturnType<typeof aLedger> {
+  return {
+    ...ledger,
+    readProjectedRows: (projection, address, query) => {
+      told(projection);
+      return ledger.readProjectedRows(projection, address, query);
+    },
+  };
+}
+
+describe('what the rounds read of a playbook where the runtime arranges no way', () => {
+  it('is nothing on a pass that follows no fact that could owe a round, and once for each fact that could', async () => {
+    const reads: string[] = [];
+    const triggersRead = (playbook: PlaybookAddress) => {
+      reads.push('triggers');
+      return listeningInARoom(playbook);
+    };
+    const counted = readsCountedOf(aLedger(), (read) => {
+      reads.push(read);
+    });
+    const rounds = roundsOver(counted, {}, false, triggersRead);
+    const wanted = await run(rounds.consumer.wants('playbook/acme/beta/'));
+    await asked(rounds, savedIn(beta, 'fact-1', 'reasoning'));
+    await run(rounds.consumer.batchOf(followedIn(beta, 'fact-2'), 'fact-2', 100));
+    const followingNoSuchFact = [...reads];
+    await asked(rounds, followedIn(beta, 'fact-3'));
+
+    expect(wanted).toBe(true);
+    expect(followingNoSuchFact).toEqual([]);
+    expect(reads).toEqual(['event_subscriptions', 'triggers']);
   });
 });
 

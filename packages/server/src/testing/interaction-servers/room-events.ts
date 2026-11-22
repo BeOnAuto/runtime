@@ -20,11 +20,29 @@ export const theRoom = '#approvals-ada';
 /** The account the rooms connection acts as, which its tool `who_am_i` answers. */
 export const itsAccountInRooms = 'u-rooms-of-the-connection';
 
+/** The name the rooms service gives the room of the requests, which its tool `room_info`, marked reads, answers. */
+export const theRoomsName = 'approvals-ada';
+
+/** Whether the rooms service's `room_info` answers the name of a room, or fails as a tool does. */
+export type RoomInfo = 'answers' | 'fails';
+
 function named(properties: readonly string[]): FakeTool['inputSchema'] {
   return {
     type: 'object',
     properties: Object.fromEntries(properties.map((property) => [property, { type: 'string' }])),
     required: properties,
+  };
+}
+
+function roomInfoTool(roomInfo: RoomInfo): FakeTool {
+  return {
+    name: 'room_info',
+    inputSchema: named(['room']),
+    annotations: { readOnlyHint: true },
+    answer: () =>
+      roomInfo === 'answers'
+        ? { content: [], structuredContent: { room: { title: theRoomsName } } }
+        : { content: [{ type: 'text', text: 'The room cannot be read' }], isError: true },
   };
 }
 
@@ -119,8 +137,9 @@ export const roomsDelivery: readonly string[] = [
   ...flatReading,
 ];
 
-export async function roomsServer(): Promise<FakeMcpServer> {
-  const rooms = receiptsTold(await serveFakeMcp({ bearer: roomsKey, chat: true, tools: hookTools }));
+export async function roomsServer(roomInfo: RoomInfo = 'answers'): Promise<FakeMcpServer> {
+  const tools = [...hookTools, roomInfoTool(roomInfo)];
+  const rooms = receiptsTold(await serveFakeMcp({ bearer: roomsKey, chat: true, tools }));
   onTestFinished(rooms.close);
   return rooms;
 }

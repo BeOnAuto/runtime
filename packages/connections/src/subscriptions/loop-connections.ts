@@ -7,6 +7,7 @@ import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-
 import type { KeptConnection } from '../registry/registry.ts';
 import { holdsItUnrefused } from '../sockets/socket-holders.ts';
 import { identityOwedBy } from './owed-identities.ts';
+import { placeNamingOf } from './owed-place-names.ts';
 
 export interface LoopConnectionsParts {
   readonly registry: Pick<StreamReader, 'load'>;
@@ -41,6 +42,7 @@ export function loopConnectionOf(providers: ProviderList, kept: KeptConnection):
   const { id, name, connected_at: connectedAt, account } = connection;
   const destinations = takenThrough(connection, declaredFor(providers, connection));
   const identify = identityOwedBy(providers, kept);
+  const placeNaming = placeNamingOf(providers, kept);
   return {
     id,
     connection: name,
@@ -48,6 +50,7 @@ export function loopConnectionOf(providers: ProviderList, kept: KeptConnection):
     ...(account === null ? {} : { account: account.id }),
     destinations,
     ...(identify === undefined ? {} : { identify }),
+    ...(placeNaming === undefined ? {} : { placeNaming }),
   };
 }
 

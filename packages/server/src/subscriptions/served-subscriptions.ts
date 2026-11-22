@@ -12,6 +12,7 @@ import { waitingRequestsOf, type WaitingParts } from '@on.auto/interaction';
 import type { DispatcherServices, Ledger } from '@on.auto/operations';
 import {
   identitiesReadOf,
+  placeNamesReadOf,
   subscriptionLoopOf,
   type ProviderList,
   type SubscriptionLoopPorts,
@@ -63,11 +64,15 @@ export interface ServedSubscriptions extends SubscriptionRounds {
 export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubscriptions {
   const { ledger, receivesOverHttp, eventsAddressOf } = serving;
   const arrangesAWay = receivesOverHttp && eventsAddressOf !== undefined;
-  const ports = subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving));
+  const parts = subscriptionLoopPartsOf(serving);
+  const ports = subscriptionLoopPortsOf(parts);
   const rounds = subscriptionRoundsOf({
     round: subscriptionRoundOf({ loop: subscriptionLoopOf(ports), ledger }),
     ledger,
     arrangesAWay,
+    triggersIn: parts.triggersIn,
+    connectionsOf: ports.connectionsOf,
+    namesRead: placeNamesReadOf(ports),
   });
   return {
     ...rounds,

@@ -8,7 +8,6 @@ import {
   type ConnectionBroken,
   type ConnectionConnected,
   type ConsentStarted,
-  type IdentifiedUser,
   type LinkIssued,
   type OfItsSealedValues,
   type RecordedConnectionEvent,
@@ -16,7 +15,7 @@ import {
 import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
 import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
-import { identifiedAfter } from './kept-identities.ts';
+import { isKeptRead, keptReadAfter, noReads, type KeptReads } from './kept-reads.ts';
 import { changesNothingButItsRequest, requestedAfter } from './kept-requests.ts';
 import { isASetting, settingAfter } from './kept-settings.ts';
 import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
@@ -42,7 +41,7 @@ export interface GivenClient {
   readonly secret_id: string;
 }
 
-export interface KeptConnection {
+export interface KeptConnection extends KeptReads {
   readonly connection: RecordedConnection;
   readonly ways: readonly RecordedConnection['credential'][] | undefined;
   readonly link: OpenLink | undefined;
@@ -54,7 +53,6 @@ export interface KeptConnection {
   readonly nextClient: GivenClient | undefined;
   readonly signing: KeptSigning | undefined;
   readonly appSecretIds: AppSecretIds;
-  readonly identified: IdentifiedUser | undefined;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -100,7 +98,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     nextClient: undefined,
     signing: undefined,
     appSecretIds: {},
-    identified: undefined,
+    ...noReads,
   };
 }
 
@@ -189,7 +187,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     nextClient: promoted === undefined ? kept.nextClient : undefined,
     signing: kept.signing,
     appSecretIds,
-    identified: undefined,
+    ...noReads,
   };
 }
 
@@ -250,8 +248,8 @@ function evolvedConnection(
   if (isASetting(event)) {
     return settingAfter(kept, event);
   }
-  if (event.type === 'connection_identified') {
-    return identifiedAfter(kept, event);
+  if (isKeptRead(event)) {
+    return keptReadAfter(kept, event);
   }
   if (isOfItsSealedValues(event)) {
     return withItsSealedValues(kept, event);

@@ -9,9 +9,18 @@ import {
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
-import { answerIssuesOf, callIssuesOf, identityTemplates, readsTheSubject } from './event-calls.ts';
+import {
+  answerIssuesOf,
+  callIssuesOf,
+  identityTemplates,
+  placeNameTemplates,
+  placesTheSubject,
+  readsTheSubject,
+  type Placed,
+} from './event-calls.ts';
 import { IdentitySchema } from './identity-call.ts';
 import { pathOf } from './json-texts.ts';
+import { PlaceNameSchema, type PlaceName } from './place-name-call.ts';
 import { subscriptionIssuesOf } from './subscription-checks.ts';
 
 export function destinationIssuesOf(destination: Destination): readonly DestinationIssue[] {
@@ -51,6 +60,7 @@ const EventTypeFieldsSchema = Schema.Struct({
         description:
           "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject.",
       }),
+      name: Schema.optionalKey(PlaceNameSchema),
     }).annotate({
       description: 'The place an event of this type happens in, such as a channel or a repository.',
     }),
@@ -123,18 +133,38 @@ function subjectIssuesOf(types: readonly EventType[], destinations: readonly Des
   );
 }
 
+function issuesAt(placed: readonly Placed[]): readonly DestinationIssue[] {
+  return placed.map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
+}
+
+const unplaced = 'Expected {{ subject }} in with, since the call reads the name of one place';
+
+function nameIssuesOf(at: string, name: PlaceName): readonly Placed[] {
+  return [
+    ...callIssuesOf(at, name, placeNameTemplates),
+    ...answerIssuesOf([[`${at}/named`, name.named]]),
+    ...(placesTheSubject(name) ? [] : [{ pointer: `${at}/with`, detail: unplaced }]),
+  ];
+}
+
+function placeNameIssuesOf(types: readonly EventType[]): readonly DestinationIssue[] {
+  return types.flatMap(({ subject }, index) =>
+    subject?.name === undefined ? [] : issuesAt(nameIssuesOf(`/types/${index}/subject/name`, subject.name)),
+  );
+}
+
 type Identity = NonNullable<EventsFields['identity']>;
 
 function identityIssuesOf(identity: Identity): readonly DestinationIssue[] {
   const { id, name } = identity.identified;
-  return [
+  return issuesAt([
     ...callIssuesOf('/identity', identity, identityTemplates),
     ...answerIssuesOf([
       ['/identity/identified/id', id],
       ['/identity/identified/name', name],
       ['/identity/account', identity.account],
     ]),
-  ].map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
+  ]);
 }
 
 const unidentified =
@@ -154,6 +184,7 @@ function eventsIssuesOf({ types = [], identity, destinations }: EventsFields): r
     ...declaredTypeIssuesOf(types),
     ...mappedTypeIssuesOf(types, destinations),
     ...subjectIssuesOf(types, destinations),
+    ...placeNameIssuesOf(types),
     ...(identity === undefined ? actorIssuesOf(destinations) : identityIssuesOf(identity)),
   ];
 }

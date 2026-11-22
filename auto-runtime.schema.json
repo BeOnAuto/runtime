@@ -772,6 +772,30 @@
                             "required": {
                               "type": "boolean",
                               "description": "Whether a trigger must name one place to listen in. Set it to true where a destination made per subscription writes this event's topic from subject."
+                            },
+                            "name": {
+                              "type": "object",
+                              "properties": {
+                                "tool": {
+                                  "type": "string",
+                                  "description": "A tool of the connection that reads one place, named as the server lists it. The tool must be marked `reads`."
+                                },
+                                "with": {
+                                  "type": "object",
+                                  "description": "The tool's arguments. Write {{ subject }} where the place goes: it is filled in with the place as the trigger writes it."
+                                },
+                                "named": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into what the tool answered, to the place's name."
+                                },
+                                "prefix": {
+                                  "type": "string",
+                                  "description": "Text to put before the name, such as \"#\" before a channel's name."
+                                }
+                              },
+                              "required": ["tool", "named"],
+                              "additionalProperties": false,
+                              "description": "How Auto reads the name the service gives a place, such as a channel's name, where a trigger writes the place as an id. Leave it out where a trigger already writes the place as its name."
                             }
                           },
                           "required": ["title", "required"],

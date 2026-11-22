@@ -4,6 +4,7 @@ import type { Effect, Redacted } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import type { IdentitySchema } from '../events/identity-call.ts';
+import type { PlaceName } from '../events/place-name-call.ts';
 import type {
   SubscriptionCallFailed,
   SubscriptionFailedBecause,
@@ -87,11 +88,18 @@ export interface Identification {
   readonly account?: IdentifiedAccount;
 }
 
+interface Naming {
+  readonly name: PlaceName;
+  readonly place: SubscriptionPlace;
+  readonly subject: string;
+}
+
 export interface SubscriptionCalls {
   readonly subscribe: <E, R>(asked: Subscribing<E, R>) => Effect.Effect<Subscribed, SubscriptionCallFailed | E, R>;
   readonly renew: (asked: Renewing) => Effect.Effect<Renewed, SubscriptionCallFailed>;
   readonly unsubscribe: (asked: Unsubscribing) => Effect.Effect<void, SubscriptionCallFailed>;
   readonly identify: (asked: Identifying) => Effect.Effect<Identification, SubscriptionCallFailed>;
+  readonly name: (asked: Naming) => Effect.Effect<string, SubscriptionCallFailed>;
 }
 
 export interface SubscriptionKey {
@@ -150,6 +158,12 @@ export interface SubscriptionSecrets {
   readonly forget: (place: SubscriptionPlace, id: string) => Effect.Effect<void>;
 }
 
+export interface PlaceNaming {
+  readonly type: string;
+  readonly name: PlaceName;
+  readonly named: readonly string[];
+}
+
 export interface LoopConnection {
   readonly id: string;
   readonly connection: string;
@@ -157,6 +171,7 @@ export interface LoopConnection {
   readonly account?: string;
   readonly destinations: readonly Destination[];
   readonly identify?: Identity;
+  readonly placeNaming?: readonly PlaceNaming[];
 }
 
 export interface Asking extends PlaybookAddress {
@@ -170,6 +185,12 @@ export interface IdentifiedConnection {
   readonly connected: string;
 }
 
+export interface NamedPlace {
+  readonly type: string;
+  readonly subject: string;
+  readonly name: string;
+}
+
 export interface SubscriptionLoopPorts extends SubscriptionPorts {
   readonly connectionsOf: (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]>;
   readonly receives: (type: Destination['type']) => boolean;
@@ -181,6 +202,11 @@ export interface SubscriptionLoopPorts extends SubscriptionPorts {
     playbook: PlaybookAddress,
     connection: IdentifiedConnection,
     identification: Identification,
+  ) => Effect.Effect<void>;
+  readonly placeNamed: (
+    playbook: PlaybookAddress,
+    connection: IdentifiedConnection,
+    named: NamedPlace,
   ) => Effect.Effect<void>;
   readonly mostPerConnection: number;
 }

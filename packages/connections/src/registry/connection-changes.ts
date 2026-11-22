@@ -56,6 +56,7 @@ const named: Readonly<
   connection_signing_secret_set: connectionChangedBy,
   connection_signing_secret_removed: connectionChangedBy,
   connection_identified: accountRecordedBy,
+  connection_place_named: null,
 };
 
 export const connectionChanges: ChangeNaming<ChangedFact> = {

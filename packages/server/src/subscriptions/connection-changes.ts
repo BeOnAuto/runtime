@@ -14,6 +14,7 @@ import { oneWakeAtATime, type HostWakeUp, type WakeSignal } from '@on.auto/workf
 import { Effect } from 'effect';
 
 import { isARegistry } from '../sockets/served-sockets.ts';
+import { noRequestSent } from './subscription-rounds.ts';
 
 export interface ChangesListening {
   readonly streams: Pick<LedgerStreams, 'orgStreams'>;
@@ -158,9 +159,10 @@ export function connectionChangesWakeUpsOf({
 }: FollowedBy): (listening: ChangesListening) => readonly WakeUpWith[] {
   const reads = {
     ledger,
-    sentIn: (playbook: PlaybookAddress) => holdsASentRequest(ledger, playbook),
+    sentIn: arrangesAWay ? (playbook: PlaybookAddress) => holdsASentRequest(ledger, playbook) : noRequestSent,
     triggersIn: (playbook: PlaybookAddress) => connectionTriggersOf(ledger, playbook),
   };
-  return ({ streams, appended }) =>
-    arrangesAWay ? [connectionChangesWakeUpOf({ ...reads, asked, streams, appended: appended ?? streamAppends })] : [];
+  return ({ streams, appended }) => [
+    connectionChangesWakeUpOf({ ...reads, asked, streams, appended: appended ?? streamAppends }),
+  ];
 }

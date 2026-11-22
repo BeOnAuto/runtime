@@ -1,8 +1,10 @@
 import { connectionsStreamOfOrg, eventSubscriptions, subscriptionRecordsOf } from '@on.auto/connections';
+import { decidedIn, definitionNamesWith, definitionsReadModelOf } from '@on.auto/definitions/testing';
+import { openRequests, openRequestsName } from '@on.auto/interaction';
 import { streamSignalOf } from '@on.auto/ledger';
 import type { Ledger, PlaybookAddress } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
-import { Effect, Logger } from 'effect';
+import { memoryLedger, memoryLedgerWith } from '@on.auto/operations/testing';
+import { Effect, Function, Logger } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -12,7 +14,7 @@ import {
   registryListedIn,
   type ConnectionFact,
 } from '../testing/subscriptions/connections-followed.ts';
-import { connectionChangesWakeUpOf } from './connection-changes.ts';
+import { connectionChangesWakeUpOf, connectionChangesWakeUpsOf } from './connection-changes.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -144,4 +146,68 @@ describe('a server that follows the connections of its orgs, where a read fails'
       ['alpha', 'alpha', 'alpha'],
     ]);
   });
+});
+
+const ada = { id: 'person:ada', name: 'Ada' };
+
+function savedListeningIn(ledger: Ledger['Service'], playbook: PlaybookAddress) {
+  const attributes = { type: 'com.example.chat.post', source: '/connections/rooms', subject: 'C1' };
+  const filters = [{ reference: '/schedule/on/one', type: attributes.type, attributes }];
+  return Effect.runPromise(
+    decidedIn(ledger, playbook, 'workflow', {
+      type: 'create',
+      name: 'on-a-post',
+      content: { source: 'on-a-post', triggers: [{ kind: 'event', reference: '/schedule/on', filters }] },
+      created_by: ada,
+      definition_id: 'on-a-post-id',
+      by: ada.id,
+      at: '2026-11-20T09:00:00.000Z',
+    }),
+  );
+}
+
+/** An org whose alpha listens in a room through a connection, whose beta holds only a request sent, and gamma neither. */
+async function anOrgListening(): Promise<Ledger['Service']> {
+  const kept = memoryLedgerWith({
+    projections: [...definitionsReadModelOf(['workflow']), eventSubscriptions, openRequests],
+    definitionNames: definitionNamesWith([]),
+  }).service;
+  await playbooksCreated(kept, 'acme', ['alpha', 'beta', 'gamma']);
+  await savedListeningIn(kept, alpha);
+  await connectionsRecorded(kept, 'acme', [connectedOf('connection-1')]);
+  const sent = { key: 'request-1', org: 'acme', playbook: 'beta', row: {} };
+  return {
+    ...kept,
+    readProjectedRows: (table, address, query) =>
+      table === openRequestsName && address.playbook === 'beta'
+        ? Effect.succeed([sent])
+        : kept.readProjectedRows(table, address, query),
+  };
+}
+
+describe('the playbooks a change of the connections asks a round of', () => {
+  it.each([
+    [false, ['alpha']],
+    [true, ['alpha', 'beta']],
+  ] as const)(
+    'are, where a way is arranged is %s, those whose triggers name a connection, and those holding a request sent only where a way is arranged',
+    async (arrangesAWay, askedOf) => {
+      const ledger = await anOrgListening();
+      const asked: string[] = [];
+      const wakeUps = connectionChangesWakeUpsOf({
+        ledger,
+        asked: ({ playbook }) => {
+          asked.push(playbook);
+        },
+        arrangesAWay,
+      })({
+        streams: { orgStreams: registryListedIn(ledger, 'acme') },
+        appended: streamSignalOf(),
+      });
+      const signal = { raised: Function.constVoid, renewed: Function.constVoid };
+      await run(Effect.forEach(wakeUps, (wakeUpWith) => wakeUpWith(signal).wakeUp({ now: 0, sweep: false })));
+
+      expect([wakeUps.length, asked.toSorted()]).toEqual([1, askedOf]);
+    },
+  );
 });

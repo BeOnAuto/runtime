@@ -1,16 +1,17 @@
-import { holdsASubscription, playbooksDueOf, reconcileDueAfter, type DueLedger } from '@on.auto/connections';
+import {
+  listensThroughAConnection,
+  playbooksDueOf,
+  reconcileDueAfter,
+  type DueLedger,
+  type ListeningParts,
+} from '@on.auto/connections';
 import type { RecordWork, Work } from '@on.auto/definitions';
 import { changesConnectionTriggers, connectionTriggerFacts } from '@on.auto/definitions/connection-triggers';
 import { requestPlaceFacts } from '@on.auto/interaction';
-import {
-  playbookOfStreamPrefix,
-  type PlaybookAddress,
-  type ProjectionReader,
-  type RecordedEvent,
-} from '@on.auto/operations';
-import type { Reconciled } from '@on.auto/providers';
+import type { PlaybookAddress, ProjectionReader, RecordedEvent } from '@on.auto/operations';
+import type { ConnectionTrigger, LoopConnection, Reconciled } from '@on.auto/providers';
 import type { Consumer, DueItem, DueWork } from '@on.auto/workflow-host';
-import { Effect, Option } from 'effect';
+import { Effect } from 'effect';
 
 const subscriptionRoundsName = 'the subscriptions of the playbooks';
 
@@ -20,6 +21,13 @@ interface RoundsParts {
   readonly round: (playbook: PlaybookAddress, now: number) => Effect.Effect<Reconciled>;
   readonly ledger: DueLedger & Pick<ProjectionReader, 'readProjectedRows'>;
   readonly arrangesAWay: boolean;
+  readonly triggersIn: ListeningParts['triggersIn'];
+  readonly connectionsOf: (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]>;
+  readonly namesRead: (
+    playbook: PlaybookAddress,
+    connections: readonly LoopConnection[],
+    triggers: readonly ConnectionTrigger[],
+  ) => Effect.Effect<void>;
 }
 
 export interface FactFollowed {
@@ -86,10 +94,19 @@ function owedRoundsOf(): OwedRounds {
   };
 }
 
+function namesReadAfter(parts: RoundsParts, playbook: PlaybookAddress): Effect.Effect<void> {
+  return Effect.gen(function* () {
+    const connections = yield* parts.connectionsOf(playbook);
+    const triggers = yield* parts.triggersIn(playbook);
+    yield* parts.namesRead(playbook, connections, triggers);
+  });
+}
+
 function roundOf(parts: RoundsParts, owed: OwedRounds, playbook: PlaybookAddress, now: number): Effect.Effect<void> {
   return Effect.suspend(() => {
     const before = owed.askedOf(playbook);
-    return Effect.map(parts.round(playbook, now), () => {
+    const round = Effect.tap(parts.round(playbook, now), () => namesReadAfter(parts, playbook));
+    return Effect.map(round, () => {
       owed.answered(playbook, before);
     });
   });
@@ -114,18 +131,48 @@ function dueWorkOf(parts: RoundsParts, owed: OwedRounds): DueWork {
   };
 }
 
-function wantedIn(parts: RoundsParts, playbookKey: string): Effect.Effect<boolean> {
-  if (parts.arrangesAWay) {
-    return Effect.succeed(true);
-  }
-  return Option.match(playbookOfStreamPrefix(playbookKey), {
-    onNone: () => Effect.succeed(false),
-    onSome: (playbook) => holdsASubscription(parts.ledger, playbook),
-  });
+export function noRequestSent(): Effect.Effect<boolean> {
+  return Effect.succeed(false);
+}
+
+function wantedInEveryPlaybook(): Effect.Effect<boolean> {
+  return Effect.succeed(true);
 }
 
 function owesARound(record: FactFollowed['record']): boolean {
   return runEndings.includes(record.type) || changesConnectionTriggers(record);
+}
+
+function roundOwedFor(parts: RoundsParts, { playbook, record }: FactFollowed): Effect.Effect<boolean> {
+  if (!owesARound(record)) {
+    return Effect.succeed(false);
+  }
+  if (parts.arrangesAWay) {
+    return Effect.succeed(true);
+  }
+  const { ledger, triggersIn } = parts;
+  return listensThroughAConnection({ ledger, sentIn: noRequestSent, triggersIn }, playbook);
+}
+
+function owedBatchOf(owed: OwedRounds, { playbook, record }: FactFollowed): OwedBatch {
+  return {
+    deliveries: [
+      {
+        key: record.id,
+        workflow: record.context.definitionName ?? '',
+        deliver: Effect.sync(() => {
+          owed.ask(playbook);
+        }),
+        skipped: () => Effect.void,
+      },
+    ],
+    through: record.id,
+    more: false,
+  };
+}
+
+function nothingOwedAfter(after: string | undefined): OwedBatch {
+  return { deliveries: [], through: after, more: false };
 }
 
 function consumerOf(parts: RoundsParts, owed: OwedRounds): FactsConsumer {
@@ -133,26 +180,13 @@ function consumerOf(parts: RoundsParts, owed: OwedRounds): FactsConsumer {
     name: subscriptionRoundsName,
     types: [...runEndings, ...connectionTriggerFacts],
     skippedAfterSweeps: Number.POSITIVE_INFINITY,
-    wants: (playbookKey) => wantedIn(parts, playbookKey),
-    batchOf: ({ playbook, record }, after) =>
-      Effect.succeed(
-        after === undefined && owesARound(record)
-          ? {
-              deliveries: [
-                {
-                  key: record.id,
-                  workflow: record.context.definitionName ?? '',
-                  deliver: Effect.sync(() => {
-                    owed.ask(playbook);
-                  }),
-                  skipped: () => Effect.void,
-                },
-              ],
-              through: record.id,
-              more: false,
-            }
-          : { deliveries: [], through: after, more: false },
-      ),
+    wants: wantedInEveryPlaybook,
+    batchOf: (followed, after) =>
+      after === undefined
+        ? Effect.map(roundOwedFor(parts, followed), (owes) =>
+            owes ? owedBatchOf(owed, followed) : nothingOwedAfter(after),
+          )
+        : Effect.succeed(nothingOwedAfter(after)),
   };
 }
 

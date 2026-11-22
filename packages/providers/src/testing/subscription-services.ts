@@ -43,6 +43,7 @@ export interface FakeService {
 export interface Serving {
   readonly callbacks?: Partial<Readonly<Record<Receiving, string>>>;
   readonly mostRequestBytes?: number;
+  readonly reads?: readonly string[];
 }
 
 export const theCallback = 'https://runtime.example.com/v1/orgs/acme/playbooks/alpha/connections/tracker/events';
@@ -139,15 +140,22 @@ function inTurn<Answer>(answers: readonly Answer[], asked: number): Answer {
   return Option.getOrThrow(Option.fromNullishOr(answers[Math.min(asked, answers.length) - 1]));
 }
 
+function isRefusedUnsent({ reference, requiredMark }: OneCall, reads: readonly string[]): boolean {
+  return requiredMark === 'reads' && !reads.includes(reference.tool);
+}
+
 function serviceOf(called: readonly CalledOnce[], requested: readonly RequestedOnce[], serving: Serving): FakeService {
   const sent: Sent[] = [];
   const asked: (readonly [SubscriptionPlace, Receiving])[] = [];
-  const { callbacks = { webhook: theCallback, queue: theQueue }, mostRequestBytes = 1_048_576 } = serving;
+  const { callbacks = { webhook: theCallback, queue: theQueue }, mostRequestBytes = 1_048_576, reads = [] } = serving;
   const sentBy = (way: 'tool' | 'request') => sent.filter((each) => way in each).length;
   return {
     ports: {
       callOnce: (call) =>
         Effect.sync(() => {
+          if (isRefusedUnsent(call, reads)) {
+            return notReadOnly;
+          }
           sent.push({ tool: call });
           return inTurn(called, sentBy('tool'));
         }),

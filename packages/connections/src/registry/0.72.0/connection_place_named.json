@@ -1,0 +1,14 @@
+{
+  "type": "connection_place_named",
+  "data": {
+    "connection": "connection-1",
+    "connected_at": "2026-10-29T10:00:00.000Z",
+    "event_type": "com.example.chat.post",
+    "subject": "C0123",
+    "name": "support"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

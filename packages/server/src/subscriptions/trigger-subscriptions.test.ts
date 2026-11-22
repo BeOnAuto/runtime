@@ -132,14 +132,14 @@ async function theServerOf(ledger: Awaited<ReturnType<typeof aSavedTrigger>>, we
   return { rounds, sent: service.sent, forgotten, ...followedBy(rounds, ledger, 'acme') };
 }
 
-describe('the connections of the orgs, on a runtime that arranges no way', () => {
-  it('are followed by no wake-up, since nothing is subscribed per subscription there', async () => {
+describe('the connections of the orgs, whether or not the runtime arranges a way', () => {
+  it('are followed by one wake-up, since a round names the places a trigger names on a runtime that takes no inbound connection too', async () => {
     const ledger = await aSavedTrigger();
     const streams = { orgStreams: () => Promise.resolve([]) };
     const wakeUpsOf = async (webhookUrl?: string) =>
       (await theServerOf(ledger, webhookUrl)).rounds.wakeUpsOver({ streams }).length;
 
-    expect([await wakeUpsOf(), await wakeUpsOf('https://events.example.com')]).toEqual([0, 1]);
+    expect([await wakeUpsOf(), await wakeUpsOf('https://events.example.com')]).toEqual([1, 1]);
   });
 });
 

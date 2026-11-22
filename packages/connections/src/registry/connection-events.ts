@@ -211,6 +211,17 @@ export const ConnectionEventSchema = Schema.Union([
     }),
     ActedContextSchema,
   ),
+  factOf(
+    'connection_place_named',
+    Schema.Struct({
+      ...ofTheConnection,
+      connected_at: Schema.String,
+      event_type: Schema.String,
+      subject: Schema.String,
+      name: Schema.String,
+    }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
@@ -254,6 +265,8 @@ export type SigningSecretsRemoved = typeof SigningSecretsRemovedSchema.Type;
 export type ConnectionIdentified = Extract<RecordedConnectionEvent, { readonly type: 'connection_identified' }>;
 
 export type IdentifiedUser = ConnectionIdentified['data']['user'];
+
+export type PlaceNamed = Extract<RecordedConnectionEvent, { readonly type: 'connection_place_named' }>;
 
 export type OfItsSealedValues = SigningSecretSet | SigningSecretRemoved | AppCredentialRefused;
 

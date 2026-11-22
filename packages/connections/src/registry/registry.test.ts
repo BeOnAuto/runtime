@@ -333,6 +333,7 @@ describe('an added connection, as the stream folds it', () => {
       algorithm: undefined,
       signing: undefined,
       appSecretIds: {},
+      placeNames: new Map(),
     });
   });
 
@@ -375,6 +376,52 @@ describe('the account a connection acts as, as the stream folds it', () => {
       crmAfter(approval, connection, identifiedAt(later.at), identifiedAt(anHourBefore, '9'))?.identified,
       crmAfter(identifiedAt(later.at))?.identified,
     ]).toEqual([undefined, undefined, { id: '7001', name: 'sam' }, undefined]);
+  });
+});
+
+const posted = 'com.example.chat.post';
+
+function placeNamedAt(connectedAt: string, subject: string, name: string): ConnectionEvent {
+  return {
+    type: 'connection_place_named',
+    data: { connection: '0199-crm', connected_at: connectedAt, event_type: posted, subject, name },
+  };
+}
+
+function namesOf(kept: ReturnType<typeof crmAfter>) {
+  return [...(kept?.placeNames ?? new Map<string, ReadonlyMap<string, string>>())].map(
+    ([type, named]: readonly [string, ReadonlyMap<string, string>]) => [type, Object.fromEntries(named)],
+  );
+}
+
+describe('the names of the places a connection reaches, as the stream folds them', () => {
+  it('are kept beside the connection for its connecting, each place by its type, the newest name of each, and the record a read answers is the same with or without them', () => {
+    const named = crmAfter(
+      approval,
+      connection,
+      placeNamedAt(later.at, 'C1', 'support'),
+      placeNamedAt(later.at, 'C2', 'sales'),
+      placeNamedAt(later.at, 'C1', 'help'),
+    );
+
+    expect(namesOf(named)).toEqual([[posted, { C1: 'help', C2: 'sales' }]]);
+    expect(named?.connection).toEqual(crmAfter(approval, connection)?.connection);
+  });
+
+  it('pass over a name of another connecting, are cleared by a new connecting, and are kept as the connection breaks', () => {
+    const anHourBefore = '2026-10-15T13:05:00.000Z';
+    const support = placeNamedAt(later.at, 'C1', 'support');
+    const broken: ConnectionEvent = {
+      type: 'connection_broken',
+      data: { connection: '0199-crm', kind: 'credential_refused', reason: 'Refused' },
+    };
+
+    expect([
+      namesOf(crmAfter(approval, connection, placeNamedAt(anHourBefore, 'C1', 'support'))),
+      namesOf(crmAfter(approval, connection, support, connection)),
+      namesOf(crmAfter(approval, connection, support, broken)),
+      namesOf(crmAfter(support)),
+    ]).toEqual([[], [], [[posted, { C1: 'support' }]], []]);
   });
 });
 

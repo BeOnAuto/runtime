@@ -40,6 +40,20 @@ export const identifiedByTheRuntime: readonly (typeof ConnectionEventSchema.Type
   },
 ];
 
+export const placeNamed: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_place_named',
+    data: {
+      connection: 'connection-1',
+      connected_at: recordedAt,
+      event_type: 'com.example.chat.post',
+      subject: 'C0123',
+      name: 'support',
+    },
+    context: { at: recordedAt, by: 'runtime' },
+  },
+];
+
 export const identifiedInItsAccount: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_identified',

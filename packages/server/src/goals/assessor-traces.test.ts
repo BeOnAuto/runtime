@@ -251,7 +251,7 @@ describe('the cost of the assessor on a Node server', () => {
     expect(passes).toBeGreaterThanOrEqual(1);
   });
 
-  it('reads nothing of an older playbook with no goals but whether it has a clock row, beside whether it holds a subscription, and observes none of its runs (trace D)', async () => {
+  it('reads nothing of an older playbook with no goals but whether it has a clock row, beside, at a fact that could owe it a round, whether it listens through a connection, and observes none of its runs (trace D)', async () => {
     const ledger = aLedger();
     const before = await servingReasoning([], {}, undefined, { ledger });
     await before.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'beta', name: 'Beta' } });
@@ -273,7 +273,7 @@ describe('the cost of the assessor on a Node server', () => {
 
     expect(Object.keys(beta)).toEqual([]);
     expect(new Set(ofBeta.filter((asked) => asked.startsWith('rows ')))).toEqual(
-      new Set(['rows goal_clocks acme/beta', 'rows event_subscriptions acme/beta']),
+      new Set(['rows goal_clocks acme/beta', 'rows event_subscriptions acme/beta', 'rows definitions acme/beta']),
     );
     expect(ofBeta.filter((asked) => /goals\/goal|assessments\/|goal-refusals\//u.test(asked))).toEqual([]);
   });

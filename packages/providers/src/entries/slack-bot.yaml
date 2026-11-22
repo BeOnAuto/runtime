@@ -63,6 +63,12 @@ events:
       subject:
         title: Channel
         required: false
+        name:
+          tool: conversations_info
+          with:
+            channel: '{{ subject }}'
+          named: /channel/name
+          prefix: '#'
       data:
         type: object
         properties:

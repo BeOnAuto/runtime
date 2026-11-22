@@ -111,6 +111,17 @@ function accountIn(document: Schema.Json, pointer: string | undefined): Pick<Ide
   return id === undefined ? {} : { account: { id } };
 }
 
+export function placeNameIn(
+  document: Answered,
+  pointer: string,
+  mostCharacters: number,
+): Effect.Effect<string, SubscriptionCallFailed> {
+  const name = document === undefined ? undefined : textIn(document, pointer);
+  return name === undefined || name.length > mostCharacters
+    ? Effect.fail(failedBecause('unreadable'))
+    : Effect.succeed(name);
+}
+
 export function identifiedIn(
   document: Answered,
   { identified, account }: IdentityPointers,

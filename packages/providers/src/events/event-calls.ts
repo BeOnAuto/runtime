@@ -120,6 +120,11 @@ export const eventTopicTemplates: TemplateSet = {
   structured: 'the list that split makes',
 };
 
+export const placeNameTemplates: TemplateSet = {
+  ...eventTopicTemplates,
+  what: "a template of the call that reads a place's name",
+};
+
 export function subscribeTemplates(receiving: Receiving): TemplateSet {
   return templatesOf(
     'a template of the call that subscribes',
@@ -270,4 +275,8 @@ export function answerIssuesOf(pointers: readonly (readonly [string, string | un
 export function placesTheSecret(call: Call): boolean {
   const written = { ...call.with, ...call.body, ...(call.url === undefined ? {} : { url: call.url }) };
   return textsIn(written, '').some(({ text }) => readsTheSecret(text));
+}
+
+export function placesTheSubject({ with: written = {} }: Pick<Call, 'with'>): boolean {
+  return textsIn(written, '').some(({ text }) => readsTheSubject(text));
 }
