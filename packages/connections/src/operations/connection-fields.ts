@@ -197,9 +197,15 @@ function missingCredentialIssuesOf({ credential, type }: AdditionGiven): readonl
   return credential === undefined && type !== 'mcp' ? [{ path: ['credential'], issue: credentialOfAnApiByHand }] : [];
 }
 
+const assertionOfAProvider =
+  'A server added by hand cannot use jwt_bearer. Add the connection from a provider that lists this way.';
+
 function credentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeIssue[] {
   if (credential === undefined) {
     return [];
+  }
+  if (credential.kind === 'jwt_bearer') {
+    return [{ path: ['credential', 'kind'], issue: assertionOfAProvider }];
   }
   return credential.kind === 'authorization'
     ? consentByHandIssuesOf(credential, type)

@@ -160,7 +160,7 @@ const waysOfTheShipped = [
   ['display-video-360', ['authorization'], []],
   ['display-video-360-reports', ['authorization'], []],
   ['github', ['authorization', 'secret'], []],
-  ['gmail', ['authorization'], []],
+  ['gmail', ['authorization', 'jwt_bearer'], []],
   ['google-ads', ['authorization'], []],
   ['google-analytics', ['authorization'], []],
   ['google-analytics-admin', ['authorization'], []],

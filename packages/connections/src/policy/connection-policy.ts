@@ -77,7 +77,7 @@ const policyFields = {
   credential_kinds: Schema.optionalKey(
     Schema.Array(CredentialKindSchema).annotate({
       description:
-        'The kinds of credential a connection may take, of none, reference, secret, client_credentials and authorization; every kind when left out',
+        'The kinds of credential a connection may take, of none, reference, secret, client_credentials, authorization and jwt_bearer; every kind when left out',
     }),
   ),
   variables: Schema.optionalKey(

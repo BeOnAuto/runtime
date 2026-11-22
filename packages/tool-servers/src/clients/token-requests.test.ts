@@ -1,10 +1,13 @@
 import { IssuerMismatchError } from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
+import { decodeJwt } from 'jose';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { MintingAuth } from '../settings/server-settings.ts';
 import { fakeMcpInProcess, inProcessFetch, type ClientRegistration } from '../testing/index.ts';
 import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { askingFetch, clientSecret, refusedAt, rsaKeys, secretAuth, sourceOf } from '../testing/token-sources.ts';
+import { failureOf } from './server-failures.ts';
 
 const audience = 'https://graph.example.com/api';
 
@@ -172,5 +175,86 @@ describe('a token asked by client credentials of an issuer with a path in its ad
 
     await expect(source.token()).rejects.toBeInstanceOf(IssuerMismatchError);
     expect(issuer.tokenRequests()).toBe(0);
+  });
+});
+
+const robot = 'robot@acme.example.com';
+
+const inbox = 'inbox@acme.example.com';
+
+function asAServiceAccount(issuer: FakeMcpServer, privateKey: string): MintingAuth {
+  return secretAuth(issuer, {
+    client_id: robot,
+    scope: graphDefault,
+    grant: 'jwt_bearer',
+    subject: inbox,
+    credential: { kind: 'private_key', private_key: Redacted.make(privateKey), algorithm: 'RS256' },
+  });
+}
+
+function assertionsSentTo(bodies: readonly Readonly<Record<string, string>>[], startedAt: number) {
+  return bodies.map((body) => {
+    const { sub, iat, exp } = decodeJwt(String(body['assertion']));
+    return [sub, Number(iat) - startedAt, Number(exp) - Number(iat)];
+  });
+}
+
+function answering503(...[address, init]: readonly [unknown, unknown?]): Promise<Response> {
+  return String(address).endsWith('/token')
+    ? Promise.resolve(new Response(null, { status: 503 }))
+    : inProcessFetch(String(address), Object.assign({}, init));
+}
+
+function fromTheIssuer(fake: FakeMcpServer) {
+  return { discovery: 'from_the_issuer', serverUrl: `${fake.origin}/api` } as const;
+}
+
+describe('a token asked with a signed assertion of a service account', () => {
+  it('is asked for the subject with a new assertion of five minutes each time it is renewed, and again when the server refuses it', async () => {
+    const { publicKey, privateKey } = rsaKeys();
+    const issuer = served({ clientSecret: undefined, clientId: robot, publicKey, subjects: [inbox] });
+    const asking = askingFetch();
+    const { source, clock, minted } = sourceOf(
+      issuer,
+      asAServiceAccount(issuer, privateKey),
+      asking.fetch,
+      fromTheIssuer(issuer),
+    );
+    const startedAt = clock.now / 1000;
+
+    const first = await source.token();
+    clock.now += 3_540_001;
+    const renewed = await source.token();
+    await source.onUnauthorized(refusedAt(issuer));
+
+    expect(new Set([first, renewed, ...minted.map(([, token]) => token)]).size).toBe(3);
+    expect(assertionsSentTo(asking.bodies(), startedAt)).toEqual([
+      [inbox, 0, 300],
+      [inbox, 3540, 300],
+      [inbox, 3540, 300],
+    ]);
+    expect(asking.bodies().map((body) => Object.keys(body).toSorted())).toEqual(
+      Array.from({ length: 3 }, () => ['assertion', 'grant_type']),
+    );
+  });
+});
+
+describe('a token a service account is not given', () => {
+  it('fails as a refused key where the token endpoint refuses the assertion, and as a failure where it answers 503', async () => {
+    const { publicKey, privateKey } = rsaKeys();
+    const refusing = served({ clientSecret: undefined, clientId: robot, publicKey, subjects: [] });
+    const failing = served({ clientSecret: undefined, clientId: robot, publicKey, subjects: [inbox] });
+
+    const refused = sourceOf(
+      refusing,
+      asAServiceAccount(refusing, privateKey),
+      inProcessFetch,
+      fromTheIssuer(refusing),
+    );
+    const failed = sourceOf(failing, asAServiceAccount(failing, privateKey), answering503, fromTheIssuer(failing));
+
+    expect(
+      await Promise.all([refused.source.token().catch(failureOf), failed.source.token().catch(failureOf)]),
+    ).toMatchObject([{ kind: 'key_refused' }, { kind: 'failing' }]);
   });
 });

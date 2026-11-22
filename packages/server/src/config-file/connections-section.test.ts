@@ -55,6 +55,34 @@ describe('the connections section of the configuration file', () => {
   });
 });
 
+const providerOfAKeyFile = `connections:
+  providers:
+    - name: mailbox
+      title: Mailbox
+      description: Read the mail of one mailbox.
+      website: https://developer.mail.example.com
+      type: openapi
+      document: https://mail.example.com/openapi.json
+      credentials:
+        - kind: jwt_bearer
+          issuer: https://login.mail.example.com
+          subject: '{inbox}'
+          placeholders:
+            inbox:
+              description: The mailbox the service account reads.
+              pattern: '^[^@\\s]+@[^@\\s]+$'
+              example: inbox@acme.example.com
+          key_file:
+            client_id: /client_email
+            private_key: /private_key
+`;
+
+describe('a provider the connections section adds, whose way takes a key file', () => {
+  it('is read, the pointers into its key file not taken for credentials', () => {
+    expect(refusalOf(fileOf(providerOfAKeyFile))).toBe('read');
+  });
+});
+
 describe('the variables of the connections section', () => {
   it('hold the value of each variable it lists that the environment sets, and nothing of one it leaves unset or empty', () => {
     const settings = readSettingsOf({

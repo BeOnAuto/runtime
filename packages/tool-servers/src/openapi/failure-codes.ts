@@ -8,6 +8,10 @@ type CodedKind = (typeof codedKinds)[number];
 
 const jsonPointer = /^(?:\/(?:[^~/]|~[01])*)+$/u;
 
+export function isJsonPointer(pointer: string): boolean {
+  return jsonPointer.test(pointer);
+}
+
 const pointerExamples = { succeeded: '/ok', code: '/error' } as const;
 
 const Codes = Schema.Array(Schema.String);
@@ -51,7 +55,7 @@ export class AnsweredCode extends Error {
 
 function pointerIssuesOf(codes: FailureCodes): readonly FailureCodeIssue[] {
   return (['succeeded', 'code'] as const)
-    .filter((field) => !jsonPointer.test(codes[field]))
+    .filter((field) => !isJsonPointer(codes[field]))
     .map((field) => ({
       path: [field],
       detail: `Expected a JSON pointer into the answer, such as ${pointerExamples[field]}`,
@@ -92,7 +96,7 @@ export function failureCodeIssuesOf(codes?: FailureCodes): readonly FailureCodeI
     : [...pointerIssuesOf(codes), ...emptyListIssuesOf(codes), ...namedTwiceIssuesOf(codes)];
 }
 
-function valueAt(answer: unknown, pointer: string): unknown {
+export function valueAt(answer: unknown, pointer: string): unknown {
   return pointer
     .split('/')
     .slice(1)

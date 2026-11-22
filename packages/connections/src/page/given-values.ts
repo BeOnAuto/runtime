@@ -1,16 +1,18 @@
 import { OrgContext, type InvalidInput, type Unavailable } from '@on.auto/operations';
 import { Effect, Redacted } from 'effect';
 
+import type { EntryChecking } from '../entries/entry-checks.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { providingOf } from '../providers/provider-providing.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
 import { appCredentialPointerOf, appCredentialsGivenOf, type GivenAppCredential } from './given-apps.ts';
 import { checkedBeforeKeeping, type CheckingServices } from './given-checks.ts';
 import { formatMarkOf, givenOf, unkeptRefusalOf, type GivingSchema } from './given-fields.ts';
+import { keyFileKept } from './given-key-files.ts';
 
 type Giving = Omit<typeof GivingSchema.Type, 'playbooks'>;
 
-type KeepingServices = CheckingServices & Pick<ConnectionServices, 'secrets'>;
+type KeepingServices = CheckingServices & Pick<ConnectionServices, 'secrets' | 'fetch'>;
 
 function appSecretsKeptOf(
   name: string,
@@ -29,13 +31,12 @@ function appSecretsKeptOf(
   );
 }
 
-export const givenValuesKept = Effect.fnUntraced(function* (
+const valuesOfAKeyKept = Effect.fnUntraced(function* (
   connection: RecordedConnection,
   { app_credentials: appsGiven = {}, ...giving }: Giving,
   services: KeepingServices,
+  checking: EntryChecking,
 ) {
-  const { org } = yield* OrgContext;
-  const checking = { org, modelProviders: services.modelProviders, providing: providingOf(connection, services) };
   const given = yield* Effect.fromResult(givenOf(connection, giving, checking));
   const formatMark = yield* Effect.fromResult(formatMarkOf(connection, given));
   const apps = yield* Effect.fromResult(appCredentialsGivenOf(connection, appsGiven, services));
@@ -49,4 +50,16 @@ export const givenValuesKept = Effect.fnUntraced(function* (
   );
   const kept: readonly string[] = [secretId, ...Object.values(appSecretIds)];
   return { given, formatMark, secretId, appSecretIds, kept };
+});
+
+export const givenValuesKept = Effect.fnUntraced(function* (
+  connection: RecordedConnection,
+  giving: Giving,
+  services: KeepingServices,
+) {
+  const { org } = yield* OrgContext;
+  const checking = { org, modelProviders: services.modelProviders, providing: providingOf(connection, services) };
+  return connection.credential.kind === 'jwt_bearer'
+    ? yield* keyFileKept(connection, giving, { ...services, checking })
+    : yield* valuesOfAKeyKept(connection, giving, services, checking);
 });

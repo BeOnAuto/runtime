@@ -5423,7 +5423,8 @@
                           "reference",
                           "secret",
                           "client_credentials",
-                          "authorization"
+                          "authorization",
+                          "jwt_bearer"
                         ]
                       },
                       "variable": {
@@ -5658,7 +5659,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -5687,16 +5689,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -6427,7 +6434,8 @@
                                 "reference",
                                 "secret",
                                 "client_credentials",
-                                "authorization"
+                                "authorization",
+                                "jwt_bearer"
                               ]
                             },
                             "variable": {
@@ -6456,16 +6464,21 @@
                             },
                             "issuer": {
                               "type": "string",
-                              "description": "For client_credentials and authorization, the https URL of the authorization server"
+                              "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                             },
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                             },
                             "scope": {
                               "type": "string",
-                              "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                              "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                            },
+                            "subject": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                             },
                             "parameters": {
                               "type": "object",
@@ -7181,7 +7194,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -7210,16 +7224,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -7931,7 +7950,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -7960,16 +7980,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -8677,7 +8702,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -8706,16 +8732,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -9429,7 +9460,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -9458,16 +9490,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -10190,7 +10227,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -10219,16 +10257,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -10943,7 +10986,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -10972,16 +11016,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -11956,7 +12005,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -11985,16 +12035,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -12601,7 +12656,8 @@
                               "reference",
                               "secret",
                               "client_credentials",
-                              "authorization"
+                              "authorization",
+                              "jwt_bearer"
                             ],
                             "description": "The kind of the way, which choose_way takes as credential.kind."
                           },
@@ -12925,7 +12981,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -12954,16 +13011,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -13534,7 +13596,8 @@
                           "reference",
                           "secret",
                           "client_credentials",
-                          "authorization"
+                          "authorization",
+                          "jwt_bearer"
                         ],
                         "description": "The kind of the way, as the list of ways names it."
                       },
@@ -13721,7 +13784,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -13750,16 +13814,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -14352,6 +14421,11 @@
                     },
                     "description": "For secret, the app credentials given beside the key, each a value under the name list_providers lists in the way's app_credentials; each is optional, and a name the way does not list here is refused"
                   },
+                  "key_file": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names. It keeps nothing else of the file."
+                  },
                   "playbooks": {
                     "anyOf": [
                       {
@@ -14520,7 +14594,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -14549,16 +14624,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -15290,7 +15370,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -15319,16 +15400,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -16253,7 +16339,8 @@
                             "reference",
                             "secret",
                             "client_credentials",
-                            "authorization"
+                            "authorization",
+                            "jwt_bearer"
                           ]
                         },
                         "variable": {
@@ -16282,16 +16369,21 @@
                         },
                         "issuer": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                          "description": "For client_credentials, authorization and jwt_bearer, the https URL of the authorization server"
                         },
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
                         },
                         "scope": {
                           "type": "string",
-                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                          "description": "For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "subject": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in"
                         },
                         "parameters": {
                           "type": "object",
@@ -16912,7 +17004,8 @@
                                   "secret",
                                   "client_credentials",
                                   "none",
-                                  "authorization"
+                                  "authorization",
+                                  "jwt_bearer"
                                 ]
                               },
                               "in": {
@@ -17046,11 +17139,11 @@
                               },
                               "key_page": {
                                 "type": "string",
-                                "description": "The https page where a person makes the key or the client. Given for a secret or client_credentials way whose entry names one."
+                                "description": "The https page where a person makes the key, the client or the key file. Given for a secret, client_credentials or jwt_bearer way whose entry names one."
                               },
                               "key_page_title": {
                                 "type": "string",
-                                "description": "For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise"
+                                "description": "For secret, client_credentials and jwt_bearer, the label of the button that opens the key page, where the entry gives one; left out otherwise"
                               },
                               "client_id_title": {
                                 "type": "string",
@@ -17076,6 +17169,37 @@
                                       "instructions"
                                     ],
                                     "additionalProperties": false
+                                  },
+                                  "pages": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "title": {
+                                          "type": "string",
+                                          "description": "The heading of the step"
+                                        },
+                                        "instructions": {
+                                          "type": "string",
+                                          "description": "What the person does in the step, in Markdown"
+                                        },
+                                        "page": {
+                                          "type": "string",
+                                          "description": "The https page of the service where the person does the step"
+                                        },
+                                        "page_title": {
+                                          "type": "string",
+                                          "description": "The label of the button that opens the page"
+                                        }
+                                      },
+                                      "required": [
+                                        "title",
+                                        "instructions",
+                                        "page",
+                                        "page_title"
+                                      ],
+                                      "additionalProperties": false
+                                    }
                                   },
                                   "key": {
                                     "type": "object",
@@ -17115,7 +17239,7 @@
                                   }
                                 },
                                 "additionalProperties": false,
-                                "description": "For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected"
+                                "description": "For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key; connected, what the person does once the connection is connected"
                               },
                               "app_credentials": {
                                 "type": "array",

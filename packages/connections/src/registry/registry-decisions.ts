@@ -27,7 +27,7 @@ export type Decision = Result.Result<readonly ConnectionEvent[], Rejection<Regis
 
 const nothingToRecord: Decision = Result.succeed([]);
 
-const kindsGivenOnThePage: ReadonlySet<string> = new Set(['secret', 'client_credentials']);
+const kindsGivenOnThePage: ReadonlySet<string> = new Set(['secret', 'client_credentials', 'jwt_bearer']);
 
 export const mostConnectionsOfAnOrg = 50;
 

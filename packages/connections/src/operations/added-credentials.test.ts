@@ -8,6 +8,7 @@ const anyWords: unknown = expect.any(String);
 
 const refusedCredentials = [
   ['a kind of credential there is not', { kind: 'consent' }, '/credential/kind'],
+  ['a signed assertion, which a provider alone states for a server', { kind: 'jwt_bearer' }, '/credential/kind'],
   ['a field of another kind', { kind: 'none', name: 'CRM_API_KEY' }, '/credential/name'],
   [
     'a reference without its variable',

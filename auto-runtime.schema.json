@@ -219,11 +219,21 @@
                 "type": "string",
                 "minLength": 1,
                 "description": "For an authorization server that names the API a token is for by an audience: the identifier the API is registered under there. Auto then asks for a token for that audience, not for this server's address. The token is sent to this server, so name the API it serves"
+              },
+              "grant": {
+                "type": "string",
+                "enum": ["client_credentials", "jwt_bearer"],
+                "description": "How Auto asks for a token. client_credentials, the default, asks for a token for the client itself. jwt_bearer asks with a JWT that private_key signs, as RFC 7523 sets out, for the account subject names, as a service account does. It takes private_key with its algorithm and subject, and no client_secret"
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "description": "With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in"
               }
             },
             "required": ["issuer", "client_id"],
             "additionalProperties": false,
-            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's"
+            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names"
           },
           "command": {
             "type": "string",
@@ -437,9 +447,9 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["none", "reference", "secret", "client_credentials", "authorization"]
+            "enum": ["none", "reference", "secret", "client_credentials", "authorization", "jwt_bearer"]
           },
-          "description": "The kinds of credential a connection may take, of none, reference, secret, client_credentials and authorization; every kind when left out"
+          "description": "The kinds of credential a connection may take, of none, reference, secret, client_credentials, authorization and jwt_bearer; every kind when left out"
         },
         "variables": {
           "type": "array",
@@ -1435,7 +1445,7 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": ["secret", "client_credentials", "none", "authorization"]
+                      "enum": ["secret", "client_credentials", "none", "authorization", "jwt_bearer"]
                     },
                     "in": {
                       "type": "string",
@@ -1649,6 +1659,25 @@
                       "type": "string",
                       "description": "For openapi, the https URL the calls of a connection made this way go to, in place of the provider's base_url and of the server its document names, each {name} in it a placeholder"
                     },
+                    "subject": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider"
+                    },
+                    "key_file": {
+                      "type": "object",
+                      "properties": {
+                        "client_id": {
+                          "type": "string"
+                        },
+                        "private_key": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["client_id", "private_key"],
+                      "additionalProperties": false,
+                      "description": "For jwt_bearer, where the two values sit in the key file the service gives, each as a JSON Pointer. Auto keeps the private key, sealed, and records the client's ID; it keeps nothing else of the file"
+                    },
                     "instructions": {
                       "type": "string",
                       "description": "For secret, how a person makes the key, in Markdown without HTML of at most 1,000 characters: where it is made, the plan or role it needs, the permissions it needs and its format",
@@ -1657,11 +1686,11 @@
                     },
                     "key_page": {
                       "type": "string",
-                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client"
+                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file"
                     },
                     "key_page_title": {
                       "type": "string",
-                      "description": "For secret and client_credentials, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
+                      "description": "For secret, client_credentials and jwt_bearer, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
                       "minLength": 1,
                       "maxLength": 40
                     },
@@ -1687,6 +1716,42 @@
                           "required": ["title", "instructions"],
                           "additionalProperties": false,
                           "description": "The step of the page where the key is made, above the button to key_page"
+                        },
+                        "pages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "string",
+                                "description": "The heading of the step, in at most 60 characters",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "instructions": {
+                                "type": "string",
+                                "description": "What the person does in the step, in Markdown without HTML of at most 1,000 characters",
+                                "minLength": 1,
+                                "maxLength": 1000
+                              },
+                              "page": {
+                                "type": "string",
+                                "description": "The https address of the page of the service where the person does the step"
+                              },
+                              "page_title": {
+                                "type": "string",
+                                "description": "The label of the button that opens page, in at most 40 characters",
+                                "minLength": 1,
+                                "maxLength": 40
+                              }
+                            },
+                            "required": ["title", "instructions", "page", "page_title"],
+                            "additionalProperties": false,
+                            "description": "A step the person does on a page of the service"
+                          },
+                          "minItems": 1,
+                          "maxItems": 4,
+                          "description": "The steps the person does on other pages of the service, in order, after the step of key_page and before the step of the key, at most 4"
                         },
                         "key": {
                           "type": "object",
@@ -1730,7 +1795,7 @@
                         }
                       },
                       "additionalProperties": false,
-                      "description": "For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions"
+                      "description": "For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions"
                     },
                     "example": {
                       "type": "string",
@@ -1814,7 +1879,7 @@
                   "additionalProperties": false
                 },
                 "minItems": 1,
-                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none or authorization, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it"
+                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization or jwt_bearer, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it"
               },
               "replaces": {
                 "type": "array",

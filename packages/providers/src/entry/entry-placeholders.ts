@@ -29,7 +29,8 @@ const clientIdElsewhere = `Holds {client_id}, which only a header or query value
 const unusedByTheProvider =
   'Expected the placeholder in the address, a header or a query value of the provider, since nothing else takes it';
 
-const unusedByTheWay = "Expected the placeholder in this way's addresses or its base_url, since nothing else takes it";
+const unusedByTheWay =
+  "Expected the placeholder in this way's addresses, its base_url or its subject, since nothing else takes it";
 
 const namedAsTheProviders =
   "Expected a name no placeholder of the provider has, since a way's placeholder is asked beside the provider's";
@@ -137,6 +138,10 @@ function unusedIssuesOf({ own, used, path, unused }: Scope, names: Names): reado
   ];
 }
 
+function isLeftOutWhereUngiven(field: TemplatedField, name: string): boolean {
+  return field.holds === 'value' && field.way === undefined && field.text === `{${name}}`;
+}
+
 function optionalIssuesOf({ placeholders, fields }: Scope): readonly EntryIssue[] {
   const optional = new Set(
     Object.entries(placeholders)
@@ -145,7 +150,7 @@ function optionalIssuesOf({ placeholders, fields }: Scope): readonly EntryIssue[
   );
   return fields.flatMap((field) =>
     namesIn(field.text)
-      .filter((name) => optional.has(name) && (field.holds !== 'value' || field.text !== `{${name}}`))
+      .filter((name) => optional.has(name) && !isLeftOutWhereUngiven(field, name))
       .map((name) => ({
         path: field.path,
         issue: `Holds the optional placeholder {${name}}, which stands only as the whole value of a header or a query parameter, left out where it is not given`,

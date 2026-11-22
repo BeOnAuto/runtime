@@ -78,7 +78,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   ),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none or authorization, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
+      'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization or jwt_bearer, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
   }),
   replaces: Schema.optionalKey(ReplacesSchema),
 });
@@ -90,6 +90,7 @@ export const entryProse: readonly string[] = [
   'for',
   'instructions',
   'key_page_title',
+  'page_title',
   'client_id_title',
   'example',
 ];

@@ -258,7 +258,15 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
       listedWayOf({
-        ...Struct.omit(way, ['app_credentials', 'test', 'permissions', 'account_types', 'placeholders']),
+        ...Struct.omit(way, [
+          'app_credentials',
+          'test',
+          'permissions',
+          'account_types',
+          'placeholders',
+          'subject',
+          'key_file',
+        ]),
         ...actingOf(way),
         ...wayPlaceholdersOf(way),
         ...appCredentialsListedOf(provider, way, listing),

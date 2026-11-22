@@ -8,7 +8,7 @@ import { actingAsAnAccount, keptWaysOfAServer, requested, wayChosenAgain } from 
 import { heldAppCredentials } from '../testing/app-credential-facts.ts';
 import { givenItsEvents, identifiedByTheRuntime, identifiedInItsAccount, placeNamed } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
-import { wayChosenWithItsValues } from '../testing/way-value-facts.ts';
+import { addedAsAServiceAccount, wayChosenWithItsValues } from '../testing/way-value-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
@@ -282,7 +282,7 @@ describe('the facts of the registry of connections', () => {
       '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
       '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
       '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
-      '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed],
+      '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed, ...addedAsAServiceAccount],
     },
   });
 });

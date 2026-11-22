@@ -10,9 +10,10 @@ import {
 } from '@modelcontextprotocol/client';
 import { Option, Redacted } from 'effect';
 
+import { assertedTokensOf, type AssertedTokens, type Assertion } from '../assertions/signed-assertions.ts';
 import type { ConsentServed, TokenServing } from '../consent/consent-client.ts';
 import { isResourceOf } from '../consent/server-metadata.ts';
-import type { MintingAuth } from '../settings/server-settings.ts';
+import type { MintingAuth, MintingCredential } from '../settings/server-settings.ts';
 
 export interface UnauthorizedContext {
   readonly response: Readonly<Response>;
@@ -130,15 +131,49 @@ function authOptionsOf({ serverUrl, fetch }: TokenSourceOptions, { scope, resour
   };
 }
 
+async function credentialsTokensOf(
+  settings: MintingAuth,
+  options: TokenSourceOptions,
+  asking: Asking,
+): Promise<AssertedTokens> {
+  const provider = providerOf(settings, options.discovery);
+  await auth(provider, authOptionsOf(options, asking));
+  return Option.getOrThrow(Option.fromNullishOr(await provider.tokens()));
+}
+
+type PrivateKey = Extract<MintingCredential, { readonly kind: 'private_key' }>;
+
+function isPrivateKey(credential: MintingCredential): credential is PrivateKey {
+  return credential.kind === 'private_key';
+}
+
+function assertionOf(settings: MintingAuth, { scope }: Asking): Assertion {
+  const { private_key: privateKey, algorithm } = Option.getOrThrow(
+    Option.liftPredicate(settings.credential, isPrivateKey),
+  );
+  return {
+    issuer: settings.issuer,
+    clientId: settings.client_id,
+    subject: Option.getOrThrow(Option.fromNullishOr(settings.subject)),
+    scope,
+    privateKey,
+    algorithm,
+  };
+}
+
+function tokensOf(settings: MintingAuth, options: TokenSourceOptions, asking: Asking): Promise<AssertedTokens> {
+  return settings.grant === 'jwt_bearer'
+    ? assertedTokensOf(assertionOf(settings, asking), { fetch: options.fetch, now: options.now })
+    : credentialsTokensOf(settings, options, asking);
+}
+
 export function tokenSource(settings: MintingAuth, options: TokenSourceOptions): TokenSource {
-  const { server, discovery, now, minted } = options;
+  const { server, now, minted } = options;
   let held: Held | undefined;
   let minting: Promise<string> | undefined;
   let asking: Asking = { scope: settings.scope ?? undefined, resourceMetadataUrl: undefined };
   const mint = async (): Promise<string> => {
-    const provider = providerOf(settings, discovery);
-    await auth(provider, authOptionsOf(options, asking));
-    const tokens = Option.getOrThrow(Option.fromNullishOr(await provider.tokens()));
+    const tokens = await tokensOf(settings, options, asking);
     minted(server, tokens.access_token);
     const issuedAt = now();
     const lifetimeMs = tokens.expires_in === undefined ? defaultLifetimeMs : tokens.expires_in * millisOfASecond;

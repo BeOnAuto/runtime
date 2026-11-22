@@ -14,12 +14,16 @@ export interface ConsentCredential extends ConsentServed {
 
 type AuthCredential = MintingCredential | ConsentCredential;
 
+type AuthGrant = 'client_credentials' | 'jwt_bearer';
+
 export interface AuthSettings {
   readonly issuer: string;
   readonly client_id: string;
   readonly scope: string | null;
   readonly discovery?: 'protected_resource' | 'issuer';
   readonly audience?: string;
+  readonly grant?: AuthGrant;
+  readonly subject?: string;
   readonly credential: AuthCredential;
 }
 

@@ -1,6 +1,7 @@
 import { listed } from '@on.auto/phrasing';
 import { isScope, wayClientSources } from '@on.auto/tool-servers';
 
+import { endingIssuesOf } from './ending-codes.ts';
 import { notScopes } from './scope-groups.ts';
 import { wayAddresses, type WayAddress } from './templates.ts';
 
@@ -34,6 +35,7 @@ export interface ConsentFields extends Partial<Readonly<Record<ConsentEndpoint, 
   readonly parameters?: Readonly<Record<string, string>>;
   readonly pkce?: string;
   readonly clients?: readonly string[];
+  readonly ending_codes?: readonly string[];
 }
 
 function scopeIssuesOf({ scope }: ConsentFields): readonly WayIssue[] {
@@ -108,5 +110,6 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
     ...endpointIssuesOf(fields),
     ...pkceIssuesOf(fields),
     ...clientIssuesOf(fields),
+    ...endingIssuesOf(fields),
   ];
 }

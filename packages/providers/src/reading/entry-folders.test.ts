@@ -72,7 +72,7 @@ describe('a folder of entries the runtime refuses', () => {
       `${invalid}<entries>/anchored.yaml:1:13: Anchors are not allowed in a provider's entry`,
       '<entries>/broken.yaml:2:1: Flow sequence in block collection must be sufficiently indented and end with a ]',
       '<entries>/notes.yaml:1:7 name: Expected the name the file is named for, as in notebook.yaml',
-      '<entries>/tracker.yaml:8:11 credentials[0].kind: Expected "secret" | "client_credentials" | "none" | "authorization"',
+      '<entries>/tracker.yaml:8:11 credentials[0].kind: Expected "secret" | "client_credentials" | "none" | "authorization" | "jwt_bearer"',
     ]);
   });
 

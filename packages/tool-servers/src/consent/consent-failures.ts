@@ -22,6 +22,8 @@ const unanswered: RequestRefusal = { refused: 'unanswered' };
 
 const invalidGrant: string = OAuthErrorCode.InvalidGrant;
 
+export const passingErrorCodes: readonly string[] = [OAuthErrorCode.ServerError, OAuthErrorCode.TemporarilyUnavailable];
+
 const endedByTheBound: ReadonlySet<unknown> = new Set(['TimeoutError', 'AbortError']);
 
 type Answered = Extract<ConsentCallAnswer, { readonly status: number }>;

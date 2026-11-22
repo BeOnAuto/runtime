@@ -28,6 +28,7 @@ export interface ClientRegistration {
   readonly namesTokenType?: boolean;
   readonly publishesMetadata?: boolean;
   readonly endpointHost?: string;
+  readonly subjects?: readonly string[];
   readonly takesBasicSecrets?: boolean;
   readonly takesPostedSecrets?: boolean;
   readonly takesPublicClientsAlone?: boolean;

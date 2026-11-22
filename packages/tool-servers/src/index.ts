@@ -192,7 +192,11 @@ export {
 } from './settings/server-entries.ts';
 export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
 export { markIssuesOf, marksOf } from './settings/tool-lists.ts';
-export { failureCodeIssuesOf, failureCodesOf } from './openapi/failure-codes.ts';
+export { failureCodeIssuesOf, failureCodesOf, isJsonPointer } from './openapi/failure-codes.ts';
+export { assertionAlgorithm, keyFileOf, type KeyFilePointers } from './assertions/key-files.ts';
+export type { Assertion } from './assertions/signed-assertions.ts';
+export { assertionCheckedOf, type AssertionChecked } from './assertions/assertion-checks.ts';
+export { passingErrorCodes } from './consent/consent-failures.ts';
 export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';

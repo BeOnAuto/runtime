@@ -1,7 +1,10 @@
+import { Schema } from 'effect';
+import { importPKCS8, SignJWT } from 'jose';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fakeMcpAnswers, type FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
 import { fakeMcpInProcess, inProcessFetch } from '../testing/index.ts';
+import { rsaKeys } from '../testing/token-sources.ts';
 import {
   asTheClient,
   basic,
@@ -98,6 +101,82 @@ const placesOfTheMetadata: readonly (readonly [string, Partial<ClientRegistratio
     '/tenant-1/v2.0/.well-known/openid-configuration',
   ],
 ];
+
+const assertingOrigin = 'https://issuer.example.com';
+
+const errorOf = Schema.decodeUnknownSync(Schema.Struct({ error: Schema.optionalKey(Schema.String) }));
+
+const asserting = rsaKeys();
+
+const robot = { clientId: 'robot', publicKey: asserting.publicKey, expiresInSeconds: 3600 };
+
+interface Asserted {
+  readonly registration?: ClientRegistration;
+  readonly privateKey?: string;
+  readonly alg?: string;
+  readonly sub?: string;
+  readonly aud?: string;
+  readonly lastsSeconds?: number;
+  readonly asserted?: (signed: string) => Readonly<Record<string, string>>;
+}
+
+async function assertionAnswered({
+  registration = { ...robot, subjects: ['inbox'] },
+  privateKey = asserting.privateKey,
+  alg = 'RS256',
+  sub = 'inbox',
+  aud = `${assertingOrigin}/token`,
+  lastsSeconds = 300,
+  asserted = (signed) => ({ assertion: signed }),
+}: Asserted) {
+  const signed = await new SignJWT({})
+    .setProtectedHeader({ alg })
+    .setIssuer('robot')
+    .setSubject(sub)
+    .setAudience(aud)
+    .setIssuedAt(1_800_000_000)
+    .setExpirationTime(1_800_000_000 + lastsSeconds)
+    .sign(await importPKCS8(privateKey, alg));
+  const answer = await fakeMcpAnswers({ client: registration }).handlerAt(assertingOrigin)(
+    new Request(`${assertingOrigin}/token`, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', ...asserted(signed) }),
+    }),
+  );
+  return [answer.status, errorOf(await answer.json()).error ?? 'token'];
+}
+
+describe('the token endpoint of a fake that takes a signed assertion', () => {
+  it('grants a token to an assertion its client signed for that endpoint and a subject it may act as, and refuses any other as the service does', async () => {
+    expect(
+      await Promise.all([
+        assertionAnswered({}),
+        assertionAnswered({ registration: robot, sub: 'ceo' }),
+        assertionAnswered({ privateKey: rsaKeys().privateKey }),
+        assertionAnswered({
+          registration: { clientId: 'robot', clientSecret: 'robot-secret', expiresInSeconds: 3600 },
+        }),
+        assertionAnswered({ alg: 'RS384' }),
+        assertionAnswered({ asserted: (signed) => ({ assertion: signed.split('.').slice(0, 2).join('.') }) }),
+        assertionAnswered({ asserted: () => ({}) }),
+        assertionAnswered({ aud: 'https://elsewhere.example.com/token' }),
+        assertionAnswered({ lastsSeconds: 3601 }),
+        assertionAnswered({ sub: 'ceo' }),
+      ]),
+    ).toEqual([
+      [200, 'token'],
+      [200, 'token'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [400, 'invalid_grant'],
+      [401, 'unauthorized_client'],
+    ]);
+  });
+});
 
 describe('a fake whose issuer has a path in its address, as an authorization server of one tenant has', () => {
   it.each(placesOfTheMetadata)(

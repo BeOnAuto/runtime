@@ -27,4 +27,4 @@ export {
   whoItActsAsThroughATool,
 } from './event-destinations.ts';
 export { postTypeNamedBy, readingTheRoomsName } from './place-name-calls.ts';
-export { asTheCompanysApp, mail, signingInToMail } from './own-app-providers.ts';
+export { asAServiceAccount, asTheCompanysApp, mail, signingInToMail } from './own-app-providers.ts';

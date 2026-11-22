@@ -1,5 +1,6 @@
 import { clientIdPlaceholder } from '@on.auto/providers';
 import {
+  assertionAlgorithm,
   failureCodesOf,
   marksOf,
   readEntry,
@@ -91,6 +92,8 @@ const fieldsOfAPlacement: Readonly<Record<Placement, keyof Fields>> = {
 
 const nothingPlaced: ReadonlyMap<string, string> = new Map();
 
+const kindsMintingTokens: ReadonlySet<string> = new Set(['client_credentials', 'jwt_bearer']);
+
 function pointerOf(...path: readonly string[]): string {
   return path.map((segment) => `/${JsonPointer.escapeToken(segment)}`).join('');
 }
@@ -113,11 +116,18 @@ function placedValue(entry: ConnectionEntry, credential: Credential, variable: s
   };
 }
 
+function grantOf({ kind, subject }: Credential): Pick<NonNullable<ServerEntryFields['auth']>, 'grant' | 'subject'> {
+  return kind === 'jwt_bearer'
+    ? { grant: kind, subject: literalText(Option.getOrThrow(Option.fromNullishOr(subject))) }
+    : {};
+}
+
 function placedClientCredentials(
   { entry, credential }: Credentialled,
-  { variable, algorithm }: NamedReference,
+  { variable, algorithm: named }: NamedReference,
 ): PlacedCredential {
   const reference = referenceTo(variable);
+  const algorithm = credential.kind === 'jwt_bearer' ? (named ?? assertionAlgorithm) : named;
   const secret =
     algorithm === undefined
       ? { client_secret: reference }
@@ -125,7 +135,7 @@ function placedClientCredentials(
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
   const issuer = literalText(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
   const clientId = Option.getOrThrow(Option.fromNullishOr(credential.client_id));
-  const auth = { issuer, client_id: literalText(clientId), ...scope, ...secret };
+  const auth = { issuer, client_id: literalText(clientId), ...scope, ...secret, ...grantOf(credential) };
   const given = ['client_id', ...Object.keys(secret)];
   return {
     written: { ...entry, auth },
@@ -160,7 +170,7 @@ function placedCredentialOf(written: Credentialled, reference: NamedReference | 
   if (reference === undefined) {
     return { written: entry, placedAt: nothingPlaced };
   }
-  return credential.kind === 'client_credentials'
+  return kindsMintingTokens.has(credential.kind)
     ? placedClientCredentials({ ...written, entry }, reference)
     : placedValue(entry, credential, reference.variable);
 }

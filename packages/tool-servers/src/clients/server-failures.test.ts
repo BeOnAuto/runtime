@@ -9,6 +9,8 @@ import {
 import { HostRefused, HostUnresolved } from '@on.auto/outbound';
 import { describe, expect, it } from 'vitest';
 
+import { AssertionRefused } from '../assertions/assertion-refused.ts';
+import { TokenRequestFailed } from '../assertions/token-request-failed.ts';
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ScopeLacking } from '../openapi/scope-lacking.ts';
 import {
@@ -148,6 +150,16 @@ describe('what a refusal of the credential is', () => {
         isCredentialRefused(error),
       ),
     ).toEqual([true, true, false, false, false]);
+  });
+
+  it('is an assertion the authorization server refused, never one it answered with a limited rate or a failure of its own', () => {
+    expect(
+      [
+        new AssertionRefused('invalid_grant'),
+        new TokenRequestFailed(429, 'tokens.example.com', true),
+        new TokenRequestFailed(503, 'tokens.example.com', true),
+      ].map((error: unknown) => failureOf(error).kind),
+    ).toEqual(['key_refused', 'rate_limited', 'failing']);
   });
 
   it('is said, once a connection is broken by it, in the words its source recorded', () => {

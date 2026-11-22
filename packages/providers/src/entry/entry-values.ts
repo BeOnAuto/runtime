@@ -79,6 +79,7 @@ function serverPartOf({
         parameters: way.parameters,
         ...Object.fromEntries(wayAddresses.map((field) => [field, way[field]])),
         base_url: way.base_url,
+        subject: way.subject,
       }),
     ),
   });

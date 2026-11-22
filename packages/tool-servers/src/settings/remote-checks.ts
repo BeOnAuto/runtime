@@ -48,6 +48,34 @@ function checkedCredential(name: string, { client_secret, private_key, algorithm
   return refused(name, ['auth'], secretOrKeyExpected);
 }
 
+type Granted = Pick<AuthSettings, 'grant' | 'subject'>;
+
+const assertionExpected =
+  'Expected private_key with its algorithm, and subject, which grant jwt_bearer takes, and no client_secret';
+
+const subjectOfAnAssertion = 'Expected subject only beside grant jwt_bearer, which asks for a token for that account';
+
+function checkedGrant(name: string, { grant, subject, private_key, client_secret }: Auth): Checked<Granted> {
+  if (grant !== 'jwt_bearer') {
+    return subject === undefined ? accepted({}) : refused(name, ['auth', 'subject'], subjectOfAnAssertion);
+  }
+  return subject !== undefined && private_key !== undefined && client_secret === undefined
+    ? accepted({ grant, subject })
+    : refused(name, ['auth'], assertionExpected);
+}
+
+function authSettingsOf(auth: Auth, granted: Granted, credential: MintingCredential): AuthSettings {
+  return {
+    issuer: auth.issuer,
+    client_id: auth.client_id,
+    scope: auth.scope ?? null,
+    ...(auth.discovery === undefined ? {} : { discovery: auth.discovery }),
+    ...(auth.audience === undefined ? {} : { audience: auth.audience }),
+    ...granted,
+    credential,
+  };
+}
+
 export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFields): Checked<AuthSettings | null> {
   if (auth === undefined) {
     return accepted(null);
@@ -57,15 +85,9 @@ export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFie
     ? refused(name, ['auth'], 'Set an Authorization header or an auth block, not both')
     : accepted(auth);
   const credential = checkedCredential(name, auth);
-  const problems = problemsOf(issuer, alone, credential);
-  return credential.ok && problems.length === 0
-    ? accepted({
-        issuer: auth.issuer,
-        client_id: auth.client_id,
-        scope: auth.scope ?? null,
-        ...(auth.discovery === undefined ? {} : { discovery: auth.discovery }),
-        ...(auth.audience === undefined ? {} : { audience: auth.audience }),
-        credential: credential.value,
-      })
+  const granted = checkedGrant(name, auth);
+  const problems = problemsOf(issuer, alone, credential, granted);
+  return credential.ok && granted.ok && problems.length === 0
+    ? accepted(authSettingsOf(auth, granted.value, credential.value))
     : rejected(problems);
 }

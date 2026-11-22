@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '../index.ts';
 import { providerOf } from '../testing/fixture-providers.ts';
-import { asTheCompanysApp, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import { asAServiceAccount, asTheCompanysApp, mail, signingInToMail } from '../testing/own-app-providers.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -76,5 +76,27 @@ const refusals: readonly (readonly [string, GivenToProvider, readonly string[]])
 describe('the values of a way that asks values of its own', () => {
   it.each(refusals)('are refused where %s', (_case, given, pointers) => {
     expect(refused(given)).toEqual(pointers.map((pointer) => ({ pointer, detail: anyWords })));
+  });
+});
+
+describe('a way that signs an assertion for an account', () => {
+  it('is added with its subject resolved from the value given for it, acting as the app', () => {
+    const provider = providerOf({ ...mail, credentials: [signingInToMail, asAServiceAccount] });
+
+    expect(
+      Result.getOrThrow(
+        additionOfProvider(provider.entry, { kind: 'jwt_bearer', placeholders: { inbox: 'inbox@acme.example.com' } }),
+      ),
+    ).toMatchObject({
+      credential: {
+        kind: 'jwt_bearer',
+        issuer: 'https://login.mail.example.com',
+        scope: 'mail.read',
+        subject: 'inbox@acme.example.com',
+      },
+      placeholders: { inbox: 'inbox@acme.example.com' },
+      permissions: 'application',
+      account_types: [],
+    });
   });
 });

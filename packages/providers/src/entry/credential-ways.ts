@@ -4,8 +4,8 @@ import { Schema } from 'effect';
 
 import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
 import { AccountTypesSchema, accountTypeIssuesOf, isTheWayAsked } from './account-types.ts';
+import { assertionFields } from './assertion-ways.ts';
 import { consentEndpoints, consentIssuesOf } from './consent-fields.ts';
-import { endingIssuesOf } from './ending-codes.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
 import { clientIdTitleField, ownValueFields } from './way-values.ts';
@@ -33,11 +33,11 @@ export const wayFields = {
   account_types: AccountTypesSchema,
 };
 
-export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
+export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization', 'jwt_bearer']);
 
 export type WayKind = typeof WayKindSchema.Type;
 
-const kindsHoldingAClientId: readonly WayKind[] = ['client_credentials', 'authorization'];
+const kindsHoldingAClientId: readonly WayKind[] = ['client_credentials', 'authorization', 'jwt_bearer'];
 
 const kindHoldingAClientId: ReadonlySet<string> = new Set(kindsHoldingAClientId);
 
@@ -73,6 +73,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   permissions: Schema.optionalKey(wayFields.permissions),
   account_types: Schema.optionalKey(wayFields.account_types),
   ...ownValueFields,
+  ...assertionFields,
   ...keyWayFields,
   client_id_title: clientIdTitleField,
   description: Schema.optionalKey(NamedSchema),
@@ -106,6 +107,8 @@ const everyField: readonly Field[] = [
   'account_types',
   'placeholders',
   'base_url',
+  'subject',
+  'key_file',
   ...keyFieldNames,
   'key_page_title',
   'client_id_title',
@@ -137,6 +140,10 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
     optional: ['scope', 'says', 'key_page', 'key_page_title', 'client_id_title', 'steps', ...ownValues],
   },
   none: { required: [], optional: [] },
+  jwt_bearer: {
+    required: ['issuer', 'subject', 'key_file'],
+    optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps', ...ownValues],
+  },
   authorization: {
     required: ['issuer'],
     optional: [
@@ -216,14 +223,7 @@ function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
     ...accountTypeIssuesOf(way),
   ];
   return way.kind === 'authorization'
-    ? [
-        ...issues,
-        ...consentIssuesOf(way),
-        ...oauthClientIssuesOf(way),
-        ...groupIssuesOf(way),
-        ...endingIssuesOf(way),
-        ...gatewayIssuesOf(way),
-      ]
+    ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way), ...gatewayIssuesOf(way)]
     : issues;
 }
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

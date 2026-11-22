@@ -716,6 +716,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],

@@ -9,7 +9,6 @@ import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
 
 const names = shippedProviders.map(({ entry }) => entry.name);
-
 const ListedSchema = Schema.Struct({
   providers: Schema.Array(Schema.Struct({ name: Schema.String })),
   may_add: Schema.Boolean,
@@ -49,7 +48,6 @@ const registeredAtTheIssuers = {
 };
 
 const SearchedSchema = Schema.Struct({ providers: Schema.Array(Schema.Struct({ name: Schema.String })) });
-
 const WaysListedSchema = Schema.Struct({
   providers: Schema.Array(
     Schema.Struct({
@@ -163,6 +161,7 @@ const waysWithoutAClient = {
   atlassian: ['authorization offered'],
   buffer: ['secret offered'],
   github: ['secret offered', underTheOrgsOAuthClientAlone],
+  gmail: [underTheOrgsOAuthClientAlone, 'jwt_bearer offered'],
   'google-drive': [underTheOrgsOAuthClientAlone],
   hubspot: [underTheOrgsOAuthClientAlone],
   linear: ['authorization offered'],
@@ -186,6 +185,7 @@ const waysWithAClient = {
   atlassian: ['authorization offered'],
   buffer: ['secret offered'],
   github: ['authorization offered', 'secret offered'],
+  gmail: ['authorization offered', 'jwt_bearer offered'],
   'google-drive': ['authorization offered'],
   hubspot: ['authorization offered'],
   linear: ['authorization offered'],

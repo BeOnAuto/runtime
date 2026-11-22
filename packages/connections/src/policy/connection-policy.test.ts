@@ -79,7 +79,7 @@ describe('the policy of connections', () => {
     const malformed = { allowed_hosts: ['https://crm.example.com'], credential_kinds: ['token'], maybe: 1 };
 
     expect(refusalOf(JSON.stringify(malformed))).toBe(
-      'The connection settings are invalid. CONNECTIONS: /maybe: Expected no excess property; CONNECTIONS: /allowed_hosts/0: Expected a host, such as crm.example.com, or a host after *. for every host under it; CONNECTIONS: /credential_kinds/0: Expected "none" | "reference" | "secret" | "client_credentials" | "authorization"',
+      'The connection settings are invalid. CONNECTIONS: /maybe: Expected no excess property; CONNECTIONS: /allowed_hosts/0: Expected a host, such as crm.example.com, or a host after *. for every host under it; CONNECTIONS: /credential_kinds/0: Expected "none" | "reference" | "secret" | "client_credentials" | "authorization" | "jwt_bearer"',
     );
   });
 });

@@ -22,3 +22,27 @@ export const wayChosenWithItsValues: readonly (typeof ConnectionEventSchema.Type
     context: acted,
   },
 ];
+
+export const addedAsAServiceAccount: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'mail',
+      server_type: 'openapi',
+      provider: 'mail',
+      placeholders: { inbox: 'inbox@acme.example.com' },
+      entry: { document: 'https://mail.example.com/openapi.json', base_url: 'https://api.mail.example.com/v1/self' },
+      credential: {
+        kind: 'jwt_bearer',
+        permissions: 'application',
+        issuer: 'https://login.mail.example.com',
+        scope: 'mail.read',
+        subject: 'inbox@acme.example.com',
+      },
+      says: { 'mail.read': 'Read the mail of the mailbox.' },
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
+    },
+    context: acted,
+  },
+];

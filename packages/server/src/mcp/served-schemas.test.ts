@@ -86,9 +86,9 @@ interface Endpoint {
 }
 
 const endpoints: readonly Endpoint[] = [
-  { path: '/mcp', tools: 43, bytes: 69_464, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 41, bytes: 67_027, mostBytes: mostListingBytes.directory },
-  { path: '/orgs/local/mcp', tools: 18, bytes: 24_939, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 43, bytes: 69_477, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 41, bytes: 67_040, mostBytes: mostListingBytes.directory },
+  { path: '/orgs/local/mcp', tools: 18, bytes: 24_952, mostBytes: mostListingBytes.org },
   { path: '/orgs/local/playbooks/alpha/mcp', tools: 30, bytes: 47_716, mostBytes: mostListingBytes.playbook },
 ];
 
@@ -114,16 +114,16 @@ async function listingOnTheWireServedSchemasWith(
 }
 
 const endpointsServedSchemasWith = [
-  { path: '/mcp', tools: 45, bytes: 75_845, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 43, bytes: 73_408, mostBytes: mostListingBytes.directory },
-  { path: '/orgs/local/mcp', tools: 18, bytes: 27_408, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 45, bytes: 75_858, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 43, bytes: 73_421, mostBytes: mostListingBytes.directory },
+  { path: '/orgs/local/mcp', tools: 18, bytes: 27_421, mostBytes: mostListingBytes.org },
   { path: '/orgs/local/playbooks/alpha/mcp', tools: 32, bytes: 51_542, mostBytes: mostListingBytes.playbook },
 ] as const;
 
 const endpointsOfTheShippedServerSigningPeopleIn: readonly Endpoint[] = [
-  { path: '/mcp', tools: 47, bytes: 77_073, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 45, bytes: 74_636, mostBytes: mostListingBytes.directory },
-  { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 28_636, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 47, bytes: 77_086, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 45, bytes: 74_649, mostBytes: mostListingBytes.directory },
+  { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 28_649, mostBytes: mostListingBytes.org },
   { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 32, bytes: 51_542, mostBytes: mostListingBytes.playbook },
 ];
 

@@ -93,6 +93,14 @@
     "gmail.users.drafts.list": "54d576c5ab3dd10d264bd8392d6df4352e432129d7d1295195ffd0a37fe0c767",
     "gmail.users.labels.list": "1cef5302182d476ff3989e1b79a4999201fee69b638d81fbdfe5bac11c03ed92"
   },
+  "gmail, jwt_bearer": {
+    "gmail.users.threads.list": "aa04dd0bd600a046677113a67b5f1ebc2c23e9ba2eb4381b7dcc5053fb196a3d",
+    "gmail.users.threads.get": "79141c12cae64d1e11dd57346c6f43ad02fcfd116378fd2e1f02f2d1c8c12df0",
+    "gmail.users.messages.list": "7b92efe45330fd74044b27fd00a8bc08bac4fb35735c7ee3becd2c6e3c9670c7",
+    "gmail.users.messages.get": "eab29b97790fa17569be4ffc98dd5b79598690ea5649f74d142ed0539371ee69",
+    "gmail.users.drafts.list": "54d576c5ab3dd10d264bd8392d6df4352e432129d7d1295195ffd0a37fe0c767",
+    "gmail.users.labels.list": "1cef5302182d476ff3989e1b79a4999201fee69b638d81fbdfe5bac11c03ed92"
+  },
   "google-ads, authorization": {
     "googleads.customers.listAccessibleCustomers": "0768a6f0f454be70479fb83839d0cacde5c72fe6b24e097d0d25b3354c88ae01",
     "googleads.customers.googleAds.search": "6895fd58d890e08e8f9a9c92bd16892dbbce940572d124f957494ecfea6ae44d",

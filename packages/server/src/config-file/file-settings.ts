@@ -49,7 +49,7 @@ export const fileSettings: readonly FileSetting[] = [
     references: 'kept',
     sortsOfCredential: connectionsSortsOfCredential,
     prose: entryProse,
-    judgedByShape: ['placeholders'],
+    judgedByShape: ['placeholders', 'key_file'],
   }),
   fileSetting(
     'USAGE_PING',

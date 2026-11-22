@@ -1,4 +1,4 @@
-import { mail, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { asAServiceAccount, mail, providerListOf, providerOf, signingInToMail } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { added, lastFact, notes, type Added } from '../testing/additions.ts';
@@ -130,5 +130,24 @@ describe('a connection connected through the company’s own app', () => {
     });
     expect(settings.auth?.credential).toMatchObject({ kind: 'client_secret' });
     expect(JSON.stringify([given, await h.facts(), h.logged()])).not.toContain(theAppsSecret);
+  });
+});
+
+describe('a way that signs an assertion, chosen for a connection that signs in', () => {
+  it('is recorded with its subject resolved from the mailbox given, and listed with its steps on the pages of the service', async () => {
+    const entry = { ...mail, credentials: [signingInToMail, asAServiceAccount] };
+    const h = harness({ providers: providerListOf(providerOf(entry)) });
+    const link = await added(h, { provider: 'mail' });
+
+    await choosing(h, link, { credential: { kind: 'jwt_bearer' }, placeholders: { inbox: 'inbox@acme.example.com' } });
+    const [, signing] = await waysListedOf(entry);
+
+    expect(await lastFact(h)).toMatchObject({
+      credential: { kind: 'jwt_bearer', permissions: 'application', subject: 'inbox@acme.example.com' },
+      placeholders: { inbox: 'inbox@acme.example.com' },
+    });
+    expect(signing).toMatchObject({ kind: 'jwt_bearer', steps: { pages: asAServiceAccount.steps.pages } });
+    expect(signing).not.toHaveProperty('subject');
+    expect(signing).not.toHaveProperty('key_file');
   });
 });

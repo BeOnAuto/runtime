@@ -18,6 +18,9 @@ const withoutHtml = 'Expected Markdown without HTML: write a link as [the page](
 const notAKeyPage =
   'Expected the https address of the page where the key is made, written out from https://, with no user name or password in it';
 
+const notAPage =
+  'Expected the https address of the page of the service, written out from https://, with no user name or password in it';
+
 const unelided = `Expected an ellipsis, ${ellipsis}, in place of the characters of the key, as in ghp_${ellipsis}, so that an example never reads as a key`;
 
 function isAKeyPage(page: string): boolean {
@@ -49,8 +52,14 @@ export const keyFields = {
 
 const mostStepTitleCharacters = 60;
 
+export const mostPageSteps = 4;
+
 function stepTitle(description: string) {
   return described(description).check(Schema.isMinLength(1), Schema.isMaxLength(mostStepTitleCharacters));
+}
+
+function buttonLabel(description: string) {
+  return described(description).check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyPageTitleCharacters));
 }
 
 const StepSchema = Schema.Struct({
@@ -60,25 +69,47 @@ const StepSchema = Schema.Struct({
   ),
 });
 
-const StepsSchema = Schema.Struct({
-  key_page: Schema.optionalKey(
-    StepSchema.annotate({ description: 'The step of the page where the key is made, above the button to key_page' }),
+const PageStepSchema = Schema.Struct({
+  title: stepTitle('The heading of the step, in at most 60 characters'),
+  instructions: keyFields.instructions(
+    'What the person does in the step, in Markdown without HTML of at most 1,000 characters',
   ),
-  key: Schema.optionalKey(
-    StepSchema.annotate({
-      description:
-        "The step of the key, above its field; the page shows its instructions in place of the way's instructions",
-    }),
+  page: described('The https address of the page of the service where the person does the step').check(
+    Schema.makeFilter((page: string) => (isAKeyPage(page) ? undefined : notAPage)),
   ),
-  connected: Schema.optionalKey(
-    StepSchema.annotate({
-      description: 'What the person does once the connection is connected, shown after approving',
-    }),
-  ),
-}).annotate({
-  description:
-    'For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
-});
+  page_title: buttonLabel('The label of the button that opens page, in at most 40 characters'),
+}).annotate({ description: 'A step the person does on a page of the service' });
+
+export function stepsSchemaOf(mostPages: number) {
+  return Schema.Struct({
+    key_page: Schema.optionalKey(
+      StepSchema.annotate({ description: 'The step of the page where the key is made, above the button to key_page' }),
+    ),
+    pages: Schema.optionalKey(
+      Schema.Array(PageStepSchema)
+        .check(Schema.isMinLength(1), Schema.isMaxLength(mostPages))
+        .annotate({
+          description: `The steps the person does on other pages of the service, in order, after the step of key_page and before the step of the key, at most ${String(mostPages)}`,
+        }),
+    ),
+    key: Schema.optionalKey(
+      StepSchema.annotate({
+        description:
+          "The step of the key, above its field; the page shows its instructions in place of the way's instructions",
+      }),
+    ),
+    connected: Schema.optionalKey(
+      StepSchema.annotate({
+        description: 'What the person does once the connection is connected, shown after approving',
+      }),
+    ),
+  }).annotate({
+    description:
+      'For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions',
+  });
+}
+
+const StepsSchema = stepsSchemaOf(mostPageSteps);
 
 export const ValueNameSchema = Schema.String.check(
   Schema.isPattern(/^[a-z][a-z0-9_]{0,63}$/u, {
@@ -146,13 +177,13 @@ export const keyWayFields = {
   ),
   key_page: Schema.optionalKey(
     keyFields.key_page(
-      'For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client',
+      'For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file',
     ),
   ),
   key_page_title: Schema.optionalKey(
-    described(
-      'For secret and client_credentials, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
-    ).check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyPageTitleCharacters)),
+    buttonLabel(
+      'For secret, client_credentials and jwt_bearer, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters',
+    ),
   ),
   steps: Schema.optionalKey(StepsSchema),
   example: Schema.optionalKey(

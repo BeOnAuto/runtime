@@ -565,6 +565,21 @@ describe('connections over http', () => {
       expect(taken).toMatchObject({ status: 200, body: { id, status: 'connected', app_credentials: [] } });
     });
 
+    it('takes the key file of a connection that signs an assertion, refused at its field where it is not one, before anything is asked', async () => {
+      const served = await serving(connectionsAllowing(['accounts.google.com', 'gmail.googleapis.com']));
+      const { id, token } = await added(served, {
+        provider: 'gmail',
+        credential: { kind: 'jwt_bearer' },
+        placeholders: { mailbox: 'inbox@acme.example.com' },
+      });
+
+      expect(
+        await served.call('POST', `${connections}/${id}/credential`, {
+          body: { token, key_file: '{"type":"service_account"}' },
+        }),
+      ).toMatchObject({ status: 422, body: { reason: 'invalid_input', errors: [{ pointer: '/key_file' }] } });
+    });
+
     it('approves one that takes no credential to give', async () => {
       const served = await serving();
       const { id, token } = await added(served, { ...crm(), credential: { kind: 'none' } });

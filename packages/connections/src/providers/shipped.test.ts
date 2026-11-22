@@ -52,6 +52,7 @@ describe('the tools every shipped document offers, by the way of each provider',
 
     expect(toolSetsOfEachProvider(byWay)).toEqual([
       ['adobe-analytics', 1],
+      ['gmail', 1],
       ['outlook', 1],
     ]);
   });

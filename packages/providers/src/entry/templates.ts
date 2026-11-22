@@ -11,6 +11,7 @@ export interface TemplatedField {
 
 export interface WayParts extends WayAddresses {
   readonly base_url?: string;
+  readonly subject?: string;
 }
 
 interface ServerPart {
@@ -43,15 +44,22 @@ function markerOf(position: number): string {
 
 const wayFieldsHoldingAnAddress = [...wayAddresses, 'base_url'] as const;
 
-function wayAddressesOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
-  return credentials.flatMap((way, index) =>
-    wayFieldsHoldingAnAddress.flatMap((field): readonly TemplatedField[] => {
+function subjectOf({ subject }: WayParts, index: number): readonly TemplatedField[] {
+  return subject === undefined
+    ? []
+    : [{ path: ['credentials', String(index), 'subject'], text: subject, holds: 'value', way: index }];
+}
+
+function wayFieldsOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
+  return credentials.flatMap((way, index) => [
+    ...wayFieldsHoldingAnAddress.flatMap((field): readonly TemplatedField[] => {
       const text = way[field];
       return text === undefined
         ? []
         : [{ path: ['credentials', String(index), field], text, holds: 'address', way: index }];
     }),
-  );
+    ...subjectOf(way, index),
+  ]);
 }
 
 export function templatedFieldsOf(entry: ServerPart): readonly TemplatedField[] {
@@ -60,7 +68,7 @@ export function templatedFieldsOf(entry: ServerPart): readonly TemplatedField[] 
       const text = entry[field];
       return text === undefined ? [] : [{ path: [field], text, holds: 'address' }];
     }),
-    ...wayAddressesOf(entry),
+    ...wayFieldsOf(entry),
     ...valueFields.flatMap((field) =>
       Object.entries(entry[field] ?? {}).map(([key, text]: readonly [string, string]): TemplatedField => ({
         path: [field, key],

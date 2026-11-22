@@ -25,11 +25,13 @@ interface WayOfAccounts extends ActingWay {
   readonly account_types?: readonly AccountType[] | undefined;
 }
 
+const kindsOfTheApp: ReadonlySet<string> = new Set(['client_credentials', 'jwt_bearer']);
+
 export function permissionsOf({ kind, permissions }: ActingWay): Permissions | undefined {
   if (kind === 'none') {
     return undefined;
   }
-  return kind === 'client_credentials' ? 'application' : (permissions ?? 'delegated');
+  return kindsOfTheApp.has(kind) ? 'application' : (permissions ?? 'delegated');
 }
 
 export function accountTypesOf(way: WayOfAccounts): readonly AccountType[] {

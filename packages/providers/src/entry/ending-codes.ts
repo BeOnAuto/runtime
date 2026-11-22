@@ -1,3 +1,5 @@
+import { passingErrorCodes } from '@on.auto/tool-servers';
+
 interface Ending {
   readonly ending_codes?: readonly string[] | undefined;
 }
@@ -15,8 +17,7 @@ const neverEnding: ReadonlySet<string> = new Set([
   'unauthorized_client',
   'unsupported_grant_type',
   'invalid_scope',
-  'server_error',
-  'temporarily_unavailable',
+  ...passingErrorCodes,
 ]);
 
 const endingCode = /^[\w.-]{1,64}$/u;

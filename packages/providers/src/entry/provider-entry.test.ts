@@ -16,7 +16,7 @@ const setAndDeclared =
   'Expected api_host, which a choice sets, in the address, a header or a query value, and never among the placeholders';
 
 const clientIdElsewhere =
-  'Holds {client_id}, which only a header or query value of a provider whose every way is client_credentials or authorization holds';
+  'Holds {client_id}, which only a header or query value of a provider whose every way is client_credentials, authorization, or jwt_bearer holds';
 
 const optionalElsewhere =
   'Holds the optional placeholder {manager}, which stands only as the whole value of a header or a query parameter, left out where it is not given';
@@ -162,7 +162,7 @@ describe('the placeholders an entry places', () => {
     expect(problemsOf({ ...regions, placeholders: named })).toEqual([
       [
         '/placeholders/client_id',
-        'Expected another name: {client_id} is the client id of a client_credentials or authorization way, never asked',
+        'Expected another name: {client_id} is the client id of a client_credentials, authorization, or jwt_bearer way, never asked',
       ],
       [
         '/placeholders/Site',
@@ -192,7 +192,7 @@ describe('the placeholders an entry places where only some may stand', () => {
     ]);
   });
 
-  it('hold {client_id} only where every way of the provider is client_credentials or authorization', () => {
+  it('hold {client_id} only where every way of the provider is client_credentials, authorization or jwt_bearer', () => {
     const client = { 'X-Client': '{client_id}' };
 
     expect([

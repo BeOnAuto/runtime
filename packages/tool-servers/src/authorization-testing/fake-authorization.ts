@@ -1,4 +1,6 @@
+import { jwtBearerGrant } from '../assertions/signed-assertions.ts';
 import { json } from './authorization-answers.ts';
+import { assertionsGranted } from './fake-assertions.ts';
 import { fakeClients, type ClientRegistration, type FakeClients } from './fake-clients.ts';
 import { fakeGrants, fakeTokens, type TokenRequest } from './fake-grants.ts';
 
@@ -142,6 +144,7 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
   const clients = fakeClients(registration);
   const tokens = fakeTokens(registration);
   const grants = fakeGrants(issuerOf(origin, registration), registration, clients, tokens);
+  const asserted = assertionsGranted(registration, `${endpointsOriginOf(origin, registration)}/token`, tokens);
   let requested = 0;
   const grantsByType: ReadonlyMap<string, Granted> = new Map([
     ['client_credentials', grants.clientCredentials],
@@ -151,7 +154,11 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
   const token = async (request: Readonly<Request>): Promise<Response> => {
     requested += 1;
     const form = await formOf(request);
-    const granted = grantsByType.get(form.get('grant_type') ?? '');
+    const grantType = form.get('grant_type') ?? '';
+    if (grantType === jwtBearerGrant) {
+      return asserted(form, requested);
+    }
+    const granted = grantsByType.get(grantType);
     return granted === undefined
       ? json({ error: 'unsupported_grant_type' }, 400)
       : asClient(clients, { request, form, requested }, granted);

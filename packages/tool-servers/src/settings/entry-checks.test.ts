@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { readToolServerSettings, serverNameProblems, type Environment, type ServerSettings } from '../index.ts';
+import { authOf } from './server-settings.ts';
 
 const context = { modelProviders: ['openai'] };
 
@@ -89,6 +90,45 @@ describe('the credential of an auth block', () => {
         bare: { ...graph, auth: { ...issued, ...key } },
       }),
     ).toEqual(['TOOL_SERVERS/graph/auth', 'TOOL_SERVERS/keyed/auth', 'TOOL_SERVERS/bare/auth']);
+  });
+});
+
+const issuedToARobot = { client_id: 'robot@acme.example.com', issuer: 'https://auth.example.com' };
+
+const itsKey = { private_key: '${GRAPH_CLIENT_SECRET}', algorithm: 'RS256' };
+
+const ofTheInbox = { subject: 'inbox@acme.example.com' };
+
+function grantsOf(servers: readonly ServerSettings[]): readonly unknown[] {
+  return servers.map((server) => [authOf(server)?.grant, authOf(server)?.subject]);
+}
+
+describe('the grant of an auth block', () => {
+  it('reads jwt_bearer beside a private key and the subject the token is asked for, and nothing beside client credentials', () => {
+    const { servers } = settingsOf({
+      mail: { ...graph, auth: { ...issuedToARobot, ...itsKey, ...ofTheInbox, grant: 'jwt_bearer' } },
+      graph: { ...graph, auth: { ...issuedToARobot, ...itsKey, grant: 'client_credentials' } },
+    });
+
+    expect(grantsOf(servers)).toEqual([
+      ['jwt_bearer', 'inbox@acme.example.com'],
+      [undefined, undefined],
+    ]);
+  });
+
+  it('refuses jwt_bearer with a client secret or with no subject, and a subject beside any other grant', () => {
+    const issued = issuedToARobot;
+    const key = itsKey;
+    const subject = ofTheInbox;
+    const aSecret = { client_secret: '${GRAPH_CLIENT_SECRET}' };
+
+    expect(
+      problemsOf({
+        secret: { ...graph, auth: { ...issued, ...aSecret, ...subject, grant: 'jwt_bearer' } },
+        unnamed: { ...graph, auth: { ...issued, ...key, grant: 'jwt_bearer' } },
+        stray: { ...graph, auth: { ...issued, ...key, ...subject } },
+      }),
+    ).toEqual(['TOOL_SERVERS/secret/auth', 'TOOL_SERVERS/unnamed/auth', 'TOOL_SERVERS/stray/auth/subject']);
   });
 });
 

@@ -29,6 +29,7 @@ export interface ProviderCredential extends WayAddresses, Partial<Readonly<Recor
   readonly pkce?: NonNullable<CredentialWay['pkce']>;
   readonly clients?: NonNullable<CredentialWay['clients']>;
   readonly client_source?: Extract<ClientSource, 'own' | 'gateway'>;
+  readonly subject?: string;
 }
 
 export interface ProviderConnectionEntry {
@@ -125,6 +126,7 @@ function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthC
     ...(parameters === undefined ? {} : { parameters }),
     ...(pkce === undefined ? {} : { pkce }),
     ...(clients === undefined ? {} : { clients }),
+    ...(way.subject === undefined ? {} : { subject: placedText(way.subject, values) }),
   };
 }
 

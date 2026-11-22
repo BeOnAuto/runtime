@@ -1,5 +1,6 @@
 import { credentialProblems, substituted, type SettingProblem } from '@on.auto/config';
 import { Conflict, InvalidInput, type Issue } from '@on.auto/operations';
+import { holdsAClientId } from '@on.auto/providers';
 import {
   isPinnableUrl,
   pinnedUrlShape,
@@ -10,7 +11,7 @@ import {
 import { JsonPointer, Redacted, Result, Schema } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
-import { placesNoValue, takesAClientId, type Credential } from '../registry/credential.ts';
+import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { placedCredential, readPlaced, type GivenValue, type Providing } from '../serving/placed-credentials.ts';
 import { credentialIssuesOf } from './credential-checks.ts';
 
@@ -145,7 +146,7 @@ export function readAddition(
 }
 
 function withAnyClientId(credential: Credential): Credential {
-  return takesAClientId(credential.kind) && credential.client_id === undefined
+  return holdsAClientId(credential.kind) && credential.client_id === undefined
     ? { ...credential, client_id: anyClientId }
     : credential;
 }

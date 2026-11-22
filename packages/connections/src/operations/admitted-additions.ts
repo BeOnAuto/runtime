@@ -111,7 +111,7 @@ function askedHowItAuthenticates(
   );
 }
 
-function fetchOfTheCall(own: Admitting['fetch']): Effect.Effect<Admitting['fetch']> {
+export function fetchOfTheCall(own: Admitting['fetch']): Effect.Effect<Admitting['fetch']> {
   return Effect.map(
     Effect.serviceOption(CallFetch),
     Option.getOrElse(() => own),

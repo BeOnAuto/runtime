@@ -3,7 +3,6 @@ import { articled, listed } from '@on.auto/phrasing';
 import {
   consentEndpoints,
   consentIssuesOf,
-  holdsAClientId,
   keyFieldNames,
   keyFields,
   wayAddresses,
@@ -26,7 +25,7 @@ import {
   isThroughAGateway,
 } from './gateway-credentials.ts';
 
-const credentialKinds = ['none', 'reference', 'secret', 'client_credentials', 'authorization'] as const;
+const credentialKinds = ['none', 'reference', 'secret', 'client_credentials', 'authorization', 'jwt_bearer'] as const;
 
 export const CredentialKindSchema = Schema.Literals(credentialKinds);
 
@@ -60,19 +59,24 @@ export const CredentialFieldsSchema = Schema.Struct({
   ),
   issuer: Schema.optionalKey(
     wayFields.issuer.annotate({
-      description: 'For client_credentials and authorization, the https URL of the authorization server',
+      description: 'For client_credentials, authorization and jwt_bearer, the https URL of the authorization server',
     }),
   ),
   client_id: Schema.optionalKey(
     ClientIdSchema.annotate({
       description:
-        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page",
+        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected",
     }),
   ),
   scope: Schema.optionalKey(
     wayFields.scope.annotate({
       description:
-        'For client_credentials and authorization, the scopes asked, separated by spaces, none when left out',
+        'For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out',
+    }),
+  ),
+  subject: Schema.optionalKey(
+    NamedSchema.annotate({
+      description: 'For jwt_bearer, the account the token is asked for, such as the mailbox the connection works in',
     }),
   ),
   parameters: Schema.optionalKey(
@@ -146,6 +150,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'issuer',
   'client_id',
   'scope',
+  'subject',
   'parameters',
   ...consentEndpoints,
   'pkce',
@@ -168,6 +173,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
     required: ['issuer'],
     optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
   },
+  jwt_bearer: { required: ['issuer', 'subject'], optional: ['client_id', 'scope'] },
 };
 
 function fieldsTakenBy(credential: CredentialFields): TakenFields {
@@ -246,16 +252,14 @@ function schemeIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return issue === undefined ? [] : [{ path: ['scheme'], issue }];
 }
 
-const addressesOfEachKind: Readonly<Record<CredentialKind, readonly WayAddress[]>> = {
-  none: [],
-  reference: [],
-  secret: [],
+const addressesOfEachKind: Partial<Readonly<Record<CredentialKind, readonly WayAddress[]>>> = {
   client_credentials: ['issuer'],
   authorization: wayAddresses,
+  jwt_bearer: ['issuer'],
 };
 
 function addressIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
-  return addressesOfEachKind[credential.kind].flatMap((field) => {
+  return (addressesOfEachKind[credential.kind] ?? []).flatMap((field) => {
     const address = credential[field];
     return address === undefined || isPinnableUrl(address) ? [] : [{ path: [field], issue: pinnedUrlShape }];
   });
@@ -279,10 +283,6 @@ export function credentialFieldIssuesOf(credential: CredentialFields): readonly 
     ...addressIssuesOf(credential),
     ...consentIssuesOfTheKind(credential),
   ];
-}
-
-export function takesAClientId(kind: CredentialKind): boolean {
-  return holdsAClientId(kind);
 }
 
 const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization']);

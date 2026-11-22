@@ -16,6 +16,12 @@ const ListedStepSchema = Schema.Struct({
   instructions: Schema.String.annotate({ description: 'What the person does in the step, in Markdown' }),
 });
 
+const ListedPageStepSchema = Schema.Struct({
+  ...ListedStepSchema.fields,
+  page: Schema.String.annotate({ description: 'The https page of the service where the person does the step' }),
+  page_title: Schema.String.annotate({ description: 'The label of the button that opens the page' }),
+});
+
 const ListedPlaceholderSchema = Schema.Struct({
   name: Schema.String,
   title: Schema.optionalKey(
@@ -90,13 +96,13 @@ export const ListedWaySchema = Schema.Struct({
   key_page: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'The https page where a person makes the key or the client. Given for a secret or client_credentials way whose entry names one.',
+        'The https page where a person makes the key, the client or the key file. Given for a secret, client_credentials or jwt_bearer way whose entry names one.',
     }),
   ),
   key_page_title: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'For secret and client_credentials, the label of the button that opens the key page, where the entry gives one; left out otherwise',
+        'For secret, client_credentials and jwt_bearer, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
   ),
   client_id_title: Schema.optionalKey(
@@ -108,11 +114,12 @@ export const ListedWaySchema = Schema.Struct({
   steps: Schema.optionalKey(
     Schema.Struct({
       key_page: Schema.optionalKey(ListedStepSchema),
+      pages: Schema.optionalKey(Schema.Array(ListedPageStepSchema)),
       key: Schema.optionalKey(ListedStepSchema),
       connected: Schema.optionalKey(ListedStepSchema),
     }).annotate({
       description:
-        'For secret and client_credentials, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; key, above the field of the key; connected, what the person does once the connection is connected',
+        'For secret, client_credentials and jwt_bearer, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key; connected, what the person does once the connection is connected',
     }),
   ),
   app_credentials: Schema.optionalKey(

@@ -41,6 +41,12 @@ export const GivingSchema = Schema.Struct({
         "For secret, the app credentials given beside the key, each a value under the name list_providers lists in the way's app_credentials; each is optional, and a name the way does not list here is refused",
     }),
   ),
+  key_file: Schema.optionalKey(
+    GivenField.annotate({
+      description:
+        "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names. It keeps nothing else of the file.",
+    }),
+  ),
   playbooks: ChosenPlaybooksField,
 });
 
@@ -122,6 +128,29 @@ export const appCredentialOutOfItsFormat =
 export const refusedByTheService =
   "The provider refused this key. Copy it again from the provider's page and paste all of it.";
 
+export const notAKeyFile =
+  'Auto cannot use this key file for this connection. Check that it is the JSON file that was downloaded when the key was created. If it is, remove the connection and add it again.';
+
+export function keyRefusedWith(code: string): string {
+  return `The provider did not accept this key. Check that each step on this page was done for this key and that the values you entered are right. A change at the provider can take a few minutes to apply. The provider answered: ${code}.`;
+}
+
+const keyFileAlone = 'Expected key_file alone, the key file of a credential of the kind jwt_bearer';
+
+const keyFileOfAnotherKind: Issue = {
+  pointer: '/key_file',
+  detail: 'Expected no key_file: only a credential of the kind jwt_bearer takes a key file',
+};
+
+const besidesAKeyFile = ['value', 'client_id', 'client_secret', 'private_key', 'algorithm', 'app_credentials'] as const;
+
+export function keyFileTextOf(giving: Omit<Giving, 'playbooks'>): Result.Result<string, InvalidInput> {
+  const { key_file: keyFile } = giving;
+  return keyFile === undefined || besidesAKeyFile.some((field) => giving[field] !== undefined)
+    ? Result.fail(refused([{ pointer: '', detail: keyFileAlone }]))
+    : Result.succeed(keyFile);
+}
+
 export function formatMarkOf(
   { provider, credential: { pattern } }: RecordedConnection,
   { value }: Pick<Given, 'value'>,
@@ -145,6 +174,9 @@ export function givenOf(
   }
   if (credential.kind !== 'secret' && credential.kind !== 'client_credentials') {
     return Result.fail(takesNoCredential(name));
+  }
+  if (giving.key_file !== undefined) {
+    return Result.fail(refused([keyFileOfAnotherKind]));
   }
   return Result.flatMap(Result.mapError(givenFieldsOf(credential, giving, wordsOfThePage), refused), (given) =>
     withAReadableClientId(connection, given, checking),

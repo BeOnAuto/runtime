@@ -8,6 +8,8 @@ import {
 } from '@modelcontextprotocol/client';
 import { causesOf, codesOf, HostRefused, HostUnresolved, isUntrustedCertificate } from '@on.auto/outbound';
 
+import { AssertionRefused } from '../assertions/assertion-refused.ts';
+import { TokenRequestFailed } from '../assertions/token-request-failed.ts';
 import { AnsweredStatus, answeredHttpWords, answeredToACall } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
 import { AnsweredCode } from '../openapi/failure-codes.ts';
@@ -111,6 +113,15 @@ function sdkHttpFailure(status: number, body: unknown): ServerFailure {
   return lacking === undefined ? httpFailure(status) : { kind: 'scope_lacking', message: lacking };
 }
 
+function tokenFailureOf(error: unknown): ServerFailure | undefined {
+  if (error instanceof AssertionRefused) {
+    return { kind: 'key_refused', message: error.message };
+  }
+  return error instanceof TokenRequestFailed
+    ? { kind: httpKinds.get(error.status) === 'rate_limited' ? 'rate_limited' : 'failing', message: error.message }
+    : undefined;
+}
+
 function answeredFailureOf(error: unknown): ServerFailure | undefined {
   if (error instanceof AnsweredStatus) {
     return httpFailure(error.status);
@@ -130,7 +141,7 @@ function answeredFailureOf(error: unknown): ServerFailure | undefined {
 }
 
 function knownFailureOf(error: unknown): ServerFailure {
-  const answered = answeredFailureOf(error);
+  const answered = answeredFailureOf(error) ?? tokenFailureOf(error);
   if (answered !== undefined) {
     return answered;
   }

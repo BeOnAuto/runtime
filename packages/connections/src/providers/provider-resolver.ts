@@ -32,7 +32,7 @@ const takesNone = 'Expected no credential: the way none takes none';
 
 const theProvider = '/provider';
 
-const byConsent = 'authorization';
+const givenOnStudiosPage: Readonly<Record<string, string>> = { authorization: 'consent', jwt_bearer: 'key file' };
 
 function underTheCredential(issues: readonly Issue[]): readonly Issue[] {
   return issues.map(({ pointer, detail }) => ({ pointer: `/credential${pointer}`, detail }));
@@ -57,15 +57,24 @@ function credentialledOf(
 }
 
 function isGivenInTheSettings({ kind }: { readonly kind: string }): boolean {
-  return kind !== byConsent;
+  return !Object.hasOwn(givenOnStudiosPage, kind);
 }
 
-function consentRefusalOf({ name, credentials }: ProviderEntry, { kind }: CredentialGiven): readonly Issue[] {
+function onStudiosPageAlone(name: string, kinds: readonly string[]): string {
+  const given = alternatives(kinds.map((kind) => `a ${String(givenOnStudiosPage[kind])}`));
+  return `The provider ${name} takes ${alternatives(kinds)} alone, ${given} a person gives on Studio's page, which an entry of the settings file cannot give, so a person connects it there`;
+}
+
+function pageRefusalOf(
+  { name, credentials }: ProviderEntry,
+  { kind }: CredentialGiven,
+  refused: string,
+): readonly Issue[] {
   const others = credentials.filter((way) => isGivenInTheSettings(way)).map((way) => way.kind);
   const detail =
     others.length === 0
-      ? `The provider ${name} takes authorization alone, a consent a person gives on Studio's page, which an entry of the settings file cannot give, so a person connects it there`
-      : `The provider ${name} takes no authorization credential in the settings file, since a person gives that consent on Studio's page; it takes ${alternatives(others)}`;
+      ? onStudiosPageAlone(name, [...new Set(credentials.map((way) => way.kind))])
+      : `The provider ${name} takes no ${refused} credential in the settings file, since a person gives that ${String(givenOnStudiosPage[refused])} on Studio's page; it takes ${alternatives(others)}`;
   return [{ pointer: kind === undefined ? '/credential' : '/credential/kind', detail }];
 }
 
@@ -84,7 +93,7 @@ function additionOfTheSettings(
   return Result.flatMap(added, (addition) =>
     isGivenInTheSettings(addition.credential)
       ? placedWhereTheWayGoes(addition)
-      : Result.fail(consentRefusalOf(entry, credential)),
+      : Result.fail(pageRefusalOf(entry, credential, addition.credential.kind)),
   );
 }
 

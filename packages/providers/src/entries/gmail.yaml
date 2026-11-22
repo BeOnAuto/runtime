@@ -16,3 +16,44 @@ credentials:
       prompt: consent
     clients: [registered]
     description: Sign in to Google and allow Gmail.
+  - kind: jwt_bearer
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/gmail.readonly
+    says:
+      https://www.googleapis.com/auth/gmail.readonly: Read Gmail messages, threads, drafts, labels and settings.
+    subject: '{mailbox}'
+    placeholders:
+      mailbox:
+        title: Mailbox
+        description: The app reads mail in this mailbox.
+        pattern: '^[^@\s]+@[^@\s]+$'
+        example: automation@acme.com
+    key_file:
+      client_id: /client_email
+      private_key: /private_key
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **Gmail API** is turned on.
+          - Open the service account. On the **Keys** tab, select **Add key**, then **Create new key**. Choose **JSON** as the **Key type** and select **Create**. Google downloads the key as a file. It is the only copy.
+          - Select **Show advanced settings** and, under **Domain-wide delegation**, copy the **Client ID**.
+
+          If Google does not let you create a key, your organization has turned key creation off. Ask whoever manages Google Cloud at your company.
+      pages:
+        - title: Allow it in Google Workspace
+          page: https://admin.google.com/ac/owl/domainwidedelegation
+          page_title: Open the Google Admin console
+          instructions: |-
+            - Go to **Security**, **Access and data control**, **API controls**, then **Manage Domain Wide Delegation**.
+            - Select **Add new**. In **Client ID**, paste the Client ID. In **OAuth Scopes**, enter `https://www.googleapis.com/auth/gmail.readonly`. Then select **Authorize**.
+
+            This lets the service account read mail in every mailbox of your organization. This connection reads only the mailbox you name below. Google can take a few minutes to apply the change.
+
+            This step needs a super administrator of Google Workspace.
+      key:
+        title: Enter the details here
+        instructions: Choose the key file Google downloaded, and name the mailbox.
+    description: Connect as a service account your company creates at Google.

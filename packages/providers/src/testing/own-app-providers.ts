@@ -39,6 +39,38 @@ export const asTheCompanysApp = {
   description: 'The ID and secret of an app your company registers at Mail.',
 } as const;
 
+export const asAServiceAccount = {
+  kind: 'jwt_bearer',
+  issuer: 'https://login.mail.example.com',
+  scope: 'mail.read',
+  says: { 'mail.read': 'Read the mail of the mailbox.' },
+  subject: '{inbox}',
+  placeholders: {
+    inbox: {
+      title: 'Mailbox',
+      description: 'The service account reads mail in this mailbox.',
+      pattern: '^[^@\\s]+@[^@\\s]+$',
+      example: 'inbox@acme.example.com',
+    },
+  },
+  key_file: { client_id: '/client_email', private_key: '/private_key' },
+  key_page: 'https://admin.mail.example.com/service-accounts',
+  key_page_title: 'Open the service accounts of Mail',
+  steps: {
+    key_page: { title: 'Create a service account at Mail', instructions: 'Create a service account and a key for it.' },
+    pages: [
+      {
+        title: 'Allow it at Mail',
+        instructions: 'Allow the service account to read mail.',
+        page: 'https://admin.mail.example.com/delegation',
+        page_title: 'Open the admin console of Mail',
+      },
+    ],
+    key: { title: 'Enter the details here', instructions: 'Choose the key file and name the mailbox.' },
+  },
+  description: 'A service account your company creates at Mail.',
+} as const;
+
 export const mail: ProviderEntry = decodeEntry({
   name: 'mail',
   title: 'Mail',
