@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.60.0](https://github.com/BeOnAuto/runtime/compare/v0.59.0...v0.60.0) (2026-11-22)
+
+
+### Features
+
+* **connections:** a connection records if it acts as the app, a service account or a personal one ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **connections:** a connection records the account it acts as ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **connections:** the way a pending connection connects can be chosen on its page ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **coordination:** a workflow's queued starts can be read ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **goals:** a goal moves to another playbook with its workflows ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **providers:** an entry declares who it acts as and who did it ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **workflow-host:** an event the connection's own account caused starts only a trigger that asks ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+
+
+### Bug Fixes
+
+* **api:** an MCP listing whose access check fails is refused as unavailable, never served shorter ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **api:** the instructions name the organization and whom the agent acts on behalf of ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **generation:** a poll's wait is kept in whole milliseconds, so the waiting rows are read again ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **global:** a busy runtime answers busy with the wait, never as a denial or a missing tool ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+* **ledger:** a wait whose first read fails is still woken by the append it waits for ([3b11b30](https://github.com/BeOnAuto/runtime/commit/3b11b30ae19ff99732508f8573adec2c0649c559))
+
 ## [0.59.0](https://github.com/BeOnAuto/runtime/compare/v0.58.0...v0.59.0) (2026-11-21)
 
 
