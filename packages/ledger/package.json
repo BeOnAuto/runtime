@@ -12,6 +12,7 @@
     "./postgresql": "./src/postgresql/postgresql-ledger.ts",
     "./postgresql-testing": "./src/testing/postgresql-databases.ts",
     "./sqlite": "./src/sqlite.ts",
+    "./store-reads": "./src/store-reads/store-reads.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

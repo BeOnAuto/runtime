@@ -1,10 +1,10 @@
 import type { ContentStore } from '@on.auto/content';
 import { Effect, Layer } from 'effect';
 
-import type { AppendSignal } from '../appends/append-signal.ts';
 import { openingLogsWith } from '../connection/opening-logs.ts';
 import { listenersOf } from '../event-store.ts';
-import { ledgerLayerOver, type LedgerServices, type OpenedLedger } from '../ledger-layer.ts';
+import { ledgerLayerOver, type LedgerServices, type OpenedLedger, type OpenedWith } from '../ledger-layer.ts';
+import { namedLedgerOf } from '../store-reads/named-store.ts';
 import { lostConnectionsLoggedWith } from './lost-connections.ts';
 import { postgresqlConnectionOn } from './postgresql-connection.ts';
 import {
@@ -28,7 +28,7 @@ export {
 } from '../webhooks/postgresql-received-webhooks.ts';
 
 export interface PostgreSQLLedgerOptions extends PostgreSQLOptions {
-  readonly appends?: AppendSignal;
+  readonly appends?: NonNullable<OpenedWith['appends']>;
   readonly content?: ContentStore;
 }
 
@@ -71,11 +71,13 @@ export function postgresqlLedgerLayer({
     Effect.map(Effect.context(), (context) =>
       ledgerLayerOver(
         () =>
-          postgresqlLedgerOpened({
-            ...options,
-            reportLostConnection: lostConnectionsLoggedWith(context),
-            ...openingLogsWith(context),
-          }),
+          namedLedgerOf(
+            postgresqlLedgerOpened({
+              ...options,
+              reportLostConnection: lostConnectionsLoggedWith(context),
+              ...openingLogsWith(context),
+            }),
+          ),
         { appends, content },
       ),
     ),

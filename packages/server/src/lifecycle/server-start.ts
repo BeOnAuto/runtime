@@ -1,12 +1,10 @@
-import { createApiHandler, makeAppRuntime, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
-import { Data, Effect, Function, Layer } from 'effect';
+import { makeAppRuntime, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
+import { Data, Function, Layer } from 'effect';
 
 import {
   logAccessMode,
   logConfigFile,
-  logIncident,
   logServedStudio,
-  logStudioKeptInMemory,
   logTelemetry,
   serverLogs,
   type LogSettings,
@@ -20,8 +18,8 @@ import type {
   StartPing,
 } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
-import { servedStudioOf } from '../studio/served-studio.ts';
 import type { Telemetry } from '../telemetry/start-telemetry.ts';
+import { apiOf } from './answering-api.ts';
 import { beside, createHttpServer, listen, ownOriginOf, tcpPort } from './http-server.ts';
 import {
   answeringBy,
@@ -84,62 +82,6 @@ function telemetryServing(telemetry: Telemetry, local: LocalServing | undefined)
       },
     },
   };
-}
-
-interface Answering<R> {
-  readonly settings: Settings;
-  readonly authenticator: ReturnType<typeof answeringBy>;
-  readonly served: Served;
-  readonly runtime: AppRuntime<R>;
-  readonly telemetry: Telemetry;
-  readonly local: LocalServing | undefined;
-  readonly startPing: StartPing;
-  readonly pageStyle: PageStyle;
-}
-
-type Requests = NonNullable<Served['observedRequests']>;
-
-/** The middleware the API runs first: the telemetry's, then what the composition observes, each where it is given. */
-function requestsWatched(
-  traced: Requests | undefined,
-  observed: Requests | undefined,
-): { readonly requests?: Requests } {
-  if (observed === undefined) {
-    return traced === undefined ? {} : { requests: traced };
-  }
-  return {
-    requests:
-      traced === undefined
-        ? observed
-        : (context, next) =>
-            traced(context, async () => {
-              await observed(context, next);
-            }),
-  };
-}
-
-function apiOf<R>(answering: Answering<R>): ApiHandler {
-  const { settings, authenticator, served, runtime, telemetry, local, startPing, pageStyle } = answering;
-  const { licenseNotice, routes, callContext } = served;
-  return createApiHandler({
-    allowedOrigins: settings.allowedOrigins,
-    studio: servedStudioOf(settings, {
-      report: (problem) => {
-        void runtime.run(logStudioKeptInMemory(problem));
-      },
-    }),
-    authenticator,
-    routes,
-    pageStyle,
-    reportIncident: (id, error, requestId, call) => {
-      void runtime.run(logIncident({ id, original: error, call }).pipe(Effect.annotateLogs({ requestId })));
-    },
-    ...requestsWatched(telemetry.requests, served.observedRequests),
-    ...(local?.runtimeControl === undefined ? {} : { runtimeControl: local.runtimeControl }),
-    installId: startPing.installId,
-    ...(authenticator.mode === 'local' && licenseNotice !== undefined ? { licenseNotice } : {}),
-    ...(callContext === undefined ? {} : { callContext }),
-  });
 }
 
 interface Serving<R> {

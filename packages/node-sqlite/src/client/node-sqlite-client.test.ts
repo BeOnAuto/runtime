@@ -70,3 +70,42 @@ describe('a client of node:sqlite given an image of a database', () => {
     expect(Buffer.from(image).equals(before)).toBe(true);
   });
 });
+
+describe('a client of node:sqlite told of each statement it runs', () => {
+  it('tells each statement as it starts and, as it ends, the rows it answered and the rows it changed', async () => {
+    const told: string[] = [];
+    const client = await aConnectedClient({
+      statementStarted: () => {
+        told.push('started');
+        return ({ rowsRead, rowsWritten }) => {
+          told.push(`ended ${rowsRead} ${rowsWritten}`);
+        };
+      },
+    });
+
+    await client.command(SQL`CREATE TABLE notes (note TEXT)`);
+    await client.batchCommand([SQL`INSERT INTO notes VALUES ('a'), ('b')`, SQL`INSERT INTO notes VALUES ('c')`]);
+    await client.query(SQL`SELECT note FROM notes`);
+    await client.command(SQL`DELETE FROM notes WHERE note = 'a'`, { ignoreChangesCount: true });
+
+    expect(told).toEqual([
+      'started',
+      'ended 0 0',
+      'started',
+      'ended 0 2',
+      'started',
+      'ended 0 1',
+      'started',
+      'ended 3 0',
+      'started',
+      'ended 0 0',
+    ]);
+  });
+
+  it('runs every statement as before where the teller tells nothing of it', async () => {
+    const client = await aConnectedClient({ statementStarted: () => {} });
+    await client.command(SQL`CREATE TABLE notes (note TEXT)`);
+
+    expect(await rowsOf(client, 'SELECT count(*) AS notes FROM notes')).toEqual([{ notes: 0 }]);
+  });
+});

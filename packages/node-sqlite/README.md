@@ -14,6 +14,8 @@ It is written to the library's public driver contract and registered the way the
 
 It sets the pragmas the add-on's client set, from the same options: the library's defaults, `DEFAULT_SQLITE_PRAGMA_OPTIONS`, under what a connection string names, under what the caller gives (`src/client/pragmas.ts`). On every connection it sets `synchronous`, `cache_size`, `foreign_keys`, `temp_store` and `mmap_size`, and, unless it is told to skip the pragmas of the database, it reads the journal mode and sets it only where the file holds another. The driver holds no value of a pragma of its own.
 
+A client given `statementStarted` calls it as each statement of a query, a command or a batch starts, and calls the function it answers, where it answers one, as the statement ends, with the rows the statement answered, `rowsRead`, and the rows it changed, `rowsWritten`, 0 for a query; a statement that fails is told as it starts and not as it ends. The ledger gives it, so the reads of a call are counted by name ([the ledger's README](../ledger/README.md#the-reads-of-a-call)); the driver knows nothing of what it is told for.
+
 A client given `minimumSQLiteVersion` refuses to connect to a SQLite older than that, in plain words that name both versions, and closes the file (`src/client/sqlite-version.ts`). The version that matters is the caller's: a Node.js built by a distribution may be linked to the SQLite of the system, which can be older than the one Node.js carries.
 
 ### Three things put back as the add-on had them

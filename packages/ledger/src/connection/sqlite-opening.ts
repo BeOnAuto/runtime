@@ -4,6 +4,7 @@ import { listenersOf, type AppendListeners } from '../event-store.ts';
 import { ledgerLayerOver, type LedgerServices, type OpenedLedger, type StoreLayerOptions } from '../ledger-layer.ts';
 import type { KeptTables } from '../projections/projection-parts.ts';
 import { pooledOptionsOf, sqliteEventStore, type AnyDriver, type SQLiteStoreOptions } from '../sqlite-event-store.ts';
+import { namedLedgerOf } from '../store-reads/named-store.ts';
 import { mostValuesTheLedgerBindsOnSQLite, sqliteMostBoundValues } from './bound-values.ts';
 import { openingLogsWith } from './opening-logs.ts';
 import { sqliteConnectionOn } from './sqlite-connection.ts';
@@ -76,7 +77,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
         pageFailed,
       };
       const listeners = { ...listenersOf(options), watchFailed };
-      return ledgerLayerOver(() => sqliteLedgerOpened(opening, kept, listeners), { appends, content });
+      return ledgerLayerOver(() => namedLedgerOf(sqliteLedgerOpened(opening, kept, listeners)), { appends, content });
     }),
   );
 }

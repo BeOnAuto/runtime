@@ -6,6 +6,8 @@ import {
 } from '@modelcontextprotocol/server';
 import { Function } from 'effect';
 
+import type { McpCallNoting } from '../hand-off/mcp-calls-noted.ts';
+
 export const stoppedWords =
   'Auto Runtime stopped while it handled this request, so it may or may not have taken effect';
 
@@ -40,26 +42,30 @@ function parsed(text: string): unknown {
   }
 }
 
-function answeredIn(event: string): readonly RequestId[] {
+const hearsNothing: McpCallNoting = { bytes: Function.constVoid, heard: Function.constVoid, ended: Function.constVoid };
+
+function answeredIn(event: string, hearing: McpCallNoting): readonly RequestId[] {
   const data = event
     .split('\n')
     .filter((line) => line.startsWith('data:'))
     .map((line) => line.slice('data:'.length).trimStart())
     .join('\n');
   const message = parsed(data);
+  hearing.heard(message);
   const answered = isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message) ? message.id : undefined;
   return answered === undefined ? [] : [answered];
 }
 
-function unansweredOf(asked: readonly RequestId[]): Unanswered {
+function unansweredOf(asked: readonly RequestId[], hearing: McpCallNoting): Unanswered {
   const unanswered = new Set(asked);
   const decoder = new TextDecoder();
   const pending = { text: '' };
   return {
     heard: (piece) => {
+      hearing.bytes(piece.byteLength);
       const events = `${pending.text}${decoder.decode(piece, { stream: true })}`.split('\n\n');
       pending.text = events.splice(-1).join('');
-      for (const id of events.flatMap((event) => answeredIn(event))) {
+      for (const id of events.flatMap((event) => answeredIn(event, hearing))) {
         unanswered.delete(id);
       }
     },
@@ -67,8 +73,17 @@ function unansweredOf(asked: readonly RequestId[]): Unanswered {
   };
 }
 
-function inFlightOf(asked: readonly RequestId[], source: ReadableStream<Uint8Array>, settled: () => void): InFlight {
-  const unanswered = unansweredOf(asked);
+function inFlightOf(
+  asked: readonly RequestId[],
+  source: ReadableStream<Uint8Array>,
+  hearing: McpCallNoting,
+  settled: () => void,
+): InFlight {
+  const unanswered = unansweredOf(asked, hearing);
+  const ended = () => {
+    hearing.ended();
+    settled();
+  };
   const stopping = { stop: Function.constVoid };
   const body = source.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
@@ -84,8 +99,8 @@ function inFlightOf(asked: readonly RequestId[], source: ReadableStream<Uint8Arr
         unanswered.heard(piece);
         controller.enqueue(piece);
       },
-      flush: settled,
-      cancel: settled,
+      flush: ended,
+      cancel: ended,
     }),
   );
   return {
@@ -112,11 +127,12 @@ export class AnswersAtStop {
     return this.#stopped;
   }
 
-  answering(asked: readonly RequestId[], answer: Response): Response {
+  answering(asked: readonly RequestId[], answer: Response, hearing: McpCallNoting = hearsNothing): Response {
     if (asked.length === 0 || answer.body === null || !isEventStream(answer)) {
+      hearing.ended();
       return answer;
     }
-    const inFlight = inFlightOf(asked, answer.body, () => {
+    const inFlight = inFlightOf(asked, answer.body, hearing, () => {
       this.#inFlight.delete(inFlight);
     });
     if (this.#stopped) {

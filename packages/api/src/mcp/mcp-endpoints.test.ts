@@ -21,7 +21,7 @@ import { capturedLogs } from '@on.auto/operations/testing';
 import { Context, Effect, Logger, Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { guideShelfOf, mcpRoutes } from '../index.ts';
+import { guideShelfOf, mcpCallsNotedIn, mcpRoutes, type McpCallNoted } from '../index.ts';
 import { requestBodyLimit } from '../operations/request-body.ts';
 import { call, createTestHandler } from '../testing/api-calls.ts';
 import { fetchInProcess, listenInProcess, type Listening } from '../testing/listening.ts';
@@ -50,6 +50,8 @@ import { issuerOnLoopback, type OnLoopback, signedInOnLoopback } from '../testin
 import { guideToolName, listedTools, toolNamesIn } from '../testing/tool-listing.ts';
 
 const anyWords: unknown = expect.any(String);
+
+const anyCount: unknown = expect.any(Number);
 
 const asAdmin = { authorization: `Bearer ${acmeAdmin.key}` };
 
@@ -307,6 +309,56 @@ describe('the methods of an MCP endpoint', () => {
     const answer = await call(handler, '/orgs/acme/playbooks/alpha/mcp', { method: 'HEAD', headers: asAdmin });
 
     expect({ status: answer.status, allow: answer.headers.get('allow') }).toEqual({ status: 405, allow: 'POST' });
+  });
+});
+
+async function notedWhilePosting(
+  handler: Awaited<ReturnType<typeof operationServer>>['handler'],
+  path: string,
+  body: string,
+): Promise<readonly McpCallNoted[]> {
+  const told: Promise<McpCallNoted>[] = [];
+  await mcpCallsNotedIn(
+    () => postMcp(handler, path, asAdmin, body),
+    (noted) => {
+      told.push(noted);
+    },
+  );
+  return Promise.all(told);
+}
+
+describe('the MCP calls an endpoint notes for the line of its request', () => {
+  it('names a listing and a call of a tool with its declared arguments, the bytes each way and how each ended', async () => {
+    const { handler } = await operationServer();
+    const calling = requestOf(2, 'tools/call', {
+      name: 'add_note',
+      arguments: { name: 'n1', text: 'Ada', secret: 'x' },
+    });
+
+    const listing = requestOf(1, 'tools/list');
+    const listed = await notedWhilePosting(handler, '/orgs/acme/playbooks/alpha/mcp', listing);
+    const called = await notedWhilePosting(handler, '/orgs/acme/playbooks/alpha/mcp', calling);
+    const unknown = await notedWhilePosting(handler, '/orgs/acme/mcp', requestOf(3, 'tools/call', { name: 'Ada' }));
+
+    expect(listed).toEqual([
+      { method: 'tools/list', request_bytes: listing.length, response_bytes: listed[0]?.response_bytes, listed: 9 },
+    ]);
+    expect(called).toEqual([
+      {
+        method: 'tools/call',
+        tool: 'add_note',
+        operation: 'add_note',
+        arguments: 'name,text',
+        undeclared: 1,
+        request_bytes: calling.length,
+        response_bytes: called[0]?.response_bytes,
+        tool_errors: 1,
+      },
+    ]);
+    expect([listed[0]?.response_bytes, called[0]?.response_bytes]).toEqual([anyCount, anyCount]);
+    expect(unknown).toEqual([
+      expect.objectContaining({ method: 'tools/call', tool: 'unknown', errors: 1, error_code: -32_602 }),
+    ]);
   });
 });
 

@@ -4,6 +4,8 @@ export {
   type CommandOptions,
   type NodeSqliteClient,
   type NodeSqliteClientOptions,
+  type StatementAnswered,
+  type StatementStarted,
 } from './client/node-sqlite-client.ts';
 export {
   nodeSqliteConnection,

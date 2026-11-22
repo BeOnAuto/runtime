@@ -12,6 +12,7 @@ import {
   playbookServerFactory,
   catalogServerFactory,
   directoryServerFactory,
+  listingsOf,
   orgServerFactory,
   type McpServerFactory,
 } from './mcp-server-factory.ts';
@@ -83,14 +84,22 @@ export function mcpRoutes(options: McpRoutesOptions): RegisterRoutes {
       linkedAnswers: linkedAnswers(options.retryStateKeys),
     };
     const handOffs = new EndpointHandOffs();
+    const directoryServing = { ...serving, ...options.directoryListing };
     const catalog = handlerFor(catalogServerFactory(serving), options);
     const org = handlerFor(orgServerFactory(serving), options);
     const playbook = handlerFor(playbookServerFactory(serving), options);
-    const directory = handlerFor(directoryServerFactory({ ...serving, ...options.directoryListing }), options);
-    routes.add('POST', '/mcp', ownOrgEndpoint(handOffs.to(catalog.fetch), routes));
-    routes.add('POST', '/directory', ownOrgEndpoint(handOffs.to(directory.fetch), routes));
-    routes.add('POST', '/orgs/:org/mcp', endpoint(handOffs.to(org.fetch), 'org', routes));
-    routes.add('POST', '/orgs/:org/playbooks/:playbook/mcp', endpoint(handOffs.to(playbook.fetch), 'playbook', routes));
+    const directory = handlerFor(directoryServerFactory(directoryServing), options);
+    const listings = listingsOf(serving, directoryServing);
+    const to = (fetchMcp: McpHttpHandler['fetch'], served: keyof typeof listings) =>
+      handOffs.to(fetchMcp, served === 'directory' ? directoryServing.shelf : serving.shelf, listings[served]);
+    routes.add('POST', '/mcp', ownOrgEndpoint(to(catalog.fetch, 'own org'), routes));
+    routes.add('POST', '/directory', ownOrgEndpoint(to(directory.fetch, 'directory'), routes));
+    routes.add('POST', '/orgs/:org/mcp', endpoint(to(org.fetch, 'org'), 'org', routes));
+    routes.add(
+      'POST',
+      '/orgs/:org/playbooks/:playbook/mcp',
+      endpoint(to(playbook.fetch, 'playbook'), 'playbook', routes),
+    );
     routes.onClose(async () => {
       handOffs.stop();
       await Promise.all([catalog.close(), org.close(), playbook.close(), directory.close()]);

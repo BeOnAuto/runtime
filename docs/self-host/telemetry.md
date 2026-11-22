@@ -68,6 +68,7 @@ A request is a trace:
 
 - Its span is named for the method and the route, such as `POST /v1/orgs/:org/playbooks/:playbook/definitions/:type/:name/run`.
 - Its response carries the trace's id in the `x-trace-id` header.
+- Its span names the reads of the ledger it made in `auto.on.store_reads`, as JSON: for each kind of read, such as a table of the ledger (`activity_requests_1`) or a fold of a kind of stream (`fold:org.playbooks`), the statements it ran, `n`, the rows they read and wrote, `rows` and `written`, the facts a fold folded, `events`, and the time the statements took, `ms`. The heaviest eight by rows are named, the rest summed as `other`. A name is never a value of the request, an id or a stream's name. On PostgreSQL the reads are named but their statements and rows are not counted yet.
 - A request with a W3C `traceparent` header continues the caller's trace.
 - A tool an agent calls over MCP is a `tools/call <tool>` span beneath the request that carried the call. It is linked to the agent's trace when the call carries `traceparent` in its `_meta`.
 - `GET /health` is not traced.

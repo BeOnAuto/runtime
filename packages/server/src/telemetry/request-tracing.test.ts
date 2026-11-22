@@ -136,3 +136,32 @@ describe('the trace of a request', () => {
     ]);
   });
 });
+
+describe('a request that reads the ledger', () => {
+  it('names on its span the reads of the ledger it made, by name, and nothing of a request that read none', async () => {
+    const ledger = temporaryLedger();
+    onTestFinished(ledger.remove);
+    const receiver = await receivingOtlp();
+    onTestFinished(receiver.close);
+    const server = await startServer(
+      {
+        HOST: '127.0.0.1',
+        PORT: '0',
+        LEDGER_FILE: ledger.fileName,
+        ...noConsentThroughAuto,
+        OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
+        OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+      },
+      testComposition(),
+    );
+
+    const answer = await fetch(`http://127.0.0.1:${server.port}/v1/orgs/local/playbooks`);
+    await fetch(`http://127.0.0.1:${server.port}/nowhere`);
+    await server.stop();
+    const [listed, nowhere] = spansIn(receiver.received()).filter(({ kind }) => kind === 2);
+
+    expect(answer.status).toBe(200);
+    expect(String(listed?.attributes['auto.on.store_reads'])).toContain('"fold:org.playbooks":{"n":');
+    expect(nowhere?.attributes['auto.on.store_reads']).toBeUndefined();
+  });
+});

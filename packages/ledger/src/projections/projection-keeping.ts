@@ -5,6 +5,7 @@ import {
   keepsChildRows,
   messageIdOf,
   partitionOfTheRow,
+  projectedTableOf,
   rowKeyOf,
   type ChildRowsProjection,
   type Context,
@@ -18,6 +19,7 @@ import {
 import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { isCatchingUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
+import { readNamed } from '../store-reads/store-reads.ts';
 import {
   inlineRegistrationOf,
   inTurn,
@@ -131,11 +133,12 @@ async function keptInTurn(
 function keepingProjection(keeping: ProjectionKeeping, catchingUp: TablesCatchingUp): InlineProjection {
   return {
     types: keeping.projection.types,
-    handle: async (messages, execute) => {
-      if (!(await isCatchingUp(catchingUp, keeping.projection, execute))) {
-        await keptInTurn(keeping, execute, placedOf(keeping, messages));
-      }
-    },
+    handle: (messages, execute) =>
+      readNamed(projectedTableOf(keeping.projection), async () => {
+        if (!(await isCatchingUp(catchingUp, keeping.projection, execute))) {
+          await keptInTurn(keeping, execute, placedOf(keeping, messages));
+        }
+      }),
   };
 }
 

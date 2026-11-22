@@ -36,10 +36,18 @@ function droppedArgumentOf(message: unknown): readonly DroppedArgument[] {
   });
 }
 
-export async function postedMessagesOf(request: Request): Promise<readonly unknown[]> {
+export interface PostedMessages {
+  readonly messages: readonly unknown[];
+  readonly bytes: number;
+}
+
+export async function postedOf(request: Request): Promise<PostedMessages> {
   const text = await bodyTextOf(request.clone());
   const body = Result.isSuccess(text) ? parsed(text.success) : undefined;
-  return Option.getOrElse(batchOf(body), () => [body]);
+  return {
+    messages: Option.getOrElse(batchOf(body), () => [body]),
+    bytes: Result.isSuccess(text) ? new TextEncoder().encode(text.success).byteLength : 0,
+  };
 }
 
 export function droppedArgumentsIn(messages: readonly unknown[]): readonly DroppedArgument[] {

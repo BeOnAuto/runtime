@@ -4,6 +4,7 @@ import {
   childKeyColumn,
   playbookOfStreamPrefix,
   keepsChildRows,
+  projectedTableOf,
   requireAdvancedColumns,
   streamPrefixOfAddress,
   streamPrefixOfTheDefinitionsOf,
@@ -22,6 +23,7 @@ import { Effect, Option, Schema } from 'effect';
 import { definitionNames } from '../definition-names/definition-names-table.ts';
 import type { InTransaction } from '../event-store.ts';
 import { servedOnceCaughtUp, type TablesCatchingUp } from '../projection-catch-up/catching-up.ts';
+import { readNamed } from '../store-reads/store-reads.ts';
 import { boundOf, type ProjectionDialect } from './projection-dialect.ts';
 import {
   columnOf,
@@ -206,7 +208,7 @@ export function projectionReader(
         ? Effect.succeed(none)
         : Effect.andThen(
             served(projection),
-            Effect.promise(() => read(projection)),
+            Effect.promise(() => readNamed(projectedTableOf(projection), () => read(projection))),
           );
     });
   return {

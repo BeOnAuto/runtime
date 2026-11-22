@@ -24,7 +24,15 @@ export interface NodeSqliteClientOptions {
   readonly minimumSQLiteVersion?: string;
   readonly serializer: JSONSerializer;
   readonly image?: Readonly<Uint8Array>;
+  readonly statementStarted?: StatementStarted;
 }
+
+export interface StatementAnswered {
+  readonly rowsRead: number;
+  readonly rowsWritten: number;
+}
+
+export type StatementStarted = () => ((answered: StatementAnswered) => void) | undefined;
 
 export interface CommandOptions {
   readonly ignoreChangesCount?: boolean;
@@ -77,7 +85,12 @@ export function nodeSqliteClient(options: NodeSqliteClientOptions): NodeSqliteCl
   const answerOf = (sql: SQL, statement: Statement): Promise<QueryResult> => {
     const { query, params } = sqliteFormatter.format(sql, { serializer: options.serializer });
     const values = boundValuesOf(params);
-    return answered(() => statement(database, query, values));
+    return answered(() => {
+      const ended = options.statementStarted?.();
+      const answer = statement(database, query, values);
+      ended?.({ rowsRead: answer.rows.length, rowsWritten: statement === queried ? 0 : Number(answer.rowCount) });
+      return answer;
+    });
   };
   const commandOf = (sql: SQL, commandOptions: CommandOptions): Promise<QueryResult> =>
     answerOf(sql, statementOf(commandOptions));

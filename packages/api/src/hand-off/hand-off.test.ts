@@ -4,7 +4,7 @@ import { Context } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { actingAsIn, authInfoFor, orgCallOf, playbookCallOf } from './caller-hand-off.ts';
-import { droppedArgumentsIn, postedMessagesOf, withDroppedArgument } from './dropped-arguments.ts';
+import { droppedArgumentsIn, postedOf, withDroppedArgument } from './dropped-arguments.ts';
 
 function posted(body: string, headers: Readonly<Record<string, string>> = {}): Request {
   return new Request('http://localhost/mcp', {
@@ -18,7 +18,7 @@ const callWithProto =
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"x","arguments":{"__proto__":{"admin":true}}}}';
 
 async function droppedArgumentsOf(request: Request): Promise<readonly unknown[]> {
-  return droppedArgumentsIn(await postedMessagesOf(request));
+  return droppedArgumentsIn((await postedOf(request)).messages);
 }
 
 describe('the arguments dropped from the messages posted to an MCP endpoint', () => {
