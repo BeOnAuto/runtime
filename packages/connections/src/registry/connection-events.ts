@@ -139,7 +139,6 @@ export const ConnectionEventSchema = Schema.Union([
     Schema.Struct({
       ...ofTheConnection,
       token_sha256: Schema.String,
-      expires_at: Schema.String,
       more: Schema.optionalKey(Schema.String),
       asked_by: Schema.optionalKey(CallingClientSchema),
     }),

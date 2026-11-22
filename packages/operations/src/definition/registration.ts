@@ -39,7 +39,6 @@ export interface RegisteredLink<R> {
   readonly toOpen: (output: unknown) => LinkToOpen | undefined;
   readonly idOf: (output: unknown) => string;
   readonly answerAfter: (link: OfferedLink) => R;
-  readonly linkLastsMs: number;
 }
 
 interface RunnableOf<S extends OperationScope, K extends OperationKind, A extends Succeeded> extends RegisteredFieldsOf<

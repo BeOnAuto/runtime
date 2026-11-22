@@ -30,7 +30,7 @@ const driveAdded: ConnectionEvent = {
 
 const linkIssued: ConnectionEvent = {
   type: 'connection_link_issued',
-  data: { connection: 'drive-id', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+  data: { connection: 'drive-id', token_sha256: 'a1b2' },
 };
 
 function decided(command: ConnectionCommand, ...history: readonly ConnectionEvent[]) {
@@ -278,8 +278,8 @@ describe('a link given for a group of more, as the stream folds it', () => {
     const plain: ConnectionEvent = { ...linkIssued, data: { ...linkIssued.data, token_sha256: 'e5f6' } };
 
     expect([fold(driveAdded, forMore)?.link, fold(driveAdded, forMore, plain)?.link]).toEqual([
-      { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z', more: 'share' },
-      { token_sha256: 'e5f6', expires_at: '2026-10-16T14:00:00.000Z' },
+      { token_sha256: 'a1b2', more: 'share' },
+      { token_sha256: 'e5f6' },
     ]);
   });
 });

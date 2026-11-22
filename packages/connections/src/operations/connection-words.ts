@@ -3,7 +3,6 @@ import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasi
 import { providerNamed, type ProviderList, type ScopeGroup } from '@on.auto/providers';
 import { Option, Result } from 'effect';
 
-import { linkLastsMs } from '../links/link-token.ts';
 import { groupNamed } from '../providers/asking-more.ts';
 import type { Connection } from '../registry/connection.ts';
 import type { AddedConnection, AdditionSchema } from './connection-fields.ts';
@@ -86,17 +85,11 @@ function doingOf({ provider, credential }: Linked): string {
 
 function linkWordsOf(connection: Linked, providers: ProviderList): string {
   const linkName = approvalLinkNamed(providerTitleOf(connection.provider, providers));
-  return `Show the person who added the connection a link named ${linkName}, never its address. On that page they approve it and ${doingOf(connection)}, within 24 hours.`;
+  return `Show the person who added the connection a link named ${linkName}, never its address. On that page they approve it and ${doingOf(connection)}.`;
 }
 
 function groupWordsOf(group: ScopeGroup | undefined): readonly string[] {
   return group === undefined ? [] : [`The link asks them to allow ${quoted(group.name)} as well: ${group.for}`];
-}
-
-function connectedWordsOf(named: string, linkRanOut: boolean): string {
-  return linkRanOut
-    ? `The link for ${named} expired unused. The connection is still connected.`
-    : `Connected ${named}; nothing is left to open.`;
 }
 
 function standingWordsOf(connection: Omit<AddedConnection, 'connect'>): string {
@@ -105,12 +98,12 @@ function standingWordsOf(connection: Omit<AddedConnection, 'connect'>): string {
     return `${capitalized(named)} is ${connection.status}. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.`;
   }
   if (connection.status === 'connected') {
-    return connectedWordsOf(named, connection.link_ran_out === true);
+    return `Connected ${named}; nothing is left to open.`;
   }
   if (connection.status === 'removed') {
     return `The person cancelled ${named} on the page, so it is removed and nothing is connected.`;
   }
-  return `${capitalized(named)} is ${connection.status}, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.`;
+  return `${capitalized(named)} is ${connection.status}, and its link is used up, so nothing is left to open: reconnect it for a new link.`;
 }
 
 function linkedWordsOf(
@@ -182,7 +175,7 @@ function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen |
   return connect === undefined
     ? undefined
     : {
-        message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection)}, within 24 hours.`,
+        message: `Open this page to approve ${connectionNamed(connection)}, and ${doingOf(connection)}.`,
         url: connect.url,
       };
 }
@@ -196,7 +189,6 @@ export function linkOffering(offering: {
     answerAfterTheLink: {
       idOf: ({ id }: AddedConnection) => id,
       read: (offered: OfferedLink) => standingAfterTheLink(offering, offered),
-      linkLastsMs,
     },
   };
 }

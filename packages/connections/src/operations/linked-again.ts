@@ -26,6 +26,6 @@ export const linkedAgain = Effect.fnUntraced(function* (
   }).pipe(Effect.catchTag('invalid_input', Effect.die));
   const shown = yield* shownConnection(secrets, kept);
   return kept.link?.token_sha256 === link.token_sha256
-    ? { ...shown, connect: connectOf(pages, { org, connection: id, token }, link.expires_at) }
+    ? { ...shown, connect: connectOf(pages, { org, connection: id, token }) }
     : shown;
 });

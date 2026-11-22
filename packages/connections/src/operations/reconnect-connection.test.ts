@@ -10,8 +10,6 @@ const anyWords: unknown = expect.any(String);
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
-const aDayOn = '2026-10-16T14:00:00.000Z';
-
 const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 const keyRefused =
@@ -51,8 +49,10 @@ describe('reconnecting a connection its server refused', () => {
 
     expect(answered).toMatchObject({
       status: 'succeeded',
-      output: { id, status: 'broken', broken: refusedAsBroken, connect: { expires_at: aDayOn } },
+      output: { id, status: 'broken', broken: refusedAsBroken },
     });
+    expect(answered).toHaveProperty('output.connect.url');
+    expect(answered).not.toHaveProperty('output.connect.expires_at');
     expect(given).toMatchObject({
       status: 'succeeded',
       output: {
@@ -74,16 +74,12 @@ describe('reconnecting a connection its server refused', () => {
 
     const latest = await reconnected(h, id, fiveMinutesLater);
 
-    expect((await h.facts()).at(-1)).toMatchObject({
-      type: 'connection_link_issued',
-      data: { connection: id, expires_at: '2026-10-16T14:05:00.000Z' },
-    });
+    expect((await h.facts()).at(-1)).toMatchObject({ type: 'connection_link_issued', data: { connection: id } });
+    expect((await h.facts()).at(-1)).not.toHaveProperty('data.expires_at');
     expect(await onEveryPageOperation(h, first, fiveMinutesLater)).toEqual(
       Array.from({ length: 5 }, () => replacedLink),
     );
-    expect(await reading(h, latest, fiveMinutesLater)).toMatchObject({
-      output: { id, status: 'broken', link: { expires_at: latest.expiresAt } },
-    });
+    expect(await reading(h, latest, fiveMinutesLater)).toMatchObject({ output: { id, status: 'broken', link: {} } });
     expect(await giving(h, latest, 'Bearer crm-key-7d2e4b19', fiveMinutesLater)).toMatchObject({
       output: { id, status: 'connected', credential_ends_with: '4b19' },
     });
@@ -116,15 +112,13 @@ describe('reconnecting a connection that is connected', () => {
 });
 
 describe('reconnecting a connection that is pending', () => {
-  it('gives a new link once the one before expired, and opens the page with it alone', async () => {
+  it('gives a new link a day after the one before, and opens the page with it alone', async () => {
     const h = harness();
     const first = await added(h, crm);
 
     const link = await reconnected(h, first.id, aDayAndAMinuteLater);
 
-    expect(await reading(h, link, aDayAndAMinuteLater)).toMatchObject({
-      output: { status: 'pending', link: { expires_at: link.expiresAt } },
-    });
+    expect(await reading(h, link, aDayAndAMinuteLater)).toHaveProperty('output.link', {});
     expect(await reading(h, first, aDayAndAMinuteLater)).toEqual(replacedLink);
   });
 
@@ -134,9 +128,7 @@ describe('reconnecting a connection that is pending', () => {
 
     const link = await reconnected(h, first.id, fiveMinutesLater);
 
-    expect(await reading(h, link, fiveMinutesLater)).toMatchObject({
-      output: { status: 'pending', link: { expires_at: link.expiresAt } },
-    });
+    expect(await reading(h, link, fiveMinutesLater)).toMatchObject({ output: { status: 'pending', link: {} } });
     expect(await reading(h, first, fiveMinutesLater)).toEqual(replacedLink);
   });
 });

@@ -7,8 +7,6 @@ import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '.
 
 const anyWords: unknown = expect.any(String);
 
-const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
-
 function reading(h: Harness, id: string, token: string, at?: string) {
   return h.call(operationNamed(h.operations, 'read_link'), acmeWriter, { id, token }, at);
 }
@@ -20,19 +18,22 @@ function approving(h: Harness, id: string, token: string, caller = ada) {
 const noOpenLink = {
   status: 'rejected',
   reason: 'not_found',
-  detail: 'There is no open link of this token: it is unknown, used up or expired',
+  detail: anyWords,
 };
 
 describe('reading a link', () => {
-  it('answers the connection it names, and when the link expires, to any caller of the org who holds its token', async () => {
-    const h = harness();
-    const { id, token, expiresAt } = await added(h, crm);
+  it.each(['2026-10-15T14:03:00.000Z', '2026-10-16T14:01:00.000Z', '2031-10-15T14:00:00.000Z'])(
+    'answers the connection it names, and its link with nothing of an end, to any caller of the org who holds its token, at %s',
+    async (at) => {
+      const h = harness();
+      const { id, token } = await added(h, crm);
 
-    expect(await reading(h, id, token, '2026-10-15T14:03:00.000Z')).toMatchObject({
-      status: 'succeeded',
-      output: { id, status: 'pending', link: { expires_at: expiresAt } },
-    });
-  });
+      const read = await reading(h, id, token, at);
+
+      expect(read).toMatchObject({ status: 'succeeded', output: { id, status: 'pending' } });
+      expect(read).toHaveProperty('output.link', {});
+    },
+  );
 
   it('answers the credential of client credentials without a client id where the person gives it on the page', async () => {
     const h = harness();
@@ -45,14 +46,13 @@ describe('reading a link', () => {
     expect(read).not.toHaveProperty('output.credential.client_id');
   });
 
-  it('answers not found for a token that is unknown, of another connection or expired', async () => {
+  it('answers not found for a token that is unknown or of another connection', async () => {
     const h = harness();
     const { id, token } = await added(h, crm);
     const other = await added(h, notes);
 
     expect(await reading(h, id, 'unknown')).toEqual(noOpenLink);
     expect(await reading(h, id, other.token)).toEqual(noOpenLink);
-    expect(await reading(h, id, token, aDayAndAMinuteLater)).toEqual(noOpenLink);
     expect(await reading(h, 'nowhere', token)).toMatchObject({ reason: 'not_found' });
   });
 });

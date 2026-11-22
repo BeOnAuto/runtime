@@ -9,6 +9,7 @@ import { listenInProcess, listenOnLoopback, type Listening } from '../testing/li
 import { plainTextIn } from '../testing/mcp-clients.ts';
 import {
   acmeAdmin,
+  acmeAdminActing,
   acmeAlphaWriter,
   operationServer,
   testRetryStateKeys,
@@ -20,8 +21,6 @@ import { linkedAnswers, toolCallbackOf, type AnsweringServing } from './linked-a
 const opened = { times: 0 };
 
 const usedUp: string[] = [];
-
-const pageLastsMs = 60 * 60 * 1000;
 
 function pageOf(made: number): string {
   return `https://studio.example/open?page=${String(made)}`;
@@ -55,7 +54,6 @@ const openPage = defineCommand('org', {
     idOf: ({ id }) => id,
     read: ({ id, url }) =>
       Effect.sync(() => (usedUp.includes(url) ? { id, again: true } : { id, page: url, again: true })),
-    linkLastsMs: pageLastsMs,
   },
 });
 
@@ -156,7 +154,6 @@ const words = {
       ({ id, url }: OfferedLink) =>
       () =>
         Effect.succeed<Outcome>({ status: 'succeeded', output: { by: 'the read', id, url } }),
-    linkLastsMs: pageLastsMs,
   },
 } as const;
 
@@ -275,23 +272,29 @@ describe('the retry of a tool across a rotation of the key', () => {
 
 const askedAt = Date.UTC(2026, 9, 15, 14);
 
-const tenMinutesMs = 10 * 60 * 1000;
+const boundToTheAdmin = {
+  http: { authInfo: { extra: { ...acmeAdminActing, requestId: 'request', dropped: [], context: Context.empty() } } },
+  mcpReq: { id: 1, signal: new AbortController().signal, requestState: () => {} },
+};
 
-describe('the retry of a tool as long after it asked as its link lasts', () => {
+describe('the state a client holds for a link it was asked to open', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('is answered until ten minutes after the link offered ends, and refused a second later', async () => {
+  it.each([
+    [60_000, linkedAnswers(testRetryStateKeys, 60_000)],
+    [(24 * 60 + 10) * 60 * 1000, linkedAnswers(testRetryStateKeys)],
+  ])('is verified for %i ms, the second figure as it ships, and refused a second later', async (lastsMs, made) => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(askedAt);
-    const state = await stateAskedBy(keyed(listening.origin), openingThePage);
+    const state = await made.minter.mint({ id: 'page-0' }, boundToTheAdmin);
 
-    vi.setSystemTime(askedAt + pageLastsMs + tenMinutesMs);
-    const atTheEnd = await retriedWith(keyed(listening.origin), openingThePage, state);
-    vi.setSystemTime(askedAt + pageLastsMs + tenMinutesMs + 1000);
+    vi.setSystemTime(askedAt + lastsMs);
+    const atTheEnd = await made.states.verify(state, boundToTheAdmin);
+    vi.setSystemTime(askedAt + lastsMs + 1000);
 
-    expect(atTheEnd).toMatchObject({ structuredContent: { again: true } });
-    await expect(retriedWith(keyed(listening.origin), openingThePage, state)).rejects.toThrow(refusedState);
+    expect(atTheEnd).toEqual({ id: 'page-0' });
+    await expect(made.states.verify(state, boundToTheAdmin)).rejects.toThrow('expired');
   });
 });

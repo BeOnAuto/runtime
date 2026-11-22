@@ -22,8 +22,6 @@ import { MessageField } from './request-fields.ts';
 
 export const ClientSourceField = ClientSourceSchema;
 
-export const ExpiresAtField = Schema.String.annotate({ description: 'When the link expires, in ISO 8601 UTC' });
-
 export const RendersField = Schema.optionalKey(Schema.String.annotate({ description: rendersDescription }));
 
 export function rendersFieldOf(providers: ProviderList, provider: string | null): { readonly renders?: string } {
@@ -37,13 +35,7 @@ export const AddedSchema = Schema.Struct({
   connect: Schema.optionalKey(
     Schema.Struct({
       url: Schema.String.annotate({ description: "Studio's page, where the person approves the connection" }),
-      expires_at: ExpiresAtField,
-    }).annotate({ description: 'The link that approves the connection, while it lasts and is not used up' }),
-  ),
-  link_ran_out: Schema.optionalKey(
-    Schema.Literal(true).annotate({
-      description: 'Answered after the link: the link offered ran out unused, so the connection stands as it was',
-    }),
+    }).annotate({ description: 'The link that approves the connection, until it is used or a newer link replaces it' }),
   ),
   link_replaced: Schema.optionalKey(
     Schema.Literal(true).annotate({

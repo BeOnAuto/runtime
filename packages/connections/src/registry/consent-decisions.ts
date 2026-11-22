@@ -7,7 +7,6 @@ import { clientUngivenOf } from './oauth-client-decisions.ts';
 import { playbooksChosenOf } from './playbooks-decisions.ts';
 import {
   clientChangedOf,
-  finishableConnectionOf,
   isOpenConsent,
   linkedConnectionOf,
   noOpenConsent,
@@ -56,7 +55,7 @@ export function finishedConnectionOf(
   use: LinkUse,
   acted: CommandMetadata,
 ): Result.Result<KeptWithLink, ConsentRefusal> {
-  return Result.flatMap(finishableConnectionOf(registry, use, acted), takingConsent);
+  return Result.flatMap(linkedConnectionOf(registry, use, acted), takingConsent);
 }
 
 export function decideStart(command: ConsentStart & CommandMetadata, registry: Registry): Decision {

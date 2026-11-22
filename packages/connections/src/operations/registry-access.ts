@@ -64,21 +64,19 @@ export function allowedToChoose(
 }
 
 interface OfferStanding {
-  readonly connect?: { readonly url: string; readonly expires_at: string };
-  readonly link_ran_out?: true;
+  readonly connect?: { readonly url: string };
   readonly link_replaced?: true;
 }
 
-function standingOfTheOffer({ link, replacedLinks }: KeptConnection, url: string, at: string): OfferStanding {
+function standingOfTheOffer({ link, replacedLinks }: KeptConnection, url: string): OfferStanding {
   if (link === undefined) {
     return {};
   }
   const offered = tokenSha256OfPage(url);
-  const isOpen = link.expires_at > at;
   if (link.token_sha256 === offered) {
-    return isOpen ? { connect: { url, expires_at: link.expires_at } } : { link_ran_out: true };
+    return { connect: { url } };
   }
-  return isOpen && replacedLinks.has(offered) ? { link_replaced: true } : {};
+  return replacedLinks.has(offered) ? { link_replaced: true } : {};
 }
 
 export const standingAfterTheLink = Effect.fnUntraced(function* (
@@ -87,7 +85,7 @@ export const standingAfterTheLink = Effect.fnUntraced(function* (
 ) {
   const kept = yield* Effect.orDie(foundConnection({ providers }, id));
   const connection = yield* shownConnection(secrets, kept);
-  return { ...connection, ...standingOfTheOffer(kept, url, DateTime.formatIso(yield* DateTime.now)) };
+  return { ...connection, ...standingOfTheOffer(kept, url) };
 });
 
 export const actedNow = Effect.gen(function* () {

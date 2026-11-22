@@ -996,7 +996,7 @@
       ]
     },
     {
-      "sha256": "e21905d3db53130fd016050723f1c06d0162dd72acdaa2cf3f8663ce64c33f60",
+      "sha256": "dd586b5df1935c808f91d59d63299cb6c82f82b41f9087f78b7b18072d597677",
       "tier": 1,
       "received": [
         {
@@ -1009,7 +1009,7 @@
         }
       ],
       "lines": [
-        "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. Once approved, the connection's tools serve the org's playbooks. Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how. An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page. It answers pending with a link to Studio's page, where the person approves it within 24 hours. If the person may not approve the connection, it sends the admins a request and answers no link. Nothing is granted by this call and no credential passes through it."
+        "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. Once approved, the connection's tools serve the org's playbooks. Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how. An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page. It answers pending with a link to Studio's page, where the person approves it. If the person may not approve the connection, it sends the admins a request and answers no link. Nothing is granted by this call and no credential passes through it."
       ]
     },
     {
@@ -1608,7 +1608,7 @@
       ]
     },
     {
-      "sha256": "fe2aff7a2045a98a8a84cdfc63fe2a939cf0b15bb1182838e30607add44e0113",
+      "sha256": "feb4921ef23d611db8963c4608bb5b304495dacdfa72564c5e2ecc7804bbae29",
       "tier": 1,
       "received": [
         {
@@ -1621,7 +1621,7 @@
         }
       ],
       "lines": [
-        "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
+        "Issues a new link to Studio's page for a connection that is broken, or whose link the person no longer has, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, or where the person no longer has the link of a connection that is not connected yet. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
       ]
     },
     {

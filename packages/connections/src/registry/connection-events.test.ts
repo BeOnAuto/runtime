@@ -86,11 +86,7 @@ const baseline: readonly (typeof ConnectionEventSchema.Type)[] = [
     },
     context: acted,
   },
-  {
-    type: 'connection_link_issued',
-    data: { ...ofTheConnection, token_sha256: 'a1b2c3', expires_at: '2026-10-30T10:00:00.000Z' },
-    context: acted,
-  },
+  { type: 'connection_link_issued', data: { ...ofTheConnection, token_sha256: 'a1b2c3' }, context: acted },
   {
     type: 'connection_consent_started',
     data: { ...startedBefore, says: {} },
@@ -121,7 +117,7 @@ const baseline: readonly (typeof ConnectionEventSchema.Type)[] = [
 const askingMore: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_link_issued',
-    data: { ...ofTheConnection, token_sha256: 'a1b2c3', expires_at: '2026-10-30T10:00:00.000Z', more: 'edit' },
+    data: { ...ofTheConnection, token_sha256: 'a1b2c3', more: 'edit' },
     context: acted,
   },
   {
@@ -170,15 +166,20 @@ const underTheOrgsOAuthClient: readonly (typeof ConnectionEventSchema.Type)[] = 
   },
 ];
 
+const askedBy = { id: 'https://agent.example/oauth/client.json', name: 'An agent', domain: 'agent.example' };
+
 const askedThroughAClient: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_link_issued',
-    data: {
-      ...ofTheConnection,
-      token_sha256: 'a1b2c3',
-      expires_at: '2026-10-30T10:00:00.000Z',
-      asked_by: { id: 'https://agent.example/oauth/client.json', name: 'An agent', domain: 'agent.example' },
-    },
+    data: { ...ofTheConnection, token_sha256: 'a1b2c3', asked_by: askedBy },
+    context: acted,
+  },
+];
+
+const issuedWithNoEnd: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_link_issued',
+    data: { ...ofTheConnection, token_sha256: 'e5f6a7', more: 'edit', asked_by: askedBy },
     context: acted,
   },
 ];
@@ -281,7 +282,7 @@ describe('the facts of the registry of connections', () => {
       '0.69.0': [...givenItsEvents, ...identifiedByTheRuntime],
       '0.70.0': [...actingAsAnAccount, ...wayChosenAgain],
       '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
-      '0.72.0': wayChosenWithItsValues,
+      '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd],
     },
   });
 });

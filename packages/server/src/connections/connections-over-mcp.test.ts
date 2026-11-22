@@ -106,15 +106,15 @@ describe('add_connection over MCP', () => {
     expect(elicited).toEqual([
       {
         mode: 'url',
-        message:
-          'Open this page to approve the connection “notes-linked”, and give its credential where it takes one, within 24 hours.',
+        message: 'Open this page to approve the connection “notes-linked”, and give its credential where it takes one.',
         url,
       },
     ]);
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=[\da-f-]{36}&token=[\w-]{43}$/u);
     expect(answer.structuredContent).toMatchObject({ name: 'notes-linked', status: 'pending' });
+    expect(answer.structuredContent).toHaveProperty('connect', { url });
     expect(plainTextIn(answer)).toBe(
-      'Added the connection “notes-linked”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
+      'Added the connection “notes-linked”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one.',
     );
   });
 
@@ -128,7 +128,7 @@ describe('add_connection over MCP', () => {
     expect([formsAlone.elicited, legacy.elicited]).toEqual([[], []]);
     expect(urls.filter((url) => /^http:\/\/127\.0\.0\.1:\d+\/studio\/connect\?connection=/u.test(url))).toHaveLength(2);
     expect(plainTextIn(legacy.answer)).toBe(
-      'Added the connection “notes-legacy”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours.',
+      'Added the connection “notes-legacy”. Show the person who added the connection a link named “Approve the connection”, never its address. On that page they approve it and give its credential where it takes one.',
     );
   });
 });

@@ -6,7 +6,6 @@ import {
   ChosenPlaybooksField,
   ClientSourceField,
   ConnectionIdField,
-  ExpiresAtField,
   GroupOfMoreSchema,
   NextClientIdField,
   TokenField,
@@ -48,7 +47,6 @@ const LinkedSchema = Schema.Struct({
       'The scopes the connection asked that its provider still asks or offers, and beside them those the consent this link starts asks, each with what a connection can do through it; empty where it asks none',
   }),
   link: Schema.Struct({
-    expires_at: ExpiresAtField,
     more: Schema.optionalKey(
       GroupOfMoreSchema.annotate({
         description: 'The group of more the link asks beside what the connection holds, where it was given for one',
@@ -83,7 +81,7 @@ const LinkedSchema = Schema.Struct({
   ...ListedOnThePageFields,
 }).annotate({
   identifier: 'LinkedConnection',
-  description: 'The connection an open link names, and when the link expires',
+  description: 'The connection an open link names',
 });
 
 type Linked = KeptWithLink['connection'];
@@ -144,14 +142,14 @@ export function defineReadLink(reading: LinkReading) {
     name: 'read_link',
     title: 'Read link',
     description: [
-      "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve.",
-      'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
+      "Reads the connection an open link names, so Studio's page can show what the person is asked to approve.",
+      'A link is open from when add_connection or reconnect_connection gave it until the connection is connected or removed, or a newer link replaces it.',
       "A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'asked_by names the client the link was asked through, where the call that gave it named one.',
       'For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read.',
       'For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them.',
-      'A token that is unknown, used up, expired or replaced is answered as not found.',
+      'A token that is unknown, used up or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
     body: { kind: 'none' },
@@ -177,7 +175,7 @@ export function defineReadLink(reading: LinkReading) {
           asked.scope,
           asked.says,
         ),
-        link: { expires_at: kept.link.expires_at, ...moreOfTheLink(asked) },
+        link: moreOfTheLink(asked),
         ...openConsentOf(kept, acted.at),
         ...source,
         ...returnAddressFor(kept.connection, reading),

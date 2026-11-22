@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { connectOf, studioBaseFor } from '../links/connect-page.ts';
 import { connectionShown } from '../registry/connection.ts';
-import type { KeptConnection, OpenLink } from '../registry/registry.ts';
+import type { KeptConnection } from '../registry/registry.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
 import { rendersFieldOf, type AdditionGiven } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
@@ -40,12 +40,12 @@ export function addedAnswerOf({ connection }: KeptConnection, { providers }: Pic
 
 export const answeredWithItsLink = Effect.fnUntraced(function* (
   kept: KeptConnection,
-  { token, link }: { readonly token: string; readonly link: OpenLink },
+  { token }: { readonly token: string },
   { pages, providers }: Pick<ConnectionServices, 'pages' | 'providers'>,
 ) {
   const { org } = yield* OrgContext;
   return {
     ...addedAnswerOf(kept, { providers }),
-    connect: connectOf(pages, { org, connection: kept.connection.id, token }, link.expires_at),
+    connect: connectOf(pages, { org, connection: kept.connection.id, token }),
   };
 });

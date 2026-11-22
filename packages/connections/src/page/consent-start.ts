@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
-import { ClientSourceField, ExpiresAtField } from '../operations/connection-fields.ts';
+import { ClientSourceField } from '../operations/connection-fields.ts';
 import { actedNow, allowedToChoose, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/consent-decisions.ts';
 import { forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
@@ -15,7 +15,7 @@ const StartedSchema = Schema.Struct({
     url: Schema.String.annotate({
       description: 'The page of the authorization server, where the person signs in and allows Auto',
     }),
-    expires_at: ExpiresAtField.annotate({
+    expires_at: Schema.String.annotate({
       description: 'When the consent must be finished by, ten minutes on, in ISO 8601 UTC',
     }),
   }),

@@ -109,8 +109,11 @@ const unrendered = {
 const earlier = '2026-10-15T13:00:00.000Z';
 
 describe('the answer to adding a connection', () => {
-  it('is the connection pending, added by the caller, and the time its link expires, 24 hours on', async () => {
-    expect(await adding(harness({ policy: crmPolicy }), crmWithTenant)).toMatchObject({
+  it('is the connection pending, added by the caller, and its link, with nothing of an end', async () => {
+    const outcome = await adding(harness({ policy: crmPolicy }), crmWithTenant);
+    const aPage: unknown = expect.stringMatching(/^https:\/\/studio\.on\.auto\/connect\?/u);
+
+    expect(outcome).toMatchObject({
       status: 'succeeded',
       output: {
         name: 'crm',
@@ -128,9 +131,9 @@ describe('the answer to adding a connection', () => {
         connected_at: null,
         connected_by: null,
         broken: null,
-        connect: { expires_at: '2026-10-16T14:00:00.000Z' },
       },
     });
+    expect(outcome).toHaveProperty('output.connect', { url: aPage });
   });
 
   it("links to Studio's page, naming the runtime, the org, the connection and a token of 32 random bytes", async () => {
@@ -161,7 +164,6 @@ describe('the facts of adding a connection', () => {
     expect(facts[1]?.data).toEqual({
       connection: id,
       token_sha256: createHash('sha256').update(token).digest('hex'),
-      expires_at: '2026-10-16T14:00:00.000Z',
     });
     expect(JSON.stringify(facts)).not.toContain(token);
   });
@@ -247,7 +249,7 @@ describe('the description of adding a connection', () => {
         "Once approved, the connection's tools serve the org's playbooks.",
         'Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how.',
         'An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page.',
-        "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
+        "It answers pending with a link to Studio's page, where the person approves it.",
         'If the person may not approve the connection, it sends the admins a request and answers no link.',
         'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),

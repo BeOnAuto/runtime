@@ -42,7 +42,7 @@ const history: readonly ConnectionEvent[] = [
   crmAdded,
   {
     type: 'connection_link_issued',
-    data: { connection: '0199-crm', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+    data: { connection: '0199-crm', token_sha256: 'a1b2' },
   },
 ];
 
@@ -236,7 +236,7 @@ function addedWith(credential: Credential): ConnectionEvent {
 
 const linkIssued: ConnectionEvent = {
   type: 'connection_link_issued',
-  data: { connection: 'crm-id', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+  data: { connection: 'crm-id', token_sha256: 'a1b2' },
 };
 
 const linkUse = { connection: 'crm-id', token_sha256: 'a1b2', bindsPerson: true };
@@ -327,7 +327,7 @@ describe('an added connection, as the stream folds it', () => {
         account: null,
         app_credentials: [],
       },
-      link: { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+      link: { token_sha256: 'a1b2' },
       replacedLinks: new Set(),
       secretId: undefined,
       algorithm: undefined,
@@ -419,11 +419,11 @@ describe('a later link of a connection, as the stream folds it', () => {
   it('takes the place of the one before, keeping the digest of one it replaced and none of one used up', () => {
     const nextLink: ConnectionEvent = {
       type: 'connection_link_issued',
-      data: { connection: '0199-crm', token_sha256: 'c3d4', expires_at: '2026-10-16T14:05:00.000Z' },
+      data: { connection: '0199-crm', token_sha256: 'c3d4' },
     };
 
     expect(crmAfter(nextLink)).toMatchObject({
-      link: { token_sha256: 'c3d4', expires_at: '2026-10-16T14:05:00.000Z' },
+      link: { token_sha256: 'c3d4' },
       replacedLinks: new Set(['a1b2']),
     });
     expect(crmAfter(approval, connection, nextLink)?.replacedLinks).toEqual(new Set());
@@ -860,5 +860,105 @@ describe('an approval refused that names playbooks', () => {
       Result.fail({ _tag: 'not_found' }),
       Result.fail({ _tag: 'forbidden' }),
     ]);
+  });
+});
+
+const aMomentOn = '2026-10-15T14:00:01.000Z';
+
+const yearsOn = '2031-10-15T14:00:00.000Z';
+
+const yearsAndFiveMinutesOn = '2031-10-15T14:05:00.000Z';
+
+function foldedAt(...facts: readonly (readonly [ConnectionEvent, string])[]): Registry {
+  return facts.reduce(
+    (state, [event, at]) => registryDecider.evolve(state, recorded(event, { by: 'person:ada', at })),
+    registryDecider.initialState,
+  );
+}
+
+const anyFacts: unknown = expect.any(Array);
+
+const taken = Result.succeed(anyFacts);
+
+const notFound = Result.fail({ _tag: 'not_found' });
+
+const newerLink: ConnectionEvent = {
+  type: 'connection_link_issued',
+  data: { connection: 'crm-id', token_sha256: 'e5f6' },
+};
+
+const consentStarted: ConnectionEvent = {
+  type: 'connection_consent_started',
+  data: {
+    connection: 'crm-id',
+    state_sha256: 'c3d4',
+    verifier_secret_id: 'secret-2',
+    client_id: 'auto-runtime',
+    client_source: 'registered',
+    expires_at: '2031-10-15T14:10:00.000Z',
+    says: {},
+  },
+};
+
+const finishing: ConnectionCommand = {
+  type: 'finish',
+  ...linkUse,
+  connected_by: ada,
+  state_sha256: 'c3d4',
+  secret_id: 'secret-3',
+  client_id: 'auto-runtime',
+  client_source: 'registered',
+  by: 'person:ada',
+  at: yearsAndFiveMinutesOn,
+};
+
+function connectionLinkedThen(event: ConnectionEvent): Registry {
+  return foldedAt([addedWith(takingNone), acted.at], [linkIssued, acted.at], [event, aMomentOn]);
+}
+
+const byConsentLinked: readonly (readonly [ConnectionEvent, string])[] = [
+  [addedWith(byConsent), acted.at],
+  [linkIssued, acted.at],
+];
+
+describe('the link of a connection, as a decision looks it up', () => {
+  it.each([
+    ['a moment after its fact', acted.at, aMomentOn],
+    ['years after its fact', acted.at, yearsOn],
+    ['before the moment its fact holds', yearsOn, acted.at],
+  ])('is taken %s, by an approval, a credential given and a start of its consent', (_, issuedAt, at) => {
+    const linked = (credential: Credential) => foldedAt([addedWith(credential), issuedAt], [linkIssued, issuedAt]);
+
+    expect([
+      registryDecider.decide({ ...approving({}), at }, linked(takingNone)),
+      registryDecider.decide({ ...giving({}), at }, linked(takingASecret)),
+      registryDecider.decide({ ...starting({}), at }, linked(byConsent)),
+    ]).toMatchObject([taken, taken, taken]);
+  });
+
+  it('is refused once its connection is connected or removed, or a newer link replaced it, and the newer link is taken', () => {
+    const approvingYearsOn = { ...approving({}), at: yearsOn };
+    const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'crm-id' } };
+
+    expect([
+      registryDecider.decide(approvingYearsOn, connectionLinkedThen(connected)),
+      registryDecider.decide(approvingYearsOn, connectionLinkedThen(removed)),
+      registryDecider.decide(approvingYearsOn, connectionLinkedThen(newerLink)),
+      registryDecider.decide(
+        { ...approving({}, { token_sha256: 'e5f6' }), at: yearsOn },
+        connectionLinkedThen(newerLink),
+      ),
+    ]).toMatchObject([notFound, notFound, notFound, taken]);
+  });
+
+  it('is the same for a start of consent and its finish, which take a link years on and refuse one a newer link replaced', () => {
+    const startingYearsOn = { ...starting({}), at: yearsOn };
+
+    expect([
+      registryDecider.decide(startingYearsOn, foldedAt(...byConsentLinked)),
+      registryDecider.decide(finishing, foldedAt(...byConsentLinked, [consentStarted, yearsOn])),
+      registryDecider.decide(startingYearsOn, foldedAt(...byConsentLinked, [newerLink, yearsOn])),
+      registryDecider.decide(finishing, foldedAt(...byConsentLinked, [consentStarted, yearsOn], [newerLink, yearsOn])),
+    ]).toMatchObject([taken, taken, notFound, notFound]);
   });
 });

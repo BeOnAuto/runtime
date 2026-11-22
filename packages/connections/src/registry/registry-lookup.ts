@@ -28,7 +28,7 @@ function connectionNotFound(id: string): NotFound {
   return new NotFound({ detail: `There is no connection ${id} in this org` });
 }
 
-const noOpenLink = new NotFound({ detail: 'There is no open link of this token: it is unknown, used up or expired' });
+const noOpenLink = new NotFound({ detail: 'There is no open link of this token: it is unknown or used up' });
 
 function replacedLink(name: string): NotFound {
   return new NotFound({
@@ -57,10 +57,6 @@ function isOfTheToken(kept: KeptConnection, tokenSha256: string): kept is KeptWi
   return kept.link !== undefined && kept.link.token_sha256 === tokenSha256;
 }
 
-function isOpen(kept: KeptConnection, tokenSha256: string, at: string): kept is KeptWithLink {
-  return isOfTheToken(kept, tokenSha256) && kept.link.expires_at > at;
-}
-
 export function bindingRefusalOf(
   { connection }: KeptConnection,
   bindsPerson: boolean,
@@ -73,38 +69,21 @@ export function bindingRefusalOf(
     : undefined;
 }
 
-function boundConnectionOf(
+export function linkedConnectionOf(
   registry: Registry,
   { connection, token_sha256: tokenSha256, bindsPerson }: LinkUse,
   { by }: Acted,
-  isUsable: (kept: KeptConnection, tokenSha256: string) => kept is KeptWithLink,
 ): Result.Result<KeptWithLink, NotFound | Forbidden> {
   return Result.flatMap(
     keptConnectionOf(registry, connection),
     (kept): Result.Result<KeptWithLink, NotFound | Forbidden> => {
-      if (!isUsable(kept, tokenSha256)) {
+      if (!isOfTheToken(kept, tokenSha256)) {
         return Result.fail(unusableLinkOf(kept, tokenSha256));
       }
       const refusal = bindingRefusalOf(kept, bindsPerson, by);
       return refusal === undefined ? Result.succeed(kept) : Result.fail(refusal);
     },
   );
-}
-
-export function linkedConnectionOf(
-  registry: Registry,
-  use: LinkUse,
-  acted: Acted,
-): Result.Result<KeptWithLink, NotFound | Forbidden> {
-  return boundConnectionOf(registry, use, acted, (kept, tokenSha256) => isOpen(kept, tokenSha256, acted.at));
-}
-
-export function finishableConnectionOf(
-  registry: Registry,
-  use: LinkUse,
-  acted: Acted,
-): Result.Result<KeptWithLink, NotFound | Forbidden> {
-  return boundConnectionOf(registry, use, acted, isOfTheToken);
 }
 
 export function isOpenConsent(kept: KeptWithLink, at: string): kept is KeptWithConsent {

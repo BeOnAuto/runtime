@@ -39,11 +39,11 @@ On an Auto that serves its own Studio, open Studio, go to Settings, Connections,
 
    Your agent may ask which playbook the connection is for. Name the playbooks that may use it, or say that every playbook of your organization may. A connection that names no playbook is for every playbook of the organization.
 
-2. Your agent asks you to open a page of Studio, or gives you its link. The link works for 24 hours. On an Auto that signs people in, only you can use it, signed in as yourself.
+2. Your agent asks you to open a page of Studio, or gives you its link. The link works until the connection is connected or removed, or until a newer link replaces it. On an Auto that signs people in, only you can use it, signed in as yourself.
 3. Check what the page says you are connecting, and press Continue to Zoom.
 4. Sign in to Zoom and allow access, as in step 3 of Add Zoom. Zoom sends you back to Studio, which shows Zoom as connected. Your agent sees it connected too.
 
-If the link runs out before Zoom is connected, ask your agent to reconnect it, for a new link.
+If you no longer have the link before Zoom is connected, ask your agent to reconnect it, for a new link.
 
 ## What you see
 
@@ -123,7 +123,7 @@ Auto's Zoom app is user-managed: each person adds it for themselves, for their o
 | What you see                                                                                                                 | What it means and what to do                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Connections shows no Zoom tile, and the link under Add Zoom opens no dialog                                                  | Studio does not offer Zoom to you yet, as [What you need](#what-you-need) says. Add Zoom once Connections shows its tile                                                                                                                |
-| Studio says Zoom denied access                                                                                               | You did not allow access at Zoom, or Zoom refused it. Press Start again to go back to Zoom while the connection's link lasts, or Open Connections to leave it. The connection waits, pending, until you allow access or remove it       |
+| Studio says Zoom denied access                                                                                               | You did not allow access at Zoom, or Zoom refused it. Press Start again to go back to Zoom, or Open Connections to leave it. The connection waits, pending, until you allow access or remove it                                         |
 | Zoom says the app needs your admin's approval                                                                                | Your Zoom account requires pre-approval. Request it at Zoom, or ask your admin to pre-approve Auto, as [What your Zoom admin may have to allow](#what-your-zoom-admin-may-have-to-allow) says, then press Start again or add Zoom again |
 | The `zoom` row says Needs attention, with Zoom asks for access this connection was not granted                               | A call needs a permission the connection was not granted. Open the row and press Connect again, then allow access at Zoom. If your admin has turned the feature off, ask them first                                                     |
 | The `zoom` row says Broken, with Zoom no longer accepts this connection, or the access Zoom gave it was revoked or has ended | Zoom refused the connection's tokens, as after you removed the app at Zoom, or the access ended. Open the row and press Sign in again, then sign in to Zoom and allow access. Or ask your agent to reconnect Zoom, for a new link       |

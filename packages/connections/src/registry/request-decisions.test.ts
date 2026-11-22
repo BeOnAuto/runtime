@@ -31,7 +31,7 @@ const addition = {
   says: {},
 } as const;
 
-const link = { token_sha256: 'a1b2', expires_at: '2026-11-22T11:00:00.000Z' };
+const link = { token_sha256: 'a1b2' };
 
 function byTheEditor(data: ConnectionCommandData): ConnectionCommand {
   return { ...data, by: editor.id, at: askedAt };

@@ -149,7 +149,7 @@ describe('the words of reconnecting a connection for more', () => {
     const words = await wordsOfReconnectingFor(h, pending.id, longest.name);
 
     expect([words.length, withinCharacters(words, mostOutcomeCharacters)]).toEqual([
-      584,
+      567,
       expect.stringContaining('never its address.'),
     ]);
   });
@@ -158,7 +158,7 @@ describe('the words of reconnecting a connection for more', () => {
     const { id } = await added(h, { provider: 'files' });
 
     expect(await wordsOfReconnectingFor(h, id, 'share')).toBe(
-      'Gave a new link to the connection “files”; the link before it stops working. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
+      'Gave a new link to the connection “files”; the link before it stops working. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 

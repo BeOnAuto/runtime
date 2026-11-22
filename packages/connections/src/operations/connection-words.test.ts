@@ -42,12 +42,12 @@ async function linkOf(h: Harness): Promise<LinkToOpen | undefined> {
   return linkingOf(h).toOpen(outputOf(outcome));
 }
 
-async function outputAfterTheLink(h: Harness, { id, url }: Added, at?: string): Promise<unknown> {
-  return outputOf(await h.call({ registration: linkingOf(h).answerAfter({ id, url }) }, ada, notes, at));
+async function outputAfterTheLink(h: Harness, { id, url }: Added): Promise<unknown> {
+  return outputOf(await h.call({ registration: linkingOf(h).answerAfter({ id, url }) }, ada, notes));
 }
 
-async function wordsAfterTheLink(h: Harness, link: Added, at?: string): Promise<string> {
-  return wordsOf(h, 'add_connection').outcome(await outputAfterTheLink(h, link, at), notes);
+async function wordsAfterTheLink(h: Harness, link: Added): Promise<string> {
+  return wordsOf(h, 'add_connection').outcome(await outputAfterTheLink(h, link), notes);
 }
 
 describe('the words of adding a connection', () => {
@@ -119,7 +119,7 @@ describe('the words of adding a connection under the organization’s own OAuth 
 });
 
 describe('the words of the answer after the link of a connection', () => {
-  it('differ for a connection approved, pending, expired, replaced by a newer link and cancelled, and are the words of adding it while its link lasts', async () => {
+  it('differ for a connection approved, pending, replaced by a newer link and cancelled, and are the words of adding it while its link is open', async () => {
     const h = harness();
     const [approved, pending, replaced, cancelled] = [
       await added(h, notes),
@@ -133,7 +133,6 @@ describe('the words of the answer after the link of a connection', () => {
     const words = [
       await wordsAfterTheLink(h, approved),
       await wordsAfterTheLink(h, pending),
-      await wordsAfterTheLink(h, pending, pending.expiresAt),
       await wordsAfterTheLink(h, replaced),
       await wordsAfterTheLink(h, cancelled),
     ].map((said) => said.replace(/notes(-\d)?/u, 'notes'));
@@ -147,8 +146,9 @@ describe('the words of the answer after the link of a connection', () => {
   it('ask no agent to have the person open a link once there is none', async () => {
     const h = harness();
     const link = await added(h, notes);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id: link.id, token: link.token });
 
-    expect(linkingOf(h).toOpen(await outputAfterTheLink(h, link, link.expiresAt))).toBeUndefined();
+    expect(linkingOf(h).toOpen(await outputAfterTheLink(h, link))).toBeUndefined();
   });
 });
 

@@ -134,28 +134,21 @@ describe('the answer to adding a connection after its link', () => {
     expect(answer).not.toHaveProperty('output.connect');
   });
 
-  it('is the connection pending with its link, while the link lasts', async () => {
-    const h = harness();
-    const link = await added(h, notes);
+  it.each(['2026-10-16T14:00:00.000Z', '2031-10-15T14:00:00.000Z'])(
+    'is the connection pending with its link alone, while it is the connection’s link, at %s',
+    async (at) => {
+      const h = harness();
+      const link = await added(h, notes);
 
-    expect(await answeredAfterTheLink(h, link, notes, '2026-10-16T13:59:59.999Z')).toMatchObject({
-      status: 'succeeded',
-      output: { id: link.id, status: 'pending', connect: { url: link.url, expires_at: link.expiresAt } },
-    });
-  });
+      const answer = await answeredAfterTheLink(h, link, notes, at);
+
+      expect(answer).toMatchObject({ status: 'succeeded', output: { id: link.id, status: 'pending' } });
+      expect(answer).toHaveProperty('output.connect', { url: link.url });
+    },
+  );
 });
 
 describe('the answer to adding a connection after its link is gone', () => {
-  it('is the connection pending with no link, once its link has expired', async () => {
-    const h = harness();
-    const link = await added(h, notes);
-
-    const answer = await answeredAfterTheLink(h, link, notes, link.expiresAt);
-
-    expect(answer).toMatchObject({ status: 'succeeded', output: { status: 'pending' } });
-    expect(answer).not.toHaveProperty('output.connect');
-  });
-
   it('is the connection removed, with no link, once the person cancelled it on the page', async () => {
     const h = harness();
     const link = await added(h, notes);
@@ -188,8 +181,6 @@ const sendingAVariable = connectionPolicyOf({ variables: ['NOTES_API_KEY'] });
 const noteKeySet = new Map([['NOTES_API_KEY', Redacted.make('notes-key-5b2e9d')]]);
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
-
-const newLinkExpires = '2026-10-16T14:05:00.000Z';
 
 const reference = {
   ...notes,
@@ -276,8 +267,8 @@ describe('reconnecting a connection of a reference that is not broken', () => {
     const fromConnected = await reconnecting(h, connected, fiveMinutesLater);
 
     expect([fromPending, fromConnected]).toMatchObject([
-      { status: 'succeeded', output: { id: pending, status: 'pending', connect: { expires_at: newLinkExpires } } },
-      { status: 'succeeded', output: { id: connected, status: 'connected', connect: { expires_at: newLinkExpires } } },
+      { status: 'succeeded', output: { id: pending, status: 'pending', connect: {} } },
+      { status: 'succeeded', output: { id: connected, status: 'connected', connect: {} } },
     ]);
     expect((await h.facts()).slice(-2).map(({ type }) => type)).toEqual([
       'connection_link_issued',

@@ -58,7 +58,7 @@ function added(
 
 const linked: RecordedConnectionEvent = {
   type: 'connection_link_issued',
-  data: { ...ofTheConnection, token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
+  data: { ...ofTheConnection, token_sha256: 'a1b2' },
   context: acted,
 };
 

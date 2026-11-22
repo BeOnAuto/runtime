@@ -113,7 +113,7 @@ describe('the scope of a finish', () => {
     });
   });
 
-  it('is bound to its start and not to the 24 hours of the link, and closes the link', async () => {
+  it('is bound to its start, a day after the link was given, and closes the link', async () => {
     const fake = served();
     const h = consentHarnessAt(fake);
     const link = await filesOf(h);

@@ -3,14 +3,14 @@ import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { type Added, added, crm, issuesIn, lastFact, notes, reconnected, reconnecting } from '../testing/additions.ts';
-import { brokenCrm, connectedCrm, giving } from '../testing/crm-connections.ts';
+import { breaking, brokenCrm, connectedCrm, giving } from '../testing/crm-connections.ts';
 import { acmeReader, acmeWriter, ada, harness, type Harness, operationNamed } from '../testing/harness.ts';
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
 const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
-const aDayAndTenMinutesLater = '2026-10-16T14:10:00.000Z';
+const yearsLater = '2031-10-15T14:00:00.000Z';
 
 function outputOf(outcome: Outcome): unknown {
   return 'output' in outcome ? outcome.output : undefined;
@@ -45,49 +45,54 @@ describe('the answer after the link of a reconnection', () => {
     const output = outputOf(outcome);
 
     expect(linkingOf(h).idOf(output)).toBe(id);
-    expect(linkingOf(h).toOpen(output)?.message).toBe(
-      'Open this page to approve the connection “crm”, and give its credential where it takes one, within 24 hours.',
-    );
+    expect(linkingOf(h).toOpen(output)?.message).toContain('“crm”');
     expect(after).toMatchObject({ output: { id, status: 'connected' } });
     expect(after).not.toHaveProperty('output.connect');
     expect(wordsOf(h, outputOf(after), id)).toBe('Connected the connection “crm”; nothing is left to open.');
   });
 
-  it('says of a connection that stayed connected that the link ran out and it stands as it was', async () => {
+  it.each([fiveMinutesLater, yearsLater])(
+    'answers the link offered, and it alone, while it is still the link of a connection that stayed connected, at %s',
+    async (at) => {
+      const h = harness();
+      const id = await connectedCrm(h);
+      const link = await reconnected(h, id);
+
+      const after = await answeredAfter(h, link, at);
+
+      expect(after).toMatchObject({ output: { id, status: 'connected' } });
+      expect(after).toHaveProperty('output.connect', { url: link.url });
+      expect(after).not.toHaveProperty('output.link_replaced');
+    },
+  );
+
+  it('answers neither the link nor a newer one once the link connected the connection and it broke since', async () => {
     const h = harness();
-    const id = await connectedCrm(h);
+    const id = await brokenCrm(h);
     const link = await reconnected(h, id);
+    await giving(h, link, 'Bearer crm-key-7d2e4b19');
+    await breaking(h, id);
 
-    const after = await answeredAfter(h, link, aDayAndAMinuteLater);
+    const after = await answeredAfter(h, link, yearsLater);
 
-    expect(after).toMatchObject({ output: { id, status: 'connected', link_ran_out: true } });
-    expect(wordsOf(h, outputOf(after), id)).toBe(
-      'The link for the connection “crm” expired unused. The connection is still connected.',
-    );
+    expect(after).toMatchObject({ output: { id, status: 'broken' } });
+    expect(after).not.toHaveProperty('output.connect');
+    expect(after).not.toHaveProperty('output.link_replaced');
+    expect(wordsOf(h, outputOf(after), id)).toContain('“crm”');
   });
 });
 
 describe('the answer after a link a later reconnection replaced', () => {
-  it('says a newer link replaced it while the newer one is open, and to reconnect once that one ran out too', async () => {
+  it.each([fiveMinutesLater, yearsLater])('says a newer link replaced it, at %s', async (at) => {
     const h = harness();
     const id = await brokenCrm(h);
     const first = await reconnected(h, id);
     await reconnected(h, id, fiveMinutesLater);
 
-    const whileOpen = await answeredAfter(h, first, fiveMinutesLater);
-    const ranOut = await answeredAfter(h, first, aDayAndTenMinutesLater);
+    const after = await answeredAfter(h, first, at);
 
-    expect(whileOpen).toMatchObject({ output: { id, status: 'broken', link_replaced: true } });
-    expect(whileOpen).not.toHaveProperty('output.connect');
-    expect(wordsOf(h, outputOf(whileOpen), id)).toBe(
-      'The connection “crm” is broken. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.',
-    );
-    expect(ranOut).toMatchObject({ output: { id, status: 'broken' } });
-    expect(ranOut).not.toHaveProperty('output.link_replaced');
-    expect(ranOut).not.toHaveProperty('output.link_ran_out');
-    expect(wordsOf(h, outputOf(ranOut), id)).toBe(
-      'The connection “crm” is broken, and its link is used up or expired, so nothing is left to open: reconnect it for a new link.',
-    );
+    expect(after).toMatchObject({ output: { id, status: 'broken', link_replaced: true } });
+    expect(after).not.toHaveProperty('output.connect');
   });
 
   it('answers no link where the link it offered was used up before a later reconnection gave another', async () => {

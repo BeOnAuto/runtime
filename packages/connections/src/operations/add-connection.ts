@@ -13,7 +13,7 @@ const description = [
   "Once approved, the connection's tools serve the org's playbooks.",
   'Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how.',
   'An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page.',
-  "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
+  "It answers pending with a link to Studio's page, where the person approves it.",
   'If the person may not approve the connection, it sends the admins a request and answers no link.',
   'Nothing is granted by this call and no credential passes through it.',
 ].join(' ');

@@ -43,7 +43,7 @@ const AddedSchema = Schema.Struct({
   status: Schema.Literal('succeeded'),
   output: Schema.Struct({
     id: Schema.String,
-    connect: Schema.Struct({ url: Schema.String, expires_at: Schema.String }),
+    connect: Schema.Struct({ url: Schema.String }),
   }),
 });
 
@@ -53,7 +53,6 @@ export interface Added {
   readonly id: string;
   readonly token: string;
   readonly url: string;
-  readonly expiresAt: string;
 }
 
 const ListedSchema = Schema.Struct({
@@ -90,12 +89,7 @@ export function statusesOf(h: Harness, inputs: readonly unknown[]): Promise<read
 function linkedIn(outcome: Outcome): Added {
   const { output } = Schema.decodeUnknownSync(AddedSchema)(outcome);
   const { token } = Schema.decodeUnknownSync(LinkSchema)(Object.fromEntries(new URL(output.connect.url).searchParams));
-  return {
-    id: output.id,
-    token,
-    url: output.connect.url,
-    expiresAt: output.connect.expires_at,
-  };
+  return { id: output.id, token, url: output.connect.url };
 }
 
 interface Acting {

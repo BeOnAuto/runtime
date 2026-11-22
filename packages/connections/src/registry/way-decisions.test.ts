@@ -49,7 +49,7 @@ function added(
 function linkOf(token: string): RecordedConnectionEvent {
   return {
     type: 'connection_link_issued',
-    data: { ...ofTheConnection, token_sha256: token, expires_at: '2026-10-16T14:00:00.000Z' },
+    data: { ...ofTheConnection, token_sha256: token },
     context: acted,
   };
 }

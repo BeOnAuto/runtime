@@ -32,7 +32,7 @@ const filesAdded: ConnectionEvent = {
   },
 };
 
-const link = { token_sha256: 'c3d4', expires_at: '2026-10-16T14:00:00.000Z' };
+const link = { token_sha256: 'c3d4' };
 
 const messagesAdded: ConnectionAddition = {
   type: 'add',

@@ -23,7 +23,6 @@ import { signingRemoved, signingSet, signingShown, type KeptSigning } from './ke
 
 export interface OpenLink {
   readonly token_sha256: string;
-  readonly expires_at: string;
   readonly more?: string;
   readonly asked_by?: CallingClient;
 }
@@ -138,12 +137,11 @@ function replacedLinksOf({ link, replacedLinks }: KeptConnection): ReadonlySet<s
 }
 
 function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
-  const { token_sha256: tokenSha256, expires_at: expiresAt, more, asked_by: askedBy } = data;
+  const { token_sha256: tokenSha256, more, asked_by: askedBy } = data;
   return {
     ...kept,
     link: {
       token_sha256: tokenSha256,
-      expires_at: expiresAt,
       ...(more === undefined ? {} : { more }),
       ...(askedBy === undefined ? {} : { asked_by: askedBy }),
     },

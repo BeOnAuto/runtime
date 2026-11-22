@@ -10,8 +10,6 @@ const tokenBytes = 32;
 
 const tenMinutesMs = Duration.toMillis(Duration.minutes(10));
 
-export const linkLastsMs = Duration.toMillis(Duration.hours(24));
-
 export interface IssuedLink extends OpenLink {
   readonly token: string;
 }
@@ -38,7 +36,6 @@ export function issuedToken(): { readonly token: string; readonly token_sha256: 
 }
 
 export const issuedLink: Effect.Effect<IssuedLink, never, Caller> = Effect.gen(function* () {
-  const expiresAt = yield* momentAfter(linkLastsMs);
   const { client } = yield* Caller;
-  return { ...issuedToken(), expires_at: expiresAt, ...(client === undefined ? {} : { asked_by: client }) };
+  return { ...issuedToken(), ...(client === undefined ? {} : { asked_by: client }) };
 });

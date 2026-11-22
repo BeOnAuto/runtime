@@ -61,7 +61,7 @@ const DetailSchema = Schema.Struct({ detail: Schema.String });
 
 const AddedSchema = Schema.Struct({
   id: Schema.String,
-  connect: Schema.Struct({ url: Schema.String, expires_at: Schema.String }),
+  connect: Schema.Struct({ url: Schema.String }),
 });
 
 let ledger: TemporaryLedger | undefined;
@@ -109,7 +109,7 @@ function linkedIn({ body }: TestResponse) {
   const { token } = Schema.decodeUnknownSync(Schema.Struct({ token: Schema.String }))(
     Object.fromEntries(page.searchParams),
   );
-  return { id, page, token, expiresAt: connect.expires_at };
+  return { id, page, token, url: connect.url };
 }
 
 async function added(served: ReasoningServer, body: unknown = crm()) {
@@ -439,9 +439,9 @@ describe('connections over http', () => {
       expect(`${page.origin}${page.pathname}`).toBe(`${served.origin}/studio/connect`);
     });
 
-    it('lists the connection and reads it, and reads it through its link with when the link expires', async () => {
+    it('lists the connection and reads it, and reads it through its link, with nothing of an end in either answer', async () => {
       const served = await serving();
-      const { id, token, expiresAt } = await added(served);
+      const { answer, id, token, url } = await added(served);
 
       const [listed, read, linked] = [
         await served.call('GET', connections),
@@ -450,10 +450,9 @@ describe('connections over http', () => {
       ];
 
       expect(listed).toMatchObject({ status: 200, body: { connections: [{ id, name: 'crm', type: 'mcp' }] } });
-      expect([read.body, linked.body]).toMatchObject([
-        { id },
-        { id, status: 'pending', link: { expires_at: expiresAt } },
-      ]);
+      expect([read.body, linked.body]).toMatchObject([{ id }, { id, status: 'pending' }]);
+      expect(answer.body).toHaveProperty('connect', { url });
+      expect(linked.body).toHaveProperty('link', {});
       expect((await served.call('GET', `${connections}/${id}/link/unknown`)).status).toBe(404);
     });
 
@@ -488,7 +487,7 @@ describe('connections over http', () => {
         404,
         'There is no open link of this token: a newer link of the connection crm replaced it',
       ]);
-      expect(current).toMatchObject({ status: 200, body: { id: first.id, link: { expires_at: latest.expiresAt } } });
+      expect(current).toMatchObject({ status: 200, body: { id: first.id, link: {} } });
     });
   });
 

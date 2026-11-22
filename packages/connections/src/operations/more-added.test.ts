@@ -106,6 +106,7 @@ describe('more added', () => {
           client_source: 'registered',
         },
       });
+      expect(read).toHaveProperty('output.link', { more: { name: 'share', for: sharing.for } });
     });
 
     it('asks both in its one consent, holds both among its asked_scopes once the consent starts, and connects granted both', async () => {
@@ -164,7 +165,7 @@ describe('more added', () => {
   describe('the words of adding a connection with a group of more', () => {
     it('say its link asks the person to allow the group as well, in the words of what it is for', async () => {
       expect(await wordsOfAdding(sharingHarness(), sharingToo)).toBe(
-        'Added the connection “files”. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one, within 24 hours. The link asks them to allow “share” as well: Share your files with other people.',
+        'Added the connection “files”. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
       );
     });
   });

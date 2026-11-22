@@ -10,7 +10,7 @@ import { connectedFiles, replacingFiles, type Replacing } from './replacements.t
 const AddedAgainSchema = Schema.Struct({
   output: Schema.Struct({
     id: Schema.String,
-    connect: Schema.Struct({ url: Schema.String, expires_at: Schema.String }),
+    connect: Schema.Struct({ url: Schema.String }),
   }),
 });
 
@@ -34,7 +34,7 @@ export function pressed({ h, ops }: Pick<Pressing, 'h' | 'ops'>, id: string, cal
 export function linkOf(outcome: Outcome): Added {
   const { output } = Schema.decodeUnknownSync(AddedAgainSchema)(outcome);
   const token = Option.getOrThrow(Option.fromNullishOr(new URL(output.connect.url).searchParams.get('token')));
-  return { id: output.id, token, url: output.connect.url, expiresAt: output.connect.expires_at };
+  return { id: output.id, token, url: output.connect.url };
 }
 
 export function startingAs(

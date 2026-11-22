@@ -23,7 +23,7 @@ interface StateMinter {
 
 export interface LinkedAnswers {
   readonly states: StateVerifier;
-  readonly mintingFor: (linkLastsMs: number) => StateMinter;
+  readonly minter: StateMinter;
 }
 
 export interface AnsweringServing extends CallServing {
@@ -34,7 +34,6 @@ export interface ToolLink {
   readonly toOpen: (output: unknown) => LinkToOpen | undefined;
   readonly idOf: (output: unknown) => string;
   readonly dispatchAfter: (offered: OfferedLink) => Dispatch;
-  readonly linkLastsMs: number;
 }
 
 interface LinkingTool extends CalledTool {
@@ -89,7 +88,7 @@ export interface RetryStateKeys {
   readonly previous?: RetryStateKey | undefined;
 }
 
-const answeredAfterTheLinkMs = Duration.toMillis(Duration.minutes(10));
+const retryStateLastsMs = Duration.toMillis(Duration.sum(Duration.hours(24), Duration.minutes(10)));
 
 function codecOptionsOf(key: RetryStateKey) {
   return { key: Redacted.value(key), bind: callerAndOrgOf };
@@ -99,22 +98,20 @@ function verifierOf(key: RetryStateKey): StateVerifier {
   return createRequestStateCodec(codecOptionsOf(key));
 }
 
-function retrySecondsOf(linkLastsMs: number): number {
-  return Math.ceil((linkLastsMs + answeredAfterTheLinkMs) / 1000);
-}
-
 function eitherOf(current: StateVerifier, previous: StateVerifier): StateVerifier {
   return {
     verify: (state, context) => current.verify(state, context).catch(() => previous.verify(state, context)),
   };
 }
 
-export function linkedAnswers({ current, previous }: RetryStateKeys): LinkedAnswers {
+export function linkedAnswers(
+  { current, previous }: RetryStateKeys,
+  stateLastsMs: number = retryStateLastsMs,
+): LinkedAnswers {
   const verifying = verifierOf(current);
   return {
     states: previous === undefined ? verifying : eitherOf(verifying, verifierOf(previous)),
-    mintingFor: (linkLastsMs) =>
-      createRequestStateCodec({ ...codecOptionsOf(current), ttlSeconds: retrySecondsOf(linkLastsMs) }),
+    minter: createRequestStateCodec({ ...codecOptionsOf(current), ttlSeconds: Math.ceil(stateLastsMs / 1000) }),
   };
 }
 
@@ -178,9 +175,10 @@ function askingToOpen(serving: AnsweringServing, call: OrgCall, tool: LinkingToo
       ? answer
       : inputRequired({
           inputRequests: { [theLink]: inputRequired.elicitUrl({ message: toOpen.message, url: toOpen.url }) },
-          requestState: await serving.linkedAnswers
-            .mintingFor(link.linkLastsMs)
-            .mint({ ...owner, id: link.idOf(output), url: toOpen.url }, context),
+          requestState: await serving.linkedAnswers.minter.mint(
+            { ...owner, id: link.idOf(output), url: toOpen.url },
+            context,
+          ),
         });
   };
 }

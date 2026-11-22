@@ -204,7 +204,6 @@ function linkOf({ opened, at }: typeof Linked.Type) {
 const answeredAgain = {
   idOf: ({ id }: typeof Linked.Type) => id,
   read: ({ id, url }: OfferedLink) => Effect.succeed({ id, opened: `${url}#again`, at: new Date(1000) }),
-  linkLastsMs: 60_000,
 };
 
 const linking = defineCommand('org', { ...linked, linkToOpen: linkOf, answerAfterTheLink: answeredAgain });
@@ -216,7 +215,7 @@ function answeringAfter(link: OfferedLink) {
 }
 
 describe('the link a registration asks a person to open', () => {
-  it('is read from its output as JSON gives it, with the id of what it is for and how long it lasts, and is not there unless its definition gives one', () => {
+  it('is read from its output as JSON gives it, with the id of what it is for, and is not there unless its definition gives one', () => {
     const output = { id: 'page-1', opened: 'https://page.example/open', at: '1970-01-01T00:00:00.000Z' };
 
     expect(linking.registration.link?.toOpen(output)).toEqual({
@@ -225,8 +224,13 @@ describe('the link a registration asks a person to open', () => {
     });
     expect(linking.registration.link?.toOpen({ id: 'page-1', at: '1970-01-01T00:00:00.000Z' })).toBeUndefined();
     expect(linking.registration.link?.idOf(output)).toBe('page-1');
-    expect(linking.registration.link?.linkLastsMs).toBe(60_000);
     expect(addNote.registration.link).toBeUndefined();
+  });
+
+  it('holds what to open, the id it is for and the answer after it, and nothing of how long the link lasts', () => {
+    const aFunction: unknown = expect.any(Function);
+
+    expect(linking.registration.link).toStrictEqual({ toOpen: aFunction, idOf: aFunction, answerAfter: aFunction });
   });
 
   it('answers the retry after it with what its read gives, under the input of the call', async () => {
