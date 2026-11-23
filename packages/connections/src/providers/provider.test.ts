@@ -120,6 +120,32 @@ describe('the marks of a provider, named in the settings', () => {
   });
 });
 
+const trackerApp = providerOf({
+  ...tracker,
+  credentials: [
+    {
+      kind: 'client_credentials',
+      issuer: 'https://auth.tracker.example.com',
+      description: 'The client id and secret of an app your company registers at Tracker.',
+    },
+  ],
+});
+
+describe('a provider of client credentials to an MCP server, named in the settings', () => {
+  it('is its server with its token asked at the issuer its way names', () => {
+    const credential = { client_id: 'acme-app', client_secret: '${TRACKER_SECRET}' };
+    const named = { provider: 'tracker', placeholders: { site: 'acme' }, credential, org: 'acme' };
+    const read = readToolServerSettings(
+      { TRACKER_SECRET: 'tracker-secret-0c41e9', TOOL_SERVERS: JSON.stringify({ named }) },
+      { modelProviders: ['openai'], providers: makeProviderResolver(providerListOf(trackerApp)) },
+    );
+
+    expect(Effect.runSync(read).servers).toMatchObject([
+      { type: 'mcp', auth: { issuer: 'https://auth.tracker.example.com', client_id: 'acme-app', discovery: 'issuer' } },
+    ]);
+  });
+});
+
 const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
 
 const coding = providersOf(ledgers, metrics, { ...regions, failure_codes: failureCodes }, tracker);

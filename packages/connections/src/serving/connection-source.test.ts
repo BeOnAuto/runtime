@@ -1,5 +1,7 @@
 import { Buffer } from 'node:buffer';
 
+import type { ProviderList } from '@on.auto/providers';
+import { providerListOf, providerOf } from '@on.auto/providers/testing';
 import type {
   ConnectionServer,
   ConnectionServerSettings,
@@ -7,9 +9,9 @@ import type {
   ConnectionUnready,
   OrgConnection,
 } from '@on.auto/tool-servers';
-import { pendingWords, playbookToolCalls } from '@on.auto/tool-servers/testing';
+import { fakeMcpInProcess, pendingWords, playbookToolCalls, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { Effect, Option, Redacted, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { documentDecider, documentStreamOfOrg, keptTextOf } from '../documents/document-streams.ts';
 import { type ConnectionPolicyFields, connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -296,6 +298,86 @@ describe('a connected connection of client credentials as a tool server', () => 
       },
       { auth: { scope: null, credential: { kind: 'private_key', algorithm: 'ES256' } } },
     ]);
+  });
+});
+
+const graphAppSecret = 'graph-app-client-secret-7d21';
+
+function graphServerNaming(authorizationServers?: readonly string[]): FakeMcpServer {
+  const fake = fakeMcpInProcess({
+    client: {
+      clientId: 'playbook',
+      clientSecret: graphAppSecret,
+      expiresInSeconds: 3600,
+      ...(authorizationServers === undefined ? {} : { authorizationServers }),
+    },
+  });
+  onTestFinished(fake.close);
+  return fake;
+}
+
+function graphAppAt(server: FakeMcpServer): ProviderList {
+  return providerListOf(
+    providerOf({
+      name: 'graph',
+      title: 'Graph',
+      description: 'Search the graph of an organization.',
+      website: 'https://developer.graph.example.com',
+      type: 'mcp',
+      url: server.url,
+      credentials: [
+        {
+          kind: 'client_credentials',
+          issuer: server.origin,
+          description: 'The client id and secret of an app your company registers at Graph.',
+        },
+      ],
+    }),
+  );
+}
+
+const searchingTheGraph = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
+
+async function graphSearchedAs(input: unknown, given: Readonly<Record<string, string>>, providers: ProviderList) {
+  const h = harness({ policy: loopbackPolicy, providers });
+  await connectedConnectionSource(h, input, given);
+  const asking = askingThrough();
+  const tools = await toolsThrough(h, asking, { providers });
+  return { called: await tools.call('execute_connection', searchingTheGraph), asking };
+}
+
+describe('the token of a connection of client credentials to an MCP server whose metadata names another authorization server', () => {
+  it('is asked at the issuer its provider’s way names, with the resource the server names, where the connection is made from a provider', async () => {
+    const named = graphServerNaming();
+    const server = graphServerNaming([named.origin]);
+
+    const { called, asking } = await graphSearchedAs(
+      { provider: 'graph' },
+      { client_id: 'playbook', client_secret: graphAppSecret },
+      graphAppAt(server),
+    );
+
+    expect(called).toMatchObject({ status: 'succeeded' });
+    expect([server.tokenRequests(), named.tokenRequests()]).toEqual([1, 0]);
+    expect(asking.resources()).toEqual([server.url]);
+    expect(named.heard()).toEqual([]);
+  });
+
+  it('is asked of no authorization server where the connection is given by hand, which asks the one its server names', async () => {
+    const named = graphServerNaming();
+    const server = graphServerNaming([named.origin]);
+    const byHand = {
+      name: 'graph',
+      type: 'mcp',
+      entry: { url: server.url },
+      credential: { kind: 'client_credentials', issuer: server.origin, client_id: 'playbook' },
+    };
+
+    const { called } = await graphSearchedAs(byHand, { client_secret: graphAppSecret }, providerListOf());
+
+    expect(called).toMatchObject({ status: 'rejected' });
+    expect([server.tokenRequests(), named.tokenRequests()]).toEqual([0, 0]);
+    expect(named.heard().map(({ path }) => path)).toContain('/.well-known/oauth-authorization-server');
   });
 });
 

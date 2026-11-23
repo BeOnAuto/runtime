@@ -47,6 +47,7 @@ const givenVariable = 'CONNECTION_CREDENTIAL';
 const noValuesPlaced: ReadonlyMap<string, string> = new Map();
 
 interface Credentialled {
+  readonly type: ConnectionType;
   readonly provider: string | null;
   readonly entry: ConnectionEntry;
   readonly credential: Credential;
@@ -122,10 +123,19 @@ function grantOf({ kind, subject }: Credential): Pick<NonNullable<ServerEntryFie
     : {};
 }
 
+type Discovery = Pick<NonNullable<ServerEntryFields['auth']>, 'discovery'>;
+
+const atTheIssuerOfTheWay: Discovery = { discovery: 'issuer' };
+
+function discoveryOf({ type, provider }: Credentialled): Discovery {
+  return type === 'mcp' && provider !== null ? atTheIssuerOfTheWay : {};
+}
+
 function placedClientCredentials(
-  { entry, credential }: Credentialled,
+  credentialled: Credentialled,
   { variable, algorithm: named }: NamedReference,
 ): PlacedCredential {
+  const { entry, credential } = credentialled;
   const reference = referenceTo(variable);
   const algorithm = credential.kind === 'jwt_bearer' ? (named ?? assertionAlgorithm) : named;
   const secret =
@@ -135,7 +145,14 @@ function placedClientCredentials(
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
   const issuer = literalText(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
   const clientId = Option.getOrThrow(Option.fromNullishOr(credential.client_id));
-  const auth = { issuer, client_id: literalText(clientId), ...scope, ...secret, ...grantOf(credential) };
+  const auth = {
+    issuer,
+    client_id: literalText(clientId),
+    ...scope,
+    ...secret,
+    ...grantOf(credential),
+    ...discoveryOf(credentialled),
+  };
   const given = ['client_id', ...Object.keys(secret)];
   return {
     written: { ...entry, auth },

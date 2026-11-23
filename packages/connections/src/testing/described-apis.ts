@@ -21,17 +21,23 @@ export const elsewhere = 'https://elsewhere.example.com';
 export interface Asking {
   readonly fetch: typeof globalThis.fetch;
   readonly asked: () => readonly string[];
+  readonly resources: () => readonly (string | null)[];
 }
 
 export function askingThrough(): Asking {
   const asked: string[] = [];
+  const resources: (string | null)[] = [];
   return {
-    fetch: (...[address, init]: readonly [unknown, unknown?]) => {
+    fetch: async (...[address, init]: readonly [unknown, unknown?]) => {
       const request = new Request(String(address), Object.assign({}, init));
       asked.push(request.url);
+      if (new URL(request.url).pathname === '/token') {
+        resources.push(new URLSearchParams(await request.clone().text()).get('resource'));
+      }
       return inProcessFetch(request);
     },
     asked: () => [...asked],
+    resources: () => [...resources],
   };
 }
 

@@ -110,7 +110,8 @@ function resolvedOf(
   { credential, reference }: Credentialled,
   { entry, documents }: { readonly entry: ProviderEntry; readonly documents: ReadonlyMap<string, ShippedDocument> },
 ) {
-  const placing = placedReference({ provider: addition.provider, entry: addition.entry, credential }, reference);
+  const { type, provider } = addition;
+  const placing = placedReference({ type, provider, entry: addition.entry, credential }, reference);
   const resolved: ProviderResolved = {
     provider: entry.name,
     written: {
@@ -118,7 +119,7 @@ function resolvedOf(
       ...marksOf(entry.marks),
       ...failureCodesOf(entry.failure_codes),
       ...(entry.handles_money === true ? { handles_money: true } : {}),
-      type: addition.type,
+      type,
     },
     placedValues: placing.placedValues,
     documents: { kind: 'shipped', byName: documents },
