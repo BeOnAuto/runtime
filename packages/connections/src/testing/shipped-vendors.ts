@@ -23,10 +23,6 @@ const zoomScopes = [
 
 const adobeIms = 'https://ims-na1.adobelogin.com';
 
-const adobeMcp = 'https://aa-mcp.adobe.io';
-
-const adobeMcpScopes = ['openid', 'AdobeID', 'additional_info.projectedProductContext'];
-
 const loginWithAmazon = 'https://lwa.amazon.com';
 
 const amazonAdsMcp = 'https://advertising-ai.amazon.com';
@@ -98,19 +94,6 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     },
     authorizationServerAt: `${adobeIms}/.well-known/oauth-authorization-server`,
     resource: null,
-  },
-  'adobe-analytics-mcp': {
-    metadata: {
-      issuer: adobeMcp,
-      authorizationServers: [adobeMcp],
-      protectedResource: `${adobeMcp}/mcp`,
-      protectedScopes: adobeMcpScopes,
-      scopesSupported: adobeMcpScopes,
-      dynamicRegistration: true,
-    },
-    protectedResourceAt: `${adobeMcp}/.well-known/oauth-protected-resource/mcp`,
-    authorizationServerAt: `${adobeMcp}/.well-known/oauth-authorization-server`,
-    resource: `${adobeMcp}/mcp`,
   },
   'amazon-ads': {
     metadata: { issuer: loginWithAmazon },

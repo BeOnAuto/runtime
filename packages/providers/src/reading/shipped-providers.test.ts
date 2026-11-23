@@ -88,7 +88,6 @@ function restrictedNamedBy({ entry }: Provider): readonly string[] {
 
 const addressesOfTheShipped = [
   ['adobe-analytics', 'https://analytics.adobe.io/api/{global_company_id}'],
-  ['adobe-analytics-mcp', 'https://aa-mcp.adobe.io/mcp'],
   ['amazon-ads', 'https://{api_host}'],
   ['amazon-ads-mcp', 'https://{mcp_host}/mcp'],
   ['apollo-graphos-agent-services', '{mcp_address}'],
@@ -133,7 +132,7 @@ describe('the shipped providers', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
     expect(names).toEqual(addressesOfTheShipped.map(([name]: readonly string[]) => name));
-    expect(names).toHaveLength(39);
+    expect(names).toHaveLength(38);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -152,7 +151,6 @@ describe('the shipped providers', () => {
 
 const waysOfTheShipped = [
   ['adobe-analytics', ['client_credentials', 'authorization'], []],
-  ['adobe-analytics-mcp', ['authorization'], []],
   ['amazon-ads', ['authorization'], []],
   ['amazon-ads-mcp', ['authorization'], []],
   ['apollo-graphos-agent-services', ['secret'], []],

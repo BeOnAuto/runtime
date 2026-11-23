@@ -133,42 +133,6 @@
       "handles_money": false
     },
     {
-      "name": "adobe-analytics-mcp",
-      "title": "Adobe Analytics MCP",
-      "description": "Ask Adobe Analytics about report suites, dimensions, metrics and reports through Adobe's Analytics MCP server, with the access the product profile of the person who connects gives. The connection ends with its sign-in, which issues no refresh token.",
-      "website": "https://developer.adobe.com/analytics-mcp/docs/guides/",
-      "server": {
-        "type": "mcp",
-        "hosts": [
-          "aa-mcp.adobe.io"
-        ]
-      },
-      "ways": [
-        {
-          "kind": "authorization",
-          "description": "Sign in with your Adobe ID and allow the Analytics MCP server.",
-          "scopes": [
-            {
-              "scope": "openid",
-              "says": "Read the unique identifier of the Adobe account the connection signs in as."
-            },
-            {
-              "scope": "AdobeID",
-              "says": "Act as the Adobe ID of the account in calls to Adobe APIs."
-            },
-            {
-              "scope": "additional_info.projectedProductContext",
-              "says": "Read the Adobe product profiles and Adobe Analytics permissions of the account."
-            }
-          ],
-          "more": [],
-          "own_client": false
-        }
-      ],
-      "placeholders": [],
-      "handles_money": false
-    },
-    {
       "name": "amazon-ads",
       "title": "Amazon Ads",
       "description": "Read and change Amazon Ads campaigns, ad groups and targets, read ads, advertiser accounts and recommendations, and request reports. A connection without an advertiser account lists the accounts, and one with an account acts on it. A report's file is a download a call does not fetch.",

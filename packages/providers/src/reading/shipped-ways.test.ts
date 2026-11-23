@@ -26,7 +26,6 @@ const amazon = 'lwa.amazon.com';
 
 const hostsOfTheWays = [
   [[['analytics.adobe.io', 'ims-na1.adobelogin.com']], [['analytics.adobe.io', 'ims-na1.adobelogin.com']]],
-  [[['aa-mcp.adobe.io', 'aa-mcp.adobe.io']]],
   [
     [
       ['advertising-api.amazon.com', amazon, 'www.amazon.com', 'api.amazon.com'],
@@ -80,7 +79,6 @@ const hostsOfTheWays = [
 
 const microsoftAmazonAndAdobe: ReadonlySet<string> = new Set([
   'adobe-analytics',
-  'adobe-analytics-mcp',
   'amazon-ads',
   'amazon-ads-mcp',
   'microsoft-advertising',
@@ -109,14 +107,6 @@ const consentWays = [
       issuer: 'https://ims-na1.adobelogin.com',
       scope: `${adobe} additional_info.job_function offline_access`,
       clients: ['registered'],
-    },
-  ],
-  [
-    'adobe-analytics-mcp',
-    {
-      issuer: 'https://aa-mcp.adobe.io',
-      scope: 'openid AdobeID additional_info.projectedProductContext',
-      clients: ['registered', 'dynamic'],
     },
   ],
   [

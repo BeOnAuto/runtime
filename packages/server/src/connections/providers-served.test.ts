@@ -147,7 +147,6 @@ function waysExpected(
 const underTheOrgsOAuthClientAlone = `authorization offered ${alone}`;
 const waysWithoutAClient = {
   'adobe-analytics': ['client_credentials offered', underTheOrgsOAuthClientAlone],
-  'adobe-analytics-mcp': ['authorization offered'],
   'amazon-ads': [underTheOrgsOAuthClientAlone],
   'amazon-ads-mcp': [underTheOrgsOAuthClientAlone],
   'apollo-graphos-agent-services': ['secret offered'],
@@ -174,7 +173,6 @@ const waysWithoutAClient = {
 
 const waysWithAClient = {
   'adobe-analytics': ['client_credentials offered', 'authorization offered'],
-  'adobe-analytics-mcp': ['authorization offered'],
   'amazon-ads': ['authorization offered'],
   'amazon-ads-mcp': ['authorization offered'],
   'apollo-graphos-agent-services': ['secret offered'],

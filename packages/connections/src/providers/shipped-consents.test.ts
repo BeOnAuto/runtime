@@ -150,7 +150,6 @@ function sourceTakenBesideARegisteredClient({ clients, oauthClient }: WayOfConse
 
 const providersTakingConsent = [
   'adobe-analytics',
-  'adobe-analytics-mcp',
   'amazon-ads',
   'amazon-ads-mcp',
   'atlassian',
@@ -204,7 +203,6 @@ describe('every way of consent of a shipped provider, against the fake authoriza
 
     expect(consents).toEqual(registering.map((consenting) => consentExpectedOf(consenting, 'dynamic')));
     expect(registering.map(({ name }) => name)).toEqual([
-      'adobe-analytics-mcp',
       'atlassian',
       'linear',
       'notion',
