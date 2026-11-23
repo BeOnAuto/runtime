@@ -1,6 +1,5 @@
 import { Buffer } from 'node:buffer';
 
-import { memoryLedger } from '@on.auto/operations/testing';
 import type {
   ConnectionServer,
   ConnectionServerSettings,
@@ -14,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import { documentDecider, documentStreamOfOrg, keptTextOf } from '../documents/document-streams.ts';
 import { type ConnectionPolicyFields, connectionPolicyOf } from '../policy/connection-policy.ts';
-import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { connectionRowsName } from '../registry/connection-rows.ts';
 import { added, billing, crm, crmKeyHelp, crmWithTenant, notes } from '../testing/additions.ts';
 import {
   accessThrough,
@@ -34,6 +33,7 @@ import {
   loopbackPolicy,
   operationNamed,
 } from '../testing/harness.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { watchedLedger } from '../testing/watched-ledger.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
@@ -125,7 +125,7 @@ interface LosingDocuments {
 
 function losingDocuments(h: Harness): LosingDocuments {
   const reading = { lost: true };
-  const keptNothing = memoryLedger().service;
+  const keptNothing = keptLedger().service;
   return {
     registry: {
       ...h.ledger.service,
@@ -474,7 +474,7 @@ describe('the run check, the calls and the listings of an HTTP API given its doc
     const beforeTheListing = ledger.asked().length;
     await tools.call('introspect', { server: 'ledgers', tool: 'search' });
 
-    const record = `load ${connectionsStreamOfOrg('acme')}`;
+    const record = `rows ${connectionRowsName}`;
     expect(called).toMatchObject({ status: 'succeeded' });
     expect([
       readSince(beforeTheCheck).slice(0, beforeTheCall - beforeTheCheck),

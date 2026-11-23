@@ -681,3 +681,14 @@ describe('a run that ended at a limit, in its history', () => {
     });
   });
 });
+
+describe('what makes a read of a definition or of a run’s history stale', () => {
+  it('is a change of the definition by its type and name, or any run, for a definition, and any event for a history', () => {
+    const { getDefinition, getRunHistory } = definitionOperationsFor([echo]);
+
+    expect([getDefinition.registration.staleOn, getRunHistory.registration.staleOn]).toEqual([
+      [{ kind: 'definition', keyedBy: { type: 'type', name: 'name' } }, { kind: 'run' }],
+      [{ kind: 'event' }],
+    ]);
+  });
+});

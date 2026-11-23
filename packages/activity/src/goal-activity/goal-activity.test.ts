@@ -16,7 +16,7 @@ import {
   passedHere,
   passedHereRow,
 } from '../testing/goal-activity.ts';
-import { ada, listedOf, outputOf, type LedgerReads } from '../testing/harness.ts';
+import { ada, firstCursorOf, listedOf, outputOf, sentOverTheWire, type LedgerReads } from '../testing/harness.ts';
 import { wordsIn } from './goal-words.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -198,5 +198,17 @@ describe('list_activity where a goal left the playbook between the read of its r
     const { list } = await goalsKept(goalsUnnamed);
 
     expect(listedOf(await list(ada, ofGoals)).rows).toEqual([]);
+  });
+});
+
+describe('list_activity where goals are kept, its playbooks read across a boundary', () => {
+  it('answers the same when the activity of its playbooks is sent and answered as values', async () => {
+    const inProcess = await goalsKept();
+    const across = await goalsKept(sentOverTheWire);
+
+    expect(outputOf(await across.list(ada))).toEqual(outputOf(await inProcess.list(ada)));
+    expect(outputOf(await across.mark(ada, { through: firstCursorOf(await across.list(ada)) }))).toEqual(
+      outputOf(await inProcess.mark(ada, { through: firstCursorOf(await inProcess.list(ada)) })),
+    );
   });
 });

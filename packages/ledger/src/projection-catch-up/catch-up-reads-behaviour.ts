@@ -25,6 +25,7 @@ import {
   notedLarge,
   type FillEntry,
 } from '../projections/keyed-fill-behaviour.ts';
+import { readsAsTheyCome } from '../projections/projection-reads.ts';
 import { openChoresWith } from '../testing/open-ledger.ts';
 
 type AnyLedger = Awaited<ReturnType<typeof aLedgerOn>>;
@@ -157,10 +158,12 @@ function appendedAndRead(entry: FillEntry, execute: StatementExecutor): Promise<
   const parts = entry.projectionsOf({ projections: [topicRows] });
   const recorded = recordedOn(execute);
   const inTransaction: InTransaction = (work) => work(recorded.execute);
+  const query = async (sql: SQL) => (await recorded.execute.query(sql)).rows;
   const reader = parts.readerOn({
-    query: async (sql) => (await recorded.execute.query(sql)).rows,
+    query,
     command: (sql) => recorded.execute.command(sql),
     inTransaction,
+    consistently: readsAsTheyCome(query),
   });
   const appended = { execute: recorded.execute };
   return Effect.runPromise(

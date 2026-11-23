@@ -1,5 +1,6 @@
 import { Data } from 'effect';
 
+import type { OrgAddress } from '../caller/org-context.ts';
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { Context } from '../ledger/context.ts';
 
@@ -66,7 +67,8 @@ export class InvalidCursor extends Data.TaggedError('invalid_cursor')<{ readonly
 
 export type AppendedScope =
   | { readonly kind: 'playbook'; readonly playbook: PlaybookAddress }
-  | { readonly kind: 'streams'; readonly streams: readonly string[] };
+  | { readonly kind: 'streams'; readonly streams: readonly string[] }
+  | { readonly kind: 'org'; readonly org: OrgAddress; readonly streams: readonly string[] };
 
 export interface AppendedFactsRequest {
   readonly after?: string;
@@ -81,6 +83,7 @@ export interface AppendedFact {
   readonly type: string;
   readonly context: Context;
   readonly data: unknown;
+  readonly playbook?: string;
 }
 
 export type AppendWaited = 'appended' | 'ended';

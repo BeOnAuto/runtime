@@ -1,10 +1,10 @@
 import type { Ledger } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { RecordedFailure, SubscriptionKey } from '@on.auto/providers';
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import {
   EventSubscriptionEventSchema,
   eventSubscriptionStreamOf,
@@ -44,7 +44,7 @@ const lacking: RecordedFailure = {
 };
 
 function recordsOver() {
-  const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+  const ledger = keptLedger(eventSubscriptions).service;
   return { ledger, records: subscriptionRecordsOf(ledger) };
 }
 

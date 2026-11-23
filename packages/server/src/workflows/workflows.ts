@@ -17,6 +17,7 @@ import { makeCatalog, makeDispatcher, type RouteRegistration } from '@on.auto/op
 
 import {
   directoryOperationsServing,
+  orgChangesServing,
   playbookOperationsServing,
   type ServedConnectionAccess,
   type ServedConnectionEvents,
@@ -90,12 +91,14 @@ function catalogsOf(
   runOperations: readonly PlaybookOperation[],
 ) {
   const { playbooks, imports } = parts.playbooksOver(capabilities);
+  const orgChanges = orgChangesServing(capabilities, parts);
   const catalogOf = (
     definitionOperations: ReturnType<typeof playbookOperationsServing>,
     capabilityOperations: readonly (PlaybookOperation | OrgOperation)[],
   ) =>
     makeCatalog([
       ...playbooks,
+      orgChanges,
       ...parts.orgOperations,
       ...imports,
       ...capabilityOperations.filter((operation) => isOrgOperation(operation)),

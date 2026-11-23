@@ -1,6 +1,15 @@
+import type { Ledger } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { ada, listedOf, localDeveloper, priya, salesReader } from '../testing/harness.ts';
+import {
+  ada,
+  entitiesOverTheWire,
+  firstCursorOf,
+  listedOf,
+  localDeveloper,
+  priya,
+  salesReader,
+} from '../testing/harness.ts';
 import { runFailed } from '../testing/recorded-facts.ts';
 import { definitionStreamOf, filed, financeAndSales, runStreamOf, runs } from '../testing/scenario.ts';
 
@@ -99,6 +108,73 @@ describe('the playbooks of list_activity', () => {
     expect(listedOf(await list(ada, { kind: 'broken' })).rows).toMatchObject([
       { address: 'finance/computation/sum-invoices', by: 'playbook:finance' },
       { address: 'finance/reasoning/categorize-invoice', by: ada.id },
+    ]);
+  });
+});
+
+interface Counting {
+  readonly entities: () => void;
+  readonly playbookRead: () => void;
+}
+
+function countedReads({ entities, playbookRead }: Counting) {
+  return (ledger: Ledger['Service']): Ledger['Service'] => ({
+    ...ledger,
+    readProjectedRows: (projection, address, query) => {
+      [address.playbook]
+        .filter((playbook) => playbook !== undefined)
+        .forEach(() => {
+          playbookRead();
+        });
+      return ledger.readProjectedRows(projection, address, query);
+    },
+    countProjectedRows: (projection, address, where) => {
+      [address.playbook]
+        .filter((playbook) => playbook !== undefined)
+        .forEach(() => {
+          playbookRead();
+        });
+      return ledger.countProjectedRows(projection, address, where);
+    },
+    namesHeldIn: (kind) => {
+      [kind.playbookKey]
+        .filter((key) => key.startsWith('playbook/'))
+        .forEach(() => {
+          playbookRead();
+        });
+      return ledger.namesHeldIn(kind);
+    },
+    readEntitiesAcross: (kind, org, keys, asked) => {
+      entities();
+      return entitiesOverTheWire(ledger, { kind, org, keys, asked });
+    },
+  });
+}
+
+describe('the reads of list_activity and mark_activity_seen', () => {
+  it('read the activity of every playbook the caller may access in one read of entities, sent and answered as values, and no row of a playbook outside it', async () => {
+    const counted = { entities: 0, playbookReads: 0 };
+    const counting: Counting = {
+      entities: () => {
+        counted.entities += 1;
+      },
+      playbookRead: () => {
+        counted.playbookReads += 1;
+      },
+    };
+    const inProcess = listedOf(await (await financeAndSales()).list(ada));
+    const { list, mark } = await financeAndSales(countedReads(counting));
+    counted.entities = 0;
+    counted.playbookReads = 0;
+
+    const listed = await list(ada);
+    const afterTheList = { entities: counted.entities, playbookReads: counted.playbookReads };
+    await mark(ada, { through: firstCursorOf(listed) });
+
+    expect(listedOf(listed)).toEqual(inProcess);
+    expect([afterTheList, { entities: counted.entities, playbookReads: counted.playbookReads }]).toEqual([
+      { entities: 1, playbookReads: 0 },
+      { entities: 2, playbookReads: 0 },
     ]);
   });
 });

@@ -2,6 +2,8 @@ import { Ledger } from '@on.auto/operations';
 import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
 import { Effect, Layer } from 'effect';
 
+import { connectionRows } from '../registry/connection-rows.ts';
+
 export interface WatchedLedger extends MemoryLedger {
   readonly asked: () => readonly string[];
   readonly failNextAppendTo: (stream: string) => void;
@@ -10,7 +12,7 @@ export interface WatchedLedger extends MemoryLedger {
 export const ledgerGone = 'The ledger went away';
 
 export function watchedLedger(): WatchedLedger {
-  const kept = memoryLedger();
+  const kept = memoryLedger(undefined, [connectionRows]);
   const asked: string[] = [];
   const failing = new Set<string>();
   const service = Ledger.of({
@@ -19,6 +21,11 @@ export function watchedLedger(): WatchedLedger {
       Effect.suspend(() => {
         asked.push(`load ${stream}`);
         return kept.service.load(stream, fold);
+      }),
+    readProjectedRows: (projection, address, query) =>
+      Effect.suspend(() => {
+        asked.push(`rows ${projection}`);
+        return kept.service.readProjectedRows(projection, address, query);
       }),
     execute: (stream, decider, command, lineage) =>
       Effect.suspend(() => {

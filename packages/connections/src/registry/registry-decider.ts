@@ -2,13 +2,13 @@ import { streamPrefixOfOrg, type Decider, type Fold } from '@on.auto/operations'
 import type { ProviderList } from '@on.auto/providers';
 
 import type { ConnectionCommand } from './connection-commands.ts';
-import { ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
+import { ConnectionEventSchema, connectionsStream, type RecordedConnectionEvent } from './connection-events.ts';
 import { decideApart, isDecidedApart } from './decided-apart.ts';
 import { factsAsReadIn } from './facts-as-named.ts';
 import { decideOnRegistry, registryContextOf, type RegistryRefusal } from './registry-decisions.ts';
 import { evolveRegistry, initialRegistry, type Registry } from './registry.ts';
 
-export const connectionsStream = 'connections';
+export { connectionsStream } from './connection-events.ts';
 
 export const byTheRuntime = 'runtime';
 

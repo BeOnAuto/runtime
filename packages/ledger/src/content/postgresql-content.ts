@@ -1,7 +1,9 @@
 import { SQL } from '@event-driven-io/dumbo';
+import { Effect, Semaphore } from 'effect';
 
 import type { InTransaction, OwnContentStore, ReturningExecutor } from '../event-store.ts';
-import { formattedFor } from '../postgresql-reads/recorded-parts.ts';
+import { countedIn, formattedFor } from '../postgresql-reads/recorded-parts.ts';
+import type { ConsistentReads } from '../projections/projection-reads.ts';
 import { postgresqlContent } from './content-dialects.ts';
 import { contentStoreOn } from './content-store.ts';
 
@@ -42,6 +44,34 @@ export function inTransactionOn(connections: ContentConnections): InTransaction 
       connection.release();
     }
   };
+}
+
+export function snapshotsOn(connections: ContentConnections): ConsistentReads {
+  return async (reads) => {
+    const connection = await connections.connect();
+    try {
+      await connection.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY', []);
+      const read = await reads(
+        formattedFor(countedIn(async (text, values) => (await connection.query(text, values)).rows)),
+      );
+      await connection.query('COMMIT', []);
+      return read;
+    } catch (failure) {
+      await connection.query('ROLLBACK', []);
+      throw failure;
+    } finally {
+      connection.release();
+    }
+  };
+}
+
+const snapshotTurns = new WeakMap<ContentConnections, Semaphore.Semaphore>();
+
+export function snapshotsTakenInTurn(pool: ContentConnections, mostAtOnce: number): ConsistentReads {
+  const turns = snapshotTurns.get(pool) ?? Semaphore.makeUnsafe(mostAtOnce);
+  snapshotTurns.set(pool, turns);
+  const snapshots = snapshotsOn(pool);
+  return (reads) => Effect.runPromise(turns.withPermit(Effect.promise(() => snapshots(reads))));
 }
 
 export function postgresqlContentOn(connections: ContentConnections): OwnContentStore {

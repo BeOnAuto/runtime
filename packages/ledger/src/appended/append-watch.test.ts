@@ -1,4 +1,5 @@
 import { cursorOfParts } from '@on.auto/operations';
+import type { HeldName } from '@on.auto/operations/definition-names';
 import { Clock, Effect, Exit, Function } from 'effect';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -88,10 +89,13 @@ async function settledWithin(promise: Promise<unknown>, ms: number): Promise<str
 
 const alphaAppendedReader = { kind: 'playbook', playbook: { org: 'acme', playbook: 'alpha' } } as const;
 
+const heldNowhere = new Map<string, HeldName>();
+
 function aStoreAsked() {
   const asked: AppendedFactsAsked[] = [];
   const reader = appendedFactsReaderOf({
     definitionsIn: () => Promise.resolve([]),
+    nameHeldBy: (key: string) => Promise.resolve(heldNowhere.get(key)),
     pointLength: 1,
     readAppendedFacts: (_scope, request) => {
       asked.push(request);

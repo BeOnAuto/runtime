@@ -1,4 +1,5 @@
 import { Caller, defineHttpOperation, defineQuery, mayCall, type Runnable } from '@on.auto/operations';
+import { orgReadsTogether } from '@on.auto/operations/entities';
 import { Effect, Schema } from 'effect';
 
 import { newestFirst } from '../registry/registry.ts';
@@ -10,6 +11,7 @@ import { foundConnection, loadRegistry } from './registry-access.ts';
 export function defineListConnections(reading: Reading, managing: Runnable<'org'>) {
   return defineQuery('org', {
     name: 'list_connections',
+    staleOn: [{ kind: 'connection' }],
     title: 'List connections',
     description: [
       'Lists the connections of the org, newest first.',
@@ -32,7 +34,7 @@ export function defineListConnections(reading: Reading, managing: Runnable<'org'
     }),
     reasons: ['unavailable'],
     handle: Effect.fnUntraced(function* ({ include_removed: includeRemoved = false }) {
-      const listed = newestFirst(yield* loadRegistry(reading)).filter(
+      const listed = newestFirst(yield* orgReadsTogether(loadRegistry(reading))).filter(
         ({ connection }) => includeRemoved || connection.status !== 'removed',
       );
       const caller = yield* Caller;
@@ -52,6 +54,7 @@ export function defineListConnections(reading: Reading, managing: Runnable<'org'
 export function defineGetConnection(reading: Reading) {
   return defineHttpOperation('org', 'query', {
     name: 'get_connection',
+    staleOn: [{ kind: 'connection', keyedBy: { connection: 'id' } }],
     title: 'Get connection',
     description: [
       'Reads one connection of the org: its server, who added it, whether it is pending, connected, broken or removed, and the groups of more it may still be granted.',

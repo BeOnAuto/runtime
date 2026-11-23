@@ -46,21 +46,30 @@ export interface SQLiteConnecting {
 
 const deferred = { mode: 'DEFERRED' } as const;
 
-function readsIn({ execute }: ReaderTransaction): ReadRows {
-  return async (asked) => (await execute.query(sqlOf(asked))).rows;
+type QueryRows = (sql: SQL) => Promise<readonly unknown[]>;
+
+export type ConsistentSQLiteReads = <A>(reads: (query: QueryRows) => Promise<A>) => Promise<A>;
+
+function queryIn({ execute }: ReaderTransaction): QueryRows {
+  return async (sql) => (await execute.query(sql)).rows;
 }
 
-function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['readConsistently'] {
-  const read = <A>(reads: (read: ReadRows) => Promise<A>) => {
+export function sqliteConsistentReadsOn(pool: SQLitePool, inMemory: boolean): ConsistentSQLiteReads {
+  const read = <A>(reads: (query: QueryRows) => Promise<A>) => {
     const handle = async (transaction: ReaderTransaction): Promise<Handled<A>> => ({
       success: true,
-      result: await reads(readsIn(transaction)),
+      result: await reads(queryIn(transaction)),
     });
     return inMemory
       ? pool.withTransaction(handle, deferred)
       : pool.withConnection((reader) => reader.withTransaction(handle, deferred), { readonly: true });
   };
   return read;
+}
+
+function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['readConsistently'] {
+  const consistently = sqliteConsistentReadsOn(pool, inMemory);
+  return (reads) => consistently((query) => reads((asked) => query(sqlOf(asked))));
 }
 
 export function sqliteConnectionOn(

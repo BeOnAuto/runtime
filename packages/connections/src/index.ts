@@ -76,3 +76,4 @@ export {
   type ConnectionsReporting,
 } from './triggers/connection-reporting.ts';
 export type { EventsReceived } from './triggers/connection-hearing.ts';
+export { connectionRows, connectionRowsLayoutSteps, connectionRowsName } from './registry/connection-rows.ts';

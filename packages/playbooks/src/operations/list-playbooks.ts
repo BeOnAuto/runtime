@@ -1,6 +1,7 @@
-import { Caller, canAccessPlaybook, defineQuery, studioLinkTo, type CallerIdentity } from '@on.auto/operations';
+import { Caller, defineQuery, studioLinkTo, type CallerIdentity } from '@on.auto/operations';
 import { Effect, Order, Schema } from 'effect';
 
+import { playbooksReadableIn } from '../entities/playbook-entity.ts';
 import { playbooksListed, welcomeOf } from '../plain-language/playbook-words.ts';
 import { PlaybookSchema, type Playbook } from '../registry/playbook.ts';
 import { loadRegistry } from './registry-loading.ts';
@@ -25,6 +26,7 @@ export const listPlaybooksSentences = [
 export const listPlaybooksDescribed = (description: string) =>
   defineQuery('org', {
     name: 'list_playbooks',
+    staleOn: [{ kind: 'playbook' }],
     title: 'List playbooks',
     description,
     route: { method: 'GET', path: '/playbooks' },
@@ -42,9 +44,8 @@ export const listPlaybooksDescribed = (description: string) =>
       if (registry.size === 0 && mayStartTheOrg(caller)) {
         return { playbooks: [], welcome: welcomeOf(yield* studioLinkTo()) };
       }
-      const playbooks = [...registry.values()].filter(
-        ({ id, status }) => canAccessPlaybook(caller.playbooks, id) && (includeRetired || status === 'active'),
-      );
+      const readable = yield* playbooksReadableIn(registry);
+      const playbooks = readable.filter(({ status }) => includeRetired || status === 'active');
       return { playbooks: playbooks.toSorted(byId) };
     }),
     plainLanguage: {

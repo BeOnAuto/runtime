@@ -1,8 +1,8 @@
 import { definitionsReadModel, type StrippedForms } from '@on.auto/definitions';
 import { decidedIn } from '@on.auto/definitions/testing';
-import { Ledger, PlaybookRegistry } from '@on.auto/operations';
-import { ledgerPlaybookRegistry, playbooksStreamOfOrg } from '@on.auto/playbooks';
-import { Effect, Layer } from 'effect';
+import { Ledger, PlaybookRegistry, type Decided, type Decider } from '@on.auto/operations';
+import { PlaybookEventSchema, ledgerPlaybookRegistry, playbookRows, playbooksStreamOfOrg } from '@on.auto/playbooks';
+import { Effect, Layer, Result } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import {
@@ -11,8 +11,7 @@ import {
   definitionIdNamed,
   definitionKeyNamed,
   eventTrigger,
-  playbookCreated,
-  recorded,
+  byAdmin,
   type TriggerFilter,
 } from '../reaction-testing/playbook-writes.ts';
 import { zoneClockOf } from '../schedules/zone-clock.ts';
@@ -70,14 +69,31 @@ function registryOn(ledger: Ledger['Service']): Promise<PlaybookRegistry['Servic
   );
 }
 
+type PlaybookFact = Decided<typeof PlaybookEventSchema.Type>;
+
+const playbookFactsAsTheyCome: Decider<null, readonly PlaybookFact[], typeof PlaybookEventSchema.Type> = {
+  initialState: null,
+  evolve: () => null,
+  decide: (facts) => Result.succeed(facts),
+  context: () => byAdmin,
+  eventSchema: PlaybookEventSchema,
+};
+
+function playbookRecorded(ledger: Ledger['Service'], fact: PlaybookFact): Promise<unknown> {
+  return Effect.runPromise(ledger.execute(playbooksStreamOfOrg('acme'), playbookFactsAsTheyCome, [fact]));
+}
+
 export async function aPlaybookBesideItsLedger() {
   const { database, ledger } = await openedBesideItsLedger({
     ...(await onSQLite()),
-    projections: definitionsReadModel,
+    projections: [...definitionsReadModel, playbookRows],
   });
-  await playbookCreated(database.store, 'alpha');
+  await playbookRecorded(ledger, {
+    type: 'playbook_created',
+    data: { playbook: 'alpha', name: 'alpha', description: '', created_by: { id: 'acme-admin', name: 'acme-admin' } },
+  });
   const statusRecorded = (type: 'playbook_retired' | 'playbook_restored') => () =>
-    recorded(database.store, playbooksStreamOfOrg('acme'), { type, data: { playbook: 'alpha' } });
+    playbookRecorded(ledger, { type, data: { playbook: 'alpha' } });
   const playbook = { retired: statusRecorded('playbook_retired'), restored: statusRecorded('playbook_restored') };
   return { database, ledger, registry: await registryOn(ledger), workflows: workflowsSavedIn(ledger), playbook };
 }

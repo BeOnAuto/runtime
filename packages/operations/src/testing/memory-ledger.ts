@@ -103,6 +103,8 @@ export function memoryLedgerWith({
     readRunOutcomes: kept.outcomes.readRunOutcomes,
     readProjectedRows: projected.readProjectedRows,
     countProjectedRows: projected.countProjectedRows,
+    readProjectedRowsOfKeys: projected.readProjectedRowsOfKeys,
+    readTogether: projected.readTogether,
     readDueRows: projected.readDueRows,
     nextDueOf: projected.nextDueOf,
     advanceRow: projected.advanceRow,

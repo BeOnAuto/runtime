@@ -1,6 +1,12 @@
 import { Clock, Duration, Effect, Option } from 'effect';
 
-import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
+import type { HeldName } from '../definition-names/name-judgement.ts';
+import {
+  streamPrefixOfPlaybook,
+  streamPrefixOfTheDefinitionsOf,
+  streamPrefixOfThePlaybooksOf,
+} from '../ledger/bound-ports.ts';
+import { playbookNamedFor } from '../ledger/names-held-now.ts';
 import type { AppendedFactsReader } from '../ledger/stream-ports.ts';
 import { CursorNotHeld } from '../reading/cursor-not-held.ts';
 import { cursorOfParts, partsOfCursor, type CursorPart } from '../reading/cursor-parts.ts';
@@ -19,13 +25,21 @@ export interface MemoryAppends {
 
 const positionPattern = /^[1-9]\d{0,14}$/u;
 
-type DefinitionsOfAPlaybook = (playbookKey: string) => readonly string[];
+export interface MemoryNames {
+  readonly definitionsIn: (playbookKey: string) => readonly string[];
+  readonly heldBy: (definitionKey: string) => HeldName | undefined;
+}
 
-function inScope(scope: AppendedScope, definitionsIn: DefinitionsOfAPlaybook): (record: MemoryRecord) => boolean {
+function inScope(scope: AppendedScope, { definitionsIn }: MemoryNames): (record: MemoryRecord) => boolean {
   if (scope.kind === 'playbook') {
     const key = streamPrefixOfPlaybook(scope.playbook);
     const keys = [key, ...definitionsIn(key)];
     return ({ stream }) => keys.some((each) => stream.startsWith(each));
+  }
+  if (scope.kind === 'org') {
+    const streams = new Set(scope.streams);
+    const ofItsPlaybooks = [streamPrefixOfThePlaybooksOf(scope.org), streamPrefixOfTheDefinitionsOf(scope.org)];
+    return ({ stream }) => streams.has(stream) || ofItsPlaybooks.some((prefix) => stream.startsWith(prefix));
   }
   const streams = new Set(scope.streams);
   const kinds = scope.streams.filter((named) => named.endsWith('/'));
@@ -91,10 +105,16 @@ function positionThrough(through: string): number {
   return Number(position);
 }
 
-function factsIn(log: readonly MemoryRecord[], definitionsIn: DefinitionsOfAPlaybook) {
+function namedIn(scope: AppendedScope, { heldBy }: MemoryNames): (read: AppendedFacts) => AppendedFacts {
+  return scope.kind === 'org'
+    ? (read) => ({ ...read, facts: read.facts.map((fact) => playbookNamedFor(fact, heldBy)) })
+    : (read) => read;
+}
+
+function factsIn(log: readonly MemoryRecord[], names: MemoryNames) {
   return (scope: AppendedScope, request: AppendedFactsRequest): Effect.Effect<AppendedFacts, CursorNotHeld> =>
     Effect.suspend(() => {
-      const isInScope = inScope(scope, definitionsIn);
+      const isInScope = inScope(scope, names);
       const scoped = log.filter((record) => isInScope(record));
       const end = log.length;
       if (request.after === undefined) {
@@ -103,18 +123,15 @@ function factsIn(log: readonly MemoryRecord[], definitionsIn: DefinitionsOfAPlay
       const held = Option.flatMap(partsOfCursor(request.after), (parts) => positionHeldBy(parts, scoped));
       return Option.match(held, {
         onNone: () => Effect.fail(new CursorNotHeld()),
-        onSome: (position) => Effect.succeed(readFrom(scoped, request, end)(position)),
+        onSome: (position) => Effect.succeed(namedIn(scope, names)(readFrom(scoped, request, end)(position))),
       });
     });
 }
 
-export function memoryAppendedReader(
-  log: readonly MemoryRecord[],
-  definitionsIn: DefinitionsOfAPlaybook,
-): MemoryAppends {
+export function memoryAppendedReader(log: readonly MemoryRecord[], names: MemoryNames): MemoryAppends {
   const waiting = new Set<() => void>();
   const appendedAfter = (scope: AppendedScope, position: number): boolean => {
-    const scoped = inScope(scope, definitionsIn);
+    const scoped = inScope(scope, names);
     return log.some((record) => record.position > position && scoped(record));
   };
   return {
@@ -124,7 +141,7 @@ export function memoryAppendedReader(
       }
     },
     reader: {
-      readAppendedFacts: factsIn(log, definitionsIn),
+      readAppendedFacts: factsIn(log, names),
       waitForAppend: (scope, after, deadline) =>
         Effect.gen(function* () {
           const left = deadline - (yield* Clock.currentTimeMillis);

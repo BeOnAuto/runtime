@@ -10,13 +10,17 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect, Schema } from 'effect';
 
+import {
+  activityOfPlaybooksToday,
+  activityOfReadablePlaybooks,
+  type ActivityOfPlaybooksKind,
+} from '../entities/activity-of-playbooks.ts';
 import { activityStreamOf, seenDecider, type SeenItem } from '../facts/activity-seen.ts';
 import { itemOfAddress, orgSegment, type ActivityItem } from '../positions/activity-addresses.ts';
-import { countsFor, noneSetAsideOf, type CountedActivity, type SetAsideOf } from './activity-counts.ts';
+import { ActivityCountsSchema, countsFor, type CountedActivity } from './activity-counts.ts';
 import { cursorField, mostRowsInAPage, positionAt, refusedAt } from './activity-input.ts';
 import { isoOf } from './activity-row.ts';
-import { throughOf, viewerOf } from './activity-viewer.ts';
-import { ActivityCountsSchema, ThroughSchema } from './list-activity.ts';
+import { ThroughSchema, throughOf, viewerOf } from './activity-viewer.ts';
 import { loadPlaybookRegister } from './playbook-register.ts';
 
 const SeenItemSchema = Schema.Struct({
@@ -53,7 +57,7 @@ function forbiddenDetailOf({ form, playbook }: ActivityItem): string {
 export interface SeenServing<Counts> {
   readonly itemOf: (address: string) => ActivityItem | undefined;
   readonly countsOf: (counted: CountedActivity) => Effect.Effect<Counts, never, OrgReader>;
-  readonly setAsideOf: SetAsideOf;
+  readonly playbooks: ActivityOfPlaybooksKind;
 }
 
 function seenItemAt(
@@ -74,7 +78,7 @@ function seenItemAt(
     : Effect.fail(new Forbidden({ detail: forbiddenDetailOf(item) }));
 }
 
-export function markedBy<Counts>({ itemOf, countsOf, setAsideOf }: SeenServing<Counts>) {
+export function markedBy<Counts>({ itemOf, countsOf, playbooks }: SeenServing<Counts>) {
   return Effect.fnUntraced(function* ({ items = [], through: cursor }: MarkActivitySeenInput) {
     const caller = yield* Caller;
     if (items.length === 0 && cursor === undefined) {
@@ -92,15 +96,18 @@ export function markedBy<Counts>({ itemOf, countsOf, setAsideOf }: SeenServing<C
       by: caller.id,
     });
     const viewer = yield* viewerOf(caller.id);
-    const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
-    const setAside = yield* setAsideOf(readable);
+    const { readable, ofPlaybooks } = yield* activityOfReadablePlaybooks(playbooks, register.active, {
+      viewer,
+      page: null,
+      pagedOf: () => [],
+    });
     return {
       counts: yield* countsOf({
         viewer,
         readable,
         withTheOrg: caller.playbooks === '*',
         changes: register.changes,
-        setAside,
+        ofPlaybooks,
       }),
       through: throughOf(viewer.seen),
     };
@@ -120,5 +127,5 @@ export const markActivitySeen = defineHttpOperation('org', 'command', {
   inputSchema: MarkActivitySeenInputSchema,
   outputSchema: MarkActivitySeenOutputSchema,
   reasons: ['invalid_input', 'forbidden', 'conflict'],
-  handle: markedBy({ itemOf: itemOfAddress, countsOf: countsFor, setAsideOf: noneSetAsideOf }),
+  handle: markedBy({ itemOf: itemOfAddress, countsOf: countsFor, playbooks: activityOfPlaybooksToday }),
 });

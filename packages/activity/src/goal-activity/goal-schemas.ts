@@ -1,8 +1,10 @@
 import { Schema } from 'effect';
 
+import { ActivityCountsSchema } from '../operations/activity-counts.ts';
 import { kindsInWords } from '../operations/activity-input.ts';
+import { ListActivityInputSchema } from '../operations/activity-input.ts';
 import { ActivityRowSchema, activityKinds, type ActivityKind } from '../operations/activity-row.ts';
-import { ActivityCountsSchema, ListActivityInputSchema, ThroughSchema } from '../operations/list-activity.ts';
+import { ThroughSchema } from '../operations/activity-viewer.ts';
 import { MarkActivitySeenInputSchema } from '../operations/mark-activity-seen.ts';
 
 export const kindsWithGoals: readonly ActivityKind[] = [...activityKinds, 'goal', 'goal_overdue'];

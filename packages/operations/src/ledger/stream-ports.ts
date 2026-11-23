@@ -109,4 +109,13 @@ export interface OrgAppendedFactsReader {
     request: AppendedFactsRequest,
   ) => Effect.Effect<AppendedFacts, CursorNotHeld>;
   readonly waitForAppend: (streams: readonly string[], after: string, deadline: number) => Effect.Effect<AppendWaited>;
+  readonly readAppendedFactsAcrossTheOrg: (
+    streams: readonly string[],
+    request: AppendedFactsRequest,
+  ) => Effect.Effect<AppendedFacts, CursorNotHeld>;
+  readonly waitForAppendAcrossTheOrg: (
+    streams: readonly string[],
+    after: string,
+    deadline: number,
+  ) => Effect.Effect<AppendWaited>;
 }

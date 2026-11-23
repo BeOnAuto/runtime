@@ -47,6 +47,7 @@ export interface ProjectionDialect {
   readonly metadataMeasured: (payloadBytes: number | undefined) => SQL;
   readonly booleanOf: (value: boolean) => boolean | number;
   readonly listed: (values: readonly string[]) => SQL;
+  readonly oneOf: (column: string, values: readonly string[]) => SQL;
   readonly forUpdate: string;
   readonly catchUp: CatchUpDialect;
 }

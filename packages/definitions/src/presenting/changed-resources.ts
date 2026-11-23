@@ -1,6 +1,7 @@
 import {
   changeKindOf,
   DefinitionContextSchema,
+  playbookChangedAcrossTheOrg,
   type ChangesNamed,
   type PlacedFact,
   type ResourceChange,
@@ -27,7 +28,12 @@ const interactionChanged = changeKindOf('interaction', 'The request of a run, op
   run_id: 'The id of the run that asks',
 });
 
-export const playbookChanged = changeKindOf('playbook', 'The playbook itself, whose own page was saved or removed', {});
+export const playbookChanged = changeKindOf(
+  'playbook',
+  'The playbook itself, whose own page was saved or removed',
+  {},
+  { acrossTheOrg: playbookChangedAcrossTheOrg },
+);
 
 const decodeDefinitionContext = Schema.decodeUnknownSync(DefinitionContextSchema);
 

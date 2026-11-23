@@ -58,6 +58,7 @@ export interface LedgerEntry {
   readonly topicTables: string;
   readonly labelledTables: string;
   readonly itsOwnContractAlone?: boolean;
+  readonly readsAsTheyCome?: boolean;
 }
 
 async function opened(layer: ReturnType<LedgerEntry['ledgerOn']>): Promise<Ledger['Service']> {

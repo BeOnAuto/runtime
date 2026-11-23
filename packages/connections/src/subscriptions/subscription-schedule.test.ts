@@ -1,10 +1,10 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { resyncedAfterMs, type Reconciled } from '@on.auto/providers';
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { subscriptionRecordsOf } from './subscription-records.ts';
 import { eventSubscriptions } from './subscription-rows.ts';
 import {
@@ -31,7 +31,7 @@ const nine = Date.parse('2026-11-18T09:00:00.000Z');
 const minute = 60_000;
 
 function recordsOver() {
-  const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+  const ledger = keptLedger(eventSubscriptions).service;
   return { ledger, records: subscriptionRecordsOf(ledger) };
 }
 

@@ -12,6 +12,7 @@ import {
   type ProjectedCondition,
   type ProjectedKeyedRow,
 } from '@on.auto/operations';
+import { playbookReadsTogether, orgReadsTogether } from '@on.auto/operations/entities';
 import { Effect, Option, Schema } from 'effect';
 
 import { isPart, listedTargetOf, playbookOfTarget, type ListedTarget } from '../positions/comment-addresses.ts';
@@ -210,7 +211,7 @@ const listed = Effect.fnUntraced(function* (input: ListCommentsInput) {
     wheresAt: wheresInThePlaybook(reader, pages),
     namedNow: namedAsHeldNow(reader),
   };
-  return yield* listedWith(reader, owner, input);
+  return yield* playbookReadsTogether(listedWith(reader, owner, input));
 });
 
 const ofTheOrgItself: Owner = {
@@ -222,7 +223,7 @@ const ofTheOrgItself: Owner = {
 };
 
 const listedInOrg = Effect.fnUntraced(function* (input: ListCommentsInput) {
-  return yield* listedWith(yield* OrgReader, ofTheOrgItself, input);
+  return yield* orgReadsTogether(listedWith(yield* OrgReader, ofTheOrgItself, input));
 });
 
 function commentsInWords(count: number, open: boolean | undefined): string {
@@ -250,6 +251,7 @@ const keptAndClosed = [
 
 export const listComments = defineQuery('playbook', {
   name: 'list_comments',
+  staleOn: [{ kind: 'comment' }],
   title: 'List comments',
   description: [
     'Lists the comments people made in Studio on things of the playbook, newest first, the open ones unless `open` is false.',
@@ -268,6 +270,7 @@ export const listComments = defineQuery('playbook', {
 
 export const listCommentsInOrg = defineQuery('org', {
   name: 'list_comments',
+  staleOn: [{ kind: 'comment' }],
   title: 'List comments',
   description: [
     "Lists the comments people made in Studio, newest first, the open ones unless `open` is false: with `playbook`, that playbook's, and without it, the organization's own, on its connections, members, Settings or itself.",

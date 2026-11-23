@@ -1,5 +1,4 @@
 import type { Ledger } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { cardMoved, overTheBoardsSocket, providersOf } from '@on.auto/providers/testing';
 import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -8,6 +7,7 @@ import { eventSubscriptions } from '../subscriptions/subscription-rows.ts';
 import type { EventsReceived } from '../triggers/connection-hearing.ts';
 import { connectionEventsOver } from '../triggers/connection-reporting.ts';
 import { archived, boardsEntryOf, boardsIdentity, bySubscriptionOfWhoMoved, placedCard } from './boards-reported.ts';
+import { keptLedger } from './kept-ledger.ts';
 import { addedFact, registryOf, type Recorded } from './loop-registries.ts';
 
 export const alpha = { org: 'acme', playbook: 'alpha' };
@@ -96,7 +96,7 @@ export async function boardsReportingTo(
   received: EventsReceived,
   { placeName, after = [] }: Naming = {},
 ): Promise<BoardsReporting> {
-  const subscriptions = memoryLedger(undefined, [eventSubscriptions]).service;
+  const subscriptions = keptLedger(eventSubscriptions).service;
   const registry = await registryOf(['2026-11-22T07:00:00.000Z', added], [connectedAt, connected], ...after);
   const parts = { registry, providers: Effect.succeed(boardsReading(placeName)), subscriptions, received };
   return { subscriptions, events: connectionEventsOver(parts, () => Effect.succeed(listened)) };

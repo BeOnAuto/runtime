@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { comparedRowsBehaviour } from './compared-rows-behaviour.ts';
 import { dueRowsBehaviour } from './due-rows-behaviour.ts';
 import { orgProjectionsBehaviour } from './org-projections-behaviour.ts';
+import { rowsOfKeysBehaviour } from './rows-of-keys-behaviour.ts';
 
 type AnyLedger = Ledger['Service'];
 
@@ -264,4 +265,5 @@ export function projectionsBehaviour(open: ProjectingLedger): void {
   rowsAdvancedWhileUnchanged(open);
   orgProjectionsBehaviour(open);
   childRowsBehaviour(open);
+  rowsOfKeysBehaviour(open);
 }

@@ -2,6 +2,7 @@ import type { RecordedContent } from '@on.auto/content';
 import { Context, type Effect } from 'effect';
 
 import type { HeldName, NameInAPlaybook, NamesOfAKind, StreamInAPlaybook } from '../definition-names/name-judgement.ts';
+import type { EntitiesReadAcross } from '../entities/entity-kind.ts';
 import type { UnheldContentRemover } from '../held-content/unheld-removal.ts';
 import type { ProjectionAdvancer, ProjectionReader } from '../projections/keyed-projection.ts';
 import type { RunIdInAnOrg } from '../run-ids/run-ids.ts';
@@ -27,6 +28,10 @@ interface RunIdsReader {
   readonly holderOfRunId: (claimed: RunIdInAnOrg) => Effect.Effect<string | undefined>;
 }
 
+interface EntitiesAcrossReader {
+  readonly readEntitiesAcross?: EntitiesReadAcross;
+}
+
 export interface ContentKeeper {
   readonly content: RecordedContent;
 }
@@ -44,6 +49,7 @@ export type LedgerPorts = StreamReader &
   ProjectionReader &
   ProjectionAdvancer &
   ContentKeeper &
-  UnheldContentRemover;
+  UnheldContentRemover &
+  EntitiesAcrossReader;
 
 export class Ledger extends Context.Service<Ledger, LedgerPorts>()('@on.auto/operations/Ledger') {}

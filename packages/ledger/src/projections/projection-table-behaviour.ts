@@ -27,6 +27,7 @@ import {
 } from '../projection-checkpoints/projection-checkpoints-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { projectionsBehaviour, topicsOf } from './projections-behaviour.ts';
+import { rowsReadTogetherOnStoresBehaviour } from './rows-of-keys-behaviour.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -285,6 +286,7 @@ function aTableOfChildRowsNotThereYet(entry: LedgerEntry): void {
 export function projectionTableBehaviour(entry: LedgerEntry): void {
   runOutcomeTableBehaviour(entry);
   projectionsBehaviour((projections) => aLedger(entry, undefined, undefined, projections));
+  rowsReadTogetherOnStoresBehaviour(entry);
   anAppendThatBreaksDown(entry);
   aReadOrderedByAnUndeclaredColumn(entry);
   aTableNotThereYet(entry);

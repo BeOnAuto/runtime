@@ -103,6 +103,7 @@ export function defineListPlaybookEvents(presenters: readonly Presenter[], holde
   requireSomePublicType(presentation.publicTypes);
   return defineQuery('playbook', {
     name: 'list_playbook_events',
+    staleOn: [{ kind: 'event' }],
     title: 'List playbook events',
     description: descriptionOf(presenters),
     route: { method: 'GET', path: '/events' },

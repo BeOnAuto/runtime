@@ -82,6 +82,29 @@ describe('changes over http', () => {
     });
   });
 
+  describe('the changes of an org and its playbooks over HTTP, while nothing changed', () => {
+    it('hold one request until a definition is saved in any playbook, and answer it with its playbook', async () => {
+      const across = '/v1/orgs/acme/changes?scope=org_and_playbooks';
+      const now = await cursorOf(across);
+      const arrivedBefore = server.arrived().length;
+
+      const held = server.call('GET', `${across}&since=${now}&wait=20`);
+      await whenHeld(
+        () => server.arrived().slice(arrivedBefore),
+        (arrived: ReturnType<ReasoningServer['arrived']>) => arrived.some(({ path }) => path.endsWith('/changes')),
+      );
+      await summaryCreated();
+
+      expect(await held).toMatchObject({
+        status: 200,
+        body: {
+          changes: [{ kind: 'definition', type: 'reasoning', name: 'summary', playbook: 'alpha' }],
+          playbooks: '*',
+        },
+      });
+    });
+  });
+
   describe('the changes of a playbook over HTTP', () => {
     it('name the definitions saved after the cursor, and an event published to it by the id its feed lists it by', async () => {
       const now = await cursorOf(`${alpha}/changes`);

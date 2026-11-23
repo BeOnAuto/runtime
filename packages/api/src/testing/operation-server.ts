@@ -17,6 +17,7 @@ import {
   mcpRoutes,
   openApiDocumentRoutes,
   operationRoutes,
+  queryRoutes,
   type ApiHandler,
   type ApiStudio,
   type AppRuntime,
@@ -130,6 +131,10 @@ function catalogDispatched(
   return { catalog: makeCatalog(operations), dispatcher: makeDispatcher([], options) };
 }
 
+function callRoutes(served: Parameters<typeof queryRoutes>[0]): readonly RegisterRoutes[] {
+  return [operationRoutes({ ...served, runCall: served.run }), queryRoutes(served)];
+}
+
 export async function operationServer({
   authenticator = keyHolders,
   allowedOrigins = [],
@@ -151,7 +156,7 @@ export async function operationServer({
   const { catalog, dispatcher } = catalogDispatched(operations, dispatcherOptions);
   const mcpErrors: string[] = [];
   const routes = [
-    operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
+    ...callRoutes({ catalog, dispatcher, run: runtime.run }),
     openApiDocumentRoutes({ catalog, ...documented, shelf }),
     guideRoutes(shelf),
     apiCatalogRoutes(shelf),

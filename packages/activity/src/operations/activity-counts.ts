@@ -1,5 +1,5 @@
 import { OrgReader, type ProjectedCondition } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 
 import { goalVerdictTable } from '../goal-activity/goal-tables.ts';
 import {
@@ -12,16 +12,9 @@ import {
 import { brokenName } from '../projections/broken-rows.ts';
 import type { Mark } from '../projections/seen-rows.ts';
 import type { ActivityRow } from './activity-row.ts';
-import {
-  commentTable,
-  newTable,
-  readsAtOnce,
-  rowsCountedOf,
-  rowsOwnedBy,
-  type ActivityTable,
-} from './activity-tables.ts';
+import { commentTable, newTable, rowsCountedOf, rowsOwnedBy, type ActivityTable } from './activity-tables.ts';
 import { isSeenBy, type Viewer } from './activity-viewer.ts';
-import { needsYouIn, noneSetAside, type RequestsSetAside } from './needs-you.ts';
+import { needsYouIn, type RequestsSetAside } from './needs-you.ts';
 
 export interface ActivityCounts {
   readonly needs_you: number;
@@ -97,17 +90,20 @@ export function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string)
   });
 }
 
-function countsIn(viewer: Viewer, playbook: string, setAside: RequestsSetAside) {
+export function countsIn(viewer: Viewer, playbook: string, setAside: RequestsSetAside) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;
-    const counted: ActivityCounts = {
+    return {
       needs_you: yield* needsYouIn(viewer, playbook, setAside),
       broken: yield* reader.countPlaybookRows(playbook, brokenName, [open]),
       new: yield* unseenIn(viewer, newTable, playbook),
       comments: yield* unseenIn(viewer, commentTable, playbook),
     };
-    return counted;
   });
+}
+
+export interface CountedOfAPlaybook {
+  readonly counts: Readonly<Record<string, number>>;
 }
 
 export interface CountedActivity {
@@ -115,12 +111,8 @@ export interface CountedActivity {
   readonly readable: readonly string[];
   readonly withTheOrg: boolean;
   readonly changes: readonly ActivityRow[];
-  readonly setAside: RequestsSetAside;
+  readonly ofPlaybooks: readonly CountedOfAPlaybook[];
 }
-
-export type SetAsideOf = (playbooks: readonly string[]) => Effect.Effect<RequestsSetAside, never, OrgReader>;
-
-export const noneSetAsideOf: SetAsideOf = () => Effect.succeed(noneSetAside);
 
 function countsOfTheOrg(viewer: Viewer) {
   return Effect.map(unseenIn(viewer, commentTable, ofTheOrg), (comments) => {
@@ -129,21 +121,33 @@ function countsOfTheOrg(viewer: Viewer) {
   });
 }
 
-export function countsFor({ viewer, readable, withTheOrg, changes, setAside }: CountedActivity) {
+export function summedCount(ofPlaybooks: readonly CountedOfAPlaybook[], name: string): number {
+  return ofPlaybooks.reduce((sum, { counts }) => sum + (counts[name] ?? 0), 0);
+}
+
+export function countsFor({ viewer, readable, withTheOrg, changes, ofPlaybooks }: CountedActivity) {
   return Effect.gen(function* () {
-    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook, setAside), {
-      concurrency: readsAtOnce,
-    });
-    const each = withTheOrg ? [...ofPlaybooks, yield* countsOfTheOrg(viewer)] : ofPlaybooks;
+    const orgCounts = withTheOrg ? yield* countsOfTheOrg(viewer) : undefined;
+    const each: readonly CountedOfAPlaybook[] =
+      orgCounts === undefined ? ofPlaybooks : [...ofPlaybooks, { counts: { ...orgCounts } }];
     const unseenChanges = changes.filter(
       (change) => readable.includes(change.position.playbook) && !isSeenBy(viewer, change),
     ).length;
     const counts: ActivityCounts = {
-      needs_you: each.reduce((sum, { needs_you: count }) => sum + count, 0),
-      broken: each.reduce((sum, { broken }) => sum + broken, 0),
-      new: each.reduce((sum, counted) => sum + counted.new, unseenChanges),
-      comments: each.reduce((sum, { comments }) => sum + comments, 0),
+      needs_you: summedCount(each, 'needs_you'),
+      broken: summedCount(each, 'broken'),
+      new: summedCount(each, 'new') + unseenChanges,
+      comments: summedCount(each, 'comments'),
     };
     return counts;
   });
 }
+
+export const ActivityCountsSchema = Schema.Struct({
+  needs_you: Schema.Int.annotate({ description: 'The requests that wait on the caller' }),
+  broken: Schema.Int.annotate({ description: 'The broken definitions' }),
+  new: Schema.Int.annotate({ description: 'The new rows the caller has not seen' }),
+  comments: Schema.Int.annotate({
+    description: 'The open comments others made or reopened that the caller has not seen',
+  }),
+}).annotate({ description: 'What the caller has to look at, over every playbook the caller may access' });

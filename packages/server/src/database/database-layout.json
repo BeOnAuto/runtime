@@ -1,5 +1,5 @@
 {
-  "layout": 30,
+  "layout": 33,
   "catalog": [
     {
       "name": "activity_1",
@@ -112,6 +112,10 @@
     {
       "name": "comments_3_open",
       "sql": "CREATE INDEX comments_3_open ON comments_3 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "connections_1",
+      "sql": "CREATE TABLE connections_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, kept TEXT, added_position INTEGER, credential_as_added INTEGER, account_type_as_added INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
       "name": "content_references_2",
@@ -356,6 +360,14 @@
     {
       "name": "page_views",
       "sql": "CREATE TABLE page_views (playbook_key TEXT NOT NULL, name TEXT NOT NULL, version BIGINT NOT NULL, saved BIGINT NOT NULL, details TEXT NOT NULL, phase TEXT NOT NULL, view TEXT NOT NULL, checkpoint TEXT NOT NULL, checkpoint_at TEXT, last_event_id TEXT, last_event_at TEXT, folded BIGINT NOT NULL, overtimes INTEGER NOT NULL, stalled_event_id TEXT, stalled_event_type TEXT, stalled_event_at TEXT, stalled_kind TEXT, stalled_message TEXT, stalled_line INTEGER, PRIMARY KEY (playbook_key, name))"
+    },
+    {
+      "name": "playbook_changes_1",
+      "sql": "CREATE TABLE playbook_changes_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, playbook TEXT, at INTEGER, by TEXT, change TEXT, position INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "playbooks_1",
+      "sql": "CREATE TABLE playbooks_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, name TEXT, description TEXT, status TEXT, created_at TEXT, created_by_id TEXT, created_by_name TEXT, updated_at TEXT, retired_at TEXT, created_position INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
       "name": "prediction_datasets",

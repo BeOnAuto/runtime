@@ -41,6 +41,7 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
   return known.publish(
     defineQuery('playbook', {
       name: operationName,
+      staleOn: [{ kind: 'definition', keyedBy: { type: 'type', name: 'name' } }, { kind: 'run' }],
       title: 'Get definition',
       description,
       route: { method: 'GET', path: '/definitions/{type}/{name}' },

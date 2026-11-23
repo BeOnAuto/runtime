@@ -1,5 +1,5 @@
 import { commentChanges, commentOperations } from '@on.auto/activity';
-import { eventSubscriptionPresenter, type ConnectionsReporting } from '@on.auto/connections';
+import { connectionChanges, eventSubscriptionPresenter, type ConnectionsReporting } from '@on.auto/connections';
 import {
   definePublishEvent,
   makeDefinitionOperations,
@@ -16,7 +16,13 @@ import {
   type ServerConnected,
 } from '@on.auto/goals';
 import type { PlaybookAddress, RouteRegistration } from '@on.auto/operations';
-import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
+import {
+  defineGetEvent,
+  defineListOrgChanges,
+  defineListPlaybookChanges,
+  defineListPlaybookEvents,
+  playbookChanges,
+} from '@on.auto/playbooks';
 import type { Effect } from 'effect';
 
 import { directoryFactsOf, type ComposedFacts } from './composed-facts.ts';
@@ -48,6 +54,24 @@ interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
+function presentersOf(capabilities: readonly Capability[], facts: ComposedFacts['facts'], goals: boolean) {
+  return [...makeDefinitionPresenters(capabilities, facts), ...goalPresenters(goals), eventSubscriptionPresenter];
+}
+
+function playbookChangeNamings(goals: boolean) {
+  return [commentChanges, ...goalChangeNamings(goals)];
+}
+
+export function orgChangesServing(
+  capabilities: readonly Capability[],
+  { facts, goals }: Pick<ComposedFacts, 'facts'> & Pick<ServedGoals, 'goals'>,
+) {
+  return defineListOrgChanges([playbookChanges, connectionChanges, commentChanges], {
+    presenters: presentersOf(capabilities, facts, goals),
+    namings: playbookChangeNamings(goals),
+  });
+}
+
 export function playbookOperationsServing(
   capabilities: readonly Capability[],
   {
@@ -62,16 +86,12 @@ export function playbookOperationsServing(
     connections,
   }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages & ServedGoals & ServedConnectionAccess,
 ): readonly PlaybookOperation[] {
-  const presenters = [
-    ...makeDefinitionPresenters(capabilities, facts),
-    ...goalPresenters(goals),
-    eventSubscriptionPresenter,
-  ];
+  const presenters = presentersOf(capabilities, facts, goals);
   const { holders } = factsKnownWith(facts.onRuns);
   return [
     ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders, connections }, { goals, messages }),
     defineListPlaybookEvents(presenters, holders),
-    defineListPlaybookChanges(presenters, [commentChanges, ...goalChangeNamings(goals)]),
+    defineListPlaybookChanges(presenters, playbookChangeNamings(goals)),
     defineGetEvent(presenters, holders),
     ...goalsOperationsServed(goals, results, messages, { connected, askedAbout }),
     definePublishEvent(names),

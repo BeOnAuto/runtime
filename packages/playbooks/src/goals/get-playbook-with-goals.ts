@@ -13,6 +13,7 @@ import type { CheckedGoals, PlaybookGoals } from './playbook-goals.ts';
 export function defineGetPlaybookWithGoals<Checked extends CheckedGoals>(goals: PlaybookGoals<Checked>) {
   return defineQuery('org', {
     name: 'get_playbook',
+    staleOn: [{ kind: 'playbook' }, { kind: 'goal' }],
     title: 'Get playbook',
     description: [
       'Reads one playbook by its id, active or retired, with its goals, what they still lack and the source of its page.',

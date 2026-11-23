@@ -74,6 +74,8 @@ export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentO
     readRunOutcomes: runOutcomesReaderOf(store),
     readProjectedRows: store.readProjectedRows,
     countProjectedRows: store.countProjectedRows,
+    readProjectedRowsOfKeys: store.readProjectedRowsOfKeys,
+    readTogether: store.readTogether,
     readDueRows: store.readDueRows,
     nextDueOf: store.nextDueOf,
     advanceRow: store.advanceRow,

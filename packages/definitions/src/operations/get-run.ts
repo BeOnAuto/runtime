@@ -27,6 +27,7 @@ export function defineGetRun(capabilities: readonly Capability[], pages: Subject
   const runWords = runWordsFor(capabilities);
   return defineQuery('playbook', {
     name: 'get_run',
+    staleOn: [{ kind: 'run', keyedBy: { run_id: 'run_id' } }],
     title: 'Get run',
     description: [
       'Reads one run of the playbook by its id: the definition and version that ran, who started it and when, its status,',

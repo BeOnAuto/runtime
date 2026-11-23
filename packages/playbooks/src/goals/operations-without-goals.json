@@ -150,6 +150,11 @@
     "permissionsManagement": false,
     "repeatable": false,
     "permissions": ["org:read", "playbook:read"],
+    "staleOn": [
+      {
+        "kind": "playbook"
+      }
+    ],
     "reasons": [],
     "input": {
       "schema": {
@@ -277,6 +282,11 @@
     "permissionsManagement": false,
     "repeatable": false,
     "permissions": ["org:read"],
+    "staleOn": [
+      {
+        "kind": "playbook"
+      }
+    ],
     "reasons": ["not_found"],
     "input": {
       "schema": {

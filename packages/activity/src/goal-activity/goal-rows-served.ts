@@ -1,9 +1,10 @@
 import { Effect } from 'effect';
 
+import type { ActivityOfAPlaybook } from '../entities/playbook-activity.ts';
 import { isoOf, servedRow, type ActivityRow } from '../operations/activity-row.ts';
 import { isSeenBy, type Viewer } from '../operations/activity-viewer.ts';
 import { setAsideIn, type RequestsSetAside } from '../operations/needs-you.ts';
-import { goalNamesOfRows, type GoalNames } from './goal-names.ts';
+import type { GoalNames } from './goal-names.ts';
 import { seenKindsWithGoals, type ServedActivityRowWithGoals } from './goal-schemas.ts';
 import type { GoalsRead } from './goal-set-aside.ts';
 import { wordOf, wordsOfRows, type WordsOfPlaybooks } from './goal-words.ts';
@@ -53,11 +54,19 @@ function servedWithGoals(row: ActivityRow, served: ServedWith): readonly ServedA
       ];
 }
 
+function goalNamesOf(ofPlaybooks: readonly ActivityOfAPlaybook[]): GoalNames {
+  return new Map(ofPlaybooks.flatMap(({ goalNames }) => [...goalNames]));
+}
+
 export function rowsServedWithGoals(goals: GoalsRead) {
-  return (rows: readonly ActivityRow[], viewer: Viewer, setAside: RequestsSetAside) =>
-    Effect.map(
-      Effect.all([wordsOfRows(goals, rows), goalNamesOfRows(rows)]),
-      ([words, names]: readonly [WordsOfPlaybooks, GoalNames]) =>
-        rows.flatMap((row) => servedWithGoals(row, { viewer, words, names, setAside })),
-    );
+  return (
+    rows: readonly ActivityRow[],
+    viewer: Viewer,
+    setAside: RequestsSetAside,
+    ofPlaybooks: readonly ActivityOfAPlaybook[],
+  ) =>
+    Effect.map(wordsOfRows(goals, rows), (words: WordsOfPlaybooks) => {
+      const names = goalNamesOf(ofPlaybooks);
+      return rows.flatMap((row) => servedWithGoals(row, { viewer, words, names, setAside }));
+    });
 }

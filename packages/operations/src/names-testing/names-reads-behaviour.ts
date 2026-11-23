@@ -130,6 +130,39 @@ function factsOfAPlaybook(entry: NamesAtThePortEntry): void {
   });
 }
 
+const acrossAcme = { kind: 'org', org: { org: 'acme' }, streams: ['org/acme/playbooks'] } as const;
+
+function factsAcrossAnOrg(entry: NamesAtThePortEntry): void {
+  describe("an org's reads of every fact of its playbooks, at the port", () => {
+    it('cover the streams of the org it names and every stream of its playbooks and their definitions, each fact of a playbook named with its playbook', async () => {
+      const port = await entry.keeping(unbounded);
+      const start = await Effect.runPromise(
+        Effect.orDie(port.ledger.readAppendedFacts(acrossAcme, { most: 10, dataOf: [] })),
+      );
+      await answerOf(port, 'org/acme/playbooks', fact('remarked', 'registered'));
+      await answerOf(port, 'org/acme/keys', fact('remarked', 'not named'));
+      await answerOf(port, 'playbook/acme/alpha/notes', fact('remarked', 'first'));
+      await answerOf(port, 'definition/acme/a/notes', made('a', 'triage'));
+      await answerOf(port, 'definition/acme/b/notes', made('b', 'brief', { playbook: 'beta' }));
+      await answerOf(port, 'definition/acme/c/notes', fact('remarked', 'held by none'));
+      await answerOf(port, 'playbook/other/alpha/notes', fact('remarked', 'of another org'));
+      await answerOf(port, 'org/other/playbooks', fact('remarked', 'of another org'));
+
+      const appended = await Effect.runPromise(
+        Effect.orDie(port.ledger.readAppendedFacts(acrossAcme, { after: start.cursor, most: 10, dataOf: [] })),
+      );
+
+      expect(appended.facts.map(({ stream, playbook }) => [stream, playbook])).toEqual([
+        ['org/acme/playbooks', undefined],
+        ['playbook/acme/alpha/notes', 'alpha'],
+        ['definition/acme/a/notes', 'alpha'],
+        ['definition/acme/b/notes', 'beta'],
+        ['definition/acme/c/notes', undefined],
+      ]);
+    });
+  });
+}
+
 function streamsOfAPlaybook(entry: NamesAtThePortEntry): void {
   describe('the definition that holds a stream, read at the port', () => {
     it('answers the key of the definition of the playbook under which a stream lies, and none for a stream no definition of the playbook holds', async () => {
@@ -165,5 +198,6 @@ export function namesReadAtThePort(entry: NamesAtThePortEntry): void {
   namesOfAPlaybook(entry);
   namesOfAKind(entry);
   factsOfAPlaybook(entry);
+  factsAcrossAnOrg(entry);
   streamsOfAPlaybook(entry);
 }

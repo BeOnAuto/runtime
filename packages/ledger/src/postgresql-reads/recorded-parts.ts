@@ -5,9 +5,19 @@ import { Schema } from 'effect';
 import type { RecordedPoint } from '../event-store.ts';
 import { readMetadataOf } from '../recorded/recorded-messages.ts';
 import type { ExaminationScope, Keys, RecordHead } from '../recorded/recorded-statements.ts';
+import { statementStarted } from '../store-reads/store-reads.ts';
 import { dataBytesOf, playbookKeyOfStream, type MessageColumns } from './playbook-indexes.ts';
 
 export type Query = (text: string, values: readonly unknown[]) => Promise<readonly unknown[]>;
+
+export function countedIn(query: Query): Query {
+  return async (text, values) => {
+    const ended = statementStarted();
+    const rows = await query(text, values);
+    ended?.({ rowsRead: rows.length, rowsWritten: 0 });
+    return rows;
+  };
+}
 
 export function formattedFor(query: Query): (sql: SQL) => Promise<readonly unknown[]> {
   return (sql) => {

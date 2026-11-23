@@ -5,6 +5,7 @@ import { dataAsWritten, emmettEventStore, type RiddenAppends } from './emmett/em
 import { inTransactionOf, type AppendListeners, type LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
 import type { KeptTables, ProjectionParts } from './projections/projection-parts.ts';
+import { readsAsTheyCome, type ConsistentReads } from './projections/projection-reads.ts';
 import { preparedOn, sqliteProjectionsOf, sqliteSizesAfter } from './projections/sqlite-projections.ts';
 import { sqliteReadsOn } from './recorded/sqlite-reads.ts';
 import { sqliteRecordedStoreOn } from './recorded/sqlite-recorded.ts';
@@ -74,6 +75,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   optionsOf: () => SQLiteStoreOptions<Driver>,
   kept: KeptTables = {},
   listeners: AppendListeners = {},
+  consistently?: ConsistentReads,
 ): LedgerStore & RiddenAppends {
   const options = pooledOptionsOf(optionsOf);
   const { pool } = options;
@@ -86,7 +88,12 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   );
   const recorded = sqliteRecordedStoreOn(pool, listeners);
   const query = async (sql: SQL) => (await pool.execute.query(sql)).rows;
-  const statements = { query, command: (sql: SQL) => pool.execute.command(sql), inTransaction: inTransactionOf(pool) };
+  const statements = {
+    query,
+    command: (sql: SQL) => pool.execute.command(sql),
+    inTransaction: inTransactionOf(pool),
+    consistently: consistently ?? readsAsTheyCome(query),
+  };
   return {
     ...streams,
     ...appends,

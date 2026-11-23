@@ -4,7 +4,9 @@ import { Schema } from 'effect';
 import { addressOf, ofTheOrg, type ItemForm } from '../positions/activity-addresses.ts';
 import { cursorOf, type ActivityPosition } from '../positions/activity-position.ts';
 
-export type ActivityKind = 'needs_you' | 'broken' | 'new' | 'comment' | 'goal' | 'goal_overdue';
+export const everyActivityKind = ['needs_you', 'broken', 'new', 'comment', 'goal', 'goal_overdue'] as const;
+
+export type ActivityKind = (typeof everyActivityKind)[number];
 
 export const activityKinds: readonly ActivityKind[] = ['needs_you', 'broken', 'new', 'comment'];
 

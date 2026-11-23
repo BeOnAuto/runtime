@@ -10,6 +10,7 @@ import {
   type ProjectedKeyedRow,
   type ProjectedValue,
 } from '@on.auto/operations';
+import { playbookReadsTogether } from '@on.auto/operations/entities';
 import { counted, plainNumber } from '@on.auto/phrasing';
 import { Array as Arr, Effect, Option, Schema } from 'effect';
 
@@ -264,13 +265,14 @@ const ListingAboutSchema = Schema.Struct({ ...ListingFields, ...DismissedInputFi
 function listingOf(goals?: GoalsOfRequests) {
   return defineQuery('playbook', {
     name: 'list_interactions',
+    staleOn: [{ kind: 'interaction' }],
     title: 'List open requests',
     description,
     route: { method: 'GET', path: '/interactions' },
     inputSchema: goals === undefined ? ListingSchema : ListingAboutSchema,
     outputSchema: Schema.Struct({ interactions: Schema.Array(InteractionSchema), ...PagingOutputFields }),
     reasons: ['invalid_input'],
-    handle: listedWith(goals),
+    handle: (listing) => playbookReadsTogether(listedWith(goals)(listing)),
     plainLanguage: {
       task: 'list the open requests',
       attempt: () => 'list the open requests',

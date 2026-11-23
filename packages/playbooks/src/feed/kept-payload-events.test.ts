@@ -25,7 +25,7 @@ import { memoryLedger, memoryPlaybookRegistry } from '@on.auto/operations/testin
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineGetEvent } from '../index.ts';
+import { defineGetEvent, playbookRows } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
@@ -82,7 +82,7 @@ const at = '2026-10-01T09:01:00.000Z';
 const pastTheHour = '2026-10-01T10:02:00.000Z';
 
 function aFeed() {
-  return harness(alphaKnown, memoryLedger(undefined, [], notedHolders));
+  return harness(alphaKnown, memoryLedger(undefined, [playbookRows], notedHolders));
 }
 
 function toKeep(text: string) {

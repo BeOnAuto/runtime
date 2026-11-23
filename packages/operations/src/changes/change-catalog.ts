@@ -1,12 +1,13 @@
 import { streamKindOf } from '../reading/presentation.ts';
 import type { Presenter } from '../reading/presenter.ts';
-import type {
-  ChangeKind,
-  ChangeNaming,
-  ChangeReader,
-  NameOfChange,
-  PlacedFact,
-  ResourceChange,
+import {
+  acrossTheOrgOf,
+  type ChangeKind,
+  type ChangeNaming,
+  type ChangeReader,
+  type NameOfChange,
+  type PlacedFact,
+  type ResourceChange,
 } from './change-naming.ts';
 
 export interface ChangeCatalog<Fact extends PlacedFact> {
@@ -66,6 +67,46 @@ export function changeCatalogOf<Fact extends PlacedFact>(namings: readonly Chang
       const named = byKind.get(streamKindOf(fact.stream));
       const name = named !== undefined && Object.hasOwn(named, fact.type) ? named[fact.type] : undefined;
       return name === undefined || name === null ? [] : name(fact);
+    },
+    readableBy: (reader) => (change) => byName.get(change.kind)?.readableBy(reader, change) === true,
+  };
+}
+
+function ofTheOrgAcrossIt<Fact extends PlacedFact>({ streamKind, changes }: ChangeNaming<Fact>): ChangeNaming<Fact> {
+  return { streamKind, changes: { ...changes, kinds: changes.kinds.map((kind) => kind.acrossTheOrg ?? kind) } };
+}
+
+function ofAPlaybookAcrossTheOrg<Fact extends PlacedFact>({
+  streamKind,
+  changes,
+}: ChangeNaming<Fact>): ChangeNaming<Fact> {
+  return { streamKind, changes: { ...changes, kinds: changes.kinds.map((kind) => acrossTheOrgOf(kind)) } };
+}
+
+export function changeCatalogAcrossTheOrgOf<Fact extends PlacedFact>(
+  ofTheOrg: readonly ChangeNaming<Fact>[],
+  ofAPlaybook: readonly ChangeNaming<Fact>[],
+): ChangeCatalog<Fact> {
+  const org = changeCatalogOf(ofTheOrg.map((naming) => ofTheOrgAcrossIt(naming)));
+  const playbooks = changeCatalogOf(ofAPlaybook.map((naming) => ofAPlaybookAcrossTheOrg(naming)));
+  const kinds = requireSomeKind(
+    kindsOf(
+      [...org.kinds, ...playbooks.kinds].map((kind) => ({
+        streamKind: kind.kind,
+        changes: { kinds: [kind], named: {} },
+      })),
+    ),
+  );
+  const byName = new Map(kinds.map((kind) => [kind.kind, kind]));
+  return {
+    kinds,
+    streamKinds: org.streamKinds,
+    namedTypes: [...new Set([...org.namedTypes, ...playbooks.namedTypes])],
+    changesOf: (fact) => {
+      const { playbook } = fact;
+      return playbook === undefined
+        ? org.changesOf(fact)
+        : playbooks.changesOf(fact).map((change) => Object.assign({ playbook }, change));
     },
     readableBy: (reader) => (change) => byName.get(change.kind)?.readableBy(reader, change) === true,
   };

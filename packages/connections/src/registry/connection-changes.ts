@@ -6,8 +6,12 @@ import {
   type ResourceChange,
 } from '@on.auto/operations';
 
-import { ConnectionEventSchema, ConsentStartedSchema, type RecordedConnectionEvent } from './connection-events.ts';
-import { connectionsStream } from './registry-decider.ts';
+import {
+  ConnectionEventSchema,
+  ConsentStartedSchema,
+  connectionsStream,
+  type RecordedConnectionEvent,
+} from './connection-events.ts';
 
 const connectionChanged = changeKindOf(
   'connection',

@@ -1,10 +1,11 @@
 import { Ledger } from '@on.auto/operations';
-import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
+import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect, Layer } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { added, crm } from '../testing/additions.ts';
 import { acmeWriter, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { givenAs, ledgers, ledgersBase, listingEntries, textOf, withPaths } from '../testing/ledgers-documents.ts';
 import { documentDecider, documentStreamOfOrg, keptTextOf } from './document-streams.ts';
 
@@ -18,8 +19,8 @@ function readingTheLink(h: Harness, { id, token }: Link) {
 }
 
 function ledgerLosingItsDocuments(): MemoryLedger {
-  const kept = memoryLedger();
-  const keptNothing = memoryLedger();
+  const kept = keptLedger();
+  const keptNothing = keptLedger();
   const service = Ledger.of({
     ...kept.service,
     load: (stream, fold) =>
@@ -88,7 +89,7 @@ describe('the link of an HTTP API given its OpenAPI document whole', () => {
   });
 
   it('names no tool where the runtime can no longer read the connection, as when a model provider takes its name', async () => {
-    const ledger = memoryLedger();
+    const ledger = keptLedger();
     const link = await added(harness({ ledger }), ledgers);
 
     expect(await readingTheLink(harness({ ledger, modelProviders: ['ledgers'] }), link)).toMatchObject({

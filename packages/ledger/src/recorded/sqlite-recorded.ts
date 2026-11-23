@@ -77,7 +77,22 @@ function ofTheKeys(keys: Keys, scope: ExaminationScope): SQL {
   return oneOrEachInTurn(keys, (key) => SQL`${playbookKeyOfStream} = ${key}`, walkedInTheOrderOf(scope));
 }
 
+function ofThePlaybooksOf(org: string): SQL {
+  const prefixes = [`playbook/${org}/`, `definition/${org}/`];
+  return SQL`(${SQL.merge(
+    prefixes.map((prefix) => SQL`substr(stream_id, 1, ${prefix.length}) = ${prefix}`),
+    ' OR ',
+  )})`;
+}
+
+function acrossThe({ org, streams }: { readonly org: string; readonly streams: readonly string[] }): SQL {
+  return streams.length === 0 ? ofThePlaybooksOf(org) : SQL`(${ofEachStream(streams)} OR ${ofThePlaybooksOf(org)})`;
+}
+
 function recordsIn(selected: RecordsSelected, scope: ExaminationScope): SQL {
+  if (selected.kind === 'across') {
+    return recordsWhere(acrossThe(selected), scope);
+  }
   if (selected.kind === 'keys') {
     return recordsWhere(ofTheKeys(selected.keys, scope), scope);
   }

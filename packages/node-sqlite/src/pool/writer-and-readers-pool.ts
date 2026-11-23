@@ -19,6 +19,7 @@ import type {
   ReadonlyStatementOptions,
 } from '../client/readonly-options.ts';
 import type { ConnectionContext } from './connection-context.ts';
+import { turnsOf } from './turns.ts';
 import { writerPool, type NodeSqlitePool } from './writer-pool.ts';
 
 export interface WriterAndReadersOptions {
@@ -69,6 +70,14 @@ async function opened(
   return connection;
 }
 
+function openingOf(connectionOf: Opening['connectionOf'], connectionOptions: NodeSqliteConnectionOptions): Opening {
+  return {
+    connectionOf,
+    connectionOptions,
+    databaseReady: onceReady(() => databasePrepared({ connectionOf, connectionOptions })),
+  };
+}
+
 export function writerAndReadersPool({
   connectionOf,
   connectionOptions,
@@ -77,11 +86,7 @@ export function writerAndReadersPool({
   maxTaskIdleTime,
   onWaitingForTheWriter,
 }: WriterAndReadersOptions): NodeSqlitePool {
-  const opening: Opening = {
-    connectionOf,
-    connectionOptions,
-    databaseReady: onceReady(() => databasePrepared({ connectionOf, connectionOptions })),
-  };
+  const opening = openingOf(connectionOf, connectionOptions);
   const writer = writerPool({
     getConnection: (abort) => opened(opening, false, abort),
     context,
@@ -93,14 +98,18 @@ export function writerAndReadersPool({
     getConnection: (abort: ReadonlyAbortContext) => opened(opening, true, abort),
     maxConnections: readerPoolSize,
   });
-  const forReading = (options?: ReadonlyConnectionOptions) =>
-    options?.readonly === true && context.active() === undefined ? readers : writer;
+  const heldReaders = turnsOf(Math.max(1, readerPoolSize - 1));
+  const readsAReader = (options?: ReadonlyConnectionOptions) =>
+    options?.readonly === true && context.active() === undefined;
+  const forReading = (options?: ReadonlyConnectionOptions) => (readsAReader(options) ? readers : writer);
   const forQueries = () => (context.active() === undefined ? readers : writer);
   return {
     driverType: nodeSqliteDriverType,
     connection: (options?: ReadonlyConnectionOptions) => forReading(options).connection(options),
     withConnection: (handle, options?: ReadonlyConnectionOptions) =>
-      forReading(options).withConnection(handle, options),
+      readsAReader(options)
+        ? heldReaders.taken(() => readers.withConnection(handle, options))
+        : writer.withConnection(handle, options),
     transaction: (options) => writer.transaction(options),
     withTransaction: (handle, options) => writer.withTransaction(handle, options),
     execute: {

@@ -7,7 +7,7 @@ import { pooledOptionsOf, sqliteEventStore, type AnyDriver, type SQLiteStoreOpti
 import { namedLedgerOf } from '../store-reads/named-store.ts';
 import { mostValuesTheLedgerBindsOnSQLite, sqliteMostBoundValues } from './bound-values.ts';
 import { openingLogsWith } from './opening-logs.ts';
-import { sqliteConnectionOn } from './sqlite-connection.ts';
+import { sqliteConnectionOn, sqliteConsistentReadsOn } from './sqlite-connection.ts';
 
 export interface SQLiteOpening<Driver extends AnyDriver> {
   readonly optionsOf: () => SQLiteStoreOptions<Driver>;
@@ -28,7 +28,7 @@ export function sqliteLedgerOpened<Driver extends AnyDriver>(
   const options = pooledOptionsOf(optionsOf);
   const onThePool = () => options;
   return {
-    store: sqliteEventStore(onThePool, kept, listeners),
+    store: sqliteEventStore(onThePool, kept, listeners, sqliteConsistentReadsOn(options.pool, inMemory)),
     connection: sqliteConnectionOn(options.pool, {
       inMemory,
       streams: sqliteEventStore(

@@ -130,6 +130,12 @@ export interface ProjectionReader {
   ) => Effect.Effect<number>;
   readonly readDueRows: (projection: string, query: DueRowsQuery) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly nextDueOf: (projection: string, column: string, after: number) => Effect.Effect<number | null>;
+  readonly readProjectedRowsOfKeys: (
+    projection: string,
+    address: RowsAddress,
+    keys: readonly string[],
+  ) => Effect.Effect<readonly (ProjectedKeyedRow | undefined)[]>;
+  readonly readTogether: <A, E, R>(reads: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 }
 
 export interface RowAdvance {
@@ -152,6 +158,11 @@ export interface BoundProjectionReader {
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (projection: string, where: readonly ProjectedCondition[]) => Effect.Effect<number>;
+  readonly readProjectedRowsOfKeys: (
+    projection: string,
+    keys: readonly string[],
+  ) => Effect.Effect<readonly (ProjectedKeyedRow | undefined)[]>;
+  readonly readTogether: ProjectionReader['readTogether'];
 }
 
 export interface OrgProjectionReader extends BoundProjectionReader {
@@ -195,6 +206,8 @@ const aKeyKindAndId = /^([^/]+\/[^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
 
 const anOrgKindAndId = /^([^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
 
+const anOrgKindAlone = /^([^/]+\/[^/]+\/)(([^/]+))$/u;
+
 function streamIn(
   scope: StreamScope,
   pattern: Readonly<RegExp>,
@@ -211,7 +224,10 @@ export function addressedStreamOf(stream: string): AddressedStream | undefined {
       Option.orElse(streamIn('playbook', aKeyKindAndId, playbookOfStreamPrefix, stream), () =>
         streamIn('definition', aKeyKindAndId, definitionOfStreamPrefix, stream),
       ),
-      () => streamIn('org', anOrgKindAndId, orgOfStreamPrefix, stream),
+      () =>
+        Option.orElse(streamIn('org', anOrgKindAndId, orgOfStreamPrefix, stream), () =>
+          streamIn('org', anOrgKindAlone, orgOfStreamPrefix, stream),
+        ),
     ),
   );
 }

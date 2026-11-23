@@ -101,8 +101,10 @@ interface KeptLedger {
 export function keptLedgerOf(tables: MemoryTables): KeptLedger {
   const log: MemoryRecord[] = [];
   const streams = new Map<string, readonly AppendedFact[]>();
-  const definitionsIn = (playbookKey: string) => kept.names.definitionsIn(playbookKey);
-  const appends = memoryAppendedReader(log, definitionsIn);
+  const appends = memoryAppendedReader(log, {
+    definitionsIn: (playbookKey) => kept.names.definitionsIn(playbookKey),
+    heldBy: (definitionKey) => kept.names.heldBy(definitionKey),
+  });
   const kept: Kept = {
     streams,
     appendedAt: new Map(),
@@ -121,6 +123,9 @@ export function keptLedgerOf(tables: MemoryTables): KeptLedger {
     },
     ...keptTablesOf(tables),
   };
-  const names = { definitionsIn, held: () => kept.names.held() };
+  const names = {
+    definitionsIn: (playbookKey: string) => kept.names.definitionsIn(playbookKey),
+    held: () => kept.names.held(),
+  };
   return { kept, appends, recordedReader: memoryRecordedReader(log, names) };
 }

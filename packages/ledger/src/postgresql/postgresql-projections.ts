@@ -1,7 +1,7 @@
 import { SQL } from '@event-driven-io/dumbo';
 
 import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
-import { inTransactionOn, type ContentConnections } from '../content/postgresql-content.ts';
+import { inTransactionOn, snapshotsTakenInTurn, type ContentConnections } from '../content/postgresql-content.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import {
   columnsOfTheTable,
@@ -145,6 +145,8 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
       : SQL`jsonb_set(message_metadata, '{payloadBytes}', to_jsonb(${payloadBytes}::bigint))`,
   booleanOf: (value) => value,
   listed: (values) => SQL`SELECT jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) AS value`,
+  oneOf: (column, values) =>
+    SQL`${SQL.plain(column)} = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(values)}::jsonb)))`,
   forUpdate: ' FOR UPDATE',
   catchUp: postgresqlCatchUp,
 };
@@ -177,8 +179,17 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
       unlessHeld: parts.references.unlessHeldOn(inTransactionOn(connections)),
       heldHeads: parts.references.heldHeadsOn(read),
     }),
-    readerOnThePool: (pool: ContentConnections, query: (sql: SQL) => Promise<readonly unknown[]>) =>
-      parts.readerOn({ query, command: query, inTransaction: inTransactionOn(pool) }),
+    readerOnThePool: (
+      pool: ContentConnections,
+      query: (sql: SQL) => Promise<readonly unknown[]>,
+      mostSnapshotsAtOnce: number,
+    ) =>
+      parts.readerOn({
+        query,
+        command: query,
+        inTransaction: inTransactionOn(pool),
+        consistently: snapshotsTakenInTurn(pool, mostSnapshotsAtOnce),
+      }),
     caughtUpOn: (pool: ContentConnections): ReturnType<typeof parts.caughtUp> => parts.caughtUp(inTransactionOn(pool)),
   };
 }

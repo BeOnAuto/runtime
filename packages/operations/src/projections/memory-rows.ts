@@ -143,6 +143,15 @@ export function pageIn(
     .slice(0, limit);
 }
 
+export function rowsOfKeysIn(
+  table: Table | undefined,
+  placed: Placed,
+  keys: readonly string[],
+): readonly (ProjectedKeyedRow | undefined)[] {
+  const byKey = new Map(table === undefined ? [] : rowsPlaced(table, placed).map((kept) => [kept.key, kept]));
+  return keys.map((key) => byKey.get(key));
+}
+
 export function countIn(table: Table, placed: Placed, where: ProjectedRowsQuery['where']): number {
   const met = conditionsMetBy(table.projection, where);
   return rowsPlaced(table, placed).filter((kept) => met(kept)).length;

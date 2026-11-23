@@ -1,9 +1,9 @@
 import { OrgReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { countsFor, unseenIn, type CountedActivity } from '../operations/activity-counts.ts';
-import { readsAtOnce } from '../operations/activity-tables.ts';
+import { countsFor, countsIn, summedCount, unseenIn, type CountedActivity } from '../operations/activity-counts.ts';
 import type { Viewer } from '../operations/activity-viewer.ts';
+import type { RequestsSetAside } from '../operations/needs-you.ts';
 import { goalOverduesName } from '../projections/goal-rows.ts';
 import type { ActivityCountsWithGoals } from './goal-schemas.ts';
 import { goalVerdictTable } from './goal-tables.ts';
@@ -18,16 +18,16 @@ function goalsIn(viewer: Viewer, playbook: string) {
   });
 }
 
-export function countsWithGoalsFor(counted: CountedActivity) {
+export function countsWithGoalsIn(viewer: Viewer, playbook: string, setAside: RequestsSetAside) {
   return Effect.gen(function* () {
-    const counts = yield* countsFor(counted);
-    const ofPlaybooks = yield* Effect.forEach(counted.readable, (playbook) => goalsIn(counted.viewer, playbook), {
-      concurrency: readsAtOnce,
-    });
-    const withGoals: ActivityCountsWithGoals = {
-      ...counts,
-      goals: ofPlaybooks.reduce((sum, count) => sum + count, 0),
-    };
+    const counts = yield* countsIn(viewer, playbook, setAside);
+    return { ...counts, goals: yield* goalsIn(viewer, playbook) };
+  });
+}
+
+export function countsWithGoalsFor(counted: CountedActivity) {
+  return Effect.map(countsFor(counted), (counts) => {
+    const withGoals: ActivityCountsWithGoals = { ...counts, goals: summedCount(counted.ofPlaybooks, 'goals') };
     return withGoals;
   });
 }

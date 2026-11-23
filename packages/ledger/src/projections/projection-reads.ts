@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { SQL } from '@event-driven-io/dumbo';
 import {
   addressOfStreamPrefix,
@@ -40,10 +42,17 @@ type ReadQuery = (sql: SQL) => Promise<readonly unknown[]>;
 
 type WriteCommand = (sql: SQL) => Promise<unknown>;
 
+export type ConsistentReads = <A>(reads: (query: ReadQuery) => Promise<A>) => Promise<A>;
+
+export function readsAsTheyCome(query: ReadQuery): ConsistentReads {
+  return (reads) => reads(query);
+}
+
 export interface ProjectionStatements {
   readonly query: ReadQuery;
   readonly command: WriteCommand;
   readonly inTransaction: InTransaction;
+  readonly consistently: ConsistentReads;
 }
 
 const KeyFields = Schema.Struct({
@@ -149,6 +158,22 @@ function rowsUnder(reading: Reading, projection: KeptProjection, address: RowsAd
   return rowsRead(reading, projection, filter, SQL`${orderOf(projection, query)} LIMIT ${query.limit}`);
 }
 
+function rowsOfKeys(reading: Reading, projection: KeptProjection, address: RowsAddress, keys: readonly string[]) {
+  if (keepsChildRows(projection)) {
+    throw new Error(`A read by keys reads a keyed projection, and ${projection.name} keeps child rows`);
+  }
+  const filter = SQL`${placedAt(address)} AND ${reading.dialect.oneOf('row_key', keys)}`;
+  return rowsRead(reading, projection, filter, SQL`row_key`);
+}
+
+function inTheOrderAsked(
+  keys: readonly string[],
+  rows: readonly ProjectedKeyedRow[],
+): readonly (ProjectedKeyedRow | undefined)[] {
+  const byKey = new Map(rows.map((kept) => [kept.key, kept]));
+  return keys.map((key) => byKey.get(key));
+}
+
 function noSoonerInItsPlaybook(projection: KeptProjection, due: string, through: number): SQL {
   const ordered = [due, ...keyColumnsOf(projection).slice(1)];
   const of = (table: string) => ordered.map((column) => `${table}.${column}`).join(', ');
@@ -193,12 +218,30 @@ async function soonest(
   return due;
 }
 
+const consistentQuery = new AsyncLocalStorage<ReadQuery>();
+
+function readTogetherOn(consistently: ConsistentReads): ProjectionReader['readTogether'] {
+  return <A, E, R>(reads: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
+    Effect.flatMap(Effect.context<R>(), (context) =>
+      Effect.suspend(() =>
+        consistentQuery.getStore() === undefined
+          ? Effect.flatten(
+              Effect.promise(() =>
+                consistently((query) => consistentQuery.run(query, () => Effect.runPromiseExitWith(context)(reads))),
+              ),
+            )
+          : reads,
+      ),
+    );
+}
+
 export function projectionReader(
   dialect: ProjectionDialect,
   projections: readonly KeptProjection[],
-  { query, command }: ProjectionStatements,
+  { query: plainQuery, command, consistently }: ProjectionStatements,
   catchingUp: TablesCatchingUp,
 ): ProjectionReader & ProjectionAdvancer {
+  const query: ReadQuery = (sql) => (consistentQuery.getStore() ?? plainQuery)(sql);
   const reading = { dialect, projections, query };
   const served = servedOnceCaughtUp(catchingUp, query);
   const withProjection = <A>(name: string, none: A, read: (projection: KeptProjection) => Promise<A>) =>
@@ -216,6 +259,13 @@ export function projectionReader(
       withProjection(name, [], (projection) => rowsUnder(reading, projection, address, rowsQuery)),
     countProjectedRows: (name, address, where) =>
       withProjection(name, 0, (projection) => counted(reading, projection, address, where)),
+    readProjectedRowsOfKeys: (name, address, keys) =>
+      keys.length === 0
+        ? Effect.succeed([])
+        : withProjection(name, inTheOrderAsked(keys, []), async (projection) =>
+            inTheOrderAsked(keys, await rowsOfKeys(reading, projection, address, keys)),
+          ),
+    readTogether: readTogetherOn(consistently),
     readDueRows: (name, dueQuery) => withProjection(name, [], (projection) => dueRows(reading, projection, dueQuery)),
     nextDueOf: (name, column, after) =>
       withProjection(name, null, (projection) => soonest(reading, projection, column, after)),

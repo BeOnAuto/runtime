@@ -1,4 +1,5 @@
 import { defineQuery } from '@on.auto/operations';
+import { playbookReadsTogether } from '@on.auto/operations/entities';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -14,6 +15,7 @@ export function defineListDefinitions(capabilities: readonly Capability[], goals
   return known.publish(
     defineQuery('playbook', {
       name: 'list_definitions',
+      staleOn: [{ kind: 'definition' }],
       title: 'List definitions',
       description: [
         'Lists the definitions of one type in the playbook, sorted by name, each with its version, its status and what its document says it does, without the document.',
@@ -29,7 +31,7 @@ export function defineListDefinitions(capabilities: readonly Capability[], goals
       reasons: ['not_found'],
       handle: Effect.fnUntraced(function* ({ type, include_retired: includeRetired = false }) {
         const capability = yield* known.capabilityOfType(type);
-        const listed = yield* stagedList(capability, includeRetired, goals);
+        const listed = yield* playbookReadsTogether(stagedList(capability, includeRetired, goals));
         return { definitions: listed.map((entry) => entry.listed) };
       }),
       plainLanguage: {

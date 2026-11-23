@@ -32,6 +32,7 @@ export const goalsReadIn = goalsReadWith();
 export function getPlaybookGoalsJudged(results: boolean, connected?: ServerConnected) {
   return defineHttpOperation('playbook', 'query', {
     name: 'get_playbook_goals',
+    staleOn: [{ kind: 'goal' }, { kind: 'connection' }],
     title: 'Get playbook goals',
     description,
     route: { method: 'GET', path: '/goals' },

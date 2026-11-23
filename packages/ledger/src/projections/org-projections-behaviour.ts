@@ -48,22 +48,25 @@ function addressesOf(rows: readonly ProjectedKeyedRow[]) {
 
 function rowsUnderTheirAddresses(open: ProjectingLedger): void {
   describe('a projection of the streams of playbooks and of orgs', () => {
-    it('keeps each row under its address, reads and counts the rows of one, and keeps none that folds to nothing', async () => {
+    it('keeps each row under its address, an org’s one stream of a kind by that kind, reads and counts the rows of one, and keeps none that folds to nothing', async () => {
       const ledger = await open([remarkRows]);
       await remarked(ledger, 'playbook/acme/alpha/remarks/r1', made('of alpha'));
       await remarked(ledger, 'org/acme/remarks/r1', made('of acme'));
       await remarked(ledger, 'org/acme/remarks/r2', { type: 'remark_erased', data: { position: 1 } });
       await remarked(ledger, 'org/globex/remarks/r1', made('of globex'));
-      await remarked(ledger, 'org/acme/remarks', made('of no stream of a kind'));
+      await remarked(ledger, 'org/acme/remarks', made('of the one stream of the kind'));
 
       const ofAcme = await Effect.runPromise(ledger.readProjectedRows('remarks', acme, everyRow));
       const ofAlpha = await Effect.runPromise(ledger.readProjectedRows('remarks', alpha, everyRow));
 
-      expect(ofAcme.map(({ row }) => row['text'])).toEqual(['of acme']);
-      expect(ofAcme).toMatchObject([{ org: 'acme', key: 'r1' }]);
-      expect(ofAcme.map((row) => 'playbook' in row)).toEqual([false]);
+      expect(ofAcme.map(({ row }) => row['text'])).toEqual(['of acme', 'of the one stream of the kind']);
+      expect(ofAcme).toMatchObject([
+        { org: 'acme', key: 'r1' },
+        { org: 'acme', key: 'remarks' },
+      ]);
+      expect(ofAcme.map((row) => 'playbook' in row)).toEqual([false, false]);
       expect(ofAlpha.map(({ row }) => row['text'])).toEqual(['of alpha']);
-      expect(await Effect.runPromise(ledger.countProjectedRows('remarks', acme, []))).toBe(1);
+      expect(await Effect.runPromise(ledger.countProjectedRows('remarks', acme, []))).toBe(2);
     });
 
     it('keeps nothing of a scope it does not name, a playbook’s streams alone when it names none', async () => {

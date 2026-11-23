@@ -1,6 +1,7 @@
 import { defineHttpOperation } from '@on.auto/operations';
 
-import { listedBy } from '../operations/list-activity.ts';
+import { activityOfPlaybooksKeepingGoals } from '../entities/activity-kinds.ts';
+import { activityStaleOn, listedBy } from '../operations/activity-listing.ts';
 import { markedBy } from '../operations/mark-activity-seen.ts';
 import { mostPlaybookChanges } from '../operations/playbook-register.ts';
 import { itemOfAnyAddress } from '../positions/activity-addresses.ts';
@@ -13,13 +14,13 @@ import {
   MarkActivitySeenWithGoalsOutputSchema,
   kindsWithGoals,
 } from './goal-schemas.ts';
-import { setAsideOfGoals, type GoalsRead } from './goal-set-aside.ts';
-import { tablesWithGoals } from './goal-tables.ts';
+import type { GoalsRead } from './goal-set-aside.ts';
 
 export function activityOperationsKeepingGoals(goals: GoalsRead) {
-  const setAsideOf = setAsideOfGoals(goals.setAside);
+  const playbooks = activityOfPlaybooksKeepingGoals(goals.setAside);
   const listActivity = defineHttpOperation('org', 'query', {
     name: 'list_activity',
+    staleOn: activityStaleOn,
     title: 'List activity',
     description: [
       'Lists the activity of the playbooks of the org the caller may access, newest first:',
@@ -37,10 +38,9 @@ export function activityOperationsKeepingGoals(goals: GoalsRead) {
     reasons: ['invalid_input', 'not_found'],
     handle: listedBy({
       kinds: kindsWithGoals,
-      tables: tablesWithGoals,
+      playbooks,
       rowsServed: rowsServedWithGoals(goals),
       countsOf: countsWithGoalsFor,
-      setAsideOf,
     }),
   });
   const markActivitySeen = defineHttpOperation('org', 'command', {
@@ -56,7 +56,7 @@ export function activityOperationsKeepingGoals(goals: GoalsRead) {
     inputSchema: MarkActivitySeenWithGoalsInputSchema,
     outputSchema: MarkActivitySeenWithGoalsOutputSchema,
     reasons: ['invalid_input', 'forbidden', 'conflict'],
-    handle: markedBy({ itemOf: itemOfAnyAddress, countsOf: countsWithGoalsFor, setAsideOf }),
+    handle: markedBy({ itemOf: itemOfAnyAddress, countsOf: countsWithGoalsFor, playbooks }),
   });
   return { listActivity, markActivitySeen };
 }

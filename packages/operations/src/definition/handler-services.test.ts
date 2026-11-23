@@ -1,5 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
+import type { EntitiesReader } from '../entities/entity-kind.ts';
 import type {
   BoundProjectionReader,
   PlaybookContentReader,
@@ -65,7 +66,7 @@ describe('the ports a handler sees', () => {
     expectTypeOf<OrgContext['Service']>().toEqualTypeOf<OrgAddress>();
     expectTypeOf<PlaybookContext['Service']>().toEqualTypeOf<PlaybookAddress>();
     expectTypeOf<OrgReader['Service']>().toEqualTypeOf<
-      StreamReader & OrgAppendedFactsReader & OrgProjectionReader & OrgDefinitionsReader
+      StreamReader & OrgAppendedFactsReader & OrgProjectionReader & OrgDefinitionsReader & EntitiesReader
     >();
     expectTypeOf<OrgWriter['Service']>().toEqualTypeOf<StreamWriter>();
     expectTypeOf<PlaybookReader['Service']>().toEqualTypeOf<

@@ -1,6 +1,8 @@
 import {
   CursorNotHeld,
   cursorOfParts,
+  definitionKeyOfStream,
+  playbookNamedAsHeld,
   partsOfCursor,
   streamPrefixOfPlaybook,
   type AppendedFacts,
@@ -26,11 +28,14 @@ type AppendedFactsPorts = Pick<Ledger['Service'], 'readAppendedFacts' | 'waitFor
 
 type AppendedStore = Pick<RecordedStore, 'pointLength' | 'readAppendedFacts'> &
   AppendWaitsStore &
-  Pick<DefinitionNamesStore, 'definitionsIn'>;
+  Pick<DefinitionNamesStore, 'definitionsIn' | 'nameHeldBy'>;
 
 async function factScopeOf(store: AppendedStore, scope: AppendedScope): Promise<FactScope> {
   if (scope.kind === 'streams') {
     return scope;
+  }
+  if (scope.kind === 'org') {
+    return { kind: 'org', org: scope.org.org, streams: scope.streams };
   }
   const playbookKey = streamPrefixOfPlaybook(scope.playbook);
   return { kind: 'playbook', playbookKey, definitionKeys: await store.definitionsIn(playbookKey) };
@@ -83,12 +88,26 @@ function appendedFactsOf(read: StoredAppendedFacts): Effect.Effect<AppendedFacts
   });
 }
 
+function namedByTheirPlaybooks(store: AppendedStore): (read: AppendedFacts) => Effect.Effect<AppendedFacts> {
+  return (read) =>
+    Effect.promise(async () => {
+      const keys = [...new Set(read.facts.flatMap(({ stream }) => definitionKeyOfStream(stream) ?? []))];
+      const held = new Map(await Promise.all(keys.map(async (key) => [key, await store.nameHeldBy(key)] as const)));
+      return {
+        ...read,
+        facts: read.facts.map((fact) => playbookNamedAsHeld(fact, held.get(definitionKeyOfStream(fact.stream) ?? ''))),
+      };
+    });
+}
+
 export function appendedFactsReaderOf(store: AppendedStore): AppendedFactsPorts {
   return {
     readAppendedFacts: (scope, { after, most, dataOf }) => {
+      const named = scope.kind === 'org' ? namedByTheirPlaybooks(store) : Effect.succeed;
       const read = (asked: AppendedFactsAsked) =>
         Effect.promise(async () => store.readAppendedFacts(await factScopeOf(store, scope), asked)).pipe(
           Effect.flatMap(appendedFactsOf),
+          Effect.flatMap(named),
         );
       if (after === undefined) {
         return read({ most, dataOf });

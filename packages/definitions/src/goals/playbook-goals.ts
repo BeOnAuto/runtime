@@ -2,7 +2,8 @@ import type { PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { contributesIn, type Contributes } from '../contributions/contributes-details.ts';
-import { loadEachHeldOn, loadRegistry } from '../operations/registry-access.ts';
+import { loadEachHeldOn } from '../operations/registry-access.ts';
+import { stagedRegistry } from '../read-model-staging/staged-registries.ts';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import { goalFoldOf, goalStream, standingYesOf, type GoalState } from './goal-decider.ts';
 import { goalType } from './goal-names.ts';
@@ -104,7 +105,7 @@ export const goalStandingIn: Effect.Effect<GoalStanding, never, PlaybookReader |
     const goals = yield* playbookGoalsIn;
     const { workflows: registered, ...armed } = yield* workflowsArmed;
     const workflows = notRetired(registered).map((stored) => standingWorkflowOf(stored));
-    const interactions = notRetired((yield* loadRegistry('interaction')).values());
+    const interactions = notRetired((yield* stagedRegistry('interaction')).values());
     const notifiers = new Set(interactions.filter((stored) => isNotification(stored)).map(({ name }) => name));
     return { ...goals, workflows, notifiers, ...armed };
   },

@@ -27,7 +27,7 @@ import {
   remarkFacts,
   RemarkFactSchema,
 } from '@on.auto/operations/testing';
-import { createPlaybook } from '@on.auto/playbooks';
+import { createPlaybook, playbookRows } from '@on.auto/playbooks';
 import { providersShippedRoots, readProviders } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Context, Effect, Layer, ManagedRuntime, Result, Schema, type SchemaAST } from 'effect';
@@ -220,7 +220,9 @@ describe('the services the playbook operations run on', () => {
   });
 
   it('share one ledger, so the playbook registry finds a playbook the operations created', async () => {
-    const runtime = ManagedRuntime.make(applicationLayer(ledgerLayer({ fileName: ':memory:' })));
+    const runtime = ManagedRuntime.make(
+      applicationLayer(ledgerLayer({ fileName: ':memory:', projections: [playbookRows] })),
+    );
     const created = makeDispatcher([]).dispatchToOrg(createPlaybook.registration, {
       caller: acmeAdmin,
       org: 'acme',

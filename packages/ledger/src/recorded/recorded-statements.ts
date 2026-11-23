@@ -67,7 +67,8 @@ export type RecordsSelected =
   | { readonly kind: 'streams'; readonly streams: readonly string[] }
   | { readonly kind: 'run'; readonly keys: Keys; readonly streams: Keys }
   | { readonly kind: 'correlated'; readonly org: string; readonly keys: Keys; readonly correlation: string }
-  | { readonly kind: 'org'; readonly org: string };
+  | { readonly kind: 'org'; readonly org: string }
+  | { readonly kind: 'across'; readonly org: string; readonly streams: readonly string[] };
 
 export function pointKey(point: RecordedPoint): string {
   return point.join(':');
@@ -210,13 +211,19 @@ function factPlaceOf({ point, id }: RecordHead): FactPlace {
   return { point, id };
 }
 
+function selectedBy(scope: FactScope): RecordsSelected {
+  if (scope.kind === 'playbook') {
+    return { kind: 'keys', keys: [scope.playbookKey, ...scope.definitionKeys] };
+  }
+  return scope.kind === 'org' ? { kind: 'across', org: scope.org, streams: scope.streams } : scope;
+}
+
 async function headsIn(
   statements: FactStatements,
   scope: FactScope,
   examined: ExaminationScope,
 ): Promise<readonly RecordHead[]> {
-  const records: RecordsSelected =
-    scope.kind === 'playbook' ? { kind: 'keys', keys: [scope.playbookKey, ...scope.definitionKeys] } : scope;
+  const records: RecordsSelected = selectedBy(scope);
   const items = await statements.examineRecords(records, { ...examined, ...measuringNothing });
   return items.flatMap(({ heads }) => heads);
 }

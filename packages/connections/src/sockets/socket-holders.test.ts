@@ -1,5 +1,4 @@
 import type { Decided } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { SocketEnded, type OpensASocket, type SocketOpening } from '@on.auto/providers';
 import {
   appLevelToken,
@@ -15,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsFoldOf, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { socketChecksOver } from './socket-checks.ts';
 import { appCredentialRefused, socketsHeldIn } from './socket-holders.ts';
 
@@ -110,7 +110,7 @@ function recordedAt(at: string) {
 }
 
 async function aRegistry() {
-  const registry = memoryLedger().service;
+  const registry = keptLedger().service;
   await Effect.runPromise(registry.execute(connectionsStreamOfOrg('acme'), recordedAt(connectedAt), facts));
   return registry;
 }
@@ -146,7 +146,7 @@ describe('the sockets a registry holds', () => {
 
 describe('what a socket holder carries of its connection', () => {
   it('is the id of the account its connection is recorded in, where there is one, and whether the service is still to be asked who the connection is', async () => {
-    const registry = memoryLedger().service;
+    const registry = keptLedger().service;
     const signedIn = {
       type: 'connection_connected',
       data: { ...connected('connection-1', appToken).data, account: { id: 'T-1', name: 'Acme' } },

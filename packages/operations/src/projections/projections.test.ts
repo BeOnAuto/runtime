@@ -191,15 +191,16 @@ const acmeRemarks: AddressedStream = {
 };
 
 describe('the stream a fact was appended to', () => {
-  it('is read as the prefix, the playbook or the org, the kind and the id, and nothing that names no kind and id', () => {
+  it('is read as the prefix, the playbook or the org, the kind and the id, an org’s one stream of a kind by that kind, and nothing else', () => {
     expect([
       addressedStreamOf('playbook/acme/alpha/runs/r1'),
       addressedStreamOf('org/acme/remarks/r1'),
       addressedStreamOf('playbook/acme/alpha/runs'),
       addressedStreamOf('playbook/acme/alpha/runs/r1/nested'),
-      addressedStreamOf('org/acme/remarks'),
       addressedStreamOf('org/acme/alpha/runs/r1'),
-    ]).toEqual([alphaRuns, acmeRemarks, undefined, undefined, undefined, undefined]);
+      addressedStreamOf('playbook/acme/alpha'),
+      addressedStreamOf('org/acme/remarks'),
+    ]).toEqual([alphaRuns, acmeRemarks, undefined, undefined, undefined, undefined, { ...acmeRemarks, id: 'remarks' }]);
   });
 
   it('is of neither a playbook nor an org outside them, though it names a kind and an id', () => {

@@ -1,9 +1,9 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { keptSecrets } from '../testing/harness-services.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { deliverySecretsOf } from './subscription-deliveries.ts';
 import {
   EventSubscriptionEventSchema,
@@ -34,7 +34,7 @@ function valueOf(secret: Redacted.Redacted | undefined): string | undefined {
 
 async function madeAndRecorded() {
   const secrets = subscriptionSecretsOf(keptSecrets({}));
-  const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+  const ledger = keptLedger(eventSubscriptions).service;
   const made = await Effect.runPromise(secrets.make(place));
   const madeSubscription = {
     type: 'webhook',
@@ -80,7 +80,7 @@ type MadeType = 'webhook' | 'queue';
 
 function heldBy() {
   const kept = keptSecrets({});
-  const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+  const ledger = keptLedger(eventSubscriptions).service;
   const records = subscriptionRecordsOf(ledger);
   const made = async (playbook: string, topic: string, secret?: string, type: MadeType = 'webhook') => {
     const secretId =

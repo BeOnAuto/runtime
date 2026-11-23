@@ -1,7 +1,7 @@
 import {
   Caller,
   Forbidden,
-  OrgReader,
+  type OrgReader,
   OrgWriter,
   randomUUIDv7,
   recordedCallerOf,
@@ -27,7 +27,7 @@ import type {
   WayChoice,
 } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDeciderOf } from '../registry/registry-decider.ts';
-import { findConnection } from '../registry/registry-lookup.ts';
+import { connectionsOfTheOrg, findConnection } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
 import type { ConnectionServices, SecretKeeping } from './connection-services.ts';
 import { shownConnection } from './shown-connections.ts';
@@ -35,10 +35,7 @@ import { shownConnection } from './shown-connections.ts';
 type Named = Pick<ConnectionServices, 'providers'>;
 
 export function loadRegistry({ providers }: Named): Effect.Effect<Registry, never, OrgReader> {
-  return Effect.gen(function* () {
-    const { state } = yield* (yield* OrgReader).load(connectionsStream, registryDeciderOf(providers));
-    return state;
-  });
+  return connectionsOfTheOrg(providers);
 }
 
 export function foundConnection(named: Named, id: string): Effect.Effect<KeptConnection, NotFound, OrgReader> {

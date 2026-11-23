@@ -1,4 +1,3 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { placeNamesReadOf, type ThroughTheConnection } from '@on.auto/providers';
 import {
   ofEachSubscription,
@@ -12,6 +11,7 @@ import type { CalledOnce } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { addedFact, factsIn, registryOf } from '../testing/loop-registries.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
@@ -115,7 +115,7 @@ function partsOver(registry: SubscriptionLoopParts['registry'], tools: ThroughTh
     forget: () => Effect.die('forgot'),
   };
   return {
-    ledger: memoryLedger().service,
+    ledger: keptLedger().service,
     registry,
     waitingIn: () => Effect.succeed([]),
     triggersIn: () => Effect.succeed([]),

@@ -15,6 +15,8 @@ import { RecordedCredentialSchema, type RecordedCredential } from './acting-fiel
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { AccountSchema, BrokenKindSchema } from './connection.ts';
 
+export const connectionsStream = 'connections';
+
 const ofTheConnection = { connection: Schema.String };
 
 const clientsOfTheRuntimesOwn: ReadonlySet<string> = new Set(['metadata_document', 'dynamic']);

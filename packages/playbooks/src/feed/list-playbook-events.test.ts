@@ -41,6 +41,10 @@ describe('list_playbook_events', () => {
     );
   });
 
+  it('is stale on any event of the feed', () => {
+    expect(listPlaybookEvents.registration.staleOn).toEqual([{ kind: 'event' }]);
+  });
+
   it('names, among what it lists, what each presenter that says so shows, last', () => {
     const shelves = { ...presenterOf('shelves', { added: 'shelf_filled' }), listedAs: 'the shelves filled' };
 

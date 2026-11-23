@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 
 import manifest from '../package.json' with { type: 'json' };
-import { keptDocumentOf, writeOpenApiDocument } from './openapi-document.ts';
+import { keptDocumentOf, writeOpenApiDocument, writeQuerySchema } from './openapi-document.ts';
 
 async function withTemporaryDocument(verify: (path: string) => Promise<void>): Promise<void> {
   const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-openapi-'));
@@ -33,5 +33,12 @@ await test('the command writes the document a throwaway server of this release s
     const document: unknown = JSON.parse(written);
     assert.equal(keptDocumentOf(written), written);
     assert.partialDeepStrictEqual(document, { openapi: '3.1.1', info: { version: manifest.version } });
+  });
+});
+
+await test('the command writes the query schema a throwaway server of this release serves, as it serves it', async () => {
+  await withTemporaryDocument(async (path) => {
+    await writeQuerySchema(path);
+    assert.match(readFileSync(path, 'utf8'), /^type Query \{/u);
   });
 });

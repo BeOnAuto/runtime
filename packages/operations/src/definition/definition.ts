@@ -2,6 +2,9 @@ import type { Effect, Schema } from 'effect';
 
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
 import type { Permission } from '../caller/permission.ts';
+import type { StaleOn } from '../changes/change-naming.ts';
+
+export type { StaleOn } from '../changes/change-naming.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import type { LinkToOpen, PlainLanguage } from '../plain-language/plain-language.ts';
 import type { MethodOf, PathParameters, Route } from './route.ts';
@@ -73,6 +76,7 @@ export interface Definition<
   readonly whileRetired?: boolean;
   readonly sameInEveryScope?: SameInEveryScope<K, Services | ReadServices>;
   readonly permittedBy?: readonly Permission[];
+  readonly staleOn?: readonly StaleOn[];
   readonly inputSchema: In;
   readonly outputSchema: Out;
   readonly reasons: readonly R[];
@@ -120,6 +124,7 @@ interface HttpFields<
   readonly repeatable?: boolean;
   readonly whileRetired?: boolean;
   readonly permittedBy?: readonly Permission[];
+  readonly staleOn?: readonly StaleOn[];
   readonly inputSchema: In;
   readonly reasons: readonly R[];
 }

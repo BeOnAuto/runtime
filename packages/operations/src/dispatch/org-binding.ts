@@ -3,16 +3,9 @@ import { Context, Effect } from 'effect';
 import { Caller } from '../caller/caller.ts';
 import { OrgContext } from '../caller/org-context.ts';
 import type { Runnable } from '../definition/registration.ts';
-import {
-  orgBoundAppendedFactsReader,
-  orgBoundProjectionReader,
-  prefixedReader,
-  prefixedWriter,
-  streamPrefixOfOrg,
-  streamPrefixOfPlaybook,
-} from '../ledger/bound-ports.ts';
+import { prefixedWriter, streamPrefixOfOrg } from '../ledger/bound-ports.ts';
 import type { LedgerPorts } from '../ledger/ledger.ts';
-import { OrgReader } from '../ledger/org-reader.ts';
+import { OrgReader, orgReaderOver } from '../ledger/org-reader.ts';
 import { OrgWriter } from '../ledger/org-writer.ts';
 import type { Succeeded, Rejected } from '../outcome/outcome.ts';
 import { DirectoryListing, type OrgRequest } from './request.ts';
@@ -26,13 +19,7 @@ export function runInOrg<A extends Succeeded>(
   const forQueries = Context.make(Caller, caller).pipe(
     Context.add(OrgContext, { org }),
     Context.add(DirectoryListing, directoryListing === true),
-    Context.add(OrgReader, {
-      ...prefixedReader(ledger, prefix),
-      ...orgBoundAppendedFactsReader(ledger, { org }),
-      ...orgBoundProjectionReader(ledger, { org }),
-      namesHeldInPlaybook: (playbook, definitionType) =>
-        ledger.namesHeldIn({ playbookKey: streamPrefixOfPlaybook({ org, playbook }), definitionType }),
-    }),
+    Context.add(OrgReader, orgReaderOver(ledger, { org })),
   );
   return registration.kind === 'query'
     ? registration.run(input, encoding).pipe(Effect.provideContext(forQueries))

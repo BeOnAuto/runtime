@@ -1,10 +1,10 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { subscriptionLoopOf, type ThroughTheConnection } from '@on.auto/providers';
 import { ofEachSubscription, providersOf, tracker } from '@on.auto/providers/testing';
 import type { CalledOnce } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { addedFact, factsIn, recordedIn, registryOf } from '../testing/loop-registries.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
@@ -116,7 +116,7 @@ function aService() {
 
 function partsOver(registry: SubscriptionLoopParts['registry'], tools: ThroughTheConnection): SubscriptionLoopParts {
   return {
-    ledger: memoryLedger(undefined, [eventSubscriptions]).service,
+    ledger: keptLedger(eventSubscriptions).service,
     registry,
     waitingIn: () => Effect.succeed([]),
     triggersIn: () => Effect.succeed([{ connection: 'boards', type: commented.type, subject: 'B0SITE' }]),

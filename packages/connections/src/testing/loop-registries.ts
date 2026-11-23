@@ -1,11 +1,11 @@
 import type { Decided, StreamReader, StreamWriter } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import type { RecordedEvents } from '@on.auto/providers';
 import { throughItsTools } from '@on.auto/providers/testing';
 import { Effect, Result } from 'effect';
 
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { keptLedger } from './kept-ledger.ts';
 
 const theSecret = {
   kind: 'secret',
@@ -65,7 +65,7 @@ export function recordedIn(registry: Pick<StreamWriter, 'execute'>, recorded: Re
 }
 
 export async function registryOf(...recorded: readonly Recorded[]) {
-  const registry = memoryLedger().service;
+  const registry = keptLedger().service;
   await Effect.runPromise(Effect.forEach(recorded, (each) => appendedTo(registry, each), { discard: true }));
   return registry;
 }

@@ -1,11 +1,17 @@
 import { type NotFound, type PlaybookContext, type PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { RegisteredDefinition } from '../registry/definition-registry.ts';
+import type { DefinitionRegistry, RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionNotFound } from '../registry/registry-lookup.ts';
 import { savedByOf, storedOf } from './read-model-answers.ts';
 import type { ReadModelRefused } from './read-model-refused.ts';
-import { rowAndSaveOf, type DefinitionRow } from './read-model-rows.ts';
+import {
+  definitionRowsOfType,
+  inThePlaybookOf,
+  rowAndSaveOf,
+  saveOfTheRow,
+  type DefinitionRow,
+} from './read-model-rows.ts';
 
 type Reading<A, E = never> = Effect.Effect<A, E | ReadModelRefused, PlaybookReader | PlaybookContext>;
 
@@ -30,5 +36,19 @@ export function registeredFromTheReadModel(type: string, name: string): Reading<
 export function storedFromTheReadModel(type: string, name: string): Reading<RegisteredInTheReadModel, NotFound> {
   return Effect.flatMap(registeredFromTheReadModel(type, name), (found) =>
     found === undefined ? Effect.fail(definitionNotFound(type, name)) : Effect.succeed(found),
+  );
+}
+
+export function registryFromTheReadModel(type: string): Reading<DefinitionRegistry> {
+  return Effect.flatMap(definitionRowsOfType(type), (rows) =>
+    inThePlaybookOf((reader) =>
+      Effect.map(
+        Effect.forEach(rows, (row) =>
+          Effect.map(saveOfTheRow(reader, type, row.definition_id, row), (saved) => storedOf({ row, saved })),
+        ),
+        (stored: readonly RegisteredDefinition[]): DefinitionRegistry =>
+          new Map(stored.map((definition) => [definition.name, definition])),
+      ),
+    ),
   );
 }

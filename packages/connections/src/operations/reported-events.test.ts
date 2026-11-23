@@ -1,4 +1,3 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import {
   cardMoved,
   overTheBoardsSocket,
@@ -24,6 +23,7 @@ import {
   theServerWithNoAddress,
 } from '../testing/boards-reported.ts';
 import { ada, harness, operationNamed } from '../testing/harness.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { addedFact, recordedIn } from '../testing/loop-registries.ts';
 import { nothingReceived } from '../triggers/connection-hearing.ts';
 import { connectionEventsOver } from '../triggers/connection-reporting.ts';
@@ -157,7 +157,7 @@ describe('the events a listed connection reports, by what the one rule answers',
 });
 
 async function boardsConnected() {
-  const ledger = memoryLedger();
+  const ledger = keptLedger();
   await recordedIn(ledger.service, [
     '2026-11-22T07:00:00.000Z',
     [

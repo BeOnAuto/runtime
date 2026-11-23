@@ -1,7 +1,10 @@
-import { Conflict, Forbidden, InvalidInput, NotFound } from '@on.auto/operations';
+import { Conflict, Forbidden, InvalidInput, NotFound, OrgReader } from '@on.auto/operations';
+import type { ProviderList } from '@on.auto/providers';
 import { Effect, Result } from 'effect';
 
 import type { LinkUse } from './connection-commands.ts';
+import { connectionsKeptIn } from './connection-rows-read.ts';
+import { connectionRowsName } from './connection-rows.ts';
 import { runsUnderTheOrgsOAuthClient } from './connection.ts';
 import {
   signingInClientOf,
@@ -115,4 +118,11 @@ export function clientChangedOf(kept: KeptConnection, clientId: string): Conflic
   return runsUnderTheOrgsOAuthClient(kept.connection) && signingInClientOf(kept)?.client_id !== clientId
     ? givenAgainMeanwhile(kept.connection.name)
     : undefined;
+}
+
+export function connectionsOfTheOrg(providers: ProviderList): Effect.Effect<Registry, never, OrgReader> {
+  return Effect.gen(function* () {
+    const reader = yield* OrgReader;
+    return yield* connectionsKeptIn((query) => reader.readProjectedRows(connectionRowsName, query), providers);
+  });
 }

@@ -6,9 +6,11 @@ import {
   providerFoundBy,
   type AccountType,
   type CredentialWay,
+  type Permissions,
   type ProviderList,
 } from '@on.auto/providers';
 
+import type { RecordedCredential } from './acting-fields.ts';
 import type { ConnectionAdded, RecordedConnectionEvent } from './connection-events.ts';
 import type { Credential } from './credential.ts';
 
@@ -33,17 +35,34 @@ function onlyWayOfItsKind({ provider, credential }: OfAWay, providers: ProviderL
   return ways?.length === 1 ? ways[0] : undefined;
 }
 
+export interface ActingAsAdded {
+  readonly permissions: Permissions;
+  readonly accountType: AccountType | undefined;
+}
+
+interface AsRecorded {
+  readonly provider: string | null;
+  readonly credential: RecordedCredential;
+}
+
+export function actingAsAddedOf(connection: AsRecorded, providers: ProviderList): ActingAsAdded | undefined {
+  if (connection.credential.permissions !== undefined) {
+    return undefined;
+  }
+  const way = onlyWayOfItsKind(connection, providers) ?? connection.credential;
+  const permissions = permissionsOf(way);
+  return permissions === undefined
+    ? undefined
+    : { permissions, accountType: accountTypeWhereNoneIsGiven(accountTypesOf(way)) };
+}
+
 function additionAsItActs(providers: ProviderList, added: ConnectionAdded): ConnectionAdded {
   const { data } = added;
-  if (data.credential.permissions !== undefined) {
+  const acting = actingAsAddedOf(data, providers);
+  if (acting === undefined) {
     return added;
   }
-  const way = onlyWayOfItsKind(data, providers) ?? data.credential;
-  const permissions = permissionsOf(way);
-  if (permissions === undefined) {
-    return added;
-  }
-  const accountType = accountTypeWhereNoneIsGiven(accountTypesOf(way));
+  const { permissions, accountType } = acting;
   return {
     ...added,
     data: {

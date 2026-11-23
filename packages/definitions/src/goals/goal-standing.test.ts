@@ -1,4 +1,4 @@
-import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
+import { Ledger, PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,7 +6,7 @@ import { defineCapability, type Capability } from '../capability/capability.ts';
 import { savedGoals, savedPage, savePlaybook } from '../exporting/playbook-saving.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
-import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
+import { harness, toPlaybook, type Harness, type LedgerRead } from '../testing/harness.ts';
 import { experiments } from './goal-examples.ts';
 import { goalStandingIn } from './playbook-goals.ts';
 
@@ -75,6 +75,11 @@ function saved(definitions: Harness, type: string, name: string, source: unknown
 
 async function standingAfterSaves() {
   const definitions = harness();
+  await savesOf(definitions);
+  return standingOf(definitions);
+}
+
+async function savesOf(definitions: Harness) {
   await definitions.call(savePlaybook, toAlpha(acmeAdmin, { page: savedPage, goals: savedGoals }));
   const contributed = { steps: 1, contributes: [measuring] };
   await saved(definitions, 'workflow', 'measuring', contributed);
@@ -92,7 +97,6 @@ async function standingAfterSaves() {
   await definitions.call(kept.pauseDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'resting' }));
   await definitions.call(kept.retireDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'gone' }));
   await definitions.call(kept.retireDefinition, toAlpha(acmeAdmin, { type: 'interaction', name: 'old-note' }));
-  return standingOf(definitions);
 }
 
 describe('what a playbook holds for its goals', () => {
@@ -111,5 +115,58 @@ describe('what a playbook holds for its goals', () => {
       { name: 'older', version: 1, paused: false, contributes: [] },
     ]);
     expect(standing.notifiers).toEqual(new Set(['tell-owner']));
+  });
+});
+
+function withoutIds(standing: Awaited<ReturnType<typeof standingOf>>) {
+  return { ...standing, held: standing.held.map((held) => ({ ...held, definition: '' })) };
+}
+
+function withTheReadModelRefusing(ledger: Ledger['Service']): Ledger['Service'] {
+  return { ...ledger, readProjectedRows: () => Effect.die(new Error('The read model cannot be read')) };
+}
+
+function interactionsFoldedIn(reads: readonly LedgerRead[]): readonly LedgerRead[] {
+  return reads.filter((read) => 'loaded' in read && read.loaded.endsWith('/definitions/interaction'));
+}
+
+function standingReadOf(definitions: Harness, readThrough: (ledger: Ledger['Service']) => Ledger['Service']) {
+  return definitions.run(
+    Effect.flatMap(Effect.service(Ledger), (ledger) =>
+      goalStandingIn.pipe(
+        Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
+        Effect.provide(playbookLedgerOf(readThrough(ledger), { org: 'acme', playbook: 'alpha' })),
+      ),
+    ),
+  );
+}
+
+describe('what a playbook holds for its goals where the definitions read model answers', () => {
+  it.each(['reads', 'on'] as const)(
+    'is read of the read model at the stage %s, folding the stream of no interaction, and is what the folds answer',
+    async (stage) => {
+      const folded = await standingAfterSaves();
+      const definitions = harness(undefined, undefined, { stage, folds: ['workflow', 'interaction'] });
+      await savesOf(definitions);
+      const before = definitions.ledgerReads().length;
+
+      const standing = await standingReadOf(definitions, (ledger) => ledger);
+      const interactionsFolded = interactionsFoldedIn(definitions.ledgerReads().slice(before));
+
+      expect(withoutIds(standing)).toEqual(withoutIds(folded));
+      expect(interactionsFolded).toEqual([]);
+    },
+  );
+
+  it('is folded as before where the read model cannot be read', async () => {
+    const folded = await standingAfterSaves();
+    const definitions = harness(undefined, undefined, { stage: 'on', folds: ['workflow', 'interaction'] });
+    await savesOf(definitions);
+    const before = definitions.ledgerReads().length;
+
+    const standing = await standingReadOf(definitions, withTheReadModelRefusing);
+
+    expect(withoutIds(standing)).toEqual(withoutIds(folded));
+    expect(interactionsFoldedIn(definitions.ledgerReads().slice(before))).toHaveLength(4);
   });
 });

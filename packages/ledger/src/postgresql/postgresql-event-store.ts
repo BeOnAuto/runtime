@@ -3,7 +3,12 @@ import { pgEventStoreDriver } from '@event-driven-io/emmett-postgresql/pg';
 
 import { emmettEventStore, type RiddenAppends } from '../emmett/emmett-event-store.ts';
 import { listenersOf, type AppendListeners, type LedgerStore } from '../event-store.ts';
-import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgresql-reads/postgresql-recorded.ts';
+import {
+  countedIn,
+  formattedFor,
+  postgresqlRecordedStoreOn,
+  type Query,
+} from '../postgresql-reads/postgresql-recorded.ts';
 import { dataAsJsonText } from './json-text.ts';
 import { migrationLockTakenWithin, postgresqlLayoutKept, type MigrationLockTaken } from './postgresql-layout.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
@@ -99,6 +104,12 @@ function migrationOf(migrating: () => Migrating, kept: StoreKept): () => Promise
 
 export const connectionsOfOneLedger = 10;
 
+function countedQueryOn(pool: { readonly query: PostgreSQLPool['query'] }): Query {
+  return countedIn(
+    async (text, values) => (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows,
+  );
+}
+
 export function postgresqlStoreOn(
   pooled: () => PostgreSQLPool,
   kept: StoreKept,
@@ -107,8 +118,7 @@ export function postgresqlStoreOn(
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
   const lockTaken = migrationLockTakenWithin(kept.migrationLockWaiting);
-  const query: Query = async (text, values) =>
-    (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
+  const query = countedQueryOn(pool);
   const store = emmettEventStore(
     getPostgreSQLEventStore({
       driver: pgEventStoreDriver,
@@ -135,7 +145,7 @@ export function postgresqlStoreOn(
     ...store,
     ...multiStreamAppendsOn(() => ({ pool, projections }), kept, listeners),
     ...recorded,
-    ...projections.readerOnThePool(pool, formattedFor(query)),
+    ...projections.readerOnThePool(pool, formattedFor(query), connectionsOfOneLedger - 1),
     ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query, projections.catchingUp),
     ...projections.holdsOn(pool, formattedFor(query)),

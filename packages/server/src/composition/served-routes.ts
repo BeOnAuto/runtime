@@ -7,6 +7,7 @@ import {
   mcpRoutes,
   openApiDocumentRoutes,
   operationRoutes,
+  queryRoutes,
   readDebugStyle,
   type AppRuntime,
   type GuidePages,
@@ -88,6 +89,7 @@ export async function routesFor(
   const debugStyle = await readDebugStyle(shippedFiles);
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
+    queryRoutes({ catalog, dispatcher, run: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, authorizationServer }),
     contentAddressRoutes({ key: contentAddressKey, content: runtimeLedger(runtime).content }),
     ...deliveryRoutesOf(runtime, { answerStores, eventStores }),

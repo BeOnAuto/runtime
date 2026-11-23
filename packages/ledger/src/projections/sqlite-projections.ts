@@ -132,6 +132,7 @@ const sqliteProjectionDialect: ProjectionDialect = {
       : SQL`json_set(message_metadata, '$.payloadBytes', ${payloadBytes})`,
   booleanOf: (value) => (value ? 1 : 0),
   listed: (values) => SQL`SELECT value FROM json_each(${JSON.stringify(values)})`,
+  oneOf: (column, values) => SQL`${SQL.plain(column)} IN (SELECT value FROM json_each(${JSON.stringify(values)}))`,
   forUpdate: '',
   catchUp: sqliteCatchUp,
 };

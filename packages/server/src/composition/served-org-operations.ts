@@ -1,8 +1,7 @@
 import { getCaller, roleAssignmentOperations } from '@on.auto/access-control';
-import { activityOperationsOf, commentChanges, orgCommentOperations } from '@on.auto/activity';
-import { connectionChanges } from '@on.auto/connections';
+import { activityOperationsOf, orgCommentOperations } from '@on.auto/activity';
 import { requestsSetAsideBy } from '@on.auto/goals';
-import { defineListOrgChanges, playbookChanges, playbookOperationsOf } from '@on.auto/playbooks';
+import { playbookOperationsOf } from '@on.auto/playbooks';
 
 import { playbookGoalsReadBy, playbookGoalsServedBy } from '../goals/reads/served-playbook-goals.ts';
 import { importOperationsOf } from '../importing/import-operations.ts';
@@ -14,8 +13,6 @@ import type {
 } from './playbook-operations.ts';
 import { playbookPagesServedBy } from './served-playbook-pages.ts';
 import type { ServedReasoning } from './served-reasoning.ts';
-
-const orgChanges = defineListOrgChanges([playbookChanges, connectionChanges, commentChanges]);
 
 type ServingRuntime = Parameters<typeof importOperationsOf>[0];
 
@@ -34,7 +31,6 @@ function playbookOperationsOver(runtime: ServingRuntime, served: ServedPlaybooks
 function orgOperationsOfPlaybooks(runtime: ServingRuntime, served: ServedPlaybooks) {
   const read = served.goals ? playbookGoalsReadBy(runtime, served.pages) : undefined;
   return [
-    orgChanges,
     ...activityOperationsOf(read === undefined ? undefined : { read, setAside: requestsSetAsideBy }),
     ...orgCommentOperations,
     ...roleAssignmentOperations,

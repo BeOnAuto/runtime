@@ -1,7 +1,9 @@
 import { definitionNamesWith } from '@on.auto/definitions/testing';
 import {
   Ledger,
+  OrgReader,
   StudioLinks,
+  type OrgAddress,
   allPermissions,
   makeDispatcher,
   type CallerIdentity,
@@ -12,11 +14,19 @@ import {
   type Runnable,
   type StudioPage,
 } from '@on.auto/operations';
+import {
+  orgReaderOver,
+  entitiesSentOf,
+  valuesAnswered,
+  wiredKindOf,
+  type EntityKind,
+} from '@on.auto/operations/entities';
 import { memoryLedgerWith, recordingReporter } from '@on.auto/operations/testing';
 import {
   createPlaybook,
   defineUpdatePlaybook,
   ledgerPlaybookRegistry,
+  playbookRows,
   restorePlaybook,
   retirePlaybook,
   type PlaybookPages,
@@ -25,8 +35,7 @@ import { DateTime, Effect, Layer, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
 import { activityProjections } from '../composition/activity-composition.ts';
-import { listActivity as listedToday } from '../operations/list-activity.ts';
-import { markActivitySeen as markedToday } from '../operations/mark-activity-seen.ts';
+import { listActivity as listedToday, markActivitySeen as markedToday, playbookChangeRows } from '../index.ts';
 import { recorded, type RecordedFact } from './recorded-facts.ts';
 
 const now = '2026-11-01T18:00:00.000Z';
@@ -82,6 +91,12 @@ const ListedSchema = Schema.Struct({
 
 export const listedOf = (outcome: Outcome) => Schema.decodeUnknownSync(ListedSchema)(outputOf(outcome));
 
+export const firstCursorOf = (outcome: Outcome): string =>
+  listedOf(outcome)
+    .rows.slice(0, 1)
+    .map(({ cursor }) => cursor)
+    .join('');
+
 export const markedOf = (outcome: Outcome) =>
   Schema.decodeUnknownSync(Schema.Struct({ counts: CountsSchema, through: ThroughSchema }))(outputOf(outcome));
 
@@ -117,6 +132,31 @@ const updatePlaybook = defineUpdatePlaybook(noPages);
 
 export type LedgerReads = (ledger: Ledger['Service']) => Ledger['Service'];
 
+interface EntitiesAsked<Key, Value, Asked> {
+  readonly kind: EntityKind<Key, Value, Asked>;
+  readonly org: OrgAddress;
+  readonly keys: readonly Key[];
+  readonly asked: Asked;
+}
+
+export function entitiesOverTheWire<Key, Value, Asked>(
+  ledger: Ledger['Service'],
+  { kind, org, keys, asked }: EntitiesAsked<Key, Value, Asked>,
+) {
+  const sent = entitiesSentOf(kind, keys, asked);
+  return wiredKindOf(kind)
+    .readSent(structuredClone(sent.keys), structuredClone(sent.asked))
+    .pipe(
+      Effect.provideService(OrgReader, orgReaderOver(ledger, org)),
+      Effect.flatMap((answered) => valuesAnswered(kind, structuredClone(answered))),
+    );
+}
+
+export const sentOverTheWire: LedgerReads = (ledger) => ({
+  ...ledger,
+  readEntitiesAcross: (kind, org, keys, asked) => entitiesOverTheWire(ledger, { kind, org, keys, asked }),
+});
+
 const asItReads: LedgerReads = (ledger) => ledger;
 
 export interface ActivityServed {
@@ -129,7 +169,7 @@ const servedToday: ActivityServed = { listActivity: listedToday, markActivitySee
 
 export function activityHarness(reads: LedgerReads = asItReads, served: ActivityServed = servedToday) {
   const ledger = memoryLedgerWith({
-    projections: [...activityProjections, ...served.projections],
+    projections: [...activityProjections, playbookRows, playbookChangeRows, ...served.projections],
     definitionNames: definitionNamesWith([]),
   });
   const { listActivity, markActivitySeen } = served;

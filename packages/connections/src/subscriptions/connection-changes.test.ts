@@ -1,10 +1,10 @@
 import type { Decided, PlaybookAddress } from '@on.auto/operations';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { addedFact } from '../testing/loop-registries.ts';
 import { connectionChangesRelayed } from './connection-changes.ts';
 
@@ -21,7 +21,7 @@ function run<A>(effect: Effect.Effect<A, unknown>): Promise<A> {
 const ada = { id: 'person:ada', name: 'Ada Lovelace' };
 
 function connectionsOver() {
-  const ledger = memoryLedger().service;
+  const ledger = keptLedger().service;
   const recorded = {
     initialState: null,
     evolve: () => null,

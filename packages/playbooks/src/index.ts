@@ -14,7 +14,7 @@ export { PlaybookSchema, type Playbook } from './registry/playbook.ts';
 export { playbookCreatedOf } from './registry/created-playbooks.ts';
 export { PlaybookEventSchema } from './registry/playbook-events.ts';
 export { playbooksStream, playbooksStreamOfOrg } from './registry/playbooks-stream.ts';
-export { defineListOrgChanges, defineListPlaybookChanges } from './changes/list-changes.ts';
+export { defineListOrgChanges, defineListPlaybookChanges, type ChangesOfThePlaybooks } from './changes/list-changes.ts';
 export { playbookChanges } from './registry/playbook-changes.ts';
 export {
   type CheckedGoal,
@@ -68,3 +68,4 @@ export {
   type PlaybookImports,
   type PlaybookImportsInItsObject,
 } from './imports/playbook-imports.ts';
+export { playbookRows, playbookRowsLayoutSteps } from './registry/playbook-rows.ts';

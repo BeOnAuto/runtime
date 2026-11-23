@@ -86,6 +86,7 @@ export function defineListRuns(capabilities: readonly Capability[], byStatus: St
   const listRuns = runsListedBy(byStatus);
   const operation = defineQuery('playbook', {
     name: 'list_runs',
+    staleOn: [{ kind: 'run' }],
     title: 'List runs',
     description,
     route: { method: 'GET', path: '/runs' },

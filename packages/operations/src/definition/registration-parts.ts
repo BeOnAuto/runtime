@@ -65,6 +65,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'repeatable'
   | 'whileRetired'
   | 'permittedBy'
+  | 'staleOn'
   | 'inputSchema'
   | 'reasons'
 > &
@@ -125,6 +126,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     ...(definition.whileRetired === true ? { whileRetired: true } : {}),
     ...sameInEveryScopeWhereDeclared(definition),
     permissions,
+    ...(definition.staleOn === undefined ? {} : { staleOn: definition.staleOn }),
     reasons: [...new Set(definition.reasons)],
     input: jsonSchemaDocumentOf(definition.inputSchema),
     refusesEmptyBody: refusesEmptyBody(definition.inputSchema, pathParameters),

@@ -1,4 +1,4 @@
-import { InvalidInput } from '@on.auto/operations';
+import { InvalidInput, PlaybookIdSchema } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { ofTheOrg } from '../positions/activity-addresses.ts';
@@ -48,4 +48,33 @@ export function kindsOf(
   return kinds.length === asked.length && kinds.length > 0
     ? Effect.succeed(new Set(kinds))
     : Effect.fail(refusedAt('/kind', `Expected ${kindsInWords(known)}, or several of them separated by commas`));
+}
+
+export const ListActivityInputSchema = Schema.Struct({
+  kind: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'One kind, needs_you, broken, new or comment, or several separated by commas: keep the rows of those kinds',
+    }),
+  ),
+  playbook: Schema.optionalKey(PlaybookIdSchema.annotate({ description: 'Keep the rows of one playbook' })),
+  mine: Schema.optionalKey(
+    Schema.Boolean.annotate({
+      description:
+        'true keeps, of the new and comment rows, those whose by is the caller, and leaves the other kinds as they are',
+    }),
+  ),
+  since: Schema.optionalKey(cursorField('A cursor: keep the rows after the row it names')),
+  limit: Schema.optionalKey(
+    Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: mostRowsInAPage })).annotate({
+      description: `How many rows a page holds, 1 to ${mostRowsInAPage}; ${rowsInAPage} when left out`,
+    }),
+  ),
+  cursor: Schema.optionalKey(cursorField('The next_cursor of the page before')),
+});
+
+export type ListActivityInput = typeof ListActivityInputSchema.Type;
+
+export interface DismissedAsked {
+  readonly dismissed?: 'include';
 }

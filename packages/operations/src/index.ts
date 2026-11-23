@@ -1,5 +1,5 @@
 export { definitionBoundStreamReader, definitionOfStreamPrefix, orgOfStreamPrefix } from './ledger/bound-ports.ts';
-export { namedAsHeld } from './ledger/names-held-now.ts';
+export { definitionKeyOfStream, namedAsHeld, playbookNamedAsHeld } from './ledger/names-held-now.ts';
 export { playbookBoundProjectionReader, playbookBoundStreamReader, runStreamNameOf } from './ledger/bound-ports.ts';
 export { playbookOfStreamPrefix, streamPrefixOfDefinition, streamPrefixOfPlaybook } from './ledger/bound-ports.ts';
 export { streamPrefixOfOrg, streamPrefixOfTheDefinitionsOf } from './ledger/bound-ports.ts';
@@ -56,6 +56,7 @@ export { type ProjectionDeclaration, type RowAdvance, type ProjectionReader } fr
 export { everyDefinitionOf, partitionOfTheRow } from './projections/keyed-projection.ts';
 export { type RowPartition, type RowsAddress, type StreamScope } from './projections/keyed-projection.ts';
 export { addressOfTheRow, playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
+export { everyProjectedRow, rowsReadAtOnce } from './projections/every-row.ts';
 export { comparedColumnOf } from './projections/projected-conditions.ts';
 export type { ProjectedComparison, ProjectedCondition } from './projections/projected-conditions.ts';
 export {
@@ -131,7 +132,7 @@ export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { reportedDifferenceMessage } from './access-control/report-only.ts';
 export { DecisionPointPatience } from './access-control/asked-in-time.ts';
-export { enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
+export { busyMessage, enforcedDecisionOf, undecidedMessage } from './access-control/enforcement.ts';
 export { roleRefusalDetail, roleRefusalKind, tokenTypeRefusalDetail } from './access-control/enforcement.ts';
 export { CallPermission, callPermissionDecidedBy, callPermissionReportedTo } from './access-control/call-permission.ts';
 export { callAdmittedBy, mayCall, mayCallEach, type CallAsked } from './access-control/call-permission.ts';
@@ -278,7 +279,6 @@ export {
 } from './outcome/rejection-because.ts';
 export { Unavailable, UnavailableKindSchema, type UnavailableKind } from './outcome/unavailable.ts';
 export { busyRefusal, busyWaitsOf, type BusyWaits } from './outcome/busy.ts';
-export { busyMessage } from './access-control/enforcement.ts';
 export {
   StudioLinks,
   studioLinkField,
@@ -293,6 +293,8 @@ export {
 export { beforeGoingOnOf, noticesFields, noticesIn, withNotices, type Notice } from './addresses/answer-notices.ts';
 export { uuidV5 } from './uuid/uuid-v5.ts';
 export { randomUUIDv7, uuidV7Before, uuidV7TimeOf } from './uuid/uuid-v7.ts';
-export { changeKindOf, changingEvents, changingNothing, changingOne } from './changes/change-naming.ts';
+export { acrossTheOrgOf, changeKindOf, changingEvents, changingNothing, changingOne } from './changes/change-naming.ts';
+export { playbookChangedAcrossTheOrg, staleReadsOf, type StaleOn, type StaleRead } from './changes/change-naming.ts';
 export type { ChangedFact, ChangeNaming, ChangesNamed, PlacedFact, ResourceChange } from './changes/change-naming.ts';
-export { changeCatalogOf, presentedChangeCatalogOf, type ChangeCatalog } from './changes/change-catalog.ts';
+export { changeCatalogAcrossTheOrgOf, changeCatalogOf, presentedChangeCatalogOf } from './changes/change-catalog.ts';
+export type { ChangeCatalog } from './changes/change-catalog.ts';

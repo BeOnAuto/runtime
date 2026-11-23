@@ -1,5 +1,5 @@
 import {
-  changeKindOf,
+  playbookChangedAcrossTheOrg as playbookChanged,
   strictRecordedDecoder,
   type ChangedFact,
   type ChangeNaming,
@@ -8,13 +8,6 @@ import {
 
 import { PlaybookEventSchema, type RecordedPlaybookEvent } from './playbook-events.ts';
 import { playbooksStream } from './playbooks-stream.ts';
-
-const playbookChanged = changeKindOf(
-  'playbook',
-  'A playbook created, updated, retired or restored',
-  { playbook: 'The id of the playbook' },
-  { playbook: 'playbook' },
-);
 
 const decodePlaybookFact = strictRecordedDecoder(PlaybookEventSchema);
 

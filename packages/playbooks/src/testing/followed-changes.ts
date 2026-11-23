@@ -47,10 +47,11 @@ const tags: ChangeNaming = {
   changes: changingOne(tagChanged, ['added'], ({ stream }) => [tagChanged.of({ tag: stream.slice('tags/'.length) })]),
 };
 
-export const listPlaybookChanges = defineListPlaybookChanges(
-  [runs, pairs, presenterOf('notes', { added: 'note_added' })],
-  [tags],
-);
+export const followedPresenters: readonly Presenter[] = [runs, pairs, presenterOf('notes', { added: 'note_added' })];
+
+export const followedNamings: readonly ChangeNaming[] = [tags];
+
+export const listPlaybookChanges = defineListPlaybookChanges(followedPresenters, followedNamings);
 
 const ChangesSchema = Schema.Struct({
   status: Schema.Literal('succeeded'),

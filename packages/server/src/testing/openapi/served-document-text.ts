@@ -1,11 +1,11 @@
-import { openApiPath } from '@on.auto/api';
+import { openApiPath, querySchemaPath } from '@on.auto/api';
 
 import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
 import { testComposition } from '../servers/test-compositions.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 
-export async function servedDocumentText(): Promise<string> {
+export async function servedDocumentText(path: string = openApiPath): Promise<string> {
   const ledger = temporaryLedger();
   try {
     const server = await startServer(
@@ -19,11 +19,15 @@ export async function servedDocumentText(): Promise<string> {
       testComposition(),
     );
     try {
-      return await (await fetch(`http://127.0.0.1:${server.port}${openApiPath}`)).text();
+      return await (await fetch(`http://127.0.0.1:${server.port}${path}`)).text();
     } finally {
       await server.stop();
     }
   } finally {
     ledger.remove();
   }
+}
+
+export function servedSchemaText(): Promise<string> {
+  return servedDocumentText(querySchemaPath);
 }

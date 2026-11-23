@@ -5,11 +5,15 @@ import { CredentialFieldsSchema, credentialFieldIssuesOf } from './credential.ts
 
 const { kind, ...fieldsOfItsKinds } = CredentialFieldsSchema.fields;
 
-export const RecordedCredentialSchema = Schema.Struct({
+export const RecordedCredentialFieldsSchema = Schema.Struct({
   kind,
   permissions: Schema.optionalKey(PermissionsSchema),
   ...fieldsOfItsKinds,
-}).check(Schema.makeFilter((credential: typeof CredentialFieldsSchema.Type) => credentialFieldIssuesOf(credential)));
+});
+
+export const RecordedCredentialSchema = RecordedCredentialFieldsSchema.check(
+  Schema.makeFilter((credential: typeof CredentialFieldsSchema.Type) => credentialFieldIssuesOf(credential)),
+);
 
 export type RecordedCredential = typeof RecordedCredentialSchema.Type;
 

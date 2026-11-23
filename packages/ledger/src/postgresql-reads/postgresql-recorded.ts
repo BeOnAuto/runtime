@@ -48,7 +48,7 @@ import {
   type Query,
 } from './recorded-parts.ts';
 
-export { formattedFor, type Query } from './recorded-parts.ts';
+export { countedIn, formattedFor, type Query } from './recorded-parts.ts';
 
 const ExaminedRecordRows = Schema.Array(Schema.Struct({ ...HeadFields, wanted: Schema.Boolean, examined: Schema.Int }));
 
@@ -102,11 +102,28 @@ function mergedInOrder(terms: readonly string[], records: RecordsScope): string 
     : `${terms.map((term) => `(${term})`).join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
 }
 
-function ofEachStream(streams: readonly string[], records: RecordsScope): string {
-  return `${streams.map((stream) => `(${recordsWhere([{ key: isAKind(stream) ? playbookKeyOfStream : 'stream_id', value: stream }], records)})`).join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
+function ofEachStream(streams: readonly string[], records: RecordsScope): readonly string[] {
+  return streams.map((stream) =>
+    recordsWhere([{ key: isAKind(stream) ? playbookKeyOfStream : 'stream_id', value: stream }], records),
+  );
+}
+
+function ofThePlaybooksOf(org: string, records: RecordsScope): string {
+  const prefixes = [`playbook/${org}/`, `definition/${org}/`];
+  return recordsWhere(
+    [{ key: orgOfStream, value: org }],
+    records,
+    (bind) => ` AND (${prefixes.map((prefix) => `left(stream_id, ${prefix.length}) = ${bind(prefix)}`).join(' OR ')})`,
+  );
 }
 
 function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
+  if (selected.kind === 'across') {
+    return mergedInOrder(
+      [...ofEachStream(selected.streams, records), ofThePlaybooksOf(selected.org, records)],
+      records,
+    );
+  }
   if (selected.kind === 'keys') {
     return mergedInOrder(
       selected.keys.map((key) => recordsWhere([{ key: playbookKeyOfStream, value: key }], records)),
@@ -114,7 +131,7 @@ function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
     );
   }
   if (selected.kind === 'run') {
-    return ofEachStream(selected.streams, records);
+    return mergedInOrder(ofEachStream(selected.streams, records), records);
   }
   if (selected.kind === 'org') {
     return recordsWhere([{ key: orgOfStream, value: selected.org }], records);
@@ -127,7 +144,7 @@ function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
       (bind) => ` AND ${ofTheKeys(bind, selected.keys)}`,
     );
   }
-  return ofEachStream(selected.streams, records);
+  return mergedInOrder(ofEachStream(selected.streams, records), records);
 }
 
 function examineRecords(query: Query): RecordedStatements['examineRecords'] {

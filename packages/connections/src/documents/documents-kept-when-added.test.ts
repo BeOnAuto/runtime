@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { connectionRowsName } from '../registry/connection-rows.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { mostConnectionsOfAnOrg } from '../registry/registry-decisions.ts';
 import { adding, added } from '../testing/additions.ts';
@@ -41,7 +42,7 @@ describe('the document an HTTP API is given in document_text, as the connection 
       `execute ${documentStream}`,
       `execute ${connections}`,
     ]);
-    expect(ledger.asked().indexOf(`load ${connections}`)).toBeLessThan(
+    expect(ledger.asked().indexOf(`rows ${connectionRowsName}`)).toBeLessThan(
       ledger.asked().indexOf(`execute ${documentStream}`),
     );
     expect(await keptIn(h)).toEqual({ state: { text, sha256, bytes }, version: 1 });

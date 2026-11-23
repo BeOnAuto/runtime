@@ -7,6 +7,7 @@ import {
   inTransactionOn,
   postgresqlContentOn,
   postgresqlPlanOf,
+  snapshotsOn,
   type ContentConnection,
   type ContentConnections,
 } from './postgresql-content.ts';
@@ -162,6 +163,28 @@ describe('the plan of a statement on PostgreSQL', () => {
       ['SET enable_seqscan = off', []],
       ['SET enable_sort = off', []],
       ['EXPLAIN SELECT sha256 FROM recorded_content_heads WHERE expires_at <= $1', [1]],
+    ]);
+  });
+});
+
+describe('the reads of PostgreSQL taken together in one snapshot', () => {
+  it('read on one connection in a read-only snapshot, committed and released when they end, and rolled back when they fail', async () => {
+    const { connections, asked } = connectionsAnswering(() => [{ n: 1 }]);
+    const snapshot = snapshotsOn(connections);
+
+    const read = await snapshot((query) => query(SQL`SELECT 1 AS n`));
+    const failed = snapshot(() => Promise.reject(new Error('The read failed')));
+
+    await expect(failed).rejects.toThrow('The read failed');
+    expect(read).toEqual([{ n: 1 }]);
+    expect(asked.map(({ on, text }) => `${on}: ${text}`)).toEqual([
+      'connection: BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY',
+      'connection: SELECT 1 AS n',
+      'connection: COMMIT',
+      'connection: released',
+      'connection: BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY',
+      'connection: ROLLBACK',
+      'connection: released',
     ]);
   });
 });

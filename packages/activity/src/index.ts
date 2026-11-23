@@ -8,6 +8,8 @@ export { seenRows } from './projections/seen-rows.ts';
 export { goalOverdueRows, goalOverduesName, goalVerdictRows, goalVerdictsName } from './projections/goal-rows.ts';
 export { dismissalRows, dismissalsName } from './projections/dismissal-rows.ts';
 export { activityProjections, activityOperationsOf } from './composition/activity-composition.ts';
+export { activityEntityKinds } from './entities/activity-kinds.ts';
+export { playbookChangeRows, playbookChangeRowsLayoutSteps } from './projections/playbook-change-rows.ts';
 export { commentOperations, orgCommentOperations } from './composition/comment-composition.ts';
 export { commentChanges } from './comments/comment-changes.ts';
 export { listActivity } from './operations/list-activity.ts';

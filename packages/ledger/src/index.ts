@@ -100,3 +100,4 @@ export { orgRecordedReaderOf, recordedReaderOf, type OrgPageRequest } from './re
 export { sqliteDefinitionStreamsIndexed, sqlitePlanOf, sqliteStatementPlanOf } from './recorded/sqlite-plans.ts';
 export { isVersionConflict, retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';
+export { namedStreamsOf } from './store-reads/named-store.ts';

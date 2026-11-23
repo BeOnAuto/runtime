@@ -32,7 +32,7 @@ export const ChangesInputSchema = Schema.Struct({
 
 export type ChangesInput = typeof ChangesInputSchema.Type;
 
-export function changesOutputSchemaOf({ kinds }: ChangeCatalog<ChangedFact>) {
+export function changesOutputSchemaOf({ kinds }: Pick<ChangeCatalog<ChangedFact>, 'kinds'>) {
   return Schema.Struct({
     cursor: Schema.String.annotate({ description: 'The cursor after the last change listed, to give back as since' }),
     changes: Schema.Array(Schema.Union(kinds.map(({ schema }) => schema))).annotate({

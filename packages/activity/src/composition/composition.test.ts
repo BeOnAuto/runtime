@@ -1,6 +1,8 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { activityEntityKinds } from '../entities/activity-kinds.ts';
+import { summedCount } from '../operations/activity-counts.ts';
 import { listActivity } from '../operations/list-activity.ts';
 import { markActivitySeen } from '../operations/mark-activity-seen.ts';
 import { activityOperationsOf } from './activity-composition.ts';
@@ -39,5 +41,18 @@ describe('the operations of the activity', () => {
     ]);
     expect(kept[0]).not.toBe(listActivity);
     expect(kept[1]).not.toBe(markActivitySeen);
+  });
+});
+
+describe('the kinds of entity the activity reads of its playbooks at once', () => {
+  it('are its playbooks’ activity without goals and with them, each known by its name', () => {
+    expect(activityEntityKinds(goals.setAside).map(({ name }) => name)).toEqual([
+      'playbook_activity',
+      'playbook_activity_with_goals',
+    ]);
+  });
+
+  it('sum a count each playbook answers, and none for a playbook that answers no such count', () => {
+    expect(summedCount([{ counts: { goals: 2 } }, { counts: {} }, { counts: { goals: 1 } }], 'goals')).toBe(3);
   });
 });

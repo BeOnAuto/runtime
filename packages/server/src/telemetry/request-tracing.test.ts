@@ -137,6 +137,32 @@ describe('the trace of a request', () => {
   });
 });
 
+async function readsOfRequestsTo(paths: readonly string[]): Promise<readonly string[]> {
+  const ledger = temporaryLedger();
+  onTestFinished(ledger.remove);
+  const receiver = await receivingOtlp();
+  onTestFinished(receiver.close);
+  const server = await startServer(
+    {
+      HOST: '127.0.0.1',
+      PORT: '0',
+      LEDGER_FILE: ledger.fileName,
+      ...noConsentThroughAuto,
+      OTEL_EXPORTER_OTLP_ENDPOINT: receiver.endpoint,
+      OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
+    },
+    testComposition(),
+  );
+  await paths.reduce(
+    (asked: Promise<unknown>, path) => asked.then(() => fetch(`http://127.0.0.1:${server.port}${path}`)),
+    Promise.resolve(),
+  );
+  await server.stop();
+  return spansIn(receiver.received())
+    .filter(({ kind }) => kind === 2)
+    .map(({ attributes }) => String(attributes['auto.on.store_reads']));
+}
+
 describe('a request that reads the ledger', () => {
   it('names on its span the reads of the ledger it made, by name, and nothing of a request that read none', async () => {
     const ledger = temporaryLedger();
@@ -161,7 +187,27 @@ describe('a request that reads the ledger', () => {
     const [listed, nowhere] = spansIn(receiver.received()).filter(({ kind }) => kind === 2);
 
     expect(answer.status).toBe(200);
-    expect(String(listed?.attributes['auto.on.store_reads'])).toContain('"fold:org.playbooks":{"n":');
+    expect(String(listed?.attributes['auto.on.store_reads'])).toContain('"playbooks_1":{"n":');
     expect(nowhere?.attributes['auto.on.store_reads']).toBeUndefined();
+  });
+
+  it('of each read of the playbooks and the connections names their kept rows, and folds neither stream', async () => {
+    const reads = await readsOfRequestsTo([
+      '/v1/orgs/local/playbooks',
+      '/v1/orgs/local/playbooks/alpha',
+      '/v1/orgs/local/activity',
+      '/v1/orgs/local/connections',
+      '/v1/orgs/local/connections/0199-crm',
+    ]);
+
+    expect(reads).toEqual([
+      expect.stringContaining('"playbooks_1":{"n":'),
+      expect.stringContaining('"playbooks_1":{"n":'),
+      expect.stringContaining('"playbooks_1":{"n":'),
+      expect.stringContaining('"connections_1":{"n":'),
+      expect.stringContaining('"connections_1":{"n":'),
+    ]);
+    expect(reads.join()).not.toContain('fold:org.playbooks');
+    expect(reads.join()).not.toContain('fold:org.connections');
   });
 });

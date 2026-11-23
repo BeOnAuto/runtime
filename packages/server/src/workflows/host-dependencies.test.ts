@@ -12,6 +12,7 @@ import {
   undecidedMessage,
 } from '@on.auto/operations';
 import { capturedLogs, memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { playbookRows } from '@on.auto/playbooks';
 import { providersShippedRoots, readProviders, type ThroughTheConnection } from '@on.auto/providers';
 import {
   cardMoved,
@@ -65,7 +66,7 @@ import { hostWorkOf } from './host-work.ts';
 import { inRuntime } from './in-runtime.ts';
 import { reactionsOf } from './reaction-dependencies.ts';
 
-const memoryLedgerHostDependencies = ledgerLayer({ fileName: ':memory:' });
+const memoryLedgerHostDependencies = ledgerLayer({ fileName: ':memory:', projections: [playbookRows] });
 
 async function reportedLines(
   report: (reports: ReturnType<typeof hostReports>) => Promise<unknown>,

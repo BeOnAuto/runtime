@@ -86,6 +86,7 @@ function historyReader(presentation: Presentation, holders: ContentHolders) {
 export function defineGetRunHistory(presenters: readonly Presenter[], holders: ContentHolders) {
   return defineHttpOperation('playbook', 'query', {
     name: 'get_run_history',
+    staleOn: [{ kind: 'event' }],
     title: 'Get run history',
     description,
     route: { method: 'GET', path: '/runs/{run_id}/history' },

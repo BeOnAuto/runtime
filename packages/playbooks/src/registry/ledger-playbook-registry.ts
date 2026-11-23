@@ -1,12 +1,14 @@
 import {
   Ledger,
   PlaybookRegistry,
+  rowKeyColumn,
   type OrgAddress,
   type PlaybookAddress,
   type StreamReader,
 } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
+import { playbookRowsName, registryOfRows } from './playbook-rows.ts';
 import { playbooksStreamOfOrg } from './playbooks-stream.ts';
 import { registryDecider } from './registry-decider.ts';
 
@@ -17,8 +19,12 @@ export const ledgerPlaybookRegistry: Layer.Layer<PlaybookRegistry, never, Ledger
     return PlaybookRegistry.of({
       status: ({ org, playbook }) =>
         ledger
-          .load(playbooksStreamOfOrg(org), registryDecider)
-          .pipe(Effect.map(({ state }) => state.get(playbook)?.status ?? 'unknown')),
+          .readProjectedRows(
+            playbookRowsName,
+            { org },
+            { where: [{ column: rowKeyColumn, equals: playbook }], orderBy: [], order: 'asc', limit: 1 },
+          )
+          .pipe(Effect.map((rows) => registryOfRows(rows).get(playbook)?.status ?? 'unknown')),
     });
   }),
 );

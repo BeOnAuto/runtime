@@ -70,3 +70,40 @@ describe('the facts appended to the streams of an org, as its operations read th
     expect(died).toEqual([true, true]);
   });
 });
+
+describe('the facts appended across an org, as its operations read them', () => {
+  it("name the streams of the org within the org, and a playbook's within its playbook, each with its playbook", async () => {
+    const ledger = await ledgerHolding(
+      'org/acme/playbooks',
+      'playbook/acme/alpha/goals',
+      'playbook/beta/alpha/goals',
+      'org/acme/keys',
+      'playbook/acme/beta/comments/c1',
+    );
+    const reader = orgBoundAppendedFactsReader(ledger, { org: 'acme' });
+
+    const read = await Effect.runPromise(
+      reader.readAppendedFactsAcrossTheOrg(['playbooks'], { ...heads, after: fromTheStart }),
+    );
+    const now = await Effect.runPromise(Clock.currentTimeMillis);
+    const waited = await Effect.runPromise(reader.waitForAppendAcrossTheOrg(['playbooks'], read.through, now));
+
+    expect(read.facts.map(({ stream, playbook }) => [stream, playbook])).toEqual([
+      ['playbooks', undefined],
+      ['goals', 'alpha'],
+      ['comments/c1', 'beta'],
+    ]);
+    expect(waited).toBe('ended');
+  });
+
+  it('take only streams of well-formed names', async () => {
+    const reader = orgBoundAppendedFactsReader(await ledgerHolding(), { org: 'acme' });
+
+    const died = await Promise.all([
+      dies(reader.readAppendedFactsAcrossTheOrg(['../beta/playbooks'], heads)),
+      dies(reader.waitForAppendAcrossTheOrg(['a//b'], fromTheStart, 0)),
+    ]);
+
+    expect(died).toEqual([true, true]);
+  });
+});

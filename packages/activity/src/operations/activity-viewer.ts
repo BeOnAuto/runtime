@@ -1,5 +1,5 @@
 import { OrgReader } from '@on.auto/operations';
-import { Clock, Effect } from 'effect';
+import { Clock, Effect, Schema } from 'effect';
 
 import { cursorOf, isAfter, type ActivityPosition } from '../positions/activity-position.ts';
 import { seenName, seenOf, type Seen } from '../projections/seen-rows.ts';
@@ -50,3 +50,10 @@ export function isSeenBy(viewer: Viewer, row: ActivityRow): boolean {
 export function throughOf({ through, seenAt }: Seen): ServedThrough | null {
   return through === undefined || seenAt === null ? null : { cursor: cursorOf(through), seen_at: isoOf(seenAt) };
 }
+
+export const ThroughSchema = Schema.NullOr(
+  Schema.Struct({
+    cursor: Schema.String.annotate({ description: 'The cursor the caller marked everything seen through' }),
+    seen_at: Schema.String.annotate({ description: 'When the caller marked it, in ISO 8601 UTC' }),
+  }),
+).annotate({ description: 'Where the caller marked everything seen, or null before they first did' });

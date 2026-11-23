@@ -150,6 +150,18 @@ describe('the reach of a registration', () => {
     expect([addNote.registration.mayChangeOutside, acting.registration.mayChangeOutside]).toEqual([false, true]);
   });
 
+  it('says which changes make its read stale only where its definition says so', () => {
+    const staleOn = [{ kind: 'note' }, { kind: 'shelf', keyedBy: { shelf: 'name' } }];
+    const reading = defineQuery('org', {
+      ...about,
+      name: 'read_notes',
+      route: { method: 'GET', path: '/notes' },
+      staleOn,
+    });
+
+    expect([reading.registration.staleOn, 'staleOn' in addNote.registration]).toEqual([staleOn, false]);
+  });
+
   it('says a command only reads outside the server only when its definition says so', () => {
     const reading = defineCommand('org', {
       ...about,

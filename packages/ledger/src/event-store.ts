@@ -142,7 +142,8 @@ export type ReadLatestAppends = (after: RecordedPoint | undefined, most: number)
 
 export type FactScope =
   | { readonly kind: 'playbook'; readonly playbookKey: string; readonly definitionKeys: readonly string[] }
-  | { readonly kind: 'streams'; readonly streams: readonly string[] };
+  | { readonly kind: 'streams'; readonly streams: readonly string[] }
+  | { readonly kind: 'org'; readonly org: string; readonly streams: readonly string[] };
 
 export function isAKind(stream: string): boolean {
   return stream.endsWith('/');

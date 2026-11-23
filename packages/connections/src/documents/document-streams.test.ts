@@ -1,8 +1,8 @@
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import {
   ConnectionDocumentEventSchema,
   documentDecider,
@@ -31,7 +31,7 @@ describe('the facts of the documents connections were added with', () => {
 
 describe('a document kept in the stream its fingerprint names', () => {
   it('is kept once, a keeping of the same text again appending nothing and answering the text kept first', async () => {
-    const { service } = memoryLedger();
+    const { service } = keptLedger();
     const stream = documentStreamOfOrg('acme', keptTextOf(text).sha256);
     const keeping = { text, ...acted };
 

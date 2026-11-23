@@ -7,12 +7,7 @@ import {
   type PolicyDecisionPoint,
   type Runnable,
 } from '@on.auto/operations';
-import {
-  memoryLedger,
-  memoryPlaybookRegistry,
-  recordingReporter,
-  type MemoryLedger,
-} from '@on.auto/operations/testing';
+import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
 import { fixtureProviders } from '@on.auto/providers/testing';
 import { Array as Arr, DateTime, Effect, Layer, Logger, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -20,7 +15,6 @@ import { TestClock } from 'effect/testing';
 import { makeConnectionOperations, type ConnectionOperations } from '../operations/connection-operations.ts';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
-import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import {
   documentsOffTheLoopback,
   fakeReads,
@@ -29,6 +23,7 @@ import {
   type HarnessConsenting,
   type KeptSecrets,
 } from './harness-services.ts';
+import { connectionsOfAcme, keptLedger } from './kept-ledger.ts';
 
 const firstMoment = '2026-10-15T14:00:00.000Z';
 
@@ -199,7 +194,7 @@ export function harness({
   mostSecretCharacters,
   consenting,
   callFetch,
-  ledger = memoryLedger(),
+  ledger = keptLedger(),
   decidedBy,
   ...given
 }: HarnessOptions = {}): Harness {
@@ -219,7 +214,7 @@ export function harness({
   return {
     ledger,
     consent,
-    facts: async () => (await Effect.runPromise(ledger.service.load(connectionsStreamOfOrg('acme'), collecting))).state,
+    facts: async () => (await Effect.runPromise(ledger.service.load(connectionsOfAcme, collecting))).state,
     logged: () => [...logged],
     secrets,
     operations,

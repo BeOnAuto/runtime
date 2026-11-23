@@ -170,6 +170,34 @@ function readStreamsOfAKind(entry: AppendedFactsEntry): void {
   });
 }
 
+function readAcrossAnOrg(entry: AppendedFactsEntry): void {
+  it("reads the org's streams it names and every playbook's of the org, and wakes on an append to any playbook of it alone", async () => {
+    const ledger = await entry.aLedger();
+    const acrossAcme: AppendedScope = { kind: 'org', org: { org: 'acme' }, streams: ['org/acme/playbooks'] };
+    const start = await read(ledger, acrossAcme, heads);
+    const clock = onATestClock();
+    const waiting = waitedFor([clock, ledger], acrossAcme, start.through, 10_000);
+    await appended(ledger, 'org/beta/playbooks', opened('elsewhere'));
+    await appended(ledger, 'playbook/beta/alpha/topics/first', opened('elsewhere'));
+    await appended(ledger, 'org/acme/keys', opened('issued'));
+    const beforeAPlaybookOfIt = await settledYet(waiting);
+    await appended(ledger, 'playbook/acme/beta/topics/first', opened('first'));
+    await appended(ledger, 'definition/acme/d/topics/second', opened('second'));
+    await appended(ledger, 'org/acme/playbooks', opened('made'));
+
+    expect([beforeAPlaybookOfIt, await waiting]).toEqual([false, 'appended']);
+    expect(streamsOf(await read(ledger, acrossAcme, { ...heads, after: start.cursor }))).toEqual([
+      'playbook/acme/beta/topics/first',
+      'definition/acme/d/topics/second',
+      'org/acme/playbooks',
+    ]);
+    expect(streamsOf(await read(ledger, { ...acrossAcme, streams: [] }, { ...heads, after: start.cursor }))).toEqual([
+      'playbook/acme/beta/topics/first',
+      'definition/acme/d/topics/second',
+    ]);
+  });
+}
+
 function refusedCursors(entry: AppendedFactsEntry): void {
   it('refuses a cursor it does not hold: malformed, of another scope, or naming a fact it does not hold', async () => {
     const ledger = await entry.aLedger();
@@ -249,6 +277,7 @@ export function appendedFactsBehaviour(entry: AppendedFactsEntry): void {
     readAtMost(entry);
     readNamedStreams(entry);
     readStreamsOfAKind(entry);
+    readAcrossAnOrg(entry);
     refusedCursors(entry);
   });
 

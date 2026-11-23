@@ -1,4 +1,4 @@
-import type { StreamReader, StreamWriter } from '@on.auto/operations';
+import type { ProjectionReader, StreamReader, StreamWriter } from '@on.auto/operations';
 import type { Resolve } from '@on.auto/outbound';
 import type { ProviderList } from '@on.auto/providers';
 import type { Redacted } from 'effect';
@@ -9,7 +9,7 @@ import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 
 export interface ServingServices {
-  readonly registry: StreamReader & StreamWriter;
+  readonly registry: StreamReader & StreamWriter & Pick<ProjectionReader, 'readProjectedRows'>;
   readonly secrets: Pick<SecretKeeping, 'read' | 'replace' | 'claim'>;
   readonly policy: ConnectionPolicy;
   readonly pages: ConnectPages;

@@ -102,6 +102,32 @@
           },
           {
             "from": "package",
+            "package": "graphql",
+            "name": [
+              "ArgumentNode",
+              "ConstValueNode",
+              "DefinitionNode",
+              "DocumentNode",
+              "FieldNode",
+              "FragmentDefinitionNode",
+              "GraphQLEnumType",
+              "GraphQLError",
+              "GraphQLField",
+              "GraphQLFieldConfigMap",
+              "GraphQLInputObjectType",
+              "GraphQLInterfaceType",
+              "GraphQLNamedType",
+              "GraphQLObjectType",
+              "GraphQLOutputType",
+              "GraphQLScalarType",
+              "GraphQLSchema",
+              "GraphQLUnionType",
+              "SelectionNode",
+              "SelectionSetNode"
+            ]
+          },
+          {
+            "from": "package",
             "package": "oidc-provider",
             "name": [
               "KoaContextWithOIDC",

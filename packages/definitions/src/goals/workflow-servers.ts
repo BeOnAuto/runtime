@@ -1,9 +1,9 @@
 import type { PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { loadRegistry } from '../operations/registry-access.ts';
 import { textAsRead, type TextAsRead } from '../payloads/kept-texts.ts';
 import { serversNamedBy } from '../portable/portable-export.ts';
+import { stagedRegistry } from '../read-model-staging/staged-registries.ts';
 import type { DefinitionRegistry, RegisteredDefinition } from '../registry/definition-registry.ts';
 import { isRetired } from '../registry/definition.ts';
 import type { NamedDefinition } from '../used-by/called-definitions.ts';
@@ -23,7 +23,7 @@ function registriesKept(): Registries {
     of: (type) => {
       const known = kept.get(type);
       return known === undefined
-        ? Effect.tap(loadRegistry(type), (registry) => Effect.sync(() => kept.set(type, registry)))
+        ? Effect.tap(stagedRegistry(type), (registry) => Effect.sync(() => kept.set(type, registry)))
         : Effect.succeed(known);
     },
   };

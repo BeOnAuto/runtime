@@ -19,6 +19,8 @@ import {
 import { DateTime, Effect, Layer } from 'effect';
 import { TestClock } from 'effect/testing';
 
+import { playbookRows } from '../registry/playbook-rows.ts';
+
 export const firstMoment = '2026-10-01T09:00:00.000Z';
 
 interface OrgOperation {
@@ -51,7 +53,7 @@ export interface Harness {
 
 export function harness(
   playbookRegistry: Layer.Layer<PlaybookRegistry, never, Ledger> = memoryPlaybookRegistry([]),
-  ledger: MemoryLedger = memoryLedger(),
+  ledger: MemoryLedger = memoryLedger(undefined, [playbookRows]),
 ): Harness {
   const services = Layer.mergeAll(
     ledger.layer,

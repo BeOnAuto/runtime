@@ -76,9 +76,16 @@ function definitionsOfItsOrg(playbookKey: string): string {
   return `definition/${keysOfOne(playbookKey).org}/`;
 }
 
+function isOfAPlaybookOf(org: string, stream: string): boolean {
+  return stream.startsWith(`playbook/${org}/`) || stream.startsWith(`definition/${org}/`);
+}
+
 export function inScope(scope: FactScope, appendedTo: string): boolean {
   if (scope.kind === 'playbook') {
     return appendedTo.startsWith(scope.playbookKey) || appendedTo.startsWith(definitionsOfItsOrg(scope.playbookKey));
+  }
+  if (scope.kind === 'org' && isOfAPlaybookOf(scope.org, appendedTo)) {
+    return true;
   }
   const ofAKind = isAKind(appendedTo);
   return scope.streams.some(

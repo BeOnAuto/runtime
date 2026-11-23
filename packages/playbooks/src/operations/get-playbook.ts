@@ -11,6 +11,7 @@ import { foundPlaybook } from './registry-loading.ts';
 export function defineGetPlaybook(pages: PlaybookPages) {
   return defineQuery('org', {
     name: 'get_playbook',
+    staleOn: [{ kind: 'playbook' }],
     title: 'Get playbook',
     description: [
       'Reads one playbook by its id, active or retired, with the source of its page.',

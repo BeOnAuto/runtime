@@ -8,7 +8,7 @@ import {
 import type { PlaybookGoals } from '@on.auto/playbooks';
 import { Effect } from 'effect';
 
-import type { SetAsideOf } from '../operations/activity-counts.ts';
+import type { SetAsideOfAPlaybook } from '../entities/playbook-activity.ts';
 import { readsAtOnce } from '../operations/activity-tables.ts';
 import type { OpenRequestSetAside, RequestSetAside } from '../operations/needs-you.ts';
 import { requestsName } from '../projections/request-rows.ts';
@@ -35,8 +35,6 @@ const open: ProjectedCondition = { column: 'open', equals: true };
 function openRowsWhere(where: readonly ProjectedCondition[], limit: number): ProjectedRowsQuery {
   return { where: [open, ...where], orderBy: [], order: 'asc', limit };
 }
-
-type SetAsideOfAPlaybook = readonly [string, ReadonlyMap<string, OpenRequestSetAside>];
 
 function openRequestsAmong(playbook: string, keys: readonly string[]) {
   return Effect.gen(function* () {
@@ -66,15 +64,13 @@ function openSetAsideIn(playbook: string, standing: StandingSetAside) {
       const mark = setAside.get(key);
       return mark === undefined ? [] : [[key, { waitsOn: String(row['waits_on']), setAside: mark }]];
     });
-    const ofThePlaybook: SetAsideOfAPlaybook = [playbook, new Map(kept)];
+    const ofThePlaybook: SetAsideOfAPlaybook = new Map(kept);
     return ofThePlaybook;
   });
 }
 
-export function setAsideOfGoals(standing: StandingSetAside): SetAsideOf {
-  return (playbooks) =>
-    Effect.map(
-      Effect.forEach(playbooks, (playbook) => openSetAsideIn(playbook, standing), { concurrency: readsAtOnce }),
-      (each: readonly SetAsideOfAPlaybook[]) => new Map(each),
-    );
+export function setAsideOfGoals(
+  standing: StandingSetAside,
+): (playbook: string) => Effect.Effect<SetAsideOfAPlaybook, never, OrgReader> {
+  return (playbook) => openSetAsideIn(playbook, standing);
 }

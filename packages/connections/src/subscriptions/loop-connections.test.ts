@@ -1,4 +1,3 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { subscriptionLoopOf } from '@on.auto/providers';
 import {
   ofEachSubscription,
@@ -11,6 +10,7 @@ import {
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keptLedger } from '../testing/kept-ledger.ts';
 import { addedFact, givenByHand, registryOf } from '../testing/loop-registries.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
 import { subscriptionLoopPortsOf, type SubscriptionLoopParts } from './loop-ports.ts';
@@ -154,7 +154,7 @@ function partsOver(
   waitingIn: SubscriptionLoopParts['waitingIn'] = () => Effect.die('a request was read'),
   triggersIn: SubscriptionLoopParts['triggersIn'] = () => Effect.die('a trigger was read'),
 ): SubscriptionLoopParts {
-  const ledger = memoryLedger().service;
+  const ledger = keptLedger().service;
   const given = { tools: noCalls, secrets: noSecrets, providers, receivesOverHttp: true };
   return { ledger, registry: ledger, waitingIn, triggersIn, ...given };
 }
@@ -285,7 +285,7 @@ describe('a connection given by hand that says how its service sends', () => {
     const registry = await givenByHand();
     const request = { connection: 'hooks', with: { project: 'site' }, sent: { conversation: 'C0123', id: '1.1' } };
     const roundOn = async (receiving: Pick<SubscriptionLoopParts, 'receivesOverHttp' | 'eventsAddressOf'>) => {
-      const ledger = memoryLedger(undefined, [eventSubscriptions]).service;
+      const ledger = keptLedger(eventSubscriptions).service;
       const parts = { ...partsOver(() => Effect.succeed([request])), ledger, registry, ...receiving };
       const ports = subscriptionLoopPortsOf(parts);
       return [

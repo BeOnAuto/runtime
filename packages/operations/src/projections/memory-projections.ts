@@ -34,6 +34,7 @@ import {
   nothingKept,
   pageIn,
   placementsOf,
+  rowsOfKeysIn,
   type DefinitionsOfAPlaybook,
   type PlaybookOfADefinition,
   type Table,
@@ -265,6 +266,16 @@ export function memoryProjections(
         const table = tableNamed(projection);
         return table === undefined ? [] : pageIn(table, placed(address), query).map((row) => placedIn(row));
       }),
+    readProjectedRowsOfKeys: (projection, address, keys) =>
+      Effect.suspend(() => {
+        const table = tableNamed(projection);
+        return table !== undefined && keepsChildRows(table.projection)
+          ? Effect.die(new Error(`A read by keys reads a keyed projection, and ${projection} keeps child rows`))
+          : Effect.succeed(
+              rowsOfKeysIn(table, placed(address), keys).map((row) => (row === undefined ? undefined : placedIn(row))),
+            );
+      }),
+    readTogether: (reads) => reads,
     countProjectedRows: (projection, address, where) =>
       Effect.sync(() => {
         const table = tableNamed(projection);

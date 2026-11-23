@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import type { StatementExecutor } from '../event-store.ts';
 import { formattedFor, type Query } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlCatchUp } from '../projection-catch-up/postgresql-catch-up.ts';
+import { readsAsTheyCome } from '../projections/projection-reads.ts';
 import { postgresqlProjectionDialect, postgresqlProjectionsOf } from './postgresql-projections.ts';
 
 interface Asked {
@@ -43,6 +44,7 @@ function readerOf(query: Query) {
   return postgresqlProjectionsOf({ projections: [runTallyRows, topicRows] }).readerOn({
     query: formattedFor(query),
     command: formattedFor(query),
+    consistently: readsAsTheyCome(formattedFor(query)),
     inTransaction: (work) =>
       work({ query: () => Promise.resolve({ rows: [] }), command: () => Promise.resolve({ rows: [] }) }),
   });

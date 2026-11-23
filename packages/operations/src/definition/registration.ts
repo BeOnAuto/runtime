@@ -3,7 +3,7 @@ import type { Permission } from '../caller/permission.ts';
 import type { Succeeded } from '../outcome/outcome.ts';
 import type { DeclarableReason } from '../outcome/rejection.ts';
 import type { LinkToOpen, RegisteredPlainLanguage } from '../plain-language/plain-language.ts';
-import type { HttpBody, OfferedLink, SuccessStatusByKind } from './definition.ts';
+import type { HttpBody, OfferedLink, StaleOn, SuccessStatusByKind } from './definition.ts';
 import type { HandlerServices } from './handler-services.ts';
 import type { JsonSchemaDocument } from './json-schema.ts';
 import type { RegisteredRun } from './registered-run.ts';
@@ -30,6 +30,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly whileRetired?: true;
   readonly sameInEveryScope?: true;
   readonly permissions: readonly Permission[];
+  readonly staleOn?: readonly StaleOn[];
   readonly reasons: readonly DeclarableReason[];
   readonly input: JsonSchemaDocument;
   readonly refusesEmptyBody: boolean;

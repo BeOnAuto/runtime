@@ -6,7 +6,6 @@ import { cursorOf, newestFirst } from '../positions/activity-position.ts';
 import { activityName } from '../projections/activity-rows.ts';
 import { seenKinds, type ActivityKind, type ActivityRow } from './activity-row.ts';
 import {
-  activityTables,
   boundsOf,
   commentTable,
   readsAtOnce,
@@ -62,7 +61,7 @@ function leftOutOf(playbook: string, table: ActivityTable, { leftOut }: PageAske
   return new Set(table.kind === 'needs_you' ? setAsideIn(leftOut, playbook).keys() : []);
 }
 
-function rowsOfTable(playbook: string, table: ActivityTable, asked: PageAsked) {
+export function rowsOfTable(playbook: string, table: ActivityTable, asked: PageAsked) {
   return Effect.gen(function* () {
     const read = { playbook, table, where: [{ column: table.openColumn, equals: true }, ...mineIn(table, asked.mine)] };
     const leftOut = leftOutOf(playbook, table, asked);
@@ -78,7 +77,7 @@ function rowsOfTable(playbook: string, table: ActivityTable, asked: PageAsked) {
   });
 }
 
-function startedBy(row: ActivityRow) {
+export function startedBy(row: ActivityRow) {
   return Effect.gen(function* () {
     if (row.kind !== 'broken' || row.run_id === null) {
       return row;
@@ -94,7 +93,7 @@ function startedBy(row: ActivityRow) {
   });
 }
 
-function namedNow(rows: readonly ActivityRow[]) {
+export function namedNow(rows: readonly ActivityRow[]) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;
     const read = yield* Effect.forEach(
@@ -119,38 +118,24 @@ function changesShown({ changes }: PlaybookRegister, asked: PageAsked): readonly
     : [];
 }
 
-interface OwnedTable {
-  readonly owner: string;
-  readonly table: ActivityTable;
+export interface OfThePlaybooks {
+  readonly rows: readonly ActivityRow[];
 }
 
-function tablesRead(asked: PageAsked, served: readonly ActivityTable[]): readonly OwnedTable[] {
-  const tables = served.filter(({ kind }) => asked.kinds.has(kind));
-  const ofPlaybooks = asked.playbooks.flatMap((owner) => tables.map((table) => ({ owner, table })));
+function rowsOfTheOrg(asked: PageAsked) {
   return asked.withTheOrg && asked.kinds.has(commentTable.kind)
-    ? [...ofPlaybooks, { owner: ofTheOrg, table: commentTable }]
-    : ofPlaybooks;
+    ? Effect.flatMap(rowsOfTable(ofTheOrg, commentTable, asked), namedNow)
+    : Effect.succeed([]);
 }
 
-export function pageOf(
-  register: PlaybookRegister,
-  asked: PageAsked,
-  served: readonly ActivityTable[] = activityTables,
-) {
+export function pageOf(register: PlaybookRegister, asked: PageAsked, ofPlaybooks: readonly OfThePlaybooks[]) {
   return Effect.gen(function* () {
-    const read = yield* Effect.forEach(
-      tablesRead(asked, served),
-      ({ owner, table }) => rowsOfTable(owner, table, asked),
-      {
-        concurrency: readsAtOnce,
-      },
-    );
-    const merged = [...read.flat(), ...changesShown(register, asked)].toSorted((left, right) =>
-      newestFirst(left.position, right.position),
-    );
-    const rows = yield* namedNow(
-      yield* Effect.forEach(merged.slice(0, asked.limit), startedBy, { concurrency: readsAtOnce }),
-    );
+    const merged = [
+      ...ofPlaybooks.flatMap(({ rows }) => rows),
+      ...(yield* rowsOfTheOrg(asked)),
+      ...changesShown(register, asked),
+    ].toSorted((left, right) => newestFirst(left.position, right.position));
+    const rows = merged.slice(0, asked.limit);
     const hasMore = merged.length > asked.limit;
     const last = rows.at(-1);
     const page: Page = { rows, hasMore, nextCursor: hasMore && last !== undefined ? cursorOf(last.position) : null };

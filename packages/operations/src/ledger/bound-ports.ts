@@ -50,6 +50,10 @@ export function streamPrefixOfPlaybook({ org, playbook }: PlaybookAddress): stri
   return `${playbookStreams}${org}/${playbook}/`;
 }
 
+export function streamPrefixOfThePlaybooksOf({ org }: OrgAddress): string {
+  return `${playbookStreams}${org}/`;
+}
+
 const aPlaybookPrefix = new RegExp(`^${playbookStreams}([^/]+)/([^/]+)/$`, 'u');
 
 export interface DefinitionAddress extends OrgAddress {
@@ -140,6 +144,8 @@ function boundProjectionReader(ledger: ProjectionReader, address: ProjectedAddre
         ? ledger.readProjectedRows(projection, address, query)
         : Effect.die(new RangeError(`A read of projected rows takes a limit of 1 or more, not ${query.limit}`)),
     countProjectedRows: (projection, where) => ledger.countProjectedRows(projection, address, where),
+    readProjectedRowsOfKeys: (projection, keys) => ledger.readProjectedRowsOfKeys(projection, address, keys),
+    readTogether: ledger.readTogether,
   };
 }
 
@@ -217,17 +223,43 @@ export function playbookBoundAppendedFactsReader(
   };
 }
 
+function factsRelativeToTheirPlaybooks(org: OrgAddress): (read: AppendedFacts) => AppendedFacts {
+  const ofTheOrg = streamPrefixOfOrg(org);
+  return ({ facts, ...reached }) => ({
+    facts: facts.map((fact) => ({
+      ...fact,
+      stream: streamRelativeTo(
+        fact.playbook === undefined ? ofTheOrg : streamPrefixOfPlaybook({ ...org, playbook: fact.playbook }),
+        fact.stream,
+      ),
+    })),
+    ...reached,
+  });
+}
+
 export function orgBoundAppendedFactsReader(ledger: AppendedFactsReader, org: OrgAddress): OrgAppendedFactsReader {
   const prefix = streamPrefixOfOrg(org);
   const read = boundTo(ledger, prefix);
+  const named = (streams: readonly string[]): Effect.Effect<readonly string[]> =>
+    Effect.map(Effect.forEach(streams, wellFormed), (each: readonly string[]) =>
+      each.flatMap((stream) => [`${prefix}${stream}`, `${prefix}${stream}/`]),
+    );
   const scopeOf = (streams: readonly string[]): Effect.Effect<AppendedScope> =>
-    Effect.map(Effect.forEach(streams, wellFormed), (named: readonly string[]) => ({
-      kind: 'streams',
-      streams: named.flatMap((stream) => [`${prefix}${stream}`, `${prefix}${stream}/`]),
-    }));
+    Effect.map(named(streams), (each) => ({ kind: 'streams', streams: each }));
+  const acrossTheOrg = (streams: readonly string[]): Effect.Effect<AppendedScope> =>
+    Effect.map(named(streams), (each) => ({ kind: 'org', org, streams: each }));
   return {
     readAppendedFacts: (streams, request) => Effect.flatMap(scopeOf(streams), (scope) => read(scope, request)),
     waitForAppend: (streams, after, deadline) =>
       Effect.flatMap(scopeOf(streams), (scope) => ledger.waitForAppend(scope, after, deadline)),
+    readAppendedFactsAcrossTheOrg: (streams, request) =>
+      Effect.flatMap(acrossTheOrg(streams), (scope) =>
+        wellFormedRequest(request).pipe(
+          Effect.flatMap((checked) => ledger.readAppendedFacts(scope, checked)),
+          Effect.map(factsRelativeToTheirPlaybooks(org)),
+        ),
+      ),
+    waitForAppendAcrossTheOrg: (streams, after, deadline) =>
+      Effect.flatMap(acrossTheOrg(streams), (scope) => ledger.waitForAppend(scope, after, deadline)),
   };
 }

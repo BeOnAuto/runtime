@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 
 import type { HeldName } from '../definition-names/name-judgement.ts';
-import type { RecordedFact } from '../reading/recorded-read.ts';
+import type { AppendedFact, RecordedFact } from '../reading/recorded-read.ts';
 
 export interface NamesHeldNow {
   readonly nameHeldBy: (definitionKey: string) => Effect.Effect<HeldName | undefined>;
@@ -37,4 +37,30 @@ export function namedAsHeldNow({
       },
     );
   };
+}
+
+const thePlaybookOfAKey = /^playbook\/[^/]+\/([^/]+)\/$/u;
+
+const aPlaybookKey = /^playbook\/[^/]+\/[^/]+\//u;
+
+export function definitionKeyOfStream(stream: string): string | undefined {
+  return definitionKeyOf({ stream });
+}
+
+function playbookOfKey(playbookKey: string | undefined): string | undefined {
+  return playbookKey === undefined ? undefined : thePlaybookOfAKey.exec(playbookKey)?.[1];
+}
+
+export function playbookNamedAsHeld(fact: AppendedFact, held: HeldName | undefined): AppendedFact {
+  const playbook = playbookOfKey(aPlaybookKey.exec(fact.stream)?.[0] ?? held?.playbookKey);
+  const named = namedAsHeld(fact, held);
+  return playbook === undefined ? named : { ...named, playbook };
+}
+
+export function playbookNamedFor(
+  fact: AppendedFact,
+  heldBy: (definitionKey: string) => HeldName | undefined,
+): AppendedFact {
+  const definitionKey = definitionKeyOfStream(fact.stream);
+  return playbookNamedAsHeld(fact, definitionKey === undefined ? undefined : heldBy(definitionKey));
 }
