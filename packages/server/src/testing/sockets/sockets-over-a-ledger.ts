@@ -7,15 +7,8 @@ import { Effect, Function, Redacted, Result, type Context } from 'effect';
 import { socketWakeUpOf, type SocketParts } from '../../sockets/served-sockets.ts';
 import { subscriptionsServedBy } from '../../subscriptions/served-subscriptions.ts';
 import { playbooksCreated, playbooksRetired } from '../subscriptions/connections-followed.ts';
-import {
-  answeringBy,
-  connectedAt,
-  noSecretsKept,
-  socketProviders,
-  type Fact,
-  type ServiceAnswer,
-} from './held-sockets.ts';
-import { ServiceSockets } from './service-sockets.ts';
+import { connectedAt, noSecretsKept, socketProviders, type Fact, type ServiceAnswer } from './held-sockets.ts';
+import { answeringAsTheConnection, answeringBy, ServiceSockets } from './service-sockets.ts';
 
 type TakeIn = SocketParts['takeIn'];
 
@@ -64,7 +57,8 @@ const noRequestWaits: SocketReplies = {
 
 /**
  * The socket set of a server over a ledger in memory: the registries of its orgs, the playbooks of each, the wakes
- * and the intake it hands each message to, each kept in order, and the service asked who a connection is.
+ * and the intake it hands each message to, each kept in order, and the service asked who a connection is, by the
+ * connection's id where it is asked as the connection and by its name where it is asked as a playbook.
  */
 export class SocketsOverALedger extends ServiceSockets {
   readonly ledger = memoryLedger(undefined, [eventSubscriptions]).service;
@@ -123,7 +117,7 @@ export class SocketsOverALedger extends ServiceSockets {
 
   readonly raised = (): number => this.#raised;
 
-  readonly started = (context: Context.Context<never>) =>
+  readonly started = (context: Context.Context<never>, chat?: SocketParts['chat']) =>
     socketWakeUpOf({
       streams: {
         orgStreams: () =>
@@ -144,6 +138,7 @@ export class SocketsOverALedger extends ServiceSockets {
       identities: this.#identities.identities,
       appended: this.appended,
       context,
+      ...(chat === undefined ? {} : { chat }),
     })({
       raised: () => {
         this.#raised += 1;
@@ -161,20 +156,25 @@ export class SocketsOverALedger extends ServiceSockets {
       return answer;
     });
 
-  readonly #identities = subscriptionsServedBy({
-    ledger: this.ledger,
-    tools: answeringBy({
-      answers: this.answers,
-      lateBy: this.lateBy,
-      asked: (connection) => {
-        this.asked.push(connection);
-      },
-    }),
-    secrets: noSecretsKept,
-    providers: socketProviders,
-    receivesOverHttp: false,
-    opensSockets: true,
-  });
+  readonly #answering = {
+    answers: this.answers,
+    lateBy: this.lateBy,
+    asked: (connection: string) => {
+      this.asked.push(connection);
+    },
+  };
+
+  readonly #identities = subscriptionsServedBy(
+    {
+      ledger: this.ledger,
+      tools: answeringBy(this.#answering),
+      secrets: noSecretsKept,
+      providers: socketProviders,
+      receivesOverHttp: false,
+      opensSockets: true,
+    },
+    answeringAsTheConnection(this.#answering),
+  );
 
   readonly #load: SocketParts['registries']['registry']['load'] = (stream, fold) =>
     Effect.andThen(

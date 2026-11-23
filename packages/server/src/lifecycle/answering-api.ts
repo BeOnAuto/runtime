@@ -1,7 +1,6 @@
 import { createApiHandler, type ApiHandler, type AppRuntime, type PageStyle } from '@on.auto/api';
-import { Effect } from 'effect';
 
-import { logIncident, logStudioKeptInMemory } from '../logging/logging.ts';
+import { incidentsLoggedIn, logStudioKeptInMemory } from '../logging/logging.ts';
 import { storeReadsWatched } from '../logging/store-reads-logging.ts';
 import type { LocalServing, Served, StartPing } from '../server-options/server-options.ts';
 import type { Settings } from '../settings/settings.ts';
@@ -53,9 +52,7 @@ export function apiOf<R>(answering: Answering<R>): ApiHandler {
     authenticator,
     routes,
     pageStyle,
-    reportIncident: (id, error, requestId, call) => {
-      void runtime.run(logIncident({ id, original: error, call }).pipe(Effect.annotateLogs({ requestId })));
-    },
+    reportIncident: incidentsLoggedIn(runtime),
     ...requestsWatched(
       telemetry.requests,
       served.observedRequests,

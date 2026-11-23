@@ -186,6 +186,18 @@ export function logIncident({ id, original, call }: Incident): Effect.Effect<voi
   );
 }
 
+interface RunsALog {
+  readonly run: (logged: Effect.Effect<void>) => unknown;
+}
+
+export function incidentsLoggedIn(
+  runtime: RunsALog,
+): (id: string, error: Readonly<Error>, requestId: string, call: Incident['call']) => void {
+  return (id, error, requestId, call) => {
+    void runtime.run(logIncident({ id, original: error, call }).pipe(Effect.annotateLogs({ requestId })));
+  };
+}
+
 export interface UnsettledReport {
   readonly org: string;
   readonly definition: string;

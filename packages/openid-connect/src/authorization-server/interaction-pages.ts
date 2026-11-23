@@ -72,6 +72,8 @@ export interface AccountLinking {
   readonly allowShown: (value: string, choices: LinkChoices) => Promise<LinkShown>;
   readonly allowed: (value: string, person: string) => Promise<LinkShown>;
   readonly denied: (value: string) => Promise<LinkShown>;
+  readonly codeSealed: (code: string) => Promise<string>;
+  readonly codeShownAgain: (sealed: string) => Promise<LinkShown>;
 }
 
 export type PageShown =

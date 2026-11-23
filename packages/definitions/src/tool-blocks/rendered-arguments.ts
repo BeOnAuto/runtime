@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import { sendableInWords } from '@on.auto/tool-servers';
 import { Result, type Schema } from 'effect';
 
@@ -28,20 +30,51 @@ interface Rendering {
   readonly mostBytes: number;
 }
 
-function renderedString(
-  text: string,
-  { variables, textVariables, clock, mostBytes }: Rendering,
-): Result.Result<Schema.Json, TextFailure> {
+let madeOmitPlaceholder: string | undefined;
+
+function omitPlaceholder(): string {
+  madeOmitPlaceholder ??= `__omit_place_holder__${randomBytes(20).toString('hex')}`;
+  return madeOmitPlaceholder;
+}
+
+const omitName = 'omit';
+
+export function omitVariables(): TemplateVariables {
+  return { [omitName]: omitPlaceholder() };
+}
+
+const omitWithin = 'Reads omit within a value, but omit can stand only as the whole value of a key';
+
+function omitFailure(path: string, mostBytes: number): ArgumentsFailure {
+  return {
+    reason: 'argument',
+    argument: path,
+    failure: { reason: 'failed', detail: omitWithin, line: 1 },
+    most: mostBytes,
+  };
+}
+
+function leavesKeysOut({ variables }: Rendering): boolean {
+  return variables[omitName] === omitPlaceholder();
+}
+
+function boundOfAnArgument(rendering: Rendering): number {
+  return rendering.mostBytes + 1 + (leavesKeysOut(rendering) ? bytesAsJsonOf(omitPlaceholder()) : 0);
+}
+
+function renderedString(text: string, rendering: Rendering): Result.Result<Schema.Json, TextFailure> {
+  const { variables, textVariables, clock } = rendering;
   const parsed = parsedTemplate(toolBlockEngine, text, 1);
   if (Result.isFailure(parsed)) {
     return Result.fail({ reason: 'failed', detail: parsed.failure.map(({ detail }) => detail).join('; '), line: 1 });
   }
+  const bound = boundOfAnArgument(rendering);
   if (passesWhole(parsed.success)) {
-    return renderedValue(parsed.success, variables, mostBytes + 1, clock);
+    return renderedValue(parsed.success, variables, bound, clock);
   }
   return isLoneExpression(text)
-    ? renderedValue(parsed.success, textVariables, mostBytes + 1, clock)
-    : renderedText(parsed.success, textVariables, mostBytes + 1, clock);
+    ? renderedValue(parsed.success, textVariables, bound, clock)
+    : renderedText(parsed.success, textVariables, bound, clock);
 }
 
 function templatesIn(value: Schema.Json): readonly string[] {
@@ -99,17 +132,51 @@ function renderedJson(
   );
 }
 
+type Arguments = Readonly<Record<string, Schema.Json>>;
+
+function objectWithKeysLeftOut(value: Arguments, path: string, mostBytes: number) {
+  const placeholder = omitPlaceholder();
+  const kept = Object.entries(value).filter(([, child]: JsonChild) => child !== placeholder);
+  const each = kept.map(([key, child]: JsonChild) =>
+    Result.map(valueWithKeysLeftOut(child, pathOf(path, key), mostBytes), (left): JsonChild => [key, left]),
+  );
+  return Result.map(Result.all(each), (entries: readonly JsonChild[]): Arguments => Object.fromEntries(entries));
+}
+
+function valueWithKeysLeftOut(
+  value: Schema.Json,
+  path: string,
+  mostBytes: number,
+): Result.Result<Schema.Json, ArgumentsFailure> {
+  if (typeof value === 'string') {
+    return value.includes(omitPlaceholder()) ? Result.fail(omitFailure(path, mostBytes)) : Result.succeed(value);
+  }
+  if (!isJsonParent(value)) {
+    return Result.succeed(value);
+  }
+  if (isJsonArray(value)) {
+    return Result.all(value.map((item, index) => valueWithKeysLeftOut(item, pathOf(path, String(index)), mostBytes)));
+  }
+  return objectWithKeysLeftOut(value, path, mostBytes);
+}
+
+function inputOf(entries: readonly JsonChild[], rendering: Rendering): Result.Result<Arguments, ArgumentsFailure> {
+  const input: Arguments = Object.fromEntries(entries);
+  return leavesKeysOut(rendering) ? objectWithKeysLeftOut(input, '', rendering.mostBytes) : Result.succeed(input);
+}
+
 export function renderedArgumentsOf(
   templates: Templates,
   rendering: Rendering,
 ): Result.Result<RenderedArguments, ArgumentsFailure> {
-  return Result.flatMap(renderedEntries(childrenOf(templates), rendering, ''), (entries) => {
-    const input = Object.fromEntries(entries);
-    const bytes = bytesAsJsonOf(input);
-    return bytes > rendering.mostBytes
-      ? Result.fail({ reason: 'too_large', bytes, most: rendering.mostBytes })
-      : Result.succeed({ input, bytes });
-  });
+  return Result.flatMap(renderedEntries(childrenOf(templates), rendering, ''), (entries) =>
+    Result.flatMap(inputOf(entries, rendering), (input) => {
+      const bytes = bytesAsJsonOf(input);
+      return bytes > rendering.mostBytes
+        ? Result.fail({ reason: 'too_large', bytes, most: rendering.mostBytes })
+        : Result.succeed({ input, bytes });
+    }),
+  );
 }
 
 export function renderedArguments(

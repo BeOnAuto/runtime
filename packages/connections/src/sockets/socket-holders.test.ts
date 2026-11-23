@@ -145,7 +145,7 @@ describe('the sockets a registry holds', () => {
 });
 
 describe('what a socket holder carries of its connection', () => {
-  it('is the id of the account its connection is recorded in, where there is one, and whether the service is still to be asked who the connection is', async () => {
+  it('is the id of the account its connection is recorded in, where there is one, whether the service is still to be asked who the connection is, and the model chosen for it', async () => {
     const registry = keptLedger().service;
     const signedIn = {
       type: 'connection_connected',
@@ -164,15 +164,24 @@ describe('what a socket holder carries of its connection', () => {
         added('connection-3', 'spaces'),
         connected('connection-3', appToken),
         identifiedInItsSpace,
+        { type: 'connection_model_set', data: { connection: 'connection-1', model: 'provider/model-1' } },
       ]),
     );
 
     const held = await Effect.runPromise(socketsHeldIn({ registry, providers }, 'acme'));
 
-    expect(held.holders.map(({ connection, account, identityOwed }) => [connection, account, identityOwed])).toEqual([
-      ['connection-1', 'T-1', false],
-      ['connection-2', undefined, true],
-      ['connection-3', 'S-9', false],
+    expect(
+      held.holders.map(({ connection, account, accountName, identityOwed, model }) => [
+        connection,
+        account,
+        accountName,
+        identityOwed,
+        model,
+      ]),
+    ).toEqual([
+      ['connection-1', 'T-1', 'Acme', false, 'provider/model-1'],
+      ['connection-2', undefined, undefined, true, null],
+      ['connection-3', 'S-9', undefined, false, null],
     ]);
   });
 });

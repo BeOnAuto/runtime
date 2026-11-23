@@ -1,5 +1,7 @@
 import type { ProvidedOnceServed } from '../capability-registry/served-ports.ts';
+import type { ChatThrough } from '../chat/serving/chat-connections.ts';
 import type { GoalsPortsOver } from '../goals/goals-engine-lists.ts';
+import type { ChatOfEachServing } from '../sockets/served-sockets.ts';
 import type { SocketsServing } from '../sockets/sockets-of-the-server.ts';
 import { workerPool, type ProgramPoolOf, type ServedComputation } from './served-computation.ts';
 import type { GenerationWiring } from './served-generation.ts';
@@ -21,6 +23,7 @@ export interface ServedWiring extends Omit<FunctionWiring, 'programPoolOf'>, Too
   readonly messages: boolean;
   readonly goalsPortsOver?: GoalsPortsOver | undefined;
   readonly opens: SocketsServing['opens'];
+  readonly chatOver?: ((through: ChatThrough) => ChatOfEachServing) | undefined;
 }
 
 export function functionWiringOf(

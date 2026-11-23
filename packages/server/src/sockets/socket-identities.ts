@@ -1,6 +1,14 @@
 import type { StreamReader } from '@on.auto/operations';
 import { activePlaybooksOf } from '@on.auto/playbooks';
-import { isLasting, type LoopConnection, type SubscriptionCallFailed } from '@on.auto/providers';
+import {
+  asksATool,
+  isLasting,
+  providerFoundBy,
+  type LoopConnection,
+  type OwedAsTheConnection,
+  type ProviderList,
+  type SubscriptionCallFailed,
+} from '@on.auto/providers';
 import { Effect } from 'effect';
 
 import type { IdentitiesReading } from '../subscriptions/served-subscriptions.ts';
@@ -8,6 +16,7 @@ import type { SocketMember } from './socket-registries.ts';
 
 export interface IdentityParts {
   readonly registry: Pick<StreamReader, 'load'>;
+  readonly providers: ProviderList;
   readonly identities: IdentitiesReading;
 }
 
@@ -15,6 +24,11 @@ type Failed = Pick<SubscriptionCallFailed, 'kind' | 'because'>;
 
 interface Owed {
   readonly connection: LoopConnection;
+  readonly member: SocketMember;
+}
+
+interface OwedHere {
+  readonly owed: OwedAsTheConnection;
   readonly member: SocketMember;
 }
 
@@ -41,6 +55,25 @@ function owingByOrg(members: readonly SocketMember[]): ReadonlyMap<string, Reado
   return byOrg;
 }
 
+function owedAsTheConnectionBy(providers: ProviderList, member: SocketMember): readonly OwedHere[] {
+  const { connection, name, connectedAt, provider } = member.holder;
+  const identity = providerFoundBy(providers, provider)?.entry.events?.identity;
+  return asksATool(identity)
+    ? [{ owed: { id: connection, connection: name, connected: connectedAt, identify: identity }, member }]
+    : [];
+}
+
+function unaskedAmong(
+  owing: ReadonlyMap<string, SocketMember>,
+  asked: readonly OwedAsTheConnection[],
+): ReadonlyMap<string, SocketMember> {
+  const left = new Map(owing);
+  for (const { id } of asked) {
+    left.delete(id);
+  }
+  return left;
+}
+
 function owedAmong(
   served: readonly LoopConnection[],
   owing: ReadonlyMap<string, SocketMember>,
@@ -52,9 +85,9 @@ function owedAmong(
   });
 }
 
-function heldBackAmong(owed: readonly Owed[], unread: ReadonlyMap<string, Failed>): readonly HeldBack[] {
-  return owed.flatMap(({ connection, member }) => {
-    const failed = unread.get(connection.connection);
+function heldBackAmong(members: readonly SocketMember[], unread: ReadonlyMap<string, Failed>): readonly HeldBack[] {
+  return members.flatMap((member) => {
+    const failed = unread.get(member.holder.name);
     return failed === undefined || !isLasting(failed.kind) ? [] : [{ member, failed }];
   });
 }
@@ -88,6 +121,31 @@ class OwedIdentities {
 
   #readIn(org: string, owing: ReadonlyMap<string, SocketMember>, deadline: number): Effect.Effect<boolean> {
     return Effect.gen({ self: this }, function* () {
+      const asTheConnection = [...owing.values()].flatMap((member) =>
+        owedAsTheConnectionBy(this.#parts.providers, member),
+      );
+      const owedThere = asTheConnection.map(({ owed }) => owed);
+      const { unread, cutAt } = yield* this.#parts.identities.readAsTheConnection(org, owedThere, deadline);
+      yield* this.#heldBackOf(
+        heldBackAmong(
+          asTheConnection.map(({ member }) => member),
+          unread,
+        ),
+      );
+      if (cutAt !== undefined) {
+        return true;
+      }
+      const throughAPlaybook = unaskedAmong(owing, owedThere);
+      return throughAPlaybook.size > 0 && (yield* this.#readThroughPlaybooks(org, throughAPlaybook, deadline));
+    });
+  }
+
+  #readThroughPlaybooks(
+    org: string,
+    owing: ReadonlyMap<string, SocketMember>,
+    deadline: number,
+  ): Effect.Effect<boolean> {
+    return Effect.gen({ self: this }, function* () {
       let tried: ReadonlySet<string> = new Set();
       for (const playbook of yield* activePlaybooksOf(this.#parts.registry, { org })) {
         if (tried.size === owing.size) {
@@ -97,7 +155,12 @@ class OwedIdentities {
         const connections = owed.map(({ connection }) => connection);
         tried = new Set([...tried, ...connections.map(({ id }) => id)]);
         const { unread, cutAt } = yield* this.#parts.identities.read(playbook, connections, deadline);
-        yield* this.#heldBackOf(heldBackAmong(owed, unread));
+        yield* this.#heldBackOf(
+          heldBackAmong(
+            owed.map(({ member }) => member),
+            unread,
+          ),
+        );
         if (cutAt !== undefined) {
           return true;
         }

@@ -1,3 +1,4 @@
+import { chatAtStartOpened } from '../chat/serving/chat-at-start.ts';
 import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { memberOperationsOver } from '../roles/member-operations.ts';
@@ -20,9 +21,13 @@ export async function signInAndStoresOpened(
   const { clientRegistrationsWith, ...signIn } = await signInOpened(runtime, settings);
   const { linkCodeKey, ...opened } = await storesAndConnectionsOf(runtime, settings, { database, loadAws }, ownOrigin);
   const signInClientRegistrations = clientRegistrationsWith(opened.stores.secrets);
+  const publicUrl = settings.signIn?.publicUrl;
+  const chat = await chatAtStartOpened({ publicUrl, signIn, secrets: opened.stores.secrets, linkCodeKey }, settings);
+  const links = chat === undefined ? {} : { accountLinks: chat.links };
   return {
     opened,
-    signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets, linkCodeKey },
-    members: settings.signIn === undefined ? [] : memberOperationsOver(signIn, settings.signIn.publicUrl),
+    signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets, linkCodeKey, ...links },
+    members: chat === undefined ? [] : memberOperationsOver(signIn, chat.publicUrl, chat.links),
+    chat,
   };
 }

@@ -123,6 +123,20 @@ describe('a connection that is removed', () => {
   });
 });
 
+describe('a connection recorded in no account, removed', () => {
+  it('takes its conversations and arrivals, and no link, since no link was made through it', async () => {
+    const scene = await aScene();
+
+    await scene.store.deletions.connectionRemoved({ connection: 'connection-1', account: undefined });
+
+    expect([await keysKept(scene), await arrivalsOf(scene)]).toEqual([
+      [false, false, false, true, true],
+      ['message-2', 'message-3'],
+    ]);
+    expect(await linksOf(scene, [memberOf('account-1', 'member-2')])).toEqual(['person-2']);
+  });
+});
+
 describe('a member who disconnects, or a person who is removed', () => {
   it('a member who disconnects loses their link alone, and what they wrote stays', async () => {
     const scene = await aScene();

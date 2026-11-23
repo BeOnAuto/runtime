@@ -31,6 +31,7 @@ export type { AnsweredFields, StartedFields } from './calls/recorded-calls.ts';
 export type { AnsweredOnce, AssetNotSentOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-call/called-once.ts';
 export type { OneCall, ReadCall, RunCall } from './one-call/one-call.ts';
 export type { ReadOnceThrough, ServerThrough, ThroughWays } from './access/through-ways.ts';
+export type { CallAsTheConnection, ConnectionCall, ConnectionWays } from './access/connection-ways.ts';
 export { bearerRequestOnce, type RequestOnce, type RequestWays } from './declared-requests/request-ways.ts';
 export type { BearerSending } from './declared-requests/bearer-requests.ts';
 export type { Bearer } from './declared-requests/carried-credentials.ts';

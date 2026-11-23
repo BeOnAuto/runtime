@@ -180,6 +180,12 @@ export const ChatMappingSchema = Schema.Struct({
         'Where a delivery says whether the conversation is shared with another organization, as a runtime expression into a field that is false where it is not. Where the field is missing, the conversation is taken as shared.',
     }),
   ),
+  own: Schema.optionalKey(
+    Schema.Tuple([ExpressionSchema, ExpressionSchema]).annotate({
+      description:
+        "Where a delivery names who wrote the message, and where it names the app's own user, as two runtime expressions. When both name the same user, the app wrote the message itself, so it is not a message a person wrote.",
+    }),
+  ),
 }).annotate({
   description:
     'One kind of message a person writes where the app reads, and the fields of the delivery that hold the message.',

@@ -11,6 +11,7 @@ import { connectionTriggersOf } from '@on.auto/definitions/connection-triggers';
 import { waitingRequestsOf, type WaitingParts } from '@on.auto/interaction';
 import type { DispatcherServices, Ledger } from '@on.auto/operations';
 import {
+  identitiesReadAsTheConnection,
   identitiesReadOf,
   placeNamesReadOf,
   subscriptionLoopOf,
@@ -55,6 +56,7 @@ export function subscriptionLoopPartsOf(serving: SubscriptionsServing): Subscrip
 export interface IdentitiesReading {
   readonly connectionsOf: SubscriptionLoopPorts['connectionsOf'];
   readonly read: ReturnType<typeof identitiesReadOf>;
+  readonly readAsTheConnection: ReturnType<typeof identitiesReadAsTheConnection>;
 }
 
 export interface ServedSubscriptions extends SubscriptionRounds {
@@ -63,7 +65,16 @@ export interface ServedSubscriptions extends SubscriptionRounds {
   readonly tools: ThroughTheConnection;
 }
 
-export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubscriptions {
+type ConnectionWays = Parameters<typeof identitiesReadAsTheConnection>[1];
+
+/**
+ * The subscriptions of a server. `asTheConnection` reaches only the read of the accounts the connections of its
+ * sockets owe, which is the connection's own use, as its socket is; the loop and its rounds call as a playbook.
+ */
+export function subscriptionsServedBy(
+  serving: SubscriptionsServing,
+  asTheConnection: ConnectionWays,
+): ServedSubscriptions {
   const { ledger, receivesOverHttp, eventsAddressOf } = serving;
   const arrangesAWay = receivesOverHttp && eventsAddressOf !== undefined;
   const parts = subscriptionLoopPartsOf(serving);
@@ -79,7 +90,11 @@ export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubs
   return {
     ...rounds,
     wakeUpsOver: connectionChangesWakeUpsOf({ ledger, asked: rounds.asked, arrangesAWay }),
-    identities: { connectionsOf: ports.connectionsOf, read: identitiesReadOf(ports) },
+    identities: {
+      connectionsOf: ports.connectionsOf,
+      read: identitiesReadOf(ports),
+      readAsTheConnection: identitiesReadAsTheConnection(ports, asTheConnection),
+    },
     tools: serving.tools,
   };
 }
@@ -87,6 +102,7 @@ export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubs
 interface TheServersOwn {
   readonly tools: ThroughTheConnection;
   readonly secrets: SubscriptionsServing['secrets'];
+  readonly asTheConnection: ConnectionWays;
   readonly takeIn?: Parameters<typeof listedIntakeOf>[0];
 }
 
@@ -95,7 +111,7 @@ type ServedReceiving = Pick<Settings, 'providers' | 'receiving'>;
 export function subscriptionsServingOf(
   ledger: SubscriptionsLedger,
   { providers, receiving: { overHttp, webhookUrl } }: ServedReceiving,
-  { tools, secrets, takeIn }: TheServersOwn,
+  { tools, secrets, takeIn }: Pick<TheServersOwn, 'tools' | 'secrets' | 'takeIn'>,
 ): SubscriptionsServing {
   const addressed =
     webhookUrl === undefined
@@ -110,5 +126,5 @@ export function subscriptionsOfTheServer(
   settings: ServedReceiving,
   own: TheServersOwn,
 ): ServedSubscriptions {
-  return subscriptionsServedBy(subscriptionsServingOf(runtimeLedger(runtime), settings, own));
+  return subscriptionsServedBy(subscriptionsServingOf(runtimeLedger(runtime), settings, own), own.asTheConnection);
 }

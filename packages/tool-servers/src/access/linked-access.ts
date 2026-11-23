@@ -1,7 +1,15 @@
 import { defaultTiming, mostRequestBytesOf } from '../bounds/call-bounds.ts';
 import { serverLink, type ServerLink } from '../clients/server-links.ts';
 import { listedTools } from '../listing/tool-servers.ts';
-import { oneCall, readOnce, type OneCall, type ReadCall, type RunCall } from '../one-call/one-call.ts';
+import {
+  oneCall,
+  ownCallOnce,
+  readOnce,
+  type OneCall,
+  type OwnCall,
+  type ReadCall,
+  type RunCall,
+} from '../one-call/one-call.ts';
 import type { ToolServers } from '../openapi/described-api.ts';
 import { connectionLinkOf } from '../org-servers/connection-linking.ts';
 import type { LinkConnection } from '../org-servers/connection-links.ts';
@@ -17,6 +25,7 @@ export interface LinkedAccess {
   readonly open: (opened: Opened) => ReturnType<typeof openedRun>;
   readonly callOnce: (call: OneCall, server: OrgServer, runCall?: RunCall) => ReturnType<typeof oneCall>;
   readonly readOnce: (call: ReadCall, server: OrgServer) => ReturnType<typeof readOnce>;
+  readonly ownCallOnce: (call: OwnCall, server: OrgServer) => ReturnType<typeof ownCallOnce>;
   readonly listed: (served: OrgServer['settings'], link: ServerLink) => ReturnType<typeof listedTools>;
   readonly close: () => Promise<void>;
 }
@@ -51,6 +60,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     callOnce: (call, server, runCall) =>
       oneCall(call, server, { secrets, keepIn, timing, assets, mostRequestBytes }, runCall),
     readOnce: (call, server) => readOnce(call, server, { secrets, keepIn, timing, assets, mostRequestBytes }),
+    ownCallOnce: (call, server) => ownCallOnce(call, server, { secrets, keepIn, timing, assets, mostRequestBytes }),
     listed: (served, link) => listedTools(served, link, { secrets, timing }),
     close: async () => {
       await Promise.all([...madeLinks.values()].map((link) => link.stop()));

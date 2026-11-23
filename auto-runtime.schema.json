@@ -766,7 +766,7 @@
                       },
                       "with": {
                         "type": "object",
-                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                        "description": "Its arguments, written as the arguments of a function's deliver are. Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient. It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words. An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call."
                       },
                       "sent": {
                         "type": "string",
@@ -781,7 +781,7 @@
                           },
                           "with": {
                             "type": "object",
-                            "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts, and over sent.id as well, the message Auto posted"
+                            "description": "Its arguments, written as the arguments of a function's deliver are. Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient. It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words. An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call. Its arguments can also read sent.id, the message Auto posted."
                           }
                         },
                         "required": ["tool", "with"],
@@ -802,7 +802,7 @@
                       },
                       "with": {
                         "type": "object",
-                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                        "description": "Its arguments, written as the arguments of a function's deliver are. Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient. It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words. An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call."
                       }
                     },
                     "required": ["tool", "with"],
@@ -818,7 +818,7 @@
                       },
                       "with": {
                         "type": "object",
-                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                        "description": "Its arguments, written as the arguments of a function's deliver are. Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient. It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words. An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call."
                       },
                       "read": {
                         "type": "object",
@@ -878,7 +878,7 @@
                       },
                       "with": {
                         "type": "object",
-                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts"
+                        "description": "Its arguments, written as the arguments of a function's deliver are. Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient. It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words. An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call."
                       },
                       "email": {
                         "type": "string",
@@ -886,11 +886,15 @@
                       },
                       "email_verified": {
                         "type": "string",
-                        "description": "A JSON Pointer to the boolean that is true where the service confirmed that the address is the person's; left out where the service gives only addresses it confirmed"
+                        "description": "A JSON Pointer to the boolean that is true where the service confirmed that the address is the person's. Where it is left out, Auto counts no address as confirmed, and asks each person to sign in instead."
                       },
                       "account": {
                         "type": "string",
                         "description": "A JSON Pointer to the id of the account the person belongs to, such as a workspace"
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the tool answered, to the person's name. Auto shows this name on the page where the person allows the connection to Auto. Without a name there, the person cannot connect their account."
                       },
                       "active": {
                         "type": "object",
@@ -918,9 +922,9 @@
                         "description": "Conditions on what the tool answered that hold only for an active person of the account, and not for one who was deactivated, has not joined yet or is an app: each a JSON Pointer with the values it may equal, every one of which holds. Put null among the values to let a field that is missing or null pass"
                       }
                     },
-                    "required": ["tool", "with", "email"],
+                    "required": ["tool", "with", "email", "name"],
                     "additionalProperties": false,
-                    "description": "How Auto reads the person who wrote a message, to know who they are"
+                    "description": "How Auto reads the person who wrote a message, to know who they are. When Auto reads a person's name before they connect, no message exists: id and sender are the person, and conversation and kind are empty."
                   }
                 },
                 "required": ["answer", "thread", "sender"],
@@ -1050,6 +1054,10 @@
                       "account": {
                         "type": "string",
                         "description": "A JSON Pointer into what the call answered, to the id of the account at the service the connection is for, such as a workspace, where the answer gives one"
+                      },
+                      "account_name": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the call answered, to the name of the account that the account field identifies, such as the workspace's name. It is read only where account is given. Auto shows this name to a person when they connect their account at the service to Auto."
                       }
                     },
                     "required": ["identified"],
@@ -1690,6 +1698,20 @@
                               "shared": {
                                 "type": "string",
                                 "description": "Where a delivery says whether the conversation is shared with another organization, as a runtime expression into a field that is false where it is not. Where the field is missing, the conversation is taken as shared."
+                              },
+                              "own": {
+                                "type": "array",
+                                "prefixItems": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ],
+                                "maxItems": 2,
+                                "minItems": 2,
+                                "description": "Where a delivery names who wrote the message, and where it names the app's own user, as two runtime expressions. When both name the same user, the app wrote the message itself, so it is not a message a person wrote."
                               }
                             },
                             "required": ["kind", "when", "id", "conversation", "sender", "text"],

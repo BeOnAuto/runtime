@@ -101,6 +101,7 @@ describe('the account that did what a message Slack’s Socket Mode sends report
       tool: 'auth_test',
       identified: { id: '/bot_id' },
       account: '/team_id',
+      account_name: '/team',
     });
   });
 });

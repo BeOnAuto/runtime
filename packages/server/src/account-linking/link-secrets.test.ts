@@ -1,3 +1,4 @@
+import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { aLinkCodeKey } from '../testing/account-linking/account-links-in-memory.ts';
@@ -9,6 +10,7 @@ import {
   codeLength,
   isTheSameSecret,
   keyedHashUnder,
+  linkCodeKeysUnder,
   secretOf,
 } from './link-secrets.ts';
 
@@ -89,6 +91,46 @@ describe('the secret a store keeps of a code', () => {
     ['a key of 33 bytes', aLinkCodeKey(1, 33)],
   ])('is not made with %s, so no code is kept or compared', (_case, key) => {
     expect(keyedHashUnder(key)).toBeUndefined();
+  });
+});
+
+function sealUnder(byte: number) {
+  return Option.getOrThrow(Option.fromNullishOr(linkCodeKeysUnder(aLinkCodeKey(byte)))).seal;
+}
+
+function alteredAt(sealed: string, part: number): string {
+  const parts = sealed.split('.');
+  const altered = String(parts[part]);
+  parts[part] = `${altered.startsWith('A') ? 'B' : 'A'}${altered.slice(1)}`;
+  return parts.join('.');
+}
+
+describe('the code kept sealed in the browser it was shown in', () => {
+  it('opens under the server’s key to the code it sealed, never holds the code in plain, and is another each time', () => {
+    const seal = sealUnder(1);
+    const [one, another] = [seal.sealed('BCDFGH'), seal.sealed('BCDFGH')];
+
+    expect([seal.opened(one), seal.opened(another), one === another]).toEqual(['BCDFGH', 'BCDFGH', false]);
+    expect(one).toMatch(/^[\w-]{16}\.[\w-]{8}\.[\w-]{22}$/u);
+  });
+
+  it.each([
+    ['sealed under another key', () => sealUnder(2).sealed('BCDFGH')],
+    ['whose sealed text was altered', () => alteredAt(sealUnder(1).sealed('BCDFGH'), 1)],
+    ['whose tag was altered', () => alteredAt(sealUnder(1).sealed('BCDFGH'), 2)],
+    ['of a fourth part', () => `${sealUnder(1).sealed('BCDFGH')}.AAAA`],
+    ['that is the code itself', () => 'BCDFGH'],
+    ['that is empty', () => ''],
+  ])('opens to nothing where it is %s', (_case, given) => {
+    expect(sealUnder(1).opened(given())).toBeUndefined();
+  });
+
+  it.each([
+    ['no key', undefined],
+    ['a key of 31 bytes', aLinkCodeKey(1, 31)],
+    ['a key of 33 bytes', aLinkCodeKey(1, 33)],
+  ])('is not made with %s', (_case, key) => {
+    expect(linkCodeKeysUnder(key)).toBeUndefined();
   });
 });
 

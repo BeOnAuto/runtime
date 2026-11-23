@@ -28,6 +28,12 @@ export const IdentitySchema = Schema.Struct({
         'A JSON Pointer into what the call answered, to the id of the account at the service the connection is for, such as a workspace, where the answer gives one',
     }),
   ),
+  account_name: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "A JSON Pointer into what the call answered, to the name of the account that the account field identifies, such as the workspace's name. It is read only where account is given. Auto shows this name to a person when they connect their account at the service to Auto.",
+    }),
+  ),
 }).annotate({
   description:
     'The call that asks the service which account the connection acts as, a tool of the connection or an HTTP request',

@@ -10,7 +10,12 @@ import type {
   MemberOfAnAccount,
   NamesFromTheService,
 } from '../../account-linking/account-links.ts';
-import { keyedHashUnder, type KeyedHash } from '../../account-linking/link-secrets.ts';
+import {
+  keyedHashUnder,
+  linkCodeKeysUnder,
+  type KeyedHash,
+  type LinkCodeKeys,
+} from '../../account-linking/link-secrets.ts';
 
 function keyOf({ account, member }: MemberOfAnAccount): string {
   return JSON.stringify([account, member]);
@@ -72,4 +77,8 @@ export function aLinkCodeKey(byte: number, bytes = secretKeyBytes): Redacted.Red
 
 export function keyedHashOf(byte: number): KeyedHash {
   return Option.getOrThrow(Option.fromNullishOr(keyedHashUnder(aLinkCodeKey(byte))));
+}
+
+export function linkCodeKeysOf(byte: number): LinkCodeKeys {
+  return Option.getOrThrow(Option.fromNullishOr(linkCodeKeysUnder(aLinkCodeKey(byte))));
 }

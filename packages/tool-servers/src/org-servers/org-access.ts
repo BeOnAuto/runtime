@@ -1,5 +1,6 @@
 import { Effect, Option } from 'effect';
 
+import { connectionWaysOf, type ConnectionWays } from '../access/connection-ways.ts';
 import type { LinkedAccess } from '../access/linked-access.ts';
 import { throughWaysOf, type ThroughWays } from '../access/through-ways.ts';
 import type { Secrets } from '../bounds/secrets.ts';
@@ -11,7 +12,7 @@ import { readyAsItIs, withTheFileFirst, type OrgServer } from './org-servers.ts'
 
 export type Load = () => Promise<LinkedAccess>;
 
-export interface OrgAccess extends ThroughWays {
+export interface OrgAccess extends ThroughWays, ConnectionWays {
   readonly loaded: Load;
   readonly serversOf: (org: string) => Effect.Effect<readonly OrgServer[]>;
   readonly listingsKept: KeptListings;
@@ -43,11 +44,14 @@ export function orgAccessOf(settings: ToolServers, parts: OrgAccessParts): OrgAc
   const linkOf: LinkConnection = async (id, server) => (await loaded()).connectionLink(id, server);
   const connections = connectionLinks(source, linkOf, secrets);
   const files = settings.servers.map((server) => fileServer(server, loaded));
+  const serversOf: OrgAccess['serversOf'] = (org) =>
+    Effect.map(connections.serversOf(org), (ofTheOrg) => withTheFileFirst(files, ofTheOrg));
   return {
     loaded,
-    serversOf: (org) => Effect.map(connections.serversOf(org), (ofTheOrg) => withTheFileFirst(files, ofTheOrg)),
+    serversOf,
     listingsKept: parts.listingsKept ?? keptListingsOf(parts.now),
     ...throughWaysOf(loaded),
+    ...connectionWaysOf(serversOf, loaded),
     close: connections.close,
   };
 }

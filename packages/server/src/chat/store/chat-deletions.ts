@@ -4,7 +4,7 @@ import type { ChatRows, KeyedConversation, MemberOfAnAccount } from '../tables/c
 
 interface ConnectionRemoved {
   readonly connection: string;
-  readonly account: string;
+  readonly account: string | undefined;
 }
 
 export interface ConversationAsked {
@@ -33,8 +33,10 @@ export function chatDeletionsOver(rows: ChatRows, keys: KeptSecrets): ChatDeleti
     connectionRemoved: async ({ connection, account }) => {
       await wholeDeleted(rows, keys, await rows.conversations.selected({ connection }));
       await rows.arrivals.deleted({ connection });
-      await rows.links.linksDeleted({ account });
-      await rows.links.startsDeleted({ account });
+      if (account !== undefined) {
+        await rows.links.linksDeleted({ account });
+        await rows.links.startsDeleted({ account });
+      }
     },
     disconnected: async (member) => {
       await rows.links.linksDeleted(member);

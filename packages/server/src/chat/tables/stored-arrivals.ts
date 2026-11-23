@@ -20,6 +20,8 @@ export const arrivalsTables: readonly Statement[] = [
   statement`CREATE INDEX IF NOT EXISTS chat_arrivals_taken ON chat_arrivals (arrived_at) WHERE state = 'taken'`,
 ];
 
+const decodeKinds = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ kind: Schema.String })));
+
 const decodeArrivals = Schema.decodeUnknownSync(
   Schema.Array(
     Schema.Struct({
@@ -32,6 +34,21 @@ const decodeArrivals = Schema.decodeUnknownSync(
   ),
 );
 
+function outrankedIn(database: ChatDatabase): ArrivalRows['outranked'] {
+  return async ({ connection, account, conversation, message, kind }, over) => {
+    const reopened = await database.write(statement`UPDATE chat_arrivals SET kind = ${kind}, state = 'taken'
+      WHERE connection = ${connection} AND account = ${account} AND conversation = ${conversation}
+        AND message = ${message} AND kind = ${over} AND state = 'passed' RETURNING message`);
+    if (reopened.length === 1) {
+      return 'taken';
+    }
+    const handed = await database.write(statement`UPDATE chat_arrivals SET kind = ${kind}
+      WHERE connection = ${connection} AND account = ${account} AND conversation = ${conversation}
+        AND message = ${message} AND kind = ${over} AND state = 'taken' RETURNING message`);
+    return handed.length === 1 ? 'handed' : 'kept';
+  };
+}
+
 export function storedArrivals(database: ChatDatabase): ArrivalRows {
   return {
     claimed: async ({ connection, account, conversation, message, kind }, at) => {
@@ -41,6 +58,19 @@ export function storedArrivals(database: ChatDatabase): ArrivalRows {
         ON CONFLICT (connection, account, conversation, message) DO NOTHING RETURNING message`);
       return written.length === 1;
     },
+    outranked: outrankedIn(database),
+    passed: async ({ connection, account, conversation, message, kind }) => {
+      const passed = await database.write(statement`UPDATE chat_arrivals SET state = 'passed'
+        WHERE connection = ${connection} AND account = ${account} AND conversation = ${conversation}
+          AND message = ${message} AND kind = ${kind} AND state = 'taken' RETURNING message`);
+      return passed.length === 1;
+    },
+    kindOf: async ({ connection, account, conversation, message }) =>
+      decodeKinds(
+        await database.read(statement`SELECT kind FROM chat_arrivals
+          WHERE connection = ${connection} AND account = ${account} AND conversation = ${conversation}
+            AND message = ${message}`),
+      ).at(0)?.kind,
     settled: async ({ connection, account, conversation, message }) => {
       await database.write(statement`UPDATE chat_arrivals SET state = 'settled'
         WHERE connection = ${connection} AND account = ${account} AND conversation = ${conversation}

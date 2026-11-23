@@ -4,6 +4,7 @@ import { onTestFinished } from 'vitest';
 
 import { chatRowsInMemory } from '../../testing/chat/chat-rows-in-memory.ts';
 import { temporaryLedger } from '../../testing/records/temporary-ledger.ts';
+import { chatReadsBehaviour } from './chat-arrivals-behaviour.ts';
 import { chatDatabaseBehaviour, rowsOnTheLedger } from './chat-database-behaviour.ts';
 import { chatLinksBehaviour } from './chat-links-behaviour.ts';
 import { chatRowsBehaviour, type ChatRowsEntry } from './chat-rows-behaviour.ts';
@@ -23,6 +24,7 @@ const onASQLiteFile: ChatRowsEntry = {
 
 for (const entry of [inMemory, onASQLiteFile]) {
   chatRowsBehaviour(entry);
+  chatReadsBehaviour(entry);
   chatLinksBehaviour(entry);
 }
 

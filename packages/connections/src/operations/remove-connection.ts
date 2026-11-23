@@ -10,7 +10,16 @@ import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed, removalAttempted } from './connection-words.ts';
 import { foundConnection, recordInRegistry } from './registry-access.ts';
 
-type RemovalServices = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve'>;
+type RemovalServices = Pick<
+  ConnectionServices,
+  'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve' | 'connectionRemoved'
+>;
+
+function removedWhereItIsKept({ connection }: KeptConnection, { connectionRemoved }: RemovalServices) {
+  return connectionRemoved === undefined
+    ? Effect.void
+    : connectionRemoved({ connection: connection.id, account: connection.account?.id });
+}
 
 export const removedAround = Effect.fnUntraced(function* <Recorded extends { readonly removed: KeptConnection }, E, R>(
   found: KeptConnection,
@@ -20,6 +29,7 @@ export const removedAround = Effect.fnUntraced(function* <Recorded extends { rea
   yield* keyEndedBeforeRemoval(found, services);
   const recorded = yield* recording;
   yield* forgottenOnRemoval(found, recorded.removed, services);
+  yield* removedWhereItIsKept(recorded.removed, services);
   return recorded;
 });
 

@@ -1,6 +1,6 @@
 import { accountLinkingOf, linkStarted } from '../../account-linking/account-linking.ts';
 import type { AccountLinks, MemberOfAnAccount } from '../../account-linking/account-links.ts';
-import { keyedHashOf, namesFromTheServiceOf } from './account-links-in-memory.ts';
+import { linkCodeKeysOf, namesFromTheServiceOf } from './account-links-in-memory.ts';
 
 export const publicUrl = 'https://auto.example.test';
 
@@ -19,7 +19,9 @@ export const names = namesFromTheServiceOf({
   members: { 'U-dana': { memberName: 'Dana Reyes', accountName: 'Northwind' } },
 });
 
-export const hashed = keyedHashOf(1);
+export const keys = linkCodeKeysOf(1);
+
+export const { hashed } = keys;
 
 export function codesOf(code: string): () => string {
   return () => code;
@@ -31,6 +33,6 @@ export async function linkFor(links: AccountLinks, member: MemberOfAnAccount): P
 }
 
 export async function aCodeShownTo(links: AccountLinks, member: MemberOfAnAccount, code = 'BCDFGH'): Promise<string> {
-  await accountLinkingOf(links, names, hashed, codesOf(code)).allowed(await linkFor(links, member), ada);
+  await accountLinkingOf(links, names, keys, codesOf(code)).allowed(await linkFor(links, member), ada);
   return code;
 }

@@ -27,6 +27,7 @@ type ReadOnceThrough = ConnectionServices['readOnceThrough'];
 interface ThroughTheRegistry {
   readonly readOnceThrough: ReadOnceThrough;
   readonly chatModels: NonNullable<ConnectionServices['chatModels']>;
+  readonly connectionRemoved?: ConnectionServices['connectionRemoved'];
 }
 
 export interface StoresAndConnections extends OwnKeysRead {
@@ -70,7 +71,7 @@ interface Composed extends ThroughTheRegistry {
 
 function connectionServicesOf(
   settings: ServingSettings,
-  { secrets, consent, pages, readOnceThrough, opens, chatModels }: Composed,
+  { secrets, consent, pages, readOnceThrough, opens, chatModels, connectionRemoved }: Composed,
 ): ConnectionServices {
   return {
     consent,
@@ -88,6 +89,7 @@ function connectionServicesOf(
     sockets: socketChecksOver(opens),
     chatModels,
     received: eventsReceivedAt(settings.receiving),
+    ...(connectionRemoved === undefined ? {} : { connectionRemoved }),
   };
 }
 
@@ -129,8 +131,9 @@ export async function storesAndConnectionsOf(
     ...ownKeys,
     consent,
     opens,
-    connectionsReadingThrough: ({ readOnceThrough, chatModels }) => {
-      const composed = { secrets: stores.secrets, consent, pages, readOnceThrough, chatModels, opens };
+    connectionsReadingThrough: ({ readOnceThrough, chatModels, connectionRemoved }) => {
+      const removed = connectionRemoved === undefined ? {} : { connectionRemoved };
+      const composed = { secrets: stores.secrets, consent, pages, readOnceThrough, chatModels, opens, ...removed };
       const services = connectionServicesOf(settings, composed);
       return { connections: makeConnectionOperations(services), offering: makeProviderOffering(services) };
     },

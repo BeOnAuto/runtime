@@ -2,6 +2,7 @@ import type { BearerSending, DeclaredRequest, RequestedOnce } from '@on.auto/too
 import { Data, type Effect, type Redacted, type Scope } from 'effect';
 
 import type { ArrivalReading } from '../events/arrival-readings.ts';
+import type { ChatMessage } from '../events/chat-arrivals.ts';
 import type { Destination } from '../events/destination-fields.ts';
 
 export type SocketEnd = 'not opened' | 'closed' | 'silent' | 'refused';
@@ -34,6 +35,7 @@ export type ConstructsASocket = (address: Redacted.Redacted) => Effect.Effect<Op
 
 export interface SocketArrival {
   readonly reading: ArrivalReading;
+  readonly chat?: ChatMessage;
 }
 
 export type Arrived = (arrival: SocketArrival) => Effect.Effect<void>;

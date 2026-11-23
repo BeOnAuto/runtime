@@ -1,7 +1,12 @@
 import type { LinkShown } from '@on.auto/openid-connect/authorization-server';
 import { describe, expect, it } from 'vitest';
 
-import { accountLinksInMemory, aLinkCodeKey, keyedHashOf } from '../testing/account-linking/account-links-in-memory.ts';
+import {
+  accountLinksInMemory,
+  aLinkCodeKey,
+  keyedHashOf,
+  linkCodeKeysOf,
+} from '../testing/account-linking/account-links-in-memory.ts';
 import {
   aCodeShownTo,
   ada,
@@ -9,6 +14,7 @@ import {
   codesOf,
   dana,
   hashed,
+  keys,
   linkFor,
   named,
   names,
@@ -16,7 +22,7 @@ import {
   publicUrl,
 } from '../testing/account-linking/linking-fixtures.ts';
 import { accountLinkingOf, codeHandedBack, linkingOf, linkStarted, type LinkingServed } from './account-linking.ts';
-import type { AccountLinks, MemberOfAnAccount } from './account-links.ts';
+import type { AccountLinks, LinkStart, MemberOfAnAccount } from './account-links.ts';
 import { secretOf } from './link-secrets.ts';
 
 const choices = { allowAt: '/interaction/i1/confirm', denyAt: '/interaction/i1/abort', tryAgainAt: '/interaction/i1' };
@@ -27,7 +33,7 @@ describe('a link started for a member of an account', () => {
     const code = await aCodeShownTo(links, dana);
     await links.started({ ...omar, secret: secretOf('a-value-allowed-before'), person: ada });
 
-    const linking = accountLinkingOf(links, names, hashed);
+    const linking = accountLinkingOf(links, names, keys);
 
     expect([await linking.opened(code), await linking.opened('a-value-allowed-before')]).toEqual([false, false]);
   });
@@ -40,12 +46,12 @@ describe('a link started for a member of an account', () => {
     const value = link.slice(`${publicUrl}/account-links/`.length);
     expect(link).toMatch(/^https:\/\/auto\.example\.test\/account-links\/[\w-]{43}$/u);
     expect(await links.startOf(dana)).toEqual({ ...dana, secret: secretOf(value) });
-    expect(await accountLinkingOf(links, names, hashed).opened(value)).toBe(true);
+    expect(await accountLinkingOf(links, names, keys).opened(value)).toBe(true);
   });
 
   it('stops the link started before it for the same member, and no other member’s', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(links, names, hashed);
+    const linking = accountLinkingOf(links, names, keys);
     const [older, others] = [await linkFor(links, dana), await linkFor(links, omar)];
 
     const newer = await linkFor(links, dana);
@@ -69,7 +75,7 @@ describe('the page that asks to allow a link', () => {
     const links = accountLinksInMemory();
     const value = await linkFor(links, dana);
 
-    const shown = await accountLinkingOf(links, names, hashed).allowShown(value, choices);
+    const shown = await accountLinkingOf(links, names, keys).allowShown(value, choices);
 
     expect(shown).toEqual({
       allow: {
@@ -86,13 +92,13 @@ describe('the page that asks to allow a link', () => {
     const links = accountLinksInMemory();
     const value = await linkFor(links, member);
 
-    expect(await accountLinkingOf(links, names, hashed).allowShown(value, choices)).toEqual(shown);
+    expect(await accountLinkingOf(links, names, keys).allowShown(value, choices)).toEqual(shown);
     expect(await links.startOf(member)).toMatchObject(member);
   });
 
   it('says the link stopped working where its start was allowed, replaced or never made', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(links, names, hashed, codesOf('BCDFGH'));
+    const linking = accountLinkingOf(links, names, keys, codesOf('BCDFGH'));
     const allowedBefore = await linkFor(links, dana);
     await linking.allowed(allowedBefore, ada);
     const replaced = await linkFor(links, omar);
@@ -109,7 +115,7 @@ describe('the page that asks to allow a link', () => {
 describe('a link allowed', () => {
   it('shows a code for the member to send back and keeps it hashed, with the person who allowed it, in place of the link', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(links, names, hashed, codesOf('BCDFGH'));
+    const linking = accountLinkingOf(links, names, keys, codesOf('BCDFGH'));
     const value = await linkFor(links, dana);
 
     const shown = await linking.allowed(value, ada);
@@ -134,7 +140,7 @@ describe('a link allowed', () => {
 
   it('shows no code and keeps the link open where the account is no longer connected', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(links, names, hashed);
+    const linking = accountLinkingOf(links, names, keys);
     const gone = { account: 'T-gone', member: 'U-dana' };
     const value = await linkFor(links, gone);
 
@@ -145,7 +151,7 @@ describe('a link allowed', () => {
 describe('a link denied', () => {
   it('ends its start and says nothing was connected, once', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(links, names, hashed);
+    const linking = accountLinkingOf(links, names, keys);
     const value = await linkFor(links, dana);
 
     const denied = [await linking.denied(value), await linking.denied(value)];
@@ -159,8 +165,59 @@ describe('a link denied', () => {
     const gone = { account: 'T-gone', member: 'U-dana' };
     const value = await linkFor(links, gone);
 
-    expect(await accountLinkingOf(links, names, hashed).denied(value)).toEqual({ ended: true });
+    expect(await accountLinkingOf(links, names, keys).denied(value)).toEqual({ ended: true });
     expect(await links.startOf(gone)).toBeUndefined();
+  });
+});
+
+const meanwhile: ReadonlyArray<readonly [string, (links: AccountLinks) => Promise<unknown>, LinkShown]> = [
+  ['before the code is used', () => Promise.resolve(), { code: { ...named, code: 'BCDFGH' } }],
+  ['after the code is used', (links) => codeHandedBack({ links, hashed }, dana, 'BCDFGH', at), { ended: true }],
+  ['after a newer start for the member', (links) => linkFor(links, dana), { ended: true }],
+  [
+    'after a wrong code from the member',
+    (links) => codeHandedBack({ links, hashed }, dana, 'ZZZZZZ', at),
+    { ended: true },
+  ],
+  ['after the person who allowed it is removed', (links) => links.personForgotten(ada), { ended: true }],
+];
+
+describe('the page of a code, loaded again in the browser that keeps the code sealed', () => {
+  it.each(meanwhile)(
+    '%s, shows the code while it still counts and that the link stopped otherwise',
+    async (_case, then, shown) => {
+      const links = accountLinksInMemory();
+      const linking = accountLinkingOf(links, names, keys, codesOf('BCDFGH'));
+      await linking.allowed(await linkFor(links, dana), ada);
+      const sealed = await linking.codeSealed('BCDFGH');
+
+      await then(links);
+
+      expect(await linking.codeShownAgain(sealed)).toEqual(shown);
+    },
+  );
+
+  it.each([
+    ['the code itself', () => 'BCDFGH'],
+    ['the code sealed under another key', () => linkCodeKeysOf(2).seal.sealed('BCDFGH')],
+    ['nothing', () => ''],
+  ])('shows no code for %s, which no browser was given, though the code still counts', async (_case, given) => {
+    const links = accountLinksInMemory();
+    await aCodeShownTo(links, dana, 'BCDFGH');
+
+    expect(await accountLinkingOf(links, names, keys).codeShownAgain(given())).toEqual({ ended: true });
+  });
+
+  it.each<readonly [string, Omit<LinkStart, 'secret'>]>([
+    ['a start that awaits no code', dana],
+    ['a start whose account is no longer connected', { account: 'T-gone', member: 'U-dana', person: ada }],
+  ])('shows no code for %s', async (_case, start) => {
+    const links = accountLinksInMemory();
+    await links.started({ ...start, secret: hashed.of('BCDFGH') });
+
+    expect(await accountLinkingOf(links, names, keys).codeShownAgain(keys.seal.sealed('BCDFGH'))).toEqual({
+      ended: true,
+    });
   });
 });
 
@@ -171,7 +228,7 @@ function endedMeanwhile(links: AccountLinks): AccountLinks {
 describe('a start another request ended between its reading and its end', () => {
   it('shows no code, says nothing was declined and links no one', async () => {
     const links = accountLinksInMemory();
-    const linking = accountLinkingOf(endedMeanwhile(links), names, hashed, codesOf('BCDFGH'));
+    const linking = accountLinkingOf(endedMeanwhile(links), names, keys, codesOf('BCDFGH'));
     const value = await linkFor(links, dana);
     const code = await aCodeShownTo(links, omar);
 

@@ -12,16 +12,19 @@ import { browserAt, issuer, signedInPerson } from '../testing/authorization-serv
 import type { Browser } from '../testing/authorization-server-over-http.ts';
 import {
   aChallenge,
+  aCode,
   allowPagesIn,
   backAtTheServer,
   callsNamed,
   choicesOf,
+  codeCookie,
   linkCookie,
   linkingClient,
   linkingServersClosedAfterAll,
   named,
   openLink,
   ownRedirect,
+  sealedOf,
   stateCarriedBy,
   toTheAllowPage,
 } from '../testing/linking-accounts.ts';
@@ -143,6 +146,60 @@ describe('a person who signed in at such a link and decided', () => {
       { link: { denied: named } },
     ]);
     expect(heard.heard().at(-1)).toEqual(['denied', openLink]);
+  });
+});
+
+async function aCodeShown(counts: boolean) {
+  const { server, heard, browser } = await aLinkingServer();
+  const codePage = await backAtTheServer(browser, await toTheAllowPage(browser), 'confirm');
+  await browser.at(codePage);
+  if (!counts) {
+    heard.codeEnded();
+  }
+  const seen = () => [
+    server.pagesShown.at(-1),
+    browser.cookies.has(codeCookie),
+    callsNamed(heard.heard(), 'codeShownAgain'),
+  ];
+  return { browser, another: browserAt(server), codePage, seen } as const;
+}
+
+type CodeShown = Awaited<ReturnType<typeof aCodeShown>>;
+
+const inItsBrowser = ({ browser, codePage }: CodeShown) => browser.at(codePage);
+
+const inAnotherBrowser = ({ another, codePage }: CodeShown) => another.at(codePage);
+
+const atAnotherReturn = ({ browser, codePage }: CodeShown) => browser.at(codePage.replace(/state=[\w-]+/u, 'state=a'));
+
+const [shownAgain, stopped] = [{ link: { code: { ...named, code: aCode } } }, { link: { ended: true } }] as const;
+
+const askedOnce = [['codeShownAgain', sealedOf(aCode)]];
+
+describe('the page of a code, loaded again', () => {
+  it('keeps the return’s state and the code as the server sealed it in a cookie of the session, never the code', async () => {
+    const { browser, codePage } = await aCodeShown(true);
+
+    const [kept, state] = [
+      browser.setCookies.find((set) => set.startsWith(codeCookie)),
+      new URL(codePage).searchParams,
+    ];
+
+    expect(browser.cookies.get(codeCookie)).toBe(`${String(state.get('state'))}.${sealedOf(aCode)}`);
+    expect(String(kept).split('; ').slice(1).toSorted()).toEqual(['httponly', 'path=/', 'samesite=lax', 'secure']);
+  });
+
+  it.each<readonly [string, boolean, (shown: CodeShown) => Promise<unknown>, readonly unknown[]]>([
+    ['before it is used, in its browser', true, inItsBrowser, [shownAgain, true, askedOnce]],
+    ['once it is used or replaced by a newer start', false, inItsBrowser, [stopped, false, askedOnce]],
+    ['in another browser, which holds no cookie', true, inAnotherBrowser, [stopped, true, []]],
+    ['at the return of another link', true, atAnotherReturn, [stopped, true, []]],
+  ])('%s, shows what the server answers for it', async (_case, counts, loadedAgain, answered) => {
+    const shown = await aCodeShown(counts);
+
+    await loadedAgain(shown);
+
+    expect(shown.seen()).toEqual(answered);
   });
 });
 

@@ -17,6 +17,8 @@ export const linkingClientId = 'account-linking';
 
 const linkCookie = '__Host-Http-account-link';
 
+const codeCookie = '__Host-Http-account-link-code';
+
 const randomBytesOfAValue = 32;
 
 const unreferred = { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } as const;
@@ -43,6 +45,11 @@ interface Carried {
   readonly value: string;
   readonly state: string;
   readonly verifier: string;
+}
+
+interface CodeKept {
+  readonly state: string;
+  readonly sealed: string;
 }
 
 interface AskedToAllow {
@@ -84,6 +91,13 @@ function carriedIn(ctx: KoaContextWithOIDC): Carried | undefined {
   return carried === undefined
     ? undefined
     : { value: String(carried['value']), state: String(carried['state']), verifier: String(carried['verifier']) };
+}
+
+const aKeptCode = /^(?<state>[\w-]+)\.(?<sealed>[\w.-]+)$/u;
+
+function codeKeptIn(ctx: KoaContextWithOIDC): CodeKept | undefined {
+  const kept = aKeptCode.exec(String(ctx.cookies.get(codeCookie)))?.groups;
+  return kept === undefined ? undefined : { state: String(kept['state']), sealed: String(kept['sealed']) };
 }
 
 function isTheSame(given: unknown, kept: string): boolean {
@@ -184,13 +198,38 @@ async function linkDecided(ctx: KoaContextWithOIDC, served: LinksServed, carried
     : { link: await served.linking.allowed(carried.value, person) };
 }
 
+async function codeKeptFor(
+  ctx: KoaContextWithOIDC,
+  served: LinksServed,
+  { state }: Carried,
+  page: PageShown,
+): Promise<PageShown> {
+  if ('link' in page && 'code' in page.link) {
+    const sealed = await served.linking.codeSealed(page.link.code.code);
+    ctx.cookies.set(codeCookie, `${state}.${sealed}`, signInCookieAttributes);
+  }
+  return page;
+}
+
+async function codeShownAgain(ctx: KoaContextWithOIDC, served: LinksServed): Promise<LinkShown> {
+  const kept = codeKeptIn(ctx);
+  if (kept === undefined || !isTheSame(ctx.query['state'], kept.state)) {
+    return ended;
+  }
+  const answered = await served.linking.codeShownAgain(kept.sealed);
+  if (!('code' in answered)) {
+    ctx.cookies.set(codeCookie, null, signInCookieAttributes);
+  }
+  return answered;
+}
+
 async function linkReturned(ctx: KoaContextWithOIDC, served: LinksServed): Promise<void> {
   const carried = carriedIn(ctx);
   ctx.cookies.set(linkCookie, null, signInCookieAttributes);
   const page =
     carried === undefined || !isTheSame(ctx.query['state'], carried.state)
-      ? { link: ended }
-      : await linkDecided(ctx, served, carried);
+      ? { link: await codeShownAgain(ctx, served) }
+      : await codeKeptFor(ctx, served, carried, await linkDecided(ctx, served, carried));
   await shownUnreferred(ctx, served.pages, page);
 }
 

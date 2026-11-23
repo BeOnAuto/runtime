@@ -1,4 +1,4 @@
-import type { CalledOnce, ConnectionRequest, OneCall, RequestedOnce } from '@on.auto/tool-servers';
+import type { CalledOnce, ConnectionRequest, ConnectionWays, OneCall, RequestedOnce } from '@on.auto/tool-servers';
 import { Effect, Option, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
@@ -97,6 +97,7 @@ export interface AppAnswering {
 
 export interface FakeApp {
   readonly through: ThroughTheConnection;
+  readonly asTheConnection: ConnectionWays;
   readonly held: () => readonly AtTheApp[];
   readonly acts: () => readonly Act[];
   readonly fails: (failing: Failing, times: number) => void;
@@ -131,7 +132,7 @@ function textIn(input: Readonly<Record<string, unknown>>, name: string): string 
   return typeof value === 'string' ? value : null;
 }
 
-function toolAsked({ reference, input }: OneCall): Asked {
+function toolAsked({ reference, input }: Pick<OneCall, 'reference' | 'input'>): Asked {
   const target = `${textIn(input, 'resource') ?? ''}${textIn(input, 'board') ?? ''}`;
   const lease = textIn(input, 'expirationDateTime');
   return { act: actOf(reference.tool), target, id: textIn(input, 'id') ?? '', lease };
@@ -144,6 +145,20 @@ function requestAsked({ method, url }: ConnectionRequest): Asked {
 
 function answeredTo(asked: Asked, answered: (asked: Asked) => Schema.Json): Schema.Json {
   return asked.act === 'identify' ? itsAccount : answered(asked);
+}
+
+type CallAnswered = (call: Pick<OneCall, 'reference' | 'input'>) => Effect.Effect<CalledOnce>;
+
+function callsAnswered(
+  failed: (asked: Asked) => Failing | undefined,
+  answered: (asked: Asked) => Schema.Json,
+): CallAnswered {
+  return (call) =>
+    Effect.sync(() => {
+      const asked = toolAsked(call);
+      const failure = failed(asked);
+      return failure === undefined ? answeredWith(answeredTo(asked, answered)) : failedCalls[failure];
+    });
 }
 
 export function anApp(answering: AppAnswering = {}): FakeApp {
@@ -173,14 +188,13 @@ export function anApp(answering: AppAnswering = {}): FakeApp {
     acts.push(asked.act);
     return failing.shift();
   };
+  const called = callsAnswered(failed, answered);
   return {
+    asTheConnection: {
+      callAsTheConnection: ({ connection, tool, input }) => called({ reference: { server: connection, tool }, input }),
+    },
     through: {
-      callOnce: (call) =>
-        Effect.sync(() => {
-          const asked = toolAsked(call);
-          const failure = failed(asked);
-          return failure === undefined ? answeredWith(answeredTo(asked, answered)) : failedCalls[failure];
-        }),
+      callOnce: called,
       requestOnce: (request) =>
         Effect.sync(() => {
           const asked = requestAsked(request);

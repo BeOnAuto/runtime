@@ -1,4 +1,4 @@
-import { renderedArguments } from '@on.auto/definitions/tool-blocks';
+import { omitVariables, renderedArguments } from '@on.auto/definitions/tool-blocks';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -21,7 +21,10 @@ const posted: Fields = {
   team: 'T0WORKSPACE',
 };
 
-const unshared: Fields = { is_ext_shared_channel: false };
+const unshared: Fields = {
+  is_ext_shared_channel: false,
+  authorizations: [{ team_id: 'T0WORKSPACE', user_id: 'U0AUTO' }],
+};
 
 function framed(event: Fields, envelope: Fields = unshared) {
   const payload = { type: 'event_callback', team_id: 'T0WORKSPACE', ...envelope, event: { ...posted, ...event } };
@@ -49,6 +52,7 @@ describe('a message a person wrote to Slack Bot, as its entry declares it', () =
       text: '<@U0AUTO> How did the launch go?',
       time: '2023-11-14T22:13:20.000200Z',
       shared: false,
+      app: 'U0AUTO',
     });
     expect(readAsSlackSends({ ...mentioned, thread_ts: '1700000000.000100' })?.thread).toBe('1700000000.000100');
   });
@@ -69,6 +73,7 @@ describe('a message a person wrote to Slack Bot, as its entry declares it', () =
     ['a deletion', { type: 'message', channel_type: 'im', subtype: 'message_deleted', hidden: true }],
     ['a person joining the channel', { ...inAThread, subtype: 'channel_join' }],
     ['a message in a group direct message', { type: 'message', channel_type: 'mpim' }],
+    ["a message of the app's own user", { ...inAThread, user: 'U0AUTO' }],
   ] as const)('is none for %s', (_, event: Fields) => {
     expect(readAsSlackSends(event)).toBeUndefined();
   });
@@ -87,40 +92,72 @@ const aLine = 'The launch went well.';
 
 const working = '1700000000.000300';
 
-function renderedFor(event: Fields, written: Readonly<Record<string, Schema.Json>> | undefined) {
+const laidOut: Schema.Json = [{ type: 'actions', elements: [{ type: 'button', url: 'https://auto.example.com/l/1' }] }];
+
+function renderedFor(
+  event: Fields,
+  written: Readonly<Record<string, Schema.Json>> | undefined,
+  rendered?: Schema.Json,
+) {
   const message = readAsSlackSends(event);
-  const variables = { ...message, message: aLine, sent: { id: working } };
+  const variables = {
+    ...message,
+    message: aLine,
+    sent: { id: working },
+    ...(rendered === undefined ? {} : { rendered }),
+    ...omitVariables(),
+  };
   return Result.map(
     renderedArguments(written ?? {}, variables, () => 0, 65_536),
     ({ input }) => input,
   );
 }
 
+const directly = { type: 'message', channel_type: 'im', channel: 'D0AUTO' };
+
+const inADirectThread = { ...directly, thread_ts: '1700000000.000100' };
+
 describe('how Slack Bot answers a message a person wrote, as its entry declares it', () => {
   const { chat } = slackBot;
 
-  it('posts the answer in the thread of the message, or under it where it started none, and replaces a message Auto posted', () => {
-    expect([
-      renderedFor(mentioned, chat?.answer.with),
-      renderedFor(inAThread, chat?.answer.with),
-      renderedFor(mentioned, chat?.answer.replace.with),
-    ]).toEqual([
-      Result.succeed({ body: { channel: 'C0SUPPORT', thread_ts: '1700000000.000200', text: aLine } }),
-      Result.succeed({ body: { channel: 'C0SUPPORT', thread_ts: '1700000000.000100', text: aLine } }),
-      Result.succeed({ body: { channel: 'C0SUPPORT', ts: working, text: aLine } }),
-    ]);
-  });
+  it.each([
+    ['a mention in a channel', mentioned, 'C0SUPPORT', { thread_ts: '1700000000.000200' }],
+    ['a reply in a thread', inAThread, 'C0SUPPORT', { thread_ts: '1700000000.000100' }],
+    ['a direct message', directly, 'D0AUTO', {}],
+    ['a direct message in a thread', inADirectThread, 'D0AUTO', { thread_ts: '1700000000.000100' }],
+  ] as const)(
+    'posts the answer to %s in its thread, or in the conversation of a direct message in none',
+    (_, event: Fields, channel, thread: Fields) => {
+      expect([renderedFor(event, chat?.answer.with), renderedFor(event, chat?.answer.with, laidOut)]).toEqual([
+        Result.succeed({ body: { channel, ...thread, markdown_text: aLine } }),
+        Result.succeed({ body: { channel, ...thread, text: aLine, blocks: laidOut } }),
+      ]);
+    },
+  );
 
-  it('shows a line to the person alone, reads the thread and reads the person, each from the places of the message', () => {
+  it.each([
+    ['a mention in a channel', mentioned, 'C0SUPPORT', {}],
+    ['a reply in a thread', inAThread, 'C0SUPPORT', { thread_ts: '1700000000.000100' }],
+    ['a direct message', directly, 'D0AUTO', {}],
+  ] as const)(
+    'shows a line to the person alone after %s, in its thread only where it is in one',
+    (_, event: Fields, channel, thread: Fields) => {
+      const user = 'U0PERSON';
+      expect([renderedFor(event, chat?.ephemeral?.with), renderedFor(event, chat?.ephemeral?.with, laidOut)]).toEqual([
+        Result.succeed({ body: { channel, user, ...thread, text: aLine } }),
+        Result.succeed({ body: { channel, user, ...thread, text: aLine, blocks: laidOut } }),
+      ]);
+    },
+  );
+
+  it('replaces a message Auto posted, reads the thread and reads the person, each from the places of the message', () => {
     expect([
-      renderedFor(inAThread, chat?.ephemeral?.with),
+      renderedFor(mentioned, chat?.answer.replace.with),
       renderedFor(inAThread, chat?.thread.with),
       renderedFor(mentioned, chat?.thread.with),
       renderedFor(mentioned, chat?.sender.with),
     ]).toEqual([
-      Result.succeed({
-        body: { channel: 'C0SUPPORT', user: 'U0PERSON', thread_ts: '1700000000.000100', text: aLine },
-      }),
+      Result.succeed({ body: { channel: 'C0SUPPORT', ts: working, markdown_text: aLine } }),
       Result.succeed({ channel: 'C0SUPPORT', ts: '1700000000.000100' }),
       Result.succeed({ channel: 'C0SUPPORT', ts: '1700000000.000200' }),
       Result.succeed({ user: 'U0PERSON' }),

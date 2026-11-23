@@ -31,6 +31,13 @@ export interface SecretKeeping {
   readonly forget: (id: string) => Effect.Effect<void>;
 }
 
+interface RemovedConnection {
+  readonly connection: string;
+  readonly account: string | undefined;
+}
+
+export type ConnectionRemoved = (removed: RemovedConnection) => Effect.Effect<void>;
+
 export interface ChatModels {
   readonly refusalOf: (model: string) => Effect.Effect<string | undefined>;
 }
@@ -51,6 +58,7 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly readOnceThrough: ReadOnceThrough;
   readonly sockets?: SocketChecks;
   readonly chatModels?: ChatModels;
+  readonly connectionRemoved?: ConnectionRemoved;
   readonly received?: EventsReceived;
 }
 

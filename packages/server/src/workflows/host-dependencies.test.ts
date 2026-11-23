@@ -1,5 +1,5 @@
 import { loadedMessage, type RoleAssignments } from '@on.auto/access-control';
-import { makeAppRuntime } from '@on.auto/api';
+import { apiShippedRoots, makeAppRuntime, type RegisterRoutes } from '@on.auto/api';
 import { playbookOwnNamesOf } from '@on.auto/definitions';
 import { decidedIn, echo } from '@on.auto/definitions/testing';
 import { ledgerLayer } from '@on.auto/ledger/sqlite';
@@ -21,7 +21,11 @@ import {
   trackerOverASocket,
   whichSpace,
 } from '@on.auto/providers/testing';
+import { scriptedLanguageModel, textResult } from '@on.auto/reasoning/testing';
+import { localCustodian, sealedSecretStoreOn } from '@on.auto/secrets';
+import { memoryRows } from '@on.auto/secrets/testing';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import type { ConnectionWays } from '@on.auto/tool-servers';
 import {
   filterSandboxOf,
   freshInstances,
@@ -32,9 +36,10 @@ import {
   sandboxShippedRoots,
 } from '@on.auto/workflow-engine/dsl';
 import { openWorkflowStore, StartRefused, StartRejected } from '@on.auto/workflow-host';
-import { Cause, Effect, Exit, Layer, Logger, Redacted, Result } from 'effect';
+import { Cause, Context, Effect, Exit, Layer, Logger, Option, Redacted, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { chatAtStartOpened } from '../chat/serving/chat-at-start.ts';
 import { applicationLayer } from '../composition/application-layer.ts';
 import { keptByTheLedgerWith } from '../composition/kept-by-the-ledger.ts';
 import { decisionPointServing } from '../composition/served-access-control.ts';
@@ -42,12 +47,15 @@ import { ledgerConnectionIn } from '../database/ledger-database.ts';
 import { shippedRoots } from '../server-options/shipped-roots.ts';
 import { socketsOfTheServer } from '../sockets/sockets-of-the-server.ts';
 import { subscriptionsOfTheServer } from '../subscriptions/served-subscriptions.ts';
+import { answeredAsTheDirectory } from '../testing/chat/chat-fakes.ts';
+import { shippedProviders } from '../testing/chat/shipped-slack-bot.ts';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
 import {
   aCardMovedIn,
   answeredWith,
   connectedAgain,
+  heldBy,
   noSecretsKept,
   theCardMovedAs,
 } from '../testing/sockets/held-sockets.ts';
@@ -476,10 +484,14 @@ function savedOnACardMoved(ledger: Ledger['Service']): Promise<void> {
   return Effect.runPromise(decidedIn(ledger, { org: 'acme', playbook: 'alpha' }, 'workflow', created));
 }
 
-const inItsSpace: ThroughTheConnection = {
-  callOnce: () => Effect.succeed(answeredWith({ self: { uid: 'B-1', space: 'S1' } })),
+const asAPlaybook: ThroughTheConnection = {
+  callOnce: () => Effect.die('a call was made as a playbook'),
   requestOnce: () => Effect.die('a request was sent'),
   mostRequestBytesTo: () => 1_048_576,
+};
+
+const inItsSpace: ConnectionWays = {
+  callAsTheConnection: () => Effect.succeed(answeredWith({ self: { uid: 'B-1', space: 'S1' } })),
 };
 
 async function publishedIn(ledger: Ledger['Service']) {
@@ -507,7 +519,7 @@ describe('an event that arrives over a socket of a server given no webhook addre
     const { identities, tools } = subscriptionsOfTheServer(
       runtime,
       { providers: boards, receiving: { overHttp: false, webhookUrl: undefined } },
-      { tools: inItsSpace, secrets: noSecretsKept },
+      { tools: asAPlaybook, secrets: noSecretsKept, asTheConnection: inItsSpace },
     );
     const appCredential = { value: Redacted.make('xapp-1'), version: 1, claimedUntil: undefined };
     const sockets = socketsOfTheServer(
@@ -600,5 +612,182 @@ describe('an event a delivery proven by a held subscription carries, taken in th
 
     expect([whileBroken, once]).toEqual([{ outcome: 'refused' }, { outcome: 'taken' }]);
     expect(await publishedIn(ledger)).toMatchObject([{ data: { event: { id: 'B1/8' } } }]);
+  });
+});
+
+/** A Slack connection just connected: no playbook may use it yet, and nothing has recorded the account it is in. */
+const slackHeld: readonly ConnectionFact[] = [
+  ...heldBy('connection-1', 'app-1', 'slack-bot', 'slack'),
+  { type: 'connection_model_set', data: { connection: 'connection-1', model: 'provider/model' } },
+];
+
+/** A member of the workspace mentions the app in a channel, as Slack's Socket Mode delivers it. */
+const aMentionOfAuto = {
+  type: 'events_api',
+  envelope_id: 'e-1700.2',
+  payload: {
+    type: 'event_callback',
+    team_id: 'T1',
+    is_ext_shared_channel: false,
+    authorizations: [{ user_id: 'U0AUTO' }],
+    event: {
+      type: 'app_mention',
+      channel: 'C1',
+      user: 'U1',
+      team: 'T1',
+      text: '<@U0AUTO> How are the sales?',
+      ts: '1700.2',
+    },
+  },
+};
+
+const unusedModel = (): never => {
+  throw new Error('the model is called through the language model');
+};
+
+const modelsOfTheServer = {
+  models: Effect.succeed({
+    resolution: (model: string) =>
+      Result.succeed({
+        provider: 'provider',
+        requested: model,
+        resolved: model,
+        model: unusedModel,
+        costHeader: null,
+        takesSchemas: true,
+      }),
+    catalog: {
+      list: () =>
+        Effect.succeed({
+          object: 'list',
+          data: [],
+          catalog_status: 'complete',
+          narrowed: false,
+          listed_at: '',
+        } as const),
+      contextWindowOf: () => Effect.undefined,
+    },
+    languageModel: scriptedLanguageModel(() => Effect.succeed(textResult('Sales are up.'))).languageModel,
+  }),
+  modelChoice: { refusalOf: (): Effect.Effect<string | undefined> => Effect.undefined },
+};
+
+/** Slack's Web API called as the connection: `auth.test` names the app and the workspace, and every post is kept. */
+function slackAnswering() {
+  const posted: unknown[] = [];
+  const asked: string[] = [];
+  const tools: ThroughTheConnection = {
+    callOnce: () => Effect.die('a call was made as a playbook'),
+    requestOnce: () => Effect.die('a request was sent'),
+    mostRequestBytesTo: () => 1_048_576,
+  };
+  const calls: ConnectionWays = {
+    callAsTheConnection: ({ connection, tool, input }) =>
+      Effect.sync(() => {
+        asked.push(tool);
+        if (tool === 'chat_postMessage') {
+          posted.push([connection, input]);
+        }
+        return tool === 'auth_test'
+          ? answeredWith({ ok: true, bot_id: 'B0AUTO', team_id: 'T1', team: 'Acme' })
+          : answeredWith({ ok: true, ts: '1700.3', messages: [] });
+      }),
+  };
+  return { tools, calls, posted, asked };
+}
+
+const outcomesTo = (told: (line: string) => void) => (line: string) => {
+  if (line.includes('"outcome"')) {
+    told(line);
+  }
+};
+
+const outcomeOf = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ annotations: Schema.Struct({ outcome: Schema.String }) })),
+);
+
+describe('a message written to Auto over a socket of a server that signs people in', () => {
+  it('is answered in its thread through the connection, on a fresh server with no playbook and no account recorded, once the account is asked as the connection, by a turn that asks the server’s own API as the person who wrote it', async () => {
+    const { promise: told, resolve } = Promise.withResolvers<string>();
+    const runtime = await makeAppRuntime(
+      applicationLayer(ledgerLayer({ fileName: ':memory:', ...keptByTheLedgerWith([]) })).pipe(
+        Layer.provideMerge(Logger.layer([Logger.map(Logger.formatJson, outcomesTo(resolve))])),
+      ),
+    );
+    onTestFinished(() => runtime.dispose());
+    const ledger = await Effect.runPromise(inRuntime(runtime, Effect.service(Ledger)));
+    await connectionsRecorded(ledger, 'acme', slackHeld);
+    const database = await ledgerConnectionIn(runtime);
+    const chat = Option.getOrThrow(
+      Option.fromNullishOr(
+        await chatAtStartOpened(
+          {
+            publicUrl: 'https://auto.example.test',
+            signIn: {
+              enrolling: { holdsARole: (person) => Promise.resolve(person === 'ada') },
+              peopleRows: { listed: () => Promise.resolve([]), found: () => Effect.runPromise(Effect.undefined) },
+              connection: database,
+            },
+            secrets: sealedSecretStoreOn(memoryRows({ now: Effect.succeed(0) }), {
+              current: localCustodian(Redacted.make(new Uint8Array(32).fill(7))),
+            }),
+            linkCodeKey: Redacted.make(new Uint8Array(32).fill(9)),
+          },
+          { providers: shippedProviders, studio: { origin: 'https://studio.example.com', served: false } },
+        ),
+      ),
+    );
+    await chat.links.linked({ account: 'T1', member: 'U1', person: 'ada', linkedAt: 1 });
+    const slack = slackAnswering();
+    const { identities, tools } = subscriptionsOfTheServer(
+      runtime,
+      { providers: shippedProviders, receiving: { overHttp: false, webhookUrl: undefined } },
+      { tools: slack.tools, secrets: noSecretsKept, asTheConnection: slack.calls },
+    );
+    const service = new ServiceSockets();
+    const askedAs: string[] = [];
+    const theDirectory: RegisterRoutes = (routes) => {
+      routes.add('POST', '/directory', (c) => {
+        askedAs.push(c.get('principal').own.id);
+        return answeredAsTheDirectory(c.req.raw);
+      });
+    };
+    const served = await chat.answering(
+      runtime,
+      { routes: [theDirectory], stopWork: () => Promise.resolve(), callContext: () => Context.empty() },
+      shippedFilesOnDisk(apiShippedRoots()),
+    );
+    const sockets = socketsOfTheServer(
+      runtime,
+      { providers: shippedProviders },
+      {
+        store: await openWorkflowStore(database, []),
+        secrets: {
+          read: () => Effect.succeed({ value: Redacted.make('xapp-1'), version: 1, claimedUntil: undefined }),
+        },
+        opens: service.opens,
+        identities,
+        delivered: () => Effect.die('a reply was delivered'),
+        tools,
+        filters: filterSandboxOf(freshInstances(sandboxModule)),
+        now: () => Date.parse('2026-11-20T09:00:00.000Z'),
+        chat: chat.over(runtime, { ...modelsOfTheServer, ...slack.calls })({ tools }),
+      },
+    )({ raised: () => {}, renewed: () => {} });
+
+    await Effect.runPromise(sockets.wakeUp({ now: 0, sweep: false }));
+    await service.whenOpened('xapp-1');
+    await Effect.runPromise(sockets.wakeUp({ now: 60_000, sweep: false }));
+    await Effect.runPromise(service.sends('xapp-1', aMentionOfAuto));
+    const outcome = outcomeOf(await told).annotations.outcome;
+    await Effect.runPromise(sockets.stop());
+    await served.stopWork();
+
+    expect([outcome, slack.asked[0], slack.posted, [...new Set(askedAs)]]).toEqual([
+      'answered',
+      'auth_test',
+      [['connection-1', { body: { channel: 'C1', thread_ts: '1700.2', markdown_text: 'Sales are up.' } }]],
+      ['person:ada'],
+    ]);
   });
 });

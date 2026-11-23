@@ -7,6 +7,7 @@ import {
   socketStepsOf,
   stillRefused,
   type ArrivalReading,
+  type ChatMessage,
   type OpensASocket,
   type SocketEnd,
   type SocketListening,
@@ -26,6 +27,16 @@ import { repliesTakenBy, type CarriedReply, type ArrivalParts } from './socket-r
 
 type ArrivalEvent = NonNullable<ArrivalReading['event']>;
 
+export interface ChatOfTheSockets {
+  readonly arrived: (members: readonly SocketMember[], chat: ChatMessage | undefined) => Effect.Effect<void>;
+  readonly restarted: (members: readonly SocketMember[]) => Effect.Effect<void>;
+  readonly stop: () => Effect.Effect<void>;
+}
+
+export interface ChatOfEachServing {
+  readonly served: () => ChatOfTheSockets;
+}
+
 export interface SocketParts extends RegistryParts, ArrivalParts {
   readonly opens: OpensASocket;
   readonly takeIn: TakeIn;
@@ -34,6 +45,7 @@ export interface SocketParts extends RegistryParts, ArrivalParts {
   readonly context: Context.Context<never> | undefined;
   readonly roundEveryMs?: number;
   readonly wakesApartMs?: number;
+  readonly chat?: ChatOfEachServing;
 }
 
 const socketTimes = { roundEveryMs: 60_000, wakesApartMs: 1000 } as const;
@@ -79,6 +91,7 @@ class SocketSet {
   readonly #owed: ReturnType<typeof owedIdentitiesOf>;
   readonly #replies: ReturnType<typeof repliesTakenBy>;
   readonly #sockets: ReturnType<typeof background>;
+  readonly #chat: ChatOfTheSockets | undefined;
   readonly #running = new Map<string, Held>();
   readonly #wokenAt = new Map<string, number>();
   #refused: ReadonlySet<string> = new Set();
@@ -86,9 +99,14 @@ class SocketSet {
   constructor(parts: SocketParts) {
     this.#parts = parts;
     this.#registries = registriesOf(parts);
-    this.#owed = owedIdentitiesOf({ registry: parts.registries.registry, identities: parts.identities });
+    this.#owed = owedIdentitiesOf({
+      registry: parts.registries.registry,
+      providers: parts.registries.providers,
+      identities: parts.identities,
+    });
     this.#replies = repliesTakenBy(parts);
     this.#sockets = background(parts.context);
+    this.#chat = parts.chat?.served();
   }
 
   get #apartMs(): number {
@@ -126,9 +144,11 @@ class SocketSet {
     yield* this.#forgetWakesBefore(yield* Clock.currentTimeMillis);
     const members = [...wanted.values()].flatMap((each) => each.members);
     yield* this.#owed.read(members, startedAt + this.#roundMs);
+    yield* this.#chat?.restarted(members) ?? Effect.void;
   });
 
-  readonly stop = (): Effect.Effect<void> => Effect.andThen(this.#replies.stop(), this.#sockets.stop());
+  readonly stop = (): Effect.Effect<void> =>
+    Effect.andThen(this.#replies.stop(), this.#sockets.stop()).pipe(Effect.andThen(this.#chat?.stop() ?? Effect.void));
 
   #started(wanted: WantedSocket): void {
     const held = heldAs(wanted);
@@ -150,9 +170,11 @@ class SocketSet {
     return {
       ...held.current().opening,
       opens: this.#parts.opens,
-      arrived: ({ reading }) => {
+      arrived: ({ reading, chat }) => {
         const present = members();
-        return Effect.andThen(this.#repliedOrWoken(present, reading), this.#takenIn(present, reading));
+        return Effect.andThen(this.#repliedOrWoken(present, reading), this.#takenIn(present, reading)).pipe(
+          Effect.andThen(this.#chat?.arrived(present, chat) ?? Effect.void),
+        );
       },
       opened: Effect.suspend(() => this.#wokenEach(members())),
       ended: (end) => this.#endedAs(held.current(), end),

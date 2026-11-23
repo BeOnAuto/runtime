@@ -1,5 +1,6 @@
 import { Effect } from 'effect';
 
+import type { ConnectionWays } from '../access/connection-ways.ts';
 import type { ThroughWays } from '../access/through-ways.ts';
 import { toolAccessOf, type ToolAccess, type ToolAccessOptions } from '../access/tool-access.ts';
 import type { ConsentTokenSources } from '../clients/token-source.ts';
@@ -10,7 +11,7 @@ import { overFetches } from './over-fetches.ts';
 export function makeToolAccess(
   settings: ToolServers,
   options: ToolAccessOptions,
-): ToolAccess & RequestWays & ThroughWays {
+): ToolAccess & RequestWays & ThroughWays & ConnectionWays {
   const own = toolAccessOf(settings, options);
   const { ofTheCall } = overFetches({ fetch: options.fetch ?? globalThis.fetch, made: own }, (fetch) => {
     const consent: ConsentTokenSources = {
@@ -30,6 +31,7 @@ export function makeToolAccess(
     callOnce: (call, runCall) => Effect.flatMap(ofTheCall, (access) => access.callOnce(call, runCall)),
     requestOnce: (request) => Effect.flatMap(ofTheCall, (access) => access.requestOnce(request)),
     readOnceThrough: (call, through) => Effect.flatMap(ofTheCall, (access) => access.readOnceThrough(call, through)),
+    callAsTheConnection: (call) => Effect.flatMap(ofTheCall, (access) => access.callAsTheConnection(call)),
     preparedCall: (call) => Effect.flatMap(ofTheCall, (access) => access.preparedCall(call)),
     listServers: (scope, named) => Effect.flatMap(ofTheCall, (access) => access.listServers(scope, named)),
     listServersInOrg: (scope, named) => Effect.flatMap(ofTheCall, (access) => access.listServersInOrg(scope, named)),

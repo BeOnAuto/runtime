@@ -29,6 +29,7 @@ export const aChat = {
     email: '/person/email',
     email_verified: '/person/email_confirmed',
     account: '/person/space',
+    name: '/person/name',
     active: { '/person/removed': [false, null], '/person/kind': ['member'] },
   },
 };
@@ -44,6 +45,7 @@ const placesOfAMessage = {
   automatic: '$message.payload#/message/app',
   changed: { '$message.payload#/message/state': ['edited', 'deleted'] },
   shared: '$message.payload#/room/shared',
+  own: ['$message.payload#/message/author', '$message.payload#/app_user'],
 };
 
 export const aMention = { kind: 'mention', when: { '$message.payload#/kind': ['mention'] }, ...placesOfAMessage };

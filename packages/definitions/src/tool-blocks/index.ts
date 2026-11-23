@@ -9,6 +9,7 @@ export {
   argumentsFailureWords,
   isOversized,
   momentVariables,
+  omitVariables,
   renderedArguments,
   smallerInputRemedy,
   smallerTemplatesRemedy,

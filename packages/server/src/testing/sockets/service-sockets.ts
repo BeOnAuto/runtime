@@ -1,5 +1,15 @@
-import { SocketEnded, type OpensASocket, type SocketFrame, type SocketOpening } from '@on.auto/providers';
-import { Effect, Option, Queue, Redacted } from 'effect';
+import {
+  SocketEnded,
+  type OpensASocket,
+  type SocketFrame,
+  type SocketOpening,
+  type ThroughTheConnection,
+} from '@on.auto/providers';
+import type { ConnectionWays } from '@on.auto/tool-servers';
+import { Effect, Function, Option, Queue, Redacted } from 'effect';
+import { TestClock } from 'effect/testing';
+
+import { answeredWith, type ServiceAnswer } from './held-sockets.ts';
 
 interface Settling {
   readonly done: () => boolean;
@@ -82,4 +92,56 @@ export class ServiceSockets {
       Effect.asVoid(Queue.offer(Option.getOrThrow(Option.fromNullishOr(this.#downs.get(value))), frame)),
     );
   }
+}
+
+interface Answering {
+  readonly answers: ReadonlyMap<string, ServiceAnswer>;
+  readonly lateBy: ReadonlyMap<string, number>;
+  readonly asked: (connection: string) => void;
+}
+
+function lateOn(lateBy: Answering['lateBy']) {
+  return (connection: string) => {
+    const by = lateBy.get(connection);
+    return by === undefined ? Effect.void : TestClock.adjust(by);
+  };
+}
+
+/**
+ * The connections as a playbook reaches them, answering the HTTP request that asks who a connection is with the
+ * connection's own user, by the connection's name, after the time it is late by on the test's clock. A tool is
+ * asked as the connection, never as a playbook.
+ */
+export function answeringBy({ lateBy, asked }: Pick<Answering, 'lateBy' | 'asked'>): ThroughTheConnection {
+  const late = lateOn(lateBy);
+  return {
+    callOnce: Function.constant(Effect.die('a tool was called as a playbook')),
+    requestOnce: ({ server }) =>
+      Effect.andThen(
+        late(server),
+        Effect.sync(() => {
+          asked(server);
+          return { kind: 'answered', outcome: 'result', answer: { self: { uid: `B-${server}` } } } as const;
+        }),
+      ),
+    mostRequestBytesTo: () => 1_048_576,
+  };
+}
+
+/**
+ * The tools of the connections called as the connection itself, answering as told by the connection's id, after the
+ * time it is late by on the test's clock.
+ */
+export function answeringAsTheConnection({ answers, lateBy, asked }: Answering): ConnectionWays {
+  const late = lateOn(lateBy);
+  return {
+    callAsTheConnection: ({ connection }) =>
+      Effect.andThen(
+        late(connection),
+        Effect.sync(() => {
+          asked(connection);
+          return answers.get(connection) ?? answeredWith({ self: { uid: `B-${connection}` } });
+        }),
+      ),
+  };
 }

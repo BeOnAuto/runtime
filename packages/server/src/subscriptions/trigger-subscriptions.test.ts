@@ -128,6 +128,7 @@ async function theServerOf(ledger: Awaited<ReturnType<typeof aSavedTrigger>>, we
   const receiving = { overHttp: true, webhookUrl };
   const rounds = subscriptionsServedBy(
     subscriptionsServingOf(ledger, { providers, receiving }, { ...service, secrets }),
+    { callAsTheConnection: () => Effect.die('a call was made as the connection') },
   );
   return { rounds, sent: service.sent, forgotten, ...followedBy(rounds, ledger, 'acme') };
 }

@@ -247,7 +247,7 @@ function actorIn(arrival: Arrival, expression: string | undefined): Pick<Arrival
   return typeof named === 'string' && named !== '' ? { actor: named } : {};
 }
 
-function isItsOwn(arrival: Arrival, own: DeclaredEvent['own']): boolean {
+export function isItsOwn(arrival: Arrival, own: readonly [string, string] | undefined): boolean {
   if (own === undefined) {
     return false;
   }

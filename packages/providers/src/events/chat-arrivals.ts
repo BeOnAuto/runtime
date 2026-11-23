@@ -1,4 +1,4 @@
-import { applies, declaredValueIn, holds, textIn, valueIn, type Arrival } from './arrival-readings.ts';
+import { applies, declaredValueIn, holds, isItsOwn, textIn, valueIn, type Arrival } from './arrival-readings.ts';
 import type { Destination } from './destination-fields.ts';
 import { eventTimeOf } from './event-times.ts';
 
@@ -14,6 +14,7 @@ export interface ChatMessage {
   readonly text: string;
   readonly time?: string;
   readonly shared: boolean;
+  readonly app?: string;
 }
 
 type Written = Pick<ChatMessage, 'id' | 'conversation' | 'sender' | 'text'>;
@@ -46,14 +47,24 @@ function isShared(arrival: Arrival, expression: string | undefined): boolean {
   return expression !== undefined && declaredValueIn(arrival, expression) !== false;
 }
 
+function appIn(arrival: Arrival, own: DeclaredChat['own']): Pick<ChatMessage, 'app'> {
+  const app = own === undefined ? undefined : textIn(arrival, own[1]);
+  return app === undefined ? {} : { app };
+}
+
 function isAPersonsNewMessage(arrival: Arrival, declared: DeclaredChat): boolean {
-  return !applies(arrival, declared.automatic) && !applies(arrival, declared.changed);
+  return (
+    !applies(arrival, declared.automatic) && !applies(arrival, declared.changed) && !isItsOwn(arrival, declared.own)
+  );
+}
+
+function personsWrittenIn(arrival: Arrival, declared: DeclaredChat): Written | undefined {
+  return isAPersonsNewMessage(arrival, declared) ? writtenIn(arrival, declared) : undefined;
 }
 
 export function chatMessageIn({ chat = [] }: Destination, arrival: Arrival): ChatMessage | undefined {
   const declared = chat.find(({ when }) => holds(arrival, when));
-  const written =
-    declared !== undefined && isAPersonsNewMessage(arrival, declared) ? writtenIn(arrival, declared) : undefined;
+  const written = declared === undefined ? undefined : personsWrittenIn(arrival, declared);
   if (declared === undefined || written === undefined) {
     return undefined;
   }
@@ -68,5 +79,6 @@ export function chatMessageIn({ chat = [] }: Destination, arrival: Arrival): Cha
     ...accountIn(arrival, declared.account),
     ...timeIn(arrival, declared.time),
     shared: isShared(arrival, declared.shared),
+    ...appIn(arrival, declared.own),
   };
 }

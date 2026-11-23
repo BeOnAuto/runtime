@@ -14,12 +14,14 @@ export interface SocketsServing
   extends
     Pick<SocketParts, 'secrets' | 'opens' | 'identities'>,
     Pick<SocketReplies, 'delivered' | 'tools'>,
-    Omit<IntakeServing, 'providers'> {}
+    Omit<IntakeServing, 'providers'> {
+  readonly chat?: SocketParts['chat'];
+}
 
 export function socketsOfTheServer(
   runtime: AppRuntime<DispatcherServices>,
   { providers }: Pick<Settings, 'providers'>,
-  { store, secrets, opens, identities, delivered, tools, filters, now }: SocketsServing,
+  { store, secrets, opens, identities, delivered, tools, filters, now, chat }: SocketsServing,
 ): (signal: WakeSignal) => HostWakeUp {
   const ledger = runtimeLedger(runtime);
   return socketWakeUpOf({
@@ -33,5 +35,6 @@ export function socketsOfTheServer(
     identities,
     appended: streamAppends,
     context: runtime.context,
+    ...(chat === undefined ? {} : { chat }),
   });
 }

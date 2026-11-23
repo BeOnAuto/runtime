@@ -16,7 +16,7 @@ import { type ReasoningServer, servingReasoning } from '../testing/servers/reaso
 import { contributing, givenGoals, workflowSource } from '../testing/servers/workflow-server.ts';
 import { whenHeld } from '../testing/waiting/until.ts';
 import { computationServedBy, type ProgramPoolOf, type ServedComputation, workerPool } from './served-computation.ts';
-import { toolAccessOf } from './served-tool-access.ts';
+import { connectionWaysOf, toolAccessOf } from './served-tool-access.ts';
 
 const ledger = temporaryLedger();
 
@@ -329,6 +329,23 @@ describe('the tool access a server makes at start', () => {
       toolAccessOf(composing, noServers, { takesConnections: false }, { ...defaultTiming, callMs: 5000 }).callMs,
       asked(),
     ]).toEqual([defaultTiming.callMs, 5000, 0]);
+  });
+
+  it('calls as a connection through the composed access only when asked to', async () => {
+    const counts = { asked: 0 };
+    const ways = connectionWaysOf(
+      Effect.sync(() => {
+        counts.asked += 1;
+        return { callAsTheConnection: () => Effect.undefined };
+      }),
+    );
+    const beforeUse = counts.asked;
+
+    const called = await Effect.runPromise(
+      ways.callAsTheConnection({ org: 'acme', connection: 'connection-1', tool: 'echo', input: {} }),
+    );
+
+    expect([beforeUse, called, counts.asked]).toEqual([0, undefined, 1]);
   });
 
   it('fails a way used with the refusal of a composition that fails, as a defect', async () => {

@@ -114,12 +114,18 @@ describe('the patterns of the keys of the shipped providers', () => {
   });
 });
 
+const anyWords: unknown = expect.any(String);
+
 describe('the page where the Slack bot token is made', () => {
-  it('creates an app named Auto from a manifest, with the bot scopes of its tools and the events of its socket', () => {
+  it('creates an app named Auto from a manifest, shown as an agent people can message, with the bot scopes, events and button clicks it needs', () => {
     expect(slackKeyPage.searchParams.get('new_app')).toBe('1');
     expect(slackManifest).toEqual({
       display_information: { name: 'Auto' },
-      features: { bot_user: { display_name: 'Auto' } },
+      features: {
+        app_home: { messages_tab_enabled: true, messages_tab_read_only_enabled: false },
+        bot_user: { display_name: 'Auto' },
+        agent_view: { agent_description: anyWords },
+      },
       oauth_config: {
         scopes: {
           bot: [
@@ -131,11 +137,16 @@ describe('the page where the Slack bot token is made', () => {
             'reactions:write',
             'groups:read',
             'groups:history',
+            'app_mentions:read',
+            'im:history',
+            'users:read.email',
+            'assistant:write',
           ],
         },
       },
       settings: {
-        event_subscriptions: { bot_events: ['message.channels', 'message.groups'] },
+        event_subscriptions: { bot_events: ['message.channels', 'message.groups', 'app_mention', 'message.im'] },
+        interactivity: { is_enabled: true },
         socket_mode_enabled: true,
       },
     });

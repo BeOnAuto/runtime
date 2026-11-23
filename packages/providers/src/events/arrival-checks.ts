@@ -217,6 +217,7 @@ function chatMappingIssuesOf(destination: Destination, declared: DeclaredChat, i
     ...placesOfAChatMessage.flatMap((field) => expressionIssuesAt([...at, field], declared[field], place)),
     ...(declared.account ?? []).flatMap((part, each) => expressionIssuesAt([...at, 'account', each], part, place)),
     ...whereEachApplies.flatMap((field) => whereItAppliesIssuesOf([...at, field], declared[field], place)),
+    ...(declared.own ?? []).flatMap((part, each) => expressionIssuesAt([...at, 'own', each], part, place)),
   ];
 }
 

@@ -1,0 +1,14 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+      ]
+    }
+  }
+}

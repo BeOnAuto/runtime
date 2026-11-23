@@ -1,13 +1,14 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 import { modelChoiceOf, type ModelAccess, type ModelTelemetry } from '@on.auto/reasoning';
-import type { ThroughWays, ToolServerDocumentRefused } from '@on.auto/tool-servers';
+import type { ConnectionWays, ThroughWays, ToolServerDocumentRefused } from '@on.auto/tool-servers';
 import { Effect, type Layer, type Scope } from 'effect';
 
 import { processesServedBy, type ServedProcesses } from '../composition/served-processes.ts';
 import { ComposedModels, modelsComposedBy, type ModelAccessOf } from '../composition/served-reasoning.ts';
 import {
   ComposedTools,
+  connectionWaysOf,
   throughWaysOf,
   toolsComposedBy,
   type MadeToolAccess,
@@ -17,7 +18,7 @@ import {
 import type { Settings } from '../settings/settings.ts';
 import { composedOnFirstUse, scopeOfTheRuntime } from './first-use.ts';
 
-export interface CapabilityRegistry extends ThroughWays {
+export interface CapabilityRegistry extends ThroughWays, ConnectionWays {
   readonly models: Effect.Effect<ModelAccess>;
   readonly modelChoice: ReturnType<typeof modelChoiceOf>;
   readonly modelTelemetry: ModelTelemetry | undefined;
@@ -64,6 +65,7 @@ function capabilityRegistryOf(
       tools,
       processes,
       readOnceThrough: throughWaysOf(tools).readOnceThrough,
+      callAsTheConnection: connectionWaysOf(tools).callAsTheConnection,
     })),
   );
 }

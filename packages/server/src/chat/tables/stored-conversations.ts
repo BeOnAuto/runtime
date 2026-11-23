@@ -80,6 +80,14 @@ function deletedIn(ids: readonly [string, ...string[]]): readonly Statement[] {
   ];
 }
 
+function spokenInOf(database: ChatDatabase): ConversationRows['spokenIn'] {
+  return async (id, sender) =>
+    (
+      await database.read(statement`SELECT sequence FROM chat_messages
+        WHERE conversation_id = ${id} AND author = 'person' AND sender = ${sender} LIMIT 1`)
+    ).length === 1;
+}
+
 export function storedConversations(database: ChatDatabase): ConversationRows {
   return {
     found: async (place) => {
@@ -118,6 +126,7 @@ export function storedConversations(database: ChatDatabase): ConversationRows {
             ORDER BY c.id, m.sender`),
         ),
       ),
+    spokenIn: spokenInOf(database),
     deleted: async (ids) => {
       const statements = chunksOf(ids, database.mostBoundValues).flatMap((chunk) => deletedIn(chunk));
       if (statements.length > 0) {

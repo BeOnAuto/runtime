@@ -50,4 +50,13 @@ export type { InteractionPorts } from './run/request-reach.ts';
 export type { ConversationsOf } from './tellings/telling-routes.ts';
 export { interactionBounds } from './run/run-bounds.ts';
 export { renderCompanionGuides, renderGuidePageOf, renderGuidePagePathOf } from './rendering/render-guide.ts';
-export { renderTargetNames } from './rendering/render-targets.ts';
+export { chatRenderingOf, renderTargetNames } from './rendering/render-targets.ts';
+export type {
+  ChatRendering,
+  ChatWords,
+  EarlierInAThread,
+  RememberedLine,
+  ToldConversation,
+  WrittenInAThread,
+} from './rendering/chat-rendering.ts';
+export type { RenderedMessage } from './rendering/rendered-message.ts';

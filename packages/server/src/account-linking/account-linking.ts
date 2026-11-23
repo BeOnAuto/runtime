@@ -8,9 +8,10 @@ import {
   aLinkValue,
   codeIn,
   isTheSameSecret,
-  keyedHashUnder,
+  linkCodeKeysUnder,
   secretOf,
   type KeyedHash,
+  type LinkCodeKeys,
 } from './link-secrets.ts';
 
 const ended: LinkShown = { ended: true };
@@ -46,15 +47,28 @@ async function allowShownFor(
 async function codeGivenFor(
   start: LinkStart,
   person: string,
-  { links, names, codes, hashed }: Linking,
+  { links, names, codes, keys }: Linking,
 ): Promise<LinkShown> {
   const named = await names.ofTheService(start.account);
   if (named === undefined || !(await links.startEnded(start))) {
     return ended;
   }
   const code = codes();
-  await links.started({ account: start.account, member: start.member, secret: hashed.of(code), person });
+  await links.started({ account: start.account, member: start.member, secret: keys.hashed.of(code), person });
   return { code: { ...named, code } };
+}
+
+async function codeShownAgainFor(sealed: string, { links, names, keys }: Linking): Promise<LinkShown> {
+  const code = keys.seal.opened(sealed);
+  if (code === undefined) {
+    return ended;
+  }
+  const start = await links.startFound(keys.hashed.of(code));
+  if (start?.person === undefined) {
+    return ended;
+  }
+  const named = await names.ofTheService(start.account);
+  return named === undefined ? ended : { code: { ...named, code } };
 }
 
 async function deniedFor(start: LinkStart, { links, names }: Linking): Promise<LinkShown> {
@@ -68,17 +82,17 @@ async function deniedFor(start: LinkStart, { links, names }: Linking): Promise<L
 interface Linking {
   readonly links: AccountLinks;
   readonly names: NamesFromTheService;
-  readonly hashed: KeyedHash;
+  readonly keys: LinkCodeKeys;
   readonly codes: () => string;
 }
 
 export function accountLinkingOf(
   links: AccountLinks,
   names: NamesFromTheService,
-  hashed: KeyedHash,
+  keys: LinkCodeKeys,
   codes = aCode,
 ): AccountLinking {
-  const linking: Linking = { links, names, hashed, codes: () => codes() };
+  const linking: Linking = { links, names, keys, codes: () => codes() };
   return {
     opened: async (value) => (await openStartOf(links, value)) !== undefined,
     allowShown: async (value, choices) => {
@@ -93,6 +107,8 @@ export function accountLinkingOf(
       const start = await openStartOf(links, value);
       return start === undefined ? ended : deniedFor(start, linking);
     },
+    codeSealed: (code) => Promise.resolve(keys.seal.sealed(code)),
+    codeShownAgain: (sealed) => codeShownAgainFor(sealed, linking),
   };
 }
 
@@ -107,10 +123,10 @@ export interface Linked {
 }
 
 export function linkingOf({ accountLinks, namesFromTheService, linkCodeKey }: LinkingServed): Linked {
-  const hashed = keyedHashUnder(linkCodeKey);
-  return accountLinks === undefined || namesFromTheService === undefined || hashed === undefined
+  const keys = linkCodeKeysUnder(linkCodeKey);
+  return accountLinks === undefined || namesFromTheService === undefined || keys === undefined
     ? {}
-    : { linking: accountLinkingOf(accountLinks, namesFromTheService, hashed) };
+    : { linking: accountLinkingOf(accountLinks, namesFromTheService, keys) };
 }
 
 export async function linkStarted(links: AccountLinks, publicUrl: string, member: MemberOfAnAccount): Promise<string> {

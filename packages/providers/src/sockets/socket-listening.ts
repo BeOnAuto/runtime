@@ -1,12 +1,14 @@
 import { Duration, Effect, Random, Ref } from 'effect';
 
-import { arrivalReadingOf, type ArrivalReading } from '../events/arrival-readings.ts';
+import { arrivalReadingOf } from '../events/arrival-readings.ts';
+import { chatMessageIn } from '../events/chat-arrivals.ts';
 import { acknowledgementOf, messageArrivalOf } from './socket-messages.ts';
 import {
   SocketEnded,
   type Arrived,
   type OpenSocket,
   type OpensASocket,
+  type SocketArrival,
   type SocketEnd,
   type SocketFrame,
   type SocketOpening,
@@ -39,11 +41,11 @@ const socketWords = {
     "What arrived over the socket to a connection's service could not be handed on, so it was not acknowledged",
 } as const;
 
-function handedOn(arrived: Arrived, reading: ArrivalReading): Effect.Effect<boolean> {
-  if (Object.keys(reading).length === 0) {
+function handedOn(arrived: Arrived, arrival: SocketArrival): Effect.Effect<boolean> {
+  if (Object.keys(arrival.reading).length === 0 && arrival.chat === undefined) {
     return Effect.succeed(true);
   }
-  return arrived({ reading }).pipe(
+  return arrived(arrival).pipe(
     Effect.as(true),
     Effect.catchDefect(() => Effect.as(Effect.logError(socketWords.notHandedOn), false)),
   );
@@ -59,7 +61,9 @@ function messageHandled(
     return Effect.void;
   }
   const acknowledgement = acknowledgementOf(destination, arrival);
-  return Effect.flatMap(handedOn(arrived, arrivalReadingOf(destination, arrival)), (handed) =>
+  const chat = chatMessageIn(destination, arrival);
+  const handing = { reading: arrivalReadingOf(destination, arrival), ...(chat === undefined ? {} : { chat }) };
+  return Effect.flatMap(handedOn(arrived, handing), (handed) =>
     handed && acknowledgement !== undefined ? socket.send(acknowledgement) : Effect.void,
   );
 }

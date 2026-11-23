@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { isRefusedForTheAccount } from '../entry/conversation-parts.ts';
-import { typingShownThrough } from './typing-calls.ts';
+import { typingShownBy, typingShownThrough } from './typing-calls.ts';
 
 const typing = {
   tool: 'set_status',
@@ -128,5 +128,21 @@ describe('the sign shown through a connection', () => {
     const { shown: answeredAs, calls } = await shownWith(showing);
 
     expect([answeredAs, calls.length]).toEqual([shown, asked]);
+  });
+
+  it('is failed where the caller reaches no connection', async () => {
+    const repliedIn = {
+      to: '#sales',
+      sent: { conversation: 'C0123', id: '1699.1' },
+      reply: { id: '1699.2', to: '1699.1' },
+    };
+    const called: string[] = [];
+    const reachingNone = (tool: string) => Effect.sync(() => void called.push(tool));
+
+    const shown = await Effect.runPromise(
+      typingShownBy(reachingNone, 1_048_576, { typing: listing, failureCodes: codes, repliedIn }),
+    );
+
+    expect([shown, called]).toEqual(['failed', ['set_status']]);
   });
 });

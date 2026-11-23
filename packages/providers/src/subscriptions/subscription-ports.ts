@@ -82,6 +82,7 @@ interface IdentifiedUser {
 
 interface IdentifiedAccount {
   readonly id: string;
+  readonly name?: string;
 }
 
 export interface Identification {
@@ -245,7 +246,7 @@ export interface SubscriptionLoopPorts extends SubscriptionPorts {
   readonly records: SubscriptionRecords;
   readonly secrets: SubscriptionSecrets;
   readonly identified: (
-    playbook: PlaybookAddress,
+    at: Pick<PlaybookAddress, 'org'>,
     connection: IdentifiedConnection,
     identification: Identification,
   ) => Effect.Effect<void>;

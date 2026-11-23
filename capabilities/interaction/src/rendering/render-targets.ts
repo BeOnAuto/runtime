@@ -1,8 +1,10 @@
 import { standardComponentDefinitions } from '@json-render/chat';
 import type { Result } from 'effect';
 
+import type { ChatRendering } from './chat-rendering.ts';
 import type { RenderedMessage, RenderState } from './rendered-message.ts';
 import { slackCatalog, type CatalogEntry } from './slack-catalog.ts';
+import { slackChat } from './slack-chat.ts';
 import { slackExample } from './slack-example.ts';
 import { slackLimitList, slackShows } from './slack-limits.ts';
 import { slackMessageOf } from './slack-target.ts';
@@ -34,6 +36,7 @@ interface RenderTarget {
   readonly shows: string;
   readonly example: string;
   readonly render: (card: unknown, state: RenderState) => Result.Result<RenderedMessage, readonly string[]>;
+  readonly chat: ChatRendering;
 }
 
 const renderTargets = {
@@ -50,6 +53,7 @@ const renderTargets = {
     shows: slackShows,
     example: slackExample,
     render: slackMessageOf,
+    chat: slackChat,
   },
 } satisfies Record<string, RenderTarget>;
 
@@ -65,4 +69,8 @@ export function isRenderTargetName(written: string): written is RenderTargetName
 
 export function renderTargetOf(name: RenderTargetName): RenderTarget {
   return renderTargets[name];
+}
+
+export function chatRenderingOf(name?: string): ChatRendering | undefined {
+  return name !== undefined && isRenderTargetName(name) ? renderTargetOf(name).chat : undefined;
 }

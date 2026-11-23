@@ -1,5 +1,6 @@
 import { renderClock } from '@on.auto/definitions/template';
 import { renderedArguments } from '@on.auto/definitions/tool-blocks';
+import type { CalledOnce } from '@on.auto/tool-servers';
 import { Effect, Result } from 'effect';
 
 import { isRefusedForTheAccount, type Conversations } from '../entry/conversation-parts.ts';
@@ -13,36 +14,51 @@ interface RepliedIn {
   readonly reply: { readonly id: string; readonly to: string };
 }
 
-interface TypingAsked {
-  readonly org: string;
-  readonly playbook: string;
-  readonly connection: string;
+interface TypingShowing {
   readonly typing: Typing;
   readonly failureCodes: Parameters<typeof isRefusedForTheAccount>[2];
   readonly repliedIn: RepliedIn;
 }
 
+interface TypingAsked extends TypingShowing {
+  readonly org: string;
+  readonly playbook: string;
+  readonly connection: string;
+}
+
 type TypingShown = 'shown' | 'refused' | 'failed';
+
+type ToolCalled = (tool: string, input: Readonly<Record<string, unknown>>) => Effect.Effect<CalledOnce | undefined>;
 
 const noLine = '';
 
-export function typingShownThrough(
-  through: Pick<ThroughTheConnection, 'callOnce' | 'mostRequestBytesTo'>,
-  { org, playbook, connection, typing, failureCodes, repliedIn }: TypingAsked,
+export function typingShownBy(
+  called: ToolCalled,
+  mostBytes: number,
+  { typing, failureCodes, repliedIn }: TypingShowing,
 ): Effect.Effect<TypingShown> {
   return Effect.gen(function* () {
     const variables = { ...repliedIn, message: noLine };
-    const mostBytes = through.mostRequestBytesTo(connection);
     const rendered = renderedArguments(typing.with, variables, yield* renderClock, mostBytes);
     if (Result.isFailure(rendered)) {
       return 'failed';
     }
-    const reference = { server: connection, tool: typing.tool };
-    const { input } = rendered.success;
-    const called = yield* through.callOnce({ org, playbook, reference, input, meta: {}, recordContent: false });
-    if (called.kind === 'answered' && called.outcome === 'result') {
+    const answered = yield* called(typing.tool, rendered.success.input);
+    if (answered === undefined) {
+      return 'failed';
+    }
+    if (answered.kind === 'answered' && answered.outcome === 'result') {
       return 'shown';
     }
-    return isRefusedForTheAccount(called, typing, failureCodes) ? 'refused' : 'failed';
+    return isRefusedForTheAccount(answered, typing, failureCodes) ? 'refused' : 'failed';
   });
+}
+
+export function typingShownThrough(
+  through: Pick<ThroughTheConnection, 'callOnce' | 'mostRequestBytesTo'>,
+  { org, playbook, connection, ...showing }: TypingAsked,
+): Effect.Effect<TypingShown> {
+  const called: ToolCalled = (tool, input) =>
+    through.callOnce({ org, playbook, reference: { server: connection, tool }, input, meta: {}, recordContent: false });
+  return typingShownBy(called, through.mostRequestBytesTo(connection), showing);
 }

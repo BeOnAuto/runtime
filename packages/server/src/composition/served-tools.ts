@@ -68,6 +68,7 @@ export async function toolUsersServedBy(
       subscriptionsOfTheServer(runtime, settings, {
         tools: { ...tools, ...requestWaysOf(registry.tools) },
         secrets,
+        asTheConnection: { callAsTheConnection: registry.callAsTheConnection },
         takeIn: connectionIntakeServedBy(runtime, { store, filters, providers: settings.providers, now }),
       }),
   };

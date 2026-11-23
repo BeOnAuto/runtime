@@ -85,6 +85,12 @@ describe('events given by hand, declaring the events a service reports', () => {
       }),
     ]).toEqual([[`${byHand}/events`], [`${byHand}/events`], ['/types']]);
   });
+
+  it('refuse the messages a person writes, since only an entry the runtime ships declares them', () => {
+    const written = [{ kind: 'mention', when: { '$message.payload#/kind': ['mention'] }, id: '$message.payload#/id' }];
+
+    expect(placesRefusedBy({ ...throughItsTools, chat: written })).toEqual([`${byHand}/chat`]);
+  });
 });
 
 describe('events given by hand, read before their form is', () => {

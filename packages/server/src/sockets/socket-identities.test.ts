@@ -6,6 +6,7 @@ import {
   aCardMovedIn,
   answeredWith,
   connectedAgain,
+  inCards,
   inSpace,
   theCardMoved,
   unreachable,
@@ -21,10 +22,10 @@ function identifiedAt(connectedAt: string) {
   return { connection: 'connection-1', connected_at: connectedAt, user: { id: 'B-1' }, account: { id: 'S1' } };
 }
 
-describe('the account a connection of a socket is in, where its entry says how to ask it', () => {
-  it('is asked at a round through an active playbook the connection serves and recorded, asked no more for that connecting, asked again for a new one, and never where no playbook is active', async () => {
+describe('the account a connection of a socket is in, where its entry says which tool to ask', () => {
+  it('is asked at a round as the connection and recorded, asked no more for that connecting, asked again for a new one, and asked where no playbook is active too', async () => {
     const server = new SocketsOverALedger();
-    server.answers.set('chat-connection-1', inS1);
+    server.answers.set('connection-1', inS1);
     await inTestTime((context) =>
       Effect.gen(function* () {
         yield* server.recorded('acme', inSpace('connection-1', 'boards'));
@@ -41,14 +42,16 @@ describe('the account a connection of a socket is in, where its entry says how t
         yield* wakeUp.wakeUp({ now: 120_000, sweep: false });
 
         expect([askedAtFirst, server.asked]).toEqual([
-          ['chat-connection-1'],
-          ['chat-connection-1', 'chat-connection-1'],
+          ['connection-1', 'connection-2'],
+          ['connection-1', 'connection-2', 'connection-1'],
         ]);
         expect(yield* server.identifiedIn('acme')).toEqual([
           identifiedAt('2026-11-19T08:00:00.000Z'),
           identifiedAt(connectedAgainAt),
         ]);
-        expect(yield* server.identifiedIn('globex')).toEqual([]);
+        expect(yield* server.identifiedIn('globex')).toEqual([
+          { connection: 'connection-2', connected_at: '2026-11-19T08:00:00.000Z', user: { id: 'B-connection-2' } },
+        ]);
         yield* wakeUp.stop();
       }),
     );
@@ -59,13 +62,12 @@ describe('a read of the account a connection of a socket is in that fails', () =
   it('is made again at the next round where the failure passes, and not where it lasts until the connection is connected again, logged once a connecting with its org and connection', async () => {
     const server = new SocketsOverALedger();
     const logged: string[] = [];
-    server.answers.set('chat-connection-1', unreachable);
-    server.answers.set('chat-connection-2', answeredWith({ self: { space: 'S1' } }));
+    server.answers.set('connection-1', unreachable);
+    server.answers.set('connection-2', answeredWith({ self: { space: 'S1' } }));
     await inTestTime(
       (context) =>
         Effect.gen(function* () {
           yield* server.recorded('acme', [...inSpace('connection-1', 'one'), ...inSpace('connection-2', 'two')]);
-          yield* server.playbooksMade('acme', ['alpha']);
           const wakeUp = server.started(context);
           yield* wakeUp.wakeUp({ now: 0, sweep: false });
           yield* TestClock.adjust(60_000);
@@ -75,8 +77,8 @@ describe('a read of the account a connection of a socket is in that fails', () =
           yield* TestClock.adjust(60_000);
           yield* wakeUp.wakeUp({ now: 120_000, sweep: false });
 
-          expect(askedBefore).toEqual(['chat-connection-1', 'chat-connection-2', 'chat-connection-1']);
-          expect(server.asked.slice(askedBefore.length)).toEqual(['chat-connection-1', 'chat-connection-2']);
+          expect(askedBefore).toEqual(['connection-1', 'connection-2', 'connection-1']);
+          expect(server.asked.slice(askedBefore.length)).toEqual(['connection-1', 'connection-2']);
           yield* wakeUp.stop();
         }),
       (line) => {
@@ -95,7 +97,7 @@ describe('a read of the account a connection of a socket is in that fails', () =
 describe('the account a connection of a socket is in, recorded after its socket opened', () => {
   it('reaches the socket that runs, which then takes an event in that account in, and is not opened again', async () => {
     const server = new SocketsOverALedger();
-    server.answers.set('chat-connection-1', inS1);
+    server.answers.set('connection-1', inS1);
     await inTestTime((context) =>
       Effect.gen(function* () {
         yield* server.recorded('acme', inSpace('connection-1', 'boards'));
@@ -126,11 +128,58 @@ describe('the account a connection of a socket is in, recorded after its socket 
 describe('the reads of a round of the sockets', () => {
   it('stop at one round’s length from its start, in every org, and the next round reads on from what is still owed', async () => {
     const server = new SocketsOverALedger();
-    server.lateBy.set('chat-connection-1', 60_000);
+    server.lateBy.set('connection-1', 60_000);
     await inTestTime((context) =>
       Effect.gen(function* () {
         yield* server.recorded('acme', [...inSpace('connection-1', 'one'), ...inSpace('connection-2', 'two')]);
         yield* server.recorded('globex', inSpace('connection-9', 'nine'));
+        const wakeUp = server.started(context);
+        yield* wakeUp.wakeUp({ now: 0, sweep: false });
+        const askedInTheFirst = [...server.asked];
+        yield* wakeUp.wakeUp({ now: 60_000, sweep: false });
+
+        expect([askedInTheFirst, server.asked]).toEqual([
+          ['connection-1'],
+          ['connection-1', 'connection-2', 'connection-9'],
+        ]);
+        yield* wakeUp.stop();
+      }),
+    );
+  });
+});
+
+describe('the connections a round of the sockets reads in an org, whose entry asks who a connection is by an HTTP request', () => {
+  it('are each read through the first active playbook it serves, once a round, after those asked as the connection, and never where no playbook is active', async () => {
+    const server = new SocketsOverALedger();
+    await inTestTime((context) =>
+      Effect.gen(function* () {
+        yield* server.recorded('acme', [
+          ...inCards('connection-1', 'one'),
+          ...inCards('connection-2', 'two'),
+          { type: 'connection_playbooks_set', data: { connection: 'connection-2', playbooks: ['beta'] } },
+          ...inSpace('connection-3', 'three'),
+        ]);
+        yield* server.recorded('globex', inCards('connection-9', 'nine'));
+        yield* server.playbooksMade('acme', ['alpha', 'beta', 'gamma']);
+        yield* server.playbooksMade('globex', [], ['delta']);
+        const wakeUp = server.started(context);
+        yield* wakeUp.wakeUp({ now: 0, sweep: false });
+
+        expect(server.asked).toEqual(['connection-3', 'chat-connection-1', 'chat-connection-2']);
+        yield* wakeUp.stop();
+      }),
+    );
+  });
+});
+
+describe('the reads of a round of the sockets through a playbook', () => {
+  it('stop at one round’s length from its start too, and the next round reads on from what is still owed', async () => {
+    const server = new SocketsOverALedger();
+    server.lateBy.set('chat-connection-1', 60_000);
+    await inTestTime((context) =>
+      Effect.gen(function* () {
+        yield* server.recorded('acme', [...inCards('connection-1', 'one'), ...inCards('connection-2', 'two')]);
+        yield* server.recorded('globex', inCards('connection-9', 'nine'));
         yield* server.playbooksMade('acme', ['alpha']);
         yield* server.playbooksMade('globex', ['gamma']);
         const wakeUp = server.started(context);
@@ -142,27 +191,6 @@ describe('the reads of a round of the sockets', () => {
           ['chat-connection-1'],
           ['chat-connection-1', 'chat-connection-2', 'chat-connection-9'],
         ]);
-        yield* wakeUp.stop();
-      }),
-    );
-  });
-});
-
-describe('the connections a round of the sockets reads in an org', () => {
-  it('are each read through the first active playbook it serves, once a round', async () => {
-    const server = new SocketsOverALedger();
-    await inTestTime((context) =>
-      Effect.gen(function* () {
-        yield* server.recorded('acme', [
-          ...inSpace('connection-1', 'one'),
-          ...inSpace('connection-2', 'two'),
-          { type: 'connection_playbooks_set', data: { connection: 'connection-2', playbooks: ['beta'] } },
-        ]);
-        yield* server.playbooksMade('acme', ['alpha', 'beta']);
-        const wakeUp = server.started(context);
-        yield* wakeUp.wakeUp({ now: 0, sweep: false });
-
-        expect(server.asked).toEqual(['chat-connection-1', 'chat-connection-2']);
         yield* wakeUp.stop();
       }),
     );

@@ -7,6 +7,7 @@ import {
   makeToolAccess,
   mostRequestBytesAmong,
   type ConnectionSource,
+  type ConnectionWays,
   type ConsentClient,
   type Describing,
   type RequestWays,
@@ -43,7 +44,7 @@ interface ServedDocuments {
 
 type ToolSettings = Pick<Settings, 'toolServers' | 'registeredClients' | 'toolCalls'>;
 
-export type MadeToolAccess = ToolAccess & RequestWays & ThroughWays;
+export type MadeToolAccess = ToolAccess & RequestWays & ThroughWays & ConnectionWays;
 
 export class ComposedTools extends Context.Service<ComposedTools, MadeToolAccess>()('@on.auto/server/ComposedTools') {}
 
@@ -101,6 +102,11 @@ export function throughWaysOf(composed: Effect.Effect<ThroughWays, ToolServerDoc
   return {
     readOnceThrough: (call, through) => Effect.flatMap(made, (access) => access.readOnceThrough(call, through)),
   };
+}
+
+export function connectionWaysOf(composed: Effect.Effect<ConnectionWays, ToolServerDocumentRefused>): ConnectionWays {
+  const made = Effect.orDie(composed);
+  return { callAsTheConnection: (call) => Effect.flatMap(made, (access) => access.callAsTheConnection(call)) };
 }
 
 export function toolAccessOf(

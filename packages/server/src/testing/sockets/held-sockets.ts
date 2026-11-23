@@ -1,6 +1,6 @@
 import type { ConnectionEventSchema } from '@on.auto/connections';
 import type { Decided } from '@on.auto/operations';
-import { eventDestinationOf, providerFoundBy, type ThroughTheConnection } from '@on.auto/providers';
+import { eventDestinationOf, providerFoundBy } from '@on.auto/providers';
 import {
   cardMoved,
   ledgers,
@@ -13,7 +13,6 @@ import {
 } from '@on.auto/providers/testing';
 import type { CalledOnce } from '@on.auto/tool-servers';
 import { Effect, Function, Option, Struct } from 'effect';
-import { TestClock } from 'effect/testing';
 
 import type { SocketMember } from '../../sockets/socket-registries.ts';
 
@@ -26,6 +25,9 @@ export const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['i
 export const connectedAt = '2026-11-19T08:00:00.000Z';
 
 const [aKey] = trackerOverASocket.credentials;
+
+/** How the cards entry asks who a connection is: an HTTP request, not a tool of the connection. */
+const whoAmIByRequest = { method: 'GET', url: 'https://api.tracker.example.com/me', identified: { id: '/self/uid' } };
 
 const typingWith = {
   channel: '{{ sent.conversation }}',
@@ -46,8 +48,9 @@ const chatsConversations = {
  * nothing of who a connection is; the boards', of another shape, which maps a card moved to an event, names the
  * space a message is in, and says how to ask who a connection is and which space it is in; the chats', whose
  * messages carry the reply a person writes in the thread of a message, and which shows that Auto is working on it;
- * and the chats' over an HTTP API, whose failed answers name a code, and which lists the codes of a service that shows
- * no working status in an account: one it answers as an error, and every code of a refused key.
+ * the chats' over an HTTP API, whose failed answers name a code, and which lists the codes of a service that shows
+ * no working status in an account: one it answers as an error, and every code of a refused key; and the cards', of the
+ * boards' shape, which asks who a connection is by an HTTP request.
  */
 export const socketProviders = providersOf(
   { ...trackerOverASocket, events: { destinations: [overASocket] } },
@@ -83,6 +86,12 @@ export const socketProviders = providersOf(
       typing: { tool: 'set_status', with: typingWith, refused: ['feature_disabled', 'invalid_auth'] },
     },
   },
+  {
+    ...trackerOverASocket,
+    name: 'cards',
+    title: 'Cards',
+    events: { types: [cardMoved], identity: whoAmIByRequest, destinations: [overTheBoardsSocket] },
+  },
 );
 
 const chatsSocket = Option.getOrThrow(Option.fromNullishOr(eventDestinationOf(socketProviders, 'chats', 'websocket')));
@@ -104,6 +113,7 @@ export function chatMemberIn(workspace: string, provider: string): SocketMember 
       secretId: 'chats',
       account: workspace,
       identityOwed: false,
+      model: null,
       ...(codes === undefined ? {} : { failureCodes: codes }),
     },
   };
@@ -154,6 +164,11 @@ export function inSpace(connection: string, appSecretId: string, space?: string)
           },
         ];
   return [...heldBy(connection, appSecretId, 'boards'), ...identified];
+}
+
+/** A connection of the cards entry holding the app credential that opens its socket. */
+export function inCards(connection: string, appSecretId: string): readonly Fact[] {
+  return heldBy(connection, appSecretId, 'cards');
 }
 
 /**
@@ -234,35 +249,6 @@ export const unreachable: ServiceAnswer = {
   because: 'unreachable',
   detail: '',
 };
-
-interface Answering {
-  readonly answers: ReadonlyMap<string, ServiceAnswer>;
-  readonly lateBy: ReadonlyMap<string, number>;
-  readonly asked: (connection: string) => void;
-}
-
-/**
- * The tools of the connections, answering the call that asks who a connection is as told by the connection's name,
- * after the time it is late by on the test's clock.
- */
-export function answeringBy({ answers, lateBy, asked }: Answering): ThroughTheConnection {
-  const late = (connection: string) => {
-    const by = lateBy.get(connection);
-    return by === undefined ? Effect.void : TestClock.adjust(by);
-  };
-  return {
-    callOnce: ({ reference }) =>
-      Effect.andThen(
-        late(reference.server),
-        Effect.sync(() => {
-          asked(reference.server);
-          return answers.get(reference.server) ?? answeredWith({ self: { uid: `B-${reference.server}` } });
-        }),
-      ),
-    requestOnce: Function.constant(Effect.die('a request was sent')),
-    mostRequestBytesTo: () => 1_048_576,
-  };
-}
 
 export const noSecretsKept = {
   keep: Function.constant(Effect.die('a secret was kept')),

@@ -38,6 +38,10 @@ function arriving(kind: string, room: Fields, message: Fields = {}, ...left: rea
   return { transport: 'message', payload: payloadOf(kind, room, message, left) };
 }
 
+function byTheAppsOwnUser(): Arrival {
+  return { transport: 'message', payload: { ...payloadOf('mention', { kind: 'open' }, {}, []), app_user: 'ada' } };
+}
+
 function accountOf(message: Fields, space: Fields): string | undefined {
   const payload = { kind: 'mention', room: { kind: 'open' }, message: { ...aMessage, ...message }, ...space };
   return readByTheChat({ transport: 'message', payload })?.account;
@@ -75,6 +79,18 @@ describe('a message a person wrote where the app reads', () => {
     ]).toEqual(['mention', 'direct_message', undefined]);
   });
 
+  it("names the app's own user where the delivery names one", () => {
+    const payload = { ...payloadOf('mention', { kind: 'open' }, {}, []), app_user: 'auto' };
+
+    const undeclared = declaring({ ...overASocketWithAChat, chat: [without(aMention, 'own')] });
+
+    expect([
+      readByTheChat({ transport: 'message', payload })?.app,
+      readByTheChat(arriving('mention', { kind: 'open' }))?.app,
+      undeclared({ transport: 'message', payload })?.app,
+    ]).toEqual(['auto', undefined, undefined]);
+  });
+
   it('names the account of whoever wrote it by the first place that holds one, and none where none does', () => {
     expect([
       accountOf({ author_space: 's2' }, { space: 's1' }),
@@ -95,6 +111,25 @@ describe('a message a person wrote where the app reads', () => {
   });
 });
 
+function postedBy(posted: string, author: string): Arrival {
+  return {
+    transport: 'message',
+    payload: { ...payloadOf('mention', { kind: 'open' }, { author, posted_by: posted }, []), app_user: 'auto' },
+  };
+}
+
+describe("a message the app's own user wrote", () => {
+  it('is the app’s own where the first place own names holds the user its second place names, whoever it names as its sender', () => {
+    const own = ['$message.payload#/message/posted_by', '$message.payload#/app_user'];
+    const byWhoPosted = declaring({ ...overASocketWithAChat, chat: [{ ...aMention, own }] });
+
+    expect([byWhoPosted(postedBy('auto', 'ada')), byWhoPosted(postedBy('ada', 'auto'))?.sender]).toEqual([
+      undefined,
+      'auto',
+    ]);
+  });
+});
+
 describe('an arrival that says nothing of a message a person wrote', () => {
   it.each([
     ['written by an app', arriving('mention', { kind: 'open' }, { app: 'a1' })],
@@ -108,6 +143,7 @@ describe('an arrival that says nothing of a message a person wrote', () => {
     ['without its conversation', arriving('mention', { kind: 'open' }, {}, 'room')],
     ['without who wrote it', arriving('mention', { kind: 'open' }, { author: '' })],
     ['without words', arriving('mention', { kind: 'open' }, { text: 7 })],
+    ["written by the app's own user", byTheAppsOwnUser()],
   ])('is none where it is %s', (_, arrival) => {
     expect(readByTheChat(arrival)).toBeUndefined();
   });

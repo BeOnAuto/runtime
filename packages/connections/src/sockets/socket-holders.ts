@@ -24,7 +24,9 @@ export interface SocketHolder {
   readonly secretId: string;
   readonly failureCodes?: NonNullable<ProviderEntry['failure_codes']>;
   readonly account?: string;
+  readonly accountName?: string;
   readonly identityOwed: boolean;
+  readonly model: string | null;
 }
 
 export interface HeldSockets {
@@ -57,6 +59,10 @@ export function labelsOf({ credentials }: ProviderEntry, credential: string): re
   );
 }
 
+function namedOf({ name }: { readonly name?: string }): Pick<SocketHolder, 'accountName'> {
+  return name === undefined ? {} : { accountName: name };
+}
+
 function holdersOf(kept: KeptConnection, providers: ProviderList): readonly SocketHolder[] {
   const { id, name, provider, status, connected_at: connectedAt, account } = kept.connection;
   const entry = providerFoundBy(providers, provider)?.entry;
@@ -64,7 +70,7 @@ function holdersOf(kept: KeptConnection, providers: ProviderList): readonly Sock
     return [];
   }
   const codes = entry.failure_codes === undefined ? {} : { failureCodes: entry.failure_codes };
-  const recorded = account === null ? {} : { account: account.id };
+  const recorded = account === null ? {} : { account: account.id, ...namedOf(account) };
   const identityOwed = identityOwedBy(providers, kept) !== undefined;
   return (entry.events?.destinations ?? []).flatMap((destination, at): readonly SocketHolder[] => {
     const { type, credential } = destination;
@@ -85,6 +91,7 @@ function holdersOf(kept: KeptConnection, providers: ProviderList): readonly Sock
             ...codes,
             ...recorded,
             identityOwed,
+            model: kept.model,
           },
         ]
       : [];

@@ -11,6 +11,7 @@ import type {
   ConversationRow,
   LinkStart,
   MemberOfAnAccount,
+  Outranking,
 } from '../tables/chat-rows.ts';
 import { chatRowsOpened } from '../tables/chat-tables.ts';
 import { chatDeletionsOver, type ChatDeletions } from './chat-deletions.ts';
@@ -24,11 +25,15 @@ export type LeaseTaken = { readonly leased: LeasedConversation } | { readonly ru
 export interface ChatStore {
   readonly arrivals: {
     readonly claimed: (arrival: Arrival) => Promise<boolean>;
+    readonly outranked: (arrival: Arrival, over: string) => Promise<Outranking>;
+    readonly passed: (arrival: Arrival) => Promise<boolean>;
+    readonly kindOf: (arrival: ArrivalKey) => Promise<string | undefined>;
     readonly settled: (arrival: ArrivalKey) => Promise<void>;
     readonly unsettled: () => Promise<readonly Arrival[]>;
   };
   readonly conversations: {
     readonly found: (place: ConversationPlace) => Promise<ConversationRow | undefined>;
+    readonly spokenIn: (conversation: ConversationRow, sender: string) => Promise<boolean>;
     readonly started: (place: ConversationPlace) => Promise<ConversationRow>;
     readonly leaseTaken: (conversation: ConversationRow) => Promise<LeaseTaken>;
   };
@@ -101,11 +106,15 @@ export function chatStoreOver(
   return {
     arrivals: {
       claimed: async (arrival) => rows.arrivals.claimed(arrival, await now()),
+      outranked: (arrival, over) => rows.arrivals.outranked(arrival, over),
+      passed: (arrival) => rows.arrivals.passed(arrival),
+      kindOf: (arrival) => rows.arrivals.kindOf(arrival),
       settled: (arrival) => rows.arrivals.settled(arrival),
       unsettled: () => rows.arrivals.unsettled(),
     },
     conversations: {
       found: (place) => rows.conversations.found(place),
+      spokenIn: (conversation, sender) => rows.conversations.spokenIn(conversation.id, sender),
       started: (place) => startedBy(leasing, place),
       leaseTaken: leaseTakenBy(leasing, leaseMs),
     },

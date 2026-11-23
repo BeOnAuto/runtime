@@ -8,7 +8,7 @@ import {
   registeredAt,
   type FakeMcpServer,
 } from '@on.auto/tool-servers/testing';
-import { Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes } from '../testing/additions.ts';
@@ -106,6 +106,23 @@ describe('removing a connection', () => {
     const { id } = await added(h, notes);
 
     expect(await removing(h, id, acmeReader)).toMatchObject({ status: 'rejected', reason: 'forbidden' });
+  });
+});
+
+describe('removing a connection through which members wrote to Auto', () => {
+  it('tells whatever keeps what members wrote through it, by its id and the account it was recorded in', async () => {
+    const told: unknown[] = [];
+    const h = harness({
+      connectionRemoved: (removed) =>
+        Effect.sync(() => {
+          told.push(removed);
+        }),
+    });
+    const { id } = await added(h, notes);
+
+    await removing(h, id);
+
+    expect(told).toEqual([{ connection: id, account: undefined }]);
   });
 });
 

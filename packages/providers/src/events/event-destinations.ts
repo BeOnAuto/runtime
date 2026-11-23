@@ -169,6 +169,7 @@ function identityIssuesOf(identity: Identity): readonly DestinationIssue[] {
       ['/identity/identified/id', id],
       ['/identity/identified/name', name],
       ['/identity/account', identity.account],
+      ['/identity/account_name', identity.account_name],
     ]),
   ]);
 }

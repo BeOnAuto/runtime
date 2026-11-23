@@ -27,7 +27,7 @@ export { ConversationsSchema, conversationTemplates, type Conversations } from '
 export { arrivalReadingOf, type Arrival, type ArrivalReading } from './events/arrival-readings.ts';
 export { chatMessageIn, type ChatMessage } from './events/chat-arrivals.ts';
 export { millisecondsSinceTheEpochOf } from './events/event-times.ts';
-export { typingShownThrough } from './events/typing-calls.ts';
+export { typingShownBy, typingShownThrough } from './events/typing-calls.ts';
 export { presentedProofOf, type PresentedProof } from './events/presented-proofs.ts';
 export type { Destination as EventDestination } from './events/destination-fields.ts';
 export {
@@ -85,7 +85,12 @@ export {
 export { requestOriginsOf } from './events/event-destinations.ts';
 export { subscriptionCallsOf } from './subscriptions/subscription-calls.ts';
 export { subscriptionLoopOf } from './subscriptions/subscription-loop.ts';
-export { identitiesReadOf } from './subscriptions/subscription-identities.ts';
+export {
+  asksATool,
+  identitiesReadAsTheConnection,
+  identitiesReadOf,
+  type OwedAsTheConnection,
+} from './subscriptions/subscription-identities.ts';
 export { placeNamesReadOf } from './subscriptions/subscription-place-names.ts';
 export {
   requestsAskerOf,

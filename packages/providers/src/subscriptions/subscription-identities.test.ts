@@ -7,7 +7,12 @@ import { IdentitySchema } from '../events/identity-call.ts';
 import { ofEachSubscription, whoItActsAs, whoItActsAsThroughATool } from '../testing/event-destinations.ts';
 import { declaredDestinations } from '../testing/subscription-apps.ts';
 import { alpha, loopOver, portsOf, roundAt, startedAt } from '../testing/subscription-loops.ts';
-import { identitiesReadOf } from './subscription-identities.ts';
+import {
+  asksATool,
+  identitiesReadAsTheConnection,
+  identitiesReadOf,
+  type OwedAsTheConnection,
+} from './subscription-identities.ts';
 import { subscriptionLoopOf } from './subscription-loop.ts';
 
 const connected = '2026-10-01T08:00:00.000Z';
@@ -190,7 +195,7 @@ describe('the accounts of connections read on their own, as a shell reads those 
 describe('the account a connection is in, where its entry says where the same call names it', () => {
   it('is read beside the account it acts as and reaches the recorder as a member of its own, none where the answer names none there, and none where the entry says nothing of it', async () => {
     const connections = [
-      through('chat', { ...whoItActsAs, account: '/team/key' }),
+      through('chat', { ...whoItActsAs, account: '/team/key', account_name: '/team/key' }),
       through('mail', { ...whoItActsAs, account: '/team/name' }),
       owing,
     ];
@@ -200,9 +205,75 @@ describe('the account a connection is in, where its entry says where the same ca
     );
 
     expect(loop.identified().map(({ connection, ...identification }) => [connection.id, identification])).toEqual([
-      ['id-of-chat', { user: { id: 'member-7', name: 'sam' }, account: { id: 'team-3' } }],
+      ['id-of-chat', { user: { id: 'member-7', name: 'sam' }, account: { id: 'team-3', name: 'team-3' } }],
       ['id-of-mail', { user: { id: 'member-7', name: 'sam' } }],
       ['id-of-tracker', { user: { id: 'member-7', name: 'sam' } }],
     ]);
+  });
+});
+
+function owedAsTheConnection(connection: string): OwedAsTheConnection {
+  return {
+    id: `id-of-${connection}`,
+    connection,
+    connected,
+    identify: { ...asked(whoItActsAsThroughATool), tool: 'whoami' },
+  };
+}
+
+const owedThere = [owedAsTheConnection('chat'), owedAsTheConnection('tracker')];
+
+describe('the accounts of connections read as the connection itself, with no playbook', () => {
+  it('records each answer through the port a playbook’s read records it through, and hands back each failure by the connection’s name', async () => {
+    const loop = loopOver([]);
+    loop.app.fails('timed_out', 1);
+    const read = identitiesReadAsTheConnection(portsOf(loop, {}), loop.app.asTheConnection);
+    const { unread } = await Effect.runPromise(read('acme', owedThere).pipe(Effect.provide(TestClock.layer())));
+
+    expect(loop.app.acts()).toEqual(['identify', 'identify']);
+    expect([...unread]).toEqual([['chat', { kind: 'unreachable', because: 'timed_out' }]]);
+    expect(loop.identified()).toEqual([{ connection: { id: 'id-of-tracker', connected }, user: { id: '7' } }]);
+  });
+
+  it('asks none at or past the deadline, which is said', async () => {
+    const loop = loopOver([]);
+    const read = identitiesReadAsTheConnection(portsOf(loop, {}), loop.app.asTheConnection);
+    const cut = await Effect.runPromise(
+      TestClock.setTime(startedAt).pipe(
+        Effect.andThen(read('acme', owedThere, startedAt)),
+        Effect.provide(TestClock.layer()),
+      ),
+    );
+
+    expect([cut, loop.app.acts()]).toEqual([{ unread: new Map(), cutAt: startedAt }, []]);
+  });
+
+  it('is read so only where the entry asks a tool of the connection, not an HTTP request', () => {
+    const noIdentity = Option.getOrUndefined(Option.none<typeof IdentitySchema.Type>());
+
+    expect([asksATool(asked(whoItActsAsThroughATool)), asksATool(asked(whoItActsAs)), asksATool(noIdentity)]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+});
+
+describe('an account a connection owes that is not read as the connection', () => {
+  it.each([
+    ['not among the connections of the org', 1_048_576, 'connection_broken', 'tool_server_not_configured'],
+    ['whose arguments render larger than the connection takes', 1, 'not_sent', 'not_sent'],
+  ] as const)('is where the connection is %s, and nothing is recorded', async (_where, most, kind, because) => {
+    const loop = loopOver([]);
+    const read = identitiesReadAsTheConnection(
+      { ...portsOf(loop, {}), mostRequestBytesTo: () => most },
+      { callAsTheConnection: () => Effect.undefined },
+    );
+    const { unread } = await Effect.runPromise(
+      read('acme', owedThere.slice(0, 1)).pipe(Effect.provide(TestClock.layer())),
+    );
+
+    expect([...unread]).toEqual([['chat', { kind, because }]]);
+    expect(loop.identified()).toEqual([]);
   });
 });

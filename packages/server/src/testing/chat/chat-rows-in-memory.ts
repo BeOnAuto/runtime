@@ -13,7 +13,7 @@ import { linksIn } from './links-in-memory.ts';
 import { keyOf, tableOf, type Table } from './memory-tables.ts';
 
 interface ArrivalKept extends Arrival {
-  readonly state: 'taken' | 'settled';
+  readonly state: 'taken' | 'passed' | 'settled';
   readonly arrivedAt: number;
 }
 
@@ -38,6 +38,28 @@ const byOrder = (left: string, right: string): number => Number(left > right) - 
 
 const keyedOf = ({ id, keyId }: ConversationKept): KeyedConversation => ({ id, keyId });
 
+function rankingIn(arrivals: Table<ArrivalKept>): Pick<ChatRows['arrivals'], 'outranked' | 'passed' | 'kindOf'> {
+  return {
+    outranked: (arrival, over) => {
+      const kept = arrivals.found(arrivalKeyOf(arrival));
+      if (kept?.kind !== over || kept.state === 'settled') {
+        return Promise.resolve('kept');
+      }
+      arrivals.put(arrivalKeyOf(kept), { ...kept, kind: arrival.kind, state: 'taken' });
+      return Promise.resolve(kept.state === 'passed' ? 'taken' : 'handed');
+    },
+    passed: (arrival) => {
+      const kept = arrivals.found(arrivalKeyOf(arrival));
+      const passing = kept?.kind === arrival.kind && kept.state === 'taken';
+      if (passing) {
+        arrivals.put(arrivalKeyOf(kept), { ...kept, state: 'passed' });
+      }
+      return Promise.resolve(passing);
+    },
+    kindOf: (arrival) => Promise.resolve(arrivals.found(arrivalKeyOf(arrival))?.kind),
+  };
+}
+
 function arrivalsIn(arrivals: Table<ArrivalKept>): ChatRows['arrivals'] {
   const arrivedFirst = (left: ArrivalKept, right: ArrivalKept): number =>
     left.arrivedAt === right.arrivedAt
@@ -51,9 +73,10 @@ function arrivalsIn(arrivals: Table<ArrivalKept>): ChatRows['arrivals'] {
       }
       return Promise.resolve(claimed);
     },
+    ...rankingIn(arrivals),
     settled: (arrival) => {
       const kept = arrivals.found(arrivalKeyOf(arrival));
-      if (kept !== undefined) {
+      if (kept?.state === 'taken') {
         arrivals.put(arrivalKeyOf(kept), { ...kept, state: 'settled' });
       }
       return Promise.resolve();
@@ -94,7 +117,11 @@ function sendersIn(messages: Table<MessageKept>, conversation: string): readonly
 
 function conversationsIn(conversations: Table<ConversationKept>, messages: Table<MessageKept>) {
   const sorted = (rows: readonly ConversationKept[]) => rows.toSorted((left, right) => byOrder(left.id, right.id));
-  const rows: Pick<ChatRows['conversations'], 'selected' | 'writtenIn' | 'deleted'> = {
+  const rows: Pick<ChatRows['conversations'], 'selected' | 'writtenIn' | 'spokenIn' | 'deleted'> = {
+    spokenIn: (id, sender) =>
+      Promise.resolve(
+        messages.rows().some((each) => each.conversation === id && each.author === 'person' && each.sender === sender),
+      ),
     selected: (selected) =>
       Promise.resolve(
         sorted(

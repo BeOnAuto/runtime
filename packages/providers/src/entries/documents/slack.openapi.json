@@ -890,11 +890,18 @@
                   },
                   "text": {
                     "type": "string",
-                    "description": "The words of the message, plain or formatted with mrkdwn."
+                    "description": "The words of the message, plain or formatted with mrkdwn. With blocks, it is the fallback string to display in notifications."
                   },
                   "thread_ts": {
                     "type": "string",
                     "description": "The timestamp of a thread's first message, to post the message in that thread."
+                  },
+                  "blocks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "A JSON-based array of structured blocks."
                   }
                 },
                 "required": ["channel", "user", "text"],

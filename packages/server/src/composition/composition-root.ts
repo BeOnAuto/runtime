@@ -97,6 +97,8 @@ function receivingStoresOf<Stores>({ receiving, providers }: Composing[0], store
 
 type Serve = Awaited<ReturnType<ComposedServerOptions['composed']>>['serve'];
 
+type Registry = Awaited<ReturnType<typeof registryOpenedFor>>;
+
 function registryOpenedFor(
   { made, settings, wiring, modelAccessOf, telemetry, documents }: Serving,
   runtime: Parameters<Serve>[0],
@@ -105,15 +107,36 @@ function registryOpenedFor(
   return made.registry.openedIn(runtime, settings, { ...wiring, modelAccessOf, telemetry, ...served, documents });
 }
 
+type Opened = Awaited<ReturnType<typeof signInAndStoresOpened>>;
+
+function chatWiringOf(chat: Opened['chat'], runtime: Parameters<Serve>[0], registry: Registry) {
+  const through = { readOnceThrough: registry.readOnceThrough, chatModels: registry.modelChoice };
+  return chat === undefined
+    ? { through, over: {} }
+    : {
+        through: { ...through, connectionRemoved: chat.connectionRemoved },
+        over: { chatOver: chat.over(runtime, registry) },
+      };
+}
+
+function answeringOf(
+  chat: Opened['chat'],
+  runtime: Parameters<Serve>[0],
+  workflows: Awaited<ReturnType<typeof serveWorkflows>>,
+  shippedFiles: Serving['shippedFiles'],
+) {
+  return chat === undefined ? workflows : chat.answering(runtime, workflows, shippedFiles);
+}
+
 function servedWith(serving: Serving): Serve {
   const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, signIn: signingIn } = settings;
-    const { opened, signIn, members } = await signInAndStoresOpened(runtime, serving, ownOrigin);
+    const { opened, signIn, members, chat } = await signInAndStoresOpened(runtime, serving, ownOrigin);
     const { stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } = opened;
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
-    const { readOnceThrough, modelChoice } = registry;
-    const { connections, offering } = connectionsReadingThrough({ readOnceThrough, chatModels: modelChoice });
+    const chatWired = chatWiringOf(chat, runtime, registry);
+    const { connections, offering } = connectionsReadingThrough(chatWired.through);
     await made.extensions.logged(runtime);
     const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
       ...wiring,
@@ -126,6 +149,7 @@ function servedWith(serving: Serving): Serve {
       prediction: made.prediction,
       generation: { shippedFiles, contentAddressKey: ownKeys.contentAddressKey, ownOrigin },
       ...goalsWiringOf(serving),
+      ...chatWired.over,
     });
     made.bounds.keptFrom(functions.parts.capabilities);
     const parts = {
@@ -142,14 +166,14 @@ function servedWith(serving: Serving): Serve {
       access: settings,
       ...optionalPartsOf(serving),
     };
-    const served = stores.withSecretsClosed(
-      registry.processes.withDocumentsClosed(await serveWorkflows(runtime, parts)),
-    );
+    const answering = await answeringOf(chat, runtime, await serveWorkflows(runtime, parts), shippedFiles);
+    const served = stores.withSecretsClosed(registry.processes.withDocumentsClosed(answering));
     const closing = await withHeldRequestsEndedFirst(
       runtime,
       license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] }),
     );
-    return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice, ...signIn };
+    const names = chat === undefined ? {} : { namesFromTheService: chat.names };
+    return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice, ...signIn, ...names };
   };
 }
 

@@ -153,8 +153,6 @@ export function memberOperationsOf(kept: MembersKept) {
   ] as const;
 }
 
-const noLinks: Pick<AccountLinks, 'personForgotten'> = { personForgotten: () => Promise.resolve() };
-
 export function signedOutWithTheirLinks(
   providerRows: Parameters<typeof personSignedOut>[0],
   links: Pick<AccountLinks, 'personForgotten'>,
@@ -171,7 +169,7 @@ export function memberOperationsOver(
     invitationAddresses,
   }: Pick<AuthStore, 'peopleRows' | 'providerRows' | 'invitationAddresses'>,
   publicUrl: string,
-  links: Pick<AccountLinks, 'personForgotten'> = noLinks,
+  links: Pick<AccountLinks, 'personForgotten'>,
 ) {
   return memberOperationsOf({
     people: peopleRows,

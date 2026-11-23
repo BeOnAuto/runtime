@@ -127,6 +127,7 @@ async function roundOfTheServer(naming: 'answers' | 'fails', webhookUrl?: string
   const receiving = { overHttp: true, webhookUrl };
   const served = subscriptionsServedBy(
     subscriptionsServingOf(ledger, { providers: roomsNamingTheirPlaces, receiving }, { tools, secrets: noSecrets }),
+    { callAsTheConnection: () => Effect.die('a call was made as the connection') },
   );
   served.asked(alpha);
   const items = await Effect.runPromise(served.dueWork.due(0, 16, true));

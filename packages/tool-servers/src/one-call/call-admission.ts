@@ -2,7 +2,8 @@ import type { AssetHolding } from '@on.auto/operations';
 import { capitalized } from '@on.auto/phrasing';
 import { Effect, Result } from 'effect';
 
-import { mostRequestBytesTo } from '../bounds/call-bounds.ts';
+import { argumentsTooLarge, mostRequestBytesTo } from '../bounds/call-bounds.ts';
+import { bytesOf } from '../bounds/text-bytes.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import { toolInWords } from '../names/tool-words.ts';
 import { plannedAssets, type AssetsNotSent, type SentAsset } from '../sent-assets/planned-assets.ts';
@@ -65,4 +66,21 @@ export function admittedOnce(
   return call.requiredMark === 'reads' && mark !== 'reads'
     ? Promise.resolve(notReadOnlyOnce(call.reference, mark))
     : assetsOf(call, opened, admitting);
+}
+
+export function admittedAsTheConnection(
+  input: Readonly<Record<string, unknown>>,
+  { slot }: Pick<Opened, 'slot'>,
+  mostRequestBytes: number,
+): readonly SentAsset[] | AssetNotSentOnce {
+  const mostBytes = mostRequestBytesTo(slot.settings, mostRequestBytes);
+  const requestBytes = bytesOf(JSON.stringify(input));
+  return requestBytes > mostBytes
+    ? assetNotSentOnce({
+        because: 'too_large',
+        pointer: '',
+        detail: argumentsTooLarge(requestBytes, mostBytes, false),
+        requestBytes,
+      })
+    : [];
 }

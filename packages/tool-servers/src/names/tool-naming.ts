@@ -46,7 +46,7 @@ function notConfigured(named: readonly ToolReference[]): ToolNotOffered {
   });
 }
 
-function notAllowed(named: readonly ToolReference[]): ToolNotOffered {
+export function notAllowed(named: readonly ToolReference[]): ToolNotOffered {
   const tools = conjunction.format(named.map((reference) => writtenOf(reference)));
   return new ToolNotOffered({
     because: 'tool_not_allowed',

@@ -63,8 +63,10 @@ chat:
     with:
       body:
         channel: '{{ conversation }}'
-        thread_ts: '{{ thread | default: id }}'
-        text: '{{ message }}'
+        thread_ts: "{% if thread %}{{ thread }}{% elsif kind == 'direct_message' %}{{ omit }}{% else %}{{ id }}{% endif %}"
+        markdown_text: '{% if rendered %}{{ omit }}{% else %}{{ message }}{% endif %}'
+        text: '{% if rendered %}{{ message }}{% else %}{{ omit }}{% endif %}'
+        blocks: '{{ rendered | default: omit }}'
     sent: /ts
     replace:
       tool: chat_update
@@ -72,15 +74,16 @@ chat:
         body:
           channel: '{{ conversation }}'
           ts: '{{ sent.id }}'
-          text: '{{ message }}'
+          markdown_text: '{{ message }}'
   ephemeral:
     tool: chat_postEphemeral
     with:
       body:
         channel: '{{ conversation }}'
         user: '{{ sender }}'
-        thread_ts: '{{ thread | default: id }}'
+        thread_ts: '{{ thread | default: omit }}'
         text: '{{ message }}'
+        blocks: '{{ rendered | default: omit }}'
   thread:
     tool: conversations_replies
     with:
@@ -102,6 +105,7 @@ chat:
     email: /user/profile/email
     email_verified: /user/is_email_confirmed
     account: /user/team_id
+    name: /user/real_name
     active:
       /user/deleted: [false, null]
       /user/is_bot: [false, null]
@@ -146,6 +150,7 @@ events:
     identified:
       id: /bot_id
     account: /team_id
+    account_name: /team
   destinations:
     - type: websocket
       open:
@@ -205,6 +210,7 @@ events:
           automatic: $message.payload#/payload/event/bot_id
           changed: $message.payload#/payload/event/hidden
           shared: $message.payload#/payload/is_ext_shared_channel
+          own: ['$message.payload#/payload/event/user', '$message.payload#/payload/authorizations/0/user_id']
         - kind: direct_message
           when:
             '$message.payload#/type': [events_api]
@@ -222,6 +228,7 @@ events:
           automatic: $message.payload#/payload/event/bot_id
           changed: $message.payload#/payload/event/hidden
           shared: $message.payload#/payload/is_ext_shared_channel
+          own: ['$message.payload#/payload/event/user', '$message.payload#/payload/authorizations/0/user_id']
         - kind: ambient
           when:
             '$message.payload#/type': [events_api]
@@ -239,6 +246,7 @@ events:
           automatic: $message.payload#/payload/event/bot_id
           changed: $message.payload#/payload/event/hidden
           shared: $message.payload#/payload/is_ext_shared_channel
+          own: ['$message.payload#/payload/event/user', '$message.payload#/payload/authorizations/0/user_id']
       connection:
         account: $message.payload#/payload/team_id
 credentials:
@@ -254,7 +262,7 @@ credentials:
       Permissions**, then **Install to Workspace** and **Allow**. Copy the **Bot User OAuth Token**, which starts with
       `xoxb-`, and paste it on this connection's page under **Slack bot token**. Once the connection is connected, add
       the app to each channel your playbooks use: in the channel, type `/invite @Auto` and send it.
-    key_page: https://api.slack.com/apps?new_app=1&manifest_json=%7B%22display_information%22%3A%7B%22name%22%3A%22Auto%22%7D%2C%22features%22%3A%7B%22bot_user%22%3A%7B%22display_name%22%3A%22Auto%22%7D%7D%2C%22oauth_config%22%3A%7B%22scopes%22%3A%7B%22bot%22%3A%5B%22channels%3Aread%22%2C%22channels%3Ahistory%22%2C%22users%3Aread%22%2C%22chat%3Awrite%22%2C%22reactions%3Aread%22%2C%22reactions%3Awrite%22%2C%22groups%3Aread%22%2C%22groups%3Ahistory%22%5D%7D%7D%2C%22settings%22%3A%7B%22event_subscriptions%22%3A%7B%22bot_events%22%3A%5B%22message.channels%22%2C%22message.groups%22%5D%7D%2C%22socket_mode_enabled%22%3Atrue%7D%7D
+    key_page: https://api.slack.com/apps?new_app=1&manifest_json=%7B%22display_information%22%3A%7B%22name%22%3A%22Auto%22%7D%2C%22features%22%3A%7B%22app_home%22%3A%7B%22messages_tab_enabled%22%3Atrue%2C%22messages_tab_read_only_enabled%22%3Afalse%7D%2C%22bot_user%22%3A%7B%22display_name%22%3A%22Auto%22%7D%2C%22agent_view%22%3A%7B%22agent_description%22%3A%22Use%20Auto%20in%20Slack%20to%20build%2C%20run%20and%20inspect%20your%20playbooks.%20To%20answer%20a%20request%20from%20Auto%2C%20reply%20in%20its%20thread.%22%7D%7D%2C%22oauth_config%22%3A%7B%22scopes%22%3A%7B%22bot%22%3A%5B%22channels%3Aread%22%2C%22channels%3Ahistory%22%2C%22users%3Aread%22%2C%22chat%3Awrite%22%2C%22reactions%3Aread%22%2C%22reactions%3Awrite%22%2C%22groups%3Aread%22%2C%22groups%3Ahistory%22%2C%22app_mentions%3Aread%22%2C%22im%3Ahistory%22%2C%22users%3Aread.email%22%2C%22assistant%3Awrite%22%5D%7D%7D%2C%22settings%22%3A%7B%22event_subscriptions%22%3A%7B%22bot_events%22%3A%5B%22message.channels%22%2C%22message.groups%22%2C%22app_mention%22%2C%22message.im%22%5D%7D%2C%22interactivity%22%3A%7B%22is_enabled%22%3Atrue%7D%2C%22socket_mode_enabled%22%3Atrue%7D%7D
     key_page_title: Create your Slack app
     steps:
       key_page:

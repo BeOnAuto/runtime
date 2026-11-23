@@ -15,8 +15,13 @@ export type ArrivalsSelected =
   | { readonly connection: string }
   | { readonly account: string; readonly conversation: string };
 
+export type Outranking = 'taken' | 'handed' | 'kept';
+
 export interface ArrivalRows {
   readonly claimed: (arrival: Arrival, at: number) => Promise<boolean>;
+  readonly outranked: (arrival: Arrival, over: string) => Promise<Outranking>;
+  readonly passed: (arrival: Arrival) => Promise<boolean>;
+  readonly kindOf: (arrival: ArrivalKey) => Promise<string | undefined>;
   readonly settled: (arrival: ArrivalKey) => Promise<void>;
   readonly unsettled: () => Promise<readonly Arrival[]>;
   readonly deleted: (selected: ArrivalsSelected) => Promise<boolean>;
@@ -60,6 +65,7 @@ export interface ConversationRows {
   readonly leaseReleased: (id: string, holder: string) => Promise<void>;
   readonly selected: (selected: ConversationsSelected) => Promise<readonly KeyedConversation[]>;
   readonly writtenIn: (sender: MemberOfAnAccount) => Promise<readonly WrittenIn[]>;
+  readonly spokenIn: (id: string, sender: string) => Promise<boolean>;
   readonly deleted: (ids: readonly string[]) => Promise<void>;
 }
 

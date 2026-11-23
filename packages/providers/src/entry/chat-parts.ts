@@ -1,10 +1,14 @@
-import { pointerIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
+import { omitVariables, pointerIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
 import { JsonPointer, Schema } from 'effect';
 
 import { ArgumentsSchema, argumentIssuesOver, issuesOf, noLines, toolIssues, type Placed } from './part-checks.ts';
 
-const overAMessage =
-  "written as the arguments of a function's deliver are, each a Liquid template over id, conversation, thread and sender, those of the person's message, and message, the words Auto posts";
+const overAMessage = [
+  "Its arguments, written as the arguments of a function's deliver are.",
+  "Each one is a Liquid template that can read these of the person's message: id, conversation, sender, thread where the message is in a thread, and kind, which is mention, direct_message or ambient.",
+  'It can also read message, the words Auto posts, and rendered, the same message laid out as the service takes it, where the message has more than words.',
+  'An argument whose template renders omit, as {{ thread | default: omit }} does for a message in no thread, is left out of the call.',
+].join(' ');
 
 const ToolSchema = Schema.String;
 
@@ -12,7 +16,7 @@ const PostSchema = Schema.Struct({
   tool: ToolSchema.annotate({
     description: "The tool that posts a message in the thread of a person's message, named as the server lists it",
   }),
-  with: ArgumentsSchema.annotate({ description: `Its arguments, ${overAMessage}` }),
+  with: ArgumentsSchema.annotate({ description: overAMessage }),
   sent: Schema.String.annotate({
     description: 'A JSON Pointer into what the tool answered, to the id of the message it posted',
   }),
@@ -21,7 +25,7 @@ const PostSchema = Schema.Struct({
       description: 'The tool that replaces the words of a message Auto posted, named as the server lists it',
     }),
     with: ArgumentsSchema.annotate({
-      description: `Its arguments, ${overAMessage}, and over sent.id as well, the message Auto posted`,
+      description: `${overAMessage} Its arguments can also read sent.id, the message Auto posted.`,
     }),
   }).annotate({
     description: 'How Auto turns a message it posted, such as one that says it is working, into its answer',
@@ -32,7 +36,7 @@ const EphemeralSchema = Schema.Struct({
   tool: ToolSchema.annotate({
     description: 'The tool that posts a line only one person sees, named as the server lists it',
   }),
-  with: ArgumentsSchema.annotate({ description: `Its arguments, ${overAMessage}` }),
+  with: ArgumentsSchema.annotate({ description: overAMessage }),
 });
 
 const EachMessageSchema = Schema.Struct({
@@ -56,7 +60,7 @@ const ThreadSchema = Schema.Struct({
   tool: ToolSchema.annotate({
     description: 'The tool that reads the messages of a thread, named as the server lists it',
   }),
-  with: ArgumentsSchema.annotate({ description: `Its arguments, ${overAMessage}` }),
+  with: ArgumentsSchema.annotate({ description: overAMessage }),
   read: Schema.Struct({
     list: Schema.String.annotate({
       description: "A JSON Pointer into what the tool answered, to the thread's messages",
@@ -77,14 +81,14 @@ const SenderSchema = Schema.Struct({
   tool: ToolSchema.annotate({
     description: 'The tool that reads a person at the service, named as the server lists it',
   }),
-  with: ArgumentsSchema.annotate({ description: `Its arguments, ${overAMessage}` }),
+  with: ArgumentsSchema.annotate({ description: overAMessage }),
   email: Schema.String.annotate({
     description: "A JSON Pointer into what the tool answered, to the person's email address",
   }),
   email_verified: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        "A JSON Pointer to the boolean that is true where the service confirmed that the address is the person's; left out where the service gives only addresses it confirmed",
+        "A JSON Pointer to the boolean that is true where the service confirmed that the address is the person's. Where it is left out, Auto counts no address as confirmed, and asks each person to sign in instead.",
     }),
   ),
   account: Schema.optionalKey(
@@ -92,6 +96,10 @@ const SenderSchema = Schema.Struct({
       description: 'A JSON Pointer to the id of the account the person belongs to, such as a workspace',
     }),
   ),
+  name: Schema.String.annotate({
+    description:
+      "A JSON Pointer into what the tool answered, to the person's name. Auto shows this name on the page where the person allows the connection to Auto. Without a name there, the person cannot connect their account.",
+  }),
   active: Schema.optionalKey(
     AnswerConditionsSchema.annotate({
       description:
@@ -109,7 +117,10 @@ export const ChatSchema = Schema.Struct({
     }),
   ),
   thread: ThreadSchema.annotate({ description: 'How Auto reads the messages of the thread a person wrote in' }),
-  sender: SenderSchema.annotate({ description: 'How Auto reads the person who wrote a message, to know who they are' }),
+  sender: SenderSchema.annotate({
+    description:
+      "How Auto reads the person who wrote a message, to know who they are. When Auto reads a person's name before they connect, no message exists: id and sender are the person, and conversation and kind are empty.",
+  }),
 }).annotate({
   description:
     "How Auto answers a person who writes to it where the provider's app reads, for a provider whose destination says under chat which messages a person wrote. Only a provider that ships with the runtime can declare it",
@@ -117,19 +128,24 @@ export const ChatSchema = Schema.Struct({
 
 type Chat = typeof ChatSchema.Type;
 
-const chatTemplates: TemplateSet = {
-  names: ['id', 'conversation', 'thread', 'sender', 'message', 'sent.id'],
-  what: 'a template of a chat',
-  sample: {
-    id: '1699.2',
-    conversation: 'C0123',
-    thread: '1699.1',
-    sender: 'ada',
-    message: 'A line',
-    sent: { id: '1699.3' },
-  },
-  structured: 'sent',
-};
+function chatTemplates(): TemplateSet {
+  return {
+    names: ['id', 'conversation', 'thread', 'sender', 'kind', 'message', 'rendered', 'sent.id', 'omit'],
+    what: 'a template of a chat',
+    sample: {
+      id: '1699.2',
+      conversation: 'C0123',
+      thread: '1699.1',
+      sender: 'ada',
+      kind: 'mention',
+      message: 'A line',
+      rendered: [{ type: 'section', text: 'A line' }],
+      sent: { id: '1699.3' },
+      ...omitVariables(),
+    },
+    structured: 'sent',
+  };
+}
 
 interface Called {
   readonly tool: string;
@@ -137,7 +153,7 @@ interface Called {
 }
 
 function calledIssues(at: string, { tool, with: written }: Called): readonly Placed[] {
-  return [...toolIssues(`${at}/tool`, tool), ...argumentIssuesOver(chatTemplates, `${at}/with`, written)];
+  return [...toolIssues(`${at}/tool`, tool), ...argumentIssuesOver(chatTemplates(), `${at}/with`, written)];
 }
 
 function answerIssues(answer: Chat['answer']): readonly Placed[] {
@@ -184,6 +200,7 @@ function senderIssues(sender: Chat['sender']): readonly Placed[] {
       ['/chat/sender/email', sender.email],
       ['/chat/sender/email_verified', sender.email_verified],
       ['/chat/sender/account', sender.account],
+      ['/chat/sender/name', sender.name],
     ]),
     ...(sender.active === undefined ? [] : activeIssues(sender.active)),
   ];

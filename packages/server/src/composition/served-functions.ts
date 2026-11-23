@@ -45,7 +45,10 @@ interface WakingParts extends Pick<SocketsServing, 'opens'> {
   readonly projections: Pick<SocketsServing, 'store'>;
   readonly recorded: Pick<SocketsServing, 'delivered'>;
   readonly subscriptions: ReturnType<Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptionsOver']>;
-  readonly tools: Pick<SocketsServing, 'secrets'> & { readonly now?: SocketsServing['now'] };
+  readonly tools: Pick<SocketsServing, 'secrets'> & {
+    readonly now?: SocketsServing['now'];
+    readonly chatOver?: ServedWiring['chatOver'];
+  };
   readonly computation: Pick<ServedWiring['computation'], 'pool'>;
 }
 
@@ -64,6 +67,7 @@ function wakeUpsOf(
     tools: subscriptions.tools,
     filters: computation.pool.evaluations.filters,
     now: tools.now ?? Date.now,
+    chat: tools.chatOver?.({ tools: subscriptions.tools }),
   };
   return [socketsOfTheServer(runtime, settings, sockets), ...following];
 }

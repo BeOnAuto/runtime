@@ -12,7 +12,7 @@ import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { Linked, OrgServer } from '../org-servers/org-servers.ts';
-import { admittedOnce, notReadOnlyOnce } from './call-admission.ts';
+import { admittedAsTheConnection, admittedOnce, notReadOnlyOnce } from './call-admission.ts';
 import { openedFor, type Opened } from './call-opening.ts';
 import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce, type UnopenedOnce } from './called-once.ts';
 
@@ -35,6 +35,8 @@ export function recordingAsTheCallAsks(
 }
 
 export type ReadCall = Pick<OneCall, 'org' | 'reference' | 'meta'>;
+
+export type OwnCall = Pick<OneCall, 'org' | 'reference' | 'input'>;
 
 export interface RunCall {
   readonly callId: string;
@@ -142,21 +144,26 @@ function admittingOf(call: OneCall, access: OneCallAccess, awaited: Awaiting): A
   };
 }
 
-export const keptNowhere: KeepContent = () =>
-  Promise.reject(new Error('A call that only reads, through a server not kept, keeps no content'));
+export const keptNowhere: KeepContent = () => Promise.reject(new Error('A call that records no content keeps none'));
+
+function recordingNothing(link: LinkedServer['link'], access: OneCallAccess): Recording {
+  return recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, keptNowhere), { recordContent: false });
+}
 
 function readingOf({ reference }: ReadCall, access: OneCallAccess): Admit {
   return ({ tool }, link) =>
     Promise.resolve(
       tool.mark === 'reads'
-        ? {
-            assets: [],
-            recording: recordingAsTheCallAsks(recordingOf(link.settings, access.secrets, keptNowhere), {
-              recordContent: false,
-            }),
-          }
+        ? { assets: [], recording: recordingNothing(link, access) }
         : notReadOnlyOnce(reference, tool.mark),
     );
+}
+
+function owningOf({ input }: OwnCall, access: OneCallAccess): Admit {
+  return (opened, link) => {
+    const assets = admittedAsTheConnection(input, opened, access.mostRequestBytes);
+    return Promise.resolve('kind' in assets ? assets : { assets, recording: recordingNothing(link, access) });
+  };
 }
 
 interface Admitting {
@@ -195,4 +202,8 @@ export function oneCall(
 
 export function readOnce(call: ReadCall, server: OrgServer, access: OneCallAccess): Effect.Effect<CalledOnce> {
   return calledThrough({ ...call, input: {} }, server, { access, admitting: () => readingOf(call, access) });
+}
+
+export function ownCallOnce(call: OwnCall, server: OrgServer, access: OneCallAccess): Effect.Effect<CalledOnce> {
+  return calledThrough({ ...call, meta: {} }, server, { access, admitting: () => owningOf(call, access) });
 }

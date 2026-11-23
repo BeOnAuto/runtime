@@ -11,7 +11,7 @@ import type { Identification, Identity, Renewed, Subscribed, SubscriptionSecret 
 
 type Pointers = NonNullable<Destination['subscribe']>['subscribed'];
 
-type IdentityPointers = Pick<Identity, 'identified' | 'account'>;
+type IdentityPointers = Pick<Identity, 'identified' | 'account' | 'account_name'>;
 
 type RenewedPointers = NonNullable<Destination['renew']>['renewed'];
 
@@ -106,9 +106,13 @@ function namedIn(document: Schema.Json, pointer: string | undefined): { readonly
   return name === undefined ? {} : { name };
 }
 
-function accountIn(document: Schema.Json, pointer: string | undefined): Pick<Identification, 'account'> {
+function accountIn(
+  document: Schema.Json,
+  pointer: string | undefined,
+  named: string | undefined,
+): Pick<Identification, 'account'> {
   const id = pointer === undefined ? undefined : textIn(document, pointer);
-  return id === undefined ? {} : { account: { id } };
+  return id === undefined ? {} : { account: { id, ...namedIn(document, named) } };
 }
 
 export function placeNameIn(
@@ -124,11 +128,14 @@ export function placeNameIn(
 
 export function identifiedIn(
   document: Answered,
-  { identified, account }: IdentityPointers,
+  { identified, account, account_name: accountName }: IdentityPointers,
 ): Effect.Effect<Identification, SubscriptionCallFailed> {
   const id = document === undefined ? undefined : textIn(document, identified.id);
   if (document === undefined || id === undefined) {
     return Effect.fail(failedBecause('unreadable'));
   }
-  return Effect.succeed({ user: { id, ...namedIn(document, identified.name) }, ...accountIn(document, account) });
+  return Effect.succeed({
+    user: { id, ...namedIn(document, identified.name) },
+    ...accountIn(document, account, accountName),
+  });
 }

@@ -6,7 +6,23 @@ import { describe, expect, it } from 'vitest';
 import { failureCodes, heldBy, inTheChannel } from '../testing/sockets/held-sockets.ts';
 import { inTestTime, settled } from '../testing/sockets/in-test-time.ts';
 import { SocketsOverALedger } from '../testing/sockets/sockets-over-a-ledger.ts';
-import { isARegistry } from './served-sockets.ts';
+import { isARegistry, type ChatOfEachServing } from './served-sockets.ts';
+
+function chatHeard() {
+  const servings: string[][] = [];
+  const chat: ChatOfEachServing = {
+    served: () => {
+      const heard: string[] = [];
+      servings.push(heard);
+      const told = (what: string) => () =>
+        Effect.sync(() => {
+          heard.push(what);
+        });
+      return { arrived: told('arrived'), restarted: told('restarted'), stop: told('stopped') };
+    },
+  };
+  return { chat, servings };
+}
 
 describe('the sockets of a server that starts', () => {
   it('open at the first round for a registry recorded before the server started, wake what waits as each opens, and load no registry whose version did not move', async () => {
@@ -178,6 +194,36 @@ describe('the sockets of a server that stops', () => {
         expect([raisedBefore, server.raised()]).toEqual([1, 1]);
       }),
     );
+  });
+});
+
+describe('the chat of a server that stops serving and serves again', () => {
+  it('is served afresh by each socket set, and hears what arrives once the server serves again', async () => {
+    const server = new SocketsOverALedger();
+    const { chat, servings } = chatHeard();
+    await inTestTime((context) =>
+      Effect.gen(function* () {
+        yield* server.recorded('acme', heldBy('connection-1', 'one'));
+        const first = server.started(context, chat);
+        yield* first.wakeUp({ now: 0, sweep: false });
+        yield* settled;
+        yield* first.stop();
+        const second = server.started(context, chat);
+        yield* second.wakeUp({ now: 10, sweep: false });
+        yield* settled;
+        yield* server.sends('xapp-one', inTheChannel('C1'));
+        yield* settled;
+        yield* second.stop();
+      }),
+    );
+
+    expect([server.opened, servings]).toEqual([
+      ['xapp-one', 'xapp-one'],
+      [
+        ['restarted', 'stopped'],
+        ['restarted', 'arrived', 'stopped'],
+      ],
+    ]);
   });
 });
 

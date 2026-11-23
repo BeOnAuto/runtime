@@ -119,7 +119,9 @@ function catalogsOf(
   };
 }
 
-export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts): Promise<Served> {
+type ServedWorkflows = Served & Required<Pick<Served, 'callContext'>>;
+
+export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts): Promise<ServedWorkflows> {
   const { runs, queued, opened } = hostOnceOpened(parts.store);
   const { names, shippedFiles } = parts;
   const workflow = makeWorkflowAdapter({

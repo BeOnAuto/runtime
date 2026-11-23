@@ -52,6 +52,22 @@ describe('the arrivals of the chat store', () => {
 
     expect([claimed, unsettled.length, await store.arrivals.unsettled()]).toEqual([[true, false], 1, []]);
   });
+
+  it('let a mention outrank a reply passed over, and say whether a member spoke in a conversation', async () => {
+    const { store } = chatStoreInMemory();
+    const ambient = { ...place, message: 'message-1', kind: 'ambient' };
+    await store.arrivals.claimed(ambient);
+    const passed = await store.arrivals.passed(ambient);
+    const outranked = await store.arrivals.outranked({ ...ambient, kind: 'mention' }, 'ambient');
+    const conversation = await store.conversations.started(place);
+
+    expect([
+      passed,
+      outranked,
+      await store.arrivals.kindOf(ambient),
+      await store.conversations.spokenIn(conversation, 'member-1'),
+    ]).toEqual([true, 'taken', 'mention', false]);
+  });
 });
 
 describe('the lease on a conversation', () => {

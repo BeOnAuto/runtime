@@ -3,6 +3,7 @@ import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql'
 import { postgresqlDatabasesOn } from '@on.auto/ledger/postgresql-testing';
 import { describe } from 'vitest';
 
+import { chatReadsBehaviour } from './chat-arrivals-behaviour.ts';
 import { chatDatabaseBehaviour, rowsOnTheLedger } from './chat-database-behaviour.ts';
 import { chatLinksBehaviour } from './chat-links-behaviour.ts';
 import { chatRowsBehaviour, type ChatRowsEntry } from './chat-rows-behaviour.ts';
@@ -18,6 +19,7 @@ const onPostgreSQL: ChatRowsEntry = {
 
 describe.skipIf(skipped)(`the chat tables on PostgreSQL${notice}`, () => {
   chatRowsBehaviour(onPostgreSQL);
+  chatReadsBehaviour(onPostgreSQL);
   chatLinksBehaviour(onPostgreSQL);
   chatDatabaseBehaviour({
     name: 'on PostgreSQL',

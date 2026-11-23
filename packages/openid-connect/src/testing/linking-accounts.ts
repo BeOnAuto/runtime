@@ -8,11 +8,19 @@ export const openLink = 'Vq3n8m1Zr0aKbT7cW2yXhP5sLdE9gF4jUiO6tRwQ-Ak';
 
 export const linkCookie = '__Host-Http-account-link';
 
+export const codeCookie = '__Host-Http-account-link-code';
+
 export const linkingClient = 'account-linking';
 
 export const ownRedirect = `${issuer}/account-links`;
 
 export const named = { service: 'A chat', app: 'Auto' } as const;
+
+export const aCode = 'BCDFGH';
+
+export function sealedOf(code: string): string {
+  return Buffer.from(`sealed ${code}`).toString('base64url');
+}
 
 type Heard = readonly unknown[];
 
@@ -33,10 +41,12 @@ export function callsNamed(heard: readonly Heard[], ...names: readonly string[])
 interface LinkingHeard {
   readonly linking: AccountLinking;
   readonly heard: () => readonly Heard[];
+  readonly codeEnded: () => void;
 }
 
 function linkingHeard(): LinkingHeard {
   const heard: Heard[] = [];
+  const awaited = new Set<string>();
   const told = (call: Heard, page: LinkShown): Promise<LinkShown> => {
     heard.push(call);
     return Promise.resolve(page);
@@ -51,10 +61,19 @@ function linkingHeard(): LinkingHeard {
         told(['allowShown', value], {
           allow: { service: named.service, memberName: 'Dana', accountName: 'Northwind', allowAt, denyAt },
         }),
-      allowed: (value, person) => told(['allowed', value, person], { code: { ...named, code: 'BCDFGH' } }),
+      allowed: (value, person) => {
+        awaited.add(sealedOf(aCode));
+        return told(['allowed', value, person], { code: { ...named, code: aCode } });
+      },
       denied: (value) => told(['denied', value], { denied: named }),
+      codeSealed: (code) => Promise.resolve(sealedOf(code)),
+      codeShownAgain: (sealed) =>
+        told(['codeShownAgain', sealed], awaited.has(sealed) ? { code: { ...named, code: aCode } } : { ended: true }),
     },
     heard: () => [...heard],
+    codeEnded: () => {
+      awaited.clear();
+    },
   };
 }
 
