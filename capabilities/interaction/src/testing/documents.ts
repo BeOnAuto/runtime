@@ -14,6 +14,14 @@ const answerSchema = answerSchemaOf(2000);
 
 export const longNoteAnswerSchema: readonly string[] = answerSchemaOf(20_000);
 
+export const noteOnRejectAnswerSchema: readonly string[] = [
+  ...answerSchema,
+  '    oneOf:',
+  '      - properties: { choice: { const: approve } }',
+  '      - properties: { choice: { const: reject } }',
+  '        required: [note]',
+];
+
 export const datedAnswerSchema: readonly string[] = [...answerSchema, '      due: { type: string, format: date }'];
 
 const inputSchema = [

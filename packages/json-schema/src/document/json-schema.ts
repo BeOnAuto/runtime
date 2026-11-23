@@ -11,6 +11,7 @@ import {
   type SchemaIssue as Issue,
 } from './json-bounds.ts';
 import { referenceLoopIssues } from './reference-loops.ts';
+import { requiredByChoiceIn, requiredByChoiceIssues } from './required-by-choice.ts';
 import { shapeIssues, type OtherFormats } from './schema-shape.ts';
 
 export const jsonSchemaLimits = {
@@ -36,6 +37,8 @@ export interface Validation {
 }
 
 type Decoder = (input: unknown) => Result.Result<unknown, Schema.SchemaError>;
+
+type IssuesOf = (value: Schema.Json) => readonly FoundIssue[];
 
 type Checked = Result.Result<Schema.Json, readonly FoundIssue[]>;
 
@@ -102,17 +105,38 @@ function decoderOf(document: Schema.JsonObject): Result.Result<Decoder, readonly
   }
 }
 
+function issuesOfSchema(decode: Decoder): IssuesOf {
+  return (value) => {
+    const decoded = decode(value);
+    return Result.isSuccess(decoded) ? [] : foundIssuesOf(decoded.failure.issue);
+  };
+}
+
+function besideTheSchema(issuesOf: IssuesOf, further: IssuesOf): IssuesOf {
+  return (value) => {
+    const found = issuesOf(value);
+    const reported = new Set(found.map(({ pointer }) => pointer));
+    return [...found, ...further(value).filter(({ pointer }) => !reported.has(pointer))];
+  };
+}
+
+function checkOf(document: Schema.JsonObject): Result.Result<IssuesOf, readonly Issue[]> {
+  const decided = requiredByChoiceIn(document);
+  if (decided === undefined) {
+    return Result.map(decoderOf(document), issuesOfSchema);
+  }
+  const { rest, byChoice } = decided;
+  return Result.map(decoderOf(rest), (decode) =>
+    besideTheSchema(issuesOfSchema(decode), (value) => requiredByChoiceIssues(byChoice, value)),
+  );
+}
+
 function nothingFurther(): readonly Issue[] {
   return [];
 }
 
-function schemaIssuesOf(decode: Decoder, value: Schema.Json): readonly FoundIssue[] {
-  const decoded = decode(value);
-  return Result.isSuccess(decoded) ? [] : foundIssuesOf(decoded.failure.issue);
-}
-
 function checkerOf(
-  decode: Decoder,
+  schemaIssuesOf: IssuesOf,
   { what, nesting, further = nothingFurther }: Validation,
 ): (value: unknown) => Checked {
   return (value) => {
@@ -122,7 +146,7 @@ function checkerOf(
     if (!isJson(value)) {
       return Result.fail(rootIssue(`The ${what} is not JSON`));
     }
-    const issues = [...schemaIssuesOf(decode, value), ...further(value)];
+    const issues = [...schemaIssuesOf(value), ...further(value)];
     return issues.length === 0 ? Result.succeed(value) : Result.fail(boundedIssues(issues, issueBounds));
   };
 }
@@ -131,8 +155,8 @@ function withoutBreaches(issues: readonly FoundIssue[]): readonly Issue[] {
   return issues.map(({ pointer, detail }) => ({ pointer, detail }));
 }
 
-function compiledOf(document: Schema.JsonObject, decode: Decoder, validation: Validation): CompiledSchema {
-  const checked = checkerOf(decode, validation);
+function compiledOf(document: Schema.JsonObject, issuesOf: IssuesOf, validation: Validation): CompiledSchema {
+  const checked = checkerOf(issuesOf, validation);
   return {
     document,
     what: validation.what,
@@ -147,6 +171,6 @@ export function compileJsonSchema(
 ): Result.Result<CompiledSchema, readonly Issue[]> {
   return boundedJsonSchema(document).pipe(
     Result.flatMap((bounded) => wellFormedDocument(bounded, validation.otherFormats)),
-    Result.flatMap((usable) => Result.map(decoderOf(usable), (decode) => compiledOf(usable, decode, validation))),
+    Result.flatMap((usable) => Result.map(checkOf(usable), (issuesOf) => compiledOf(usable, issuesOf, validation))),
   );
 }

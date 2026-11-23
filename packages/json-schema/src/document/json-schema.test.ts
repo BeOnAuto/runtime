@@ -200,3 +200,62 @@ describe('an answer that cannot be checked', () => {
     expect(answerIssues(compiled({}), new Date(0))).toEqual([{ pointer: '', detail: 'The answer is not JSON' }]);
   });
 });
+
+const approval = {
+  type: 'object',
+  required: ['verdict'],
+  properties: {
+    verdict: { type: 'string', enum: ['approve', 'revise'] },
+    note: { type: 'string', maxLength: 2000 },
+  },
+};
+
+const choices = [
+  { properties: { verdict: { const: 'approve' } } },
+  { properties: { verdict: { const: 'revise', description: 'Send it back' } }, required: ['note'], title: 'Revise' },
+];
+
+const noteMissingOnRevise = {
+  pointer: '/note',
+  breach: { rule: 'missing', when: { field: 'verdict', choice: 'revise' } },
+};
+
+describe('an answer whose choice decides which other fields it needs', () => {
+  it.each(['oneOf', 'anyOf'])('is checked against a %s of one case for each choice', (branching) => {
+    const schema = compiled({ ...approval, [branching]: choices });
+
+    expect(schema.validate({ verdict: 'approve' })).toEqual(Result.succeed({ verdict: 'approve' }));
+    expect(schema.validate({ verdict: 'revise', note: 'Shorter.' })).toEqual(
+      Result.succeed({ verdict: 'revise', note: 'Shorter.' }),
+    );
+    expect(schema.issuesOf({ verdict: 'revise' })).toMatchObject([noteMissingOnRevise]);
+  });
+
+  it('refuses a blank text for a field the choice needs, and takes it where the choice does not', () => {
+    const schema = compiled({ ...approval, oneOf: choices });
+
+    expect(schema.issuesOf({ verdict: 'revise', note: ' ' })).toMatchObject([noteMissingOnRevise]);
+    expect(schema.issuesOf({ verdict: 'revise', note: 5 })).toMatchObject([
+      { pointer: '/note', breach: { rule: 'kind' } },
+    ]);
+    expect(schema.validate({ verdict: 'approve', note: '' })).toEqual(Result.succeed({ verdict: 'approve', note: '' }));
+  });
+
+  it('refuses a choice no case names once, and leaves an answer without the choice to the schema', () => {
+    const schema = compiled({ ...approval, oneOf: choices });
+    const anyVerdict = { ...approval.properties, verdict: { type: 'string' } };
+    const open = compiled({ ...approval, properties: anyVerdict, anyOf: choices });
+
+    expect(schema.issuesOf({ verdict: 'hold' })).toMatchObject([{ pointer: '/verdict', breach: { rule: 'kind' } }]);
+    expect(open.issuesOf({ verdict: 'hold' })).toMatchObject([{ pointer: '/verdict', breach: { rule: 'kind' } }]);
+    expect(schema.issuesOf({ note: 'x' })).toMatchObject([{ pointer: '/verdict', breach: { rule: 'missing' } }]);
+    expect(schema.issuesOf('revise')).toMatchObject([{ pointer: '' }]);
+  });
+
+  it('leaves every other oneOf to the schema as written', () => {
+    expect(
+      Result.isFailure(compileJsonSchema({ ...approval, oneOf: [choices[0], { required: ['note'] }] }, asAnAnswer)),
+    ).toBe(true);
+    expect(compiled({ oneOf: [{ type: 'string' }, { type: 'number' }] }).validate(3)).toEqual(Result.succeed(3));
+  });
+});

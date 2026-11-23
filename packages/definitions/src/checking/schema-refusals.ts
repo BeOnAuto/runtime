@@ -140,6 +140,12 @@ function receivedWords(schemas: readonly JsonSchema[], received: Schema.Json | u
   return noun === undefined || taken.size === 0 || taken.has(kind) ? '' : `; it was given ${noun}`;
 }
 
+function choiceWords(breach: Breach): string {
+  return breach.rule === 'missing' && breach.when !== undefined
+    ? ` when ${breach.when.field} is ${breach.when.choice}`
+    : '';
+}
+
 function holderSentence({ schema: { document, what }, tokens }: Breached, breach: Breach): string {
   const place = placeAt(document, tokens);
   const holder = subjectOf(placeAt(document, tokens.slice(0, -1)), what);
@@ -147,7 +153,7 @@ function holderSentence({ schema: { document, what }, tokens }: Breached, breach
     return `${holder}: expected ${refusedWords(place.steps)}`;
   }
   const missing = place.steps.slice(-1).map((step) => missingWords(step));
-  return `${holder}: expected ${missing.join('')}${aboutOf(place.schemas)}`;
+  return `${holder}: expected ${missing.join('')}${choiceWords(breach)}${aboutOf(place.schemas)}`;
 }
 
 function formWords(format: FormatName, field: SchemaPlace): string {

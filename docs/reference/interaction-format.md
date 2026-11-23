@@ -58,7 +58,7 @@ So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `pri
 
 ## A function document
 
-The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner, in the team chat, to approve the review of their brief, and takes their answer from their reply in the thread of the message. Its answer is `{ verdict: approve | revise, note? }`:
+The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner, in the team chat, to approve the review of their brief, and takes their answer from their reply in the thread of the message. Its answer is `{ verdict: approve | revise, note }`, and its `oneOf` needs the note for `revise` alone:
 
 <!-- prettier-ignore -->
 ````markdown
@@ -108,6 +108,7 @@ output:
     properties:
       verdict: { type: string, enum: [approve, revise] }
       note: { type: string, maxLength: 2000 }
+    oneOf: [{ properties: { verdict: { const: approve } } }, { properties: { verdict: { const: revise } }, required: [note] }]
 page:
   data:
     language: typescript
@@ -480,7 +481,7 @@ A person often answers in a conversation with their agent: they approve, reject,
 Rules of an answer:
 
 - A caller that may write to the playbook can answer.
-- The answer is checked against the answer schema the request recorded, and takes at most 64 KiB as JSON.
+- The answer is checked against the answer schema the request recorded.
 - It is recorded on the run as one fact, `request_answered`, with the answer and `claimed_for`. `claimed_for` is whom the caller says it answers for: a claim the runtime keeps and never checks. The fact records the caller and the time itself.
 - `answer_interaction` returns that fact: the `run_id`, the `answer_id` of the fact (which `get_event` reads), the `answer`, `claimed_for`, `answered_by` (the caller who answered, by `id` and `name`) and `answered_at`.
 - The request leaves the open requests at once. The run takes the answer within about a second (the server checks waiting runs every second by default). It succeeds with the answer as its output, settled as the caller that answered.
@@ -532,7 +533,7 @@ How replies are taken:
 - A reply in a thread answers the question the thread began with. A reply outside a thread answers the conversation's one open request, leaving out any the read shows was asked after the reply, and is refused when several remain.
 - The answer is recorded as any answer is, as `request_answered`. It carries `reply`, the identity of the message that answered. It names the playbook (`playbook:` and its id) as the one that answered. The run takes it at once.
 - A reply taken once is never taken twice, and a request already answered takes no further reply.
-- A request whose function reads no replies is answered with `answer_interaction` alone. A function that reads replies always has a reply rule, since one without is refused when saved.
+- A request whose function reads no replies is answered with `answer_interaction` alone.
 
 ## How a run ends
 
@@ -618,8 +619,6 @@ The limits for what one call may send and for the requests a playbook holds open
 On a runtime of one's own, the arguments of a call take what its operator sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program, and a playbook holds at once the open requests its operator sets with [`INTERACTION_OPEN_REQUESTS`](../self-host/configuration.md#interaction-functions), 10,000 unless set. Auto Cloud sets its own.
 
 </div>
-
-Reads of a conversation never come sooner than the function's `wait`.
 
 ## In a workflow
 

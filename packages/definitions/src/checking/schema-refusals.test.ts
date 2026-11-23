@@ -197,6 +197,27 @@ describe('the refusal of a value whose fields do not fit', () => {
   });
 });
 
+describe('the refusal of a field one choice needs', () => {
+  it('names the field at its pointer, and the choice that needs it', () => {
+    const approval = {
+      type: 'object',
+      required: ['verdict'],
+      properties: { verdict: { enum: ['approve', 'revise'] }, note: { type: 'string' } },
+      oneOf: [
+        { properties: { verdict: { const: 'approve' } } },
+        { properties: { verdict: { const: 'revise' } }, required: ['note'] },
+      ],
+    };
+
+    expect(refusalOf(approval, { verdict: 'approve' }, 'answer')).toBeUndefined();
+    const namingTheChoice: unknown = expect.stringMatching(/note.*verdict.*revise/u);
+
+    expect(refusalOf(approval, { verdict: 'revise' }, 'answer')?.issues).toEqual([
+      { pointer: '/note', detail: namingTheChoice },
+    ]);
+  });
+});
+
 describe('the refusal of a value no keyword of the schema words', () => {
   it('says the words of the validator about the field, or about the whole value', () => {
     expect([

@@ -10,6 +10,7 @@ import {
   datedAnswerSchema,
   interactionHarness,
   notificationDocument,
+  noteOnRejectAnswerSchema,
   recordedReply,
   takenReply,
 } from '../testing/index.ts';
@@ -176,6 +177,20 @@ describe('an answer the request does not take', () => {
     });
     expect(await playbook.call(listInteractions, {})).toMatchObject({
       output: { interactions: [{ run_id: runId }] },
+    });
+  });
+
+  it('is refused at the field the choice needs when that field is missing or blank, and taken without it for another choice', async () => {
+    const { playbook } = await askedApproval(approvalDocument(agentDelivery, 'P2D', noteOnRejectAnswerSchema));
+    const refusedForTheNote = { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/answer/note' }] };
+
+    expect([
+      await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'reject' } }),
+      await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'reject', note: '  ' } }),
+    ]).toMatchObject([refusedForTheNote, refusedForTheNote]);
+    expect(await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'approve' } })).toMatchObject({
+      status: 'succeeded',
+      output: { answer: { choice: 'approve' } },
     });
   });
 

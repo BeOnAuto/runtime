@@ -6,7 +6,7 @@ import type { FormatName } from './string-formats.ts';
 
 export type Breach =
   | { readonly rule: 'kind' }
-  | { readonly rule: 'missing' }
+  | { readonly rule: 'missing'; readonly when?: { readonly field: string; readonly choice: string } }
   | { readonly rule: 'unexpected' }
   | { readonly rule: 'bound'; readonly keywords: Schema.JsonObject }
   | { readonly rule: 'format'; readonly format: FormatName };

@@ -16,6 +16,7 @@ export {
   approvalDocument,
   chatDelivery,
   datedAnswerSchema,
+  noteOnRejectAnswerSchema,
   longNoteAnswerSchema,
   notificationDocument,
   replyRuleLines,
