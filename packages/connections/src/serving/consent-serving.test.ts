@@ -35,6 +35,13 @@ import {
   studioReturn,
 } from '../testing/consents.ts';
 import { fixtureServing, harness, type Harness, harnessPages, loopbackPolicy } from '../testing/harness.ts';
+import {
+  finishingWith,
+  installingFake,
+  installingHarnessAt,
+  installingProvidersAt,
+  registeredApplicationAt,
+} from '../testing/installing-consents.ts';
 import { connectedFiles, replacingFiles, replacingPolicy } from '../testing/replacements.ts';
 import { givenThrough, sealedIn, sourceLoggingInto } from '../testing/sealed-connections.ts';
 import { consentServedAs, servedAs, sourceOver } from '../testing/served-connections.ts';
@@ -540,5 +547,40 @@ describe('unreadable credentials', () => {
       });
       expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
     });
+  });
+});
+
+async function connectedThroughTheApplication() {
+  const made = installingFake();
+  closing.push(made.fake.close);
+  const h = installingHarnessAt(made);
+  const link = await added(h, { provider: 'files' });
+  await finishingWith(h, link, { ...(await consentedOf(h, link)), installation: '41' });
+  return { made, h, id: link.id, providers: installingProvidersAt(made.fake) };
+}
+
+describe('a connection made by installing the application whoever runs Auto registered', () => {
+  it('is served asking each token for its installation, signed with the private key the application was registered with', async () => {
+    const { made, h, id, providers } = await connectedThroughTheApplication();
+
+    const source = sourceOver(h, { providers, registeredClients: [registeredApplicationAt(made)] });
+    const { settings } = await Effect.runPromise(preparedOf(await servedAs(source, id)));
+
+    expect(settings.auth).toMatchObject({
+      issuer: made.fake.origin,
+      client_id: 'auto-runtime',
+      grant: 'jwt_bearer',
+      token_request: { method: 'POST', url: `${made.fake.origin}/app/installations/41/access_tokens` },
+      credential: { kind: 'private_key', algorithm: 'RS256' },
+    });
+  });
+
+  it('is not served, and stays as it is, while the application is not set up on the runtime', async () => {
+    const { h, id, providers } = await connectedThroughTheApplication();
+
+    const unready = await Effect.runPromise(Effect.flip(preparedOf(await servedAs(sourceOver(h, { providers }), id))));
+
+    expect(unready).toMatchObject({ because: 'connection_not_allowed' });
+    expect((await h.facts()).map(({ type }) => type)).not.toContain('connection_broken');
   });
 });

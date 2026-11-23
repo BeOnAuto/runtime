@@ -15,6 +15,11 @@ interface WayOfConsent {
   readonly clients?: readonly WayClientSource[];
   readonly pkce?: WayPkce;
   readonly gateway?: WayGateway;
+  readonly installation?: unknown;
+}
+
+export function takesTheRuntimesOwnClientAlone({ gateway, installation }: WayOfConsent): boolean {
+  return gateway !== undefined || installation !== undefined;
 }
 
 export type ConsentOffered = { readonly client_source: ClientSource } | { readonly because: string };
@@ -23,13 +28,14 @@ function throughARegisteredClient(provider: string): string {
   return `The provider ${provider} takes consent through a client whoever runs Auto registers`;
 }
 
-function wayOfClientsOf({ issuer, scope, clients, pkce, gateway }: WayOfConsent): WayOfClients {
+function wayOfClientsOf({ issuer, scope, clients, pkce, gateway, installation }: WayOfConsent): WayOfClients {
   return {
     issuer: String(issuer),
     scope,
     clients,
     pkce,
     ...(gateway === undefined ? {} : { gateway: { url: gateway.url } }),
+    ...(installation === undefined ? {} : { installs: true }),
   };
 }
 

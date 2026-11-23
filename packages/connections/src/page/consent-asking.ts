@@ -90,6 +90,7 @@ function wayOf(
     clients: credential.clients,
     oauth_client: credential.client_source === 'own' ? credential.client_source : undefined,
     ...(gateway === undefined ? {} : { gateway }),
+    ...(credential.installation === undefined ? {} : { installs: true }),
   };
 }
 

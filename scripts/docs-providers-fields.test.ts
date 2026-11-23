@@ -19,6 +19,7 @@ const WaySchema = Schema.Struct({
   own_client: Schema.optionalKey(Schema.Boolean),
   key_page: Schema.optionalKey(Schema.String),
   instructions: Schema.optionalKey(Schema.String),
+  installation: Schema.optionalKey(Schema.Unknown),
 });
 
 const ToolSchema = Schema.Struct({ name: Schema.String, mark: Schema.Literals(['reads', 'acts']) });

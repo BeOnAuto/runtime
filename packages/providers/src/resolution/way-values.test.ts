@@ -5,6 +5,7 @@ import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '..
 import { providerOf } from '../testing/fixture-providers.ts';
 import {
   asAnInstalledApp,
+  asAnInstallingApp,
   asAServiceAccount,
   asTheCompanysApp,
   asTheServiceAccountItself,
@@ -164,5 +165,24 @@ describe('a way that signs an assertion with a key file in PEM, asking a token t
     expect(Result.getOrThrow(Result.flip(addedAs({ app: '1234567', installation: '../../user' })))).toEqual([
       { pointer: '/placeholders/installation', detail: anyWords },
     ]);
+  });
+});
+
+describe('a way that connects by installing the application whoever runs Auto registered', () => {
+  it('is added with its installation as the entry writes it, which the consent fills, acting as the app', () => {
+    const provider = providerOf({ ...mail, credentials: [signingInToMail, asAnInstallingApp] });
+    const addition = Result.getOrThrow(
+      additionOfProvider(provider.entry, {
+        kind: 'authorization',
+        canBeGiven: (way) => way.installation !== undefined,
+      }),
+    );
+
+    expect(addition).toMatchObject({
+      credential: { kind: 'authorization', clients: ['registered'], installation: asAnInstallingApp.installation },
+      placeholders: {},
+      permissions: 'application',
+      account_types: [],
+    });
   });
 });

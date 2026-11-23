@@ -1,6 +1,7 @@
 import type { ProjectionReader, StreamReader, StreamWriter } from '@on.auto/operations';
 import type { Resolve } from '@on.auto/outbound';
 import type { ProviderList } from '@on.auto/providers';
+import type { RegisteredClient } from '@on.auto/tool-servers';
 import type { Redacted } from 'effect';
 
 import type { ConnectPages } from '../links/connect-page.ts';
@@ -17,6 +18,7 @@ export interface ServingServices {
   readonly modelProviders: readonly string[];
   readonly providers: ProviderList;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
+  readonly registeredClients?: readonly RegisteredClient[];
   readonly resolve?: Resolve;
 }
 

@@ -17,7 +17,7 @@ import { Struct, type Redacted } from 'effect';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import type { ChatOffered } from '../registry/connection-commands.ts';
 import { chatThroughOf, type ChatAnswering, type ChatHosting } from './chat-answers.ts';
-import { consentOfferedOf } from './consent-offered.ts';
+import { consentOfferedOf, takesTheRuntimesOwnClientAlone } from './consent-offered.ts';
 import {
   listedPlaceholdersOf,
   listedWayOf,
@@ -62,7 +62,12 @@ interface OAuthClientOffered {
   readonly because?: string;
 }
 
-function gatewayOfferedOf(provider: Provider, way: CredentialWay, listing: Listing, offering: Offering): Offering {
+function offeredWhereItsClientIsHad(
+  provider: Provider,
+  way: CredentialWay,
+  listing: Listing,
+  offering: Offering,
+): Offering {
   const offered = consentOfferedOf(provider.entry.name, way, listing.consent);
   if ('because' in offered) {
     return { offered: false, because: offered.because };
@@ -75,7 +80,7 @@ function oauthClientOfferedOf(
   way: CredentialWay,
   listing: Listing,
 ): OAuthClientOffered | undefined {
-  if (way.kind !== 'authorization' || way.gateway !== undefined) {
+  if (way.kind !== 'authorization' || takesTheRuntimesOwnClientAlone(way)) {
     return undefined;
   }
   if (way.oauth_client !== undefined) {
@@ -86,8 +91,8 @@ function oauthClientOfferedOf(
 }
 
 function wayOfferingOf(way: CredentialWay, offering: Offering, provider: Provider, listing: Listing) {
-  if (way.gateway !== undefined) {
-    return gatewayOfferedOf(provider, way, listing, offering);
+  if (takesTheRuntimesOwnClientAlone(way)) {
+    return offeredWhereItsClientIsHad(provider, way, listing, offering);
   }
   const oauthClient = oauthClientOfferedOf(provider, way, listing);
   if (oauthClient === undefined) {
@@ -125,7 +130,8 @@ export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Li
   return (
     isListed(provider, way, listing.policy) &&
     offeringOf(provider, listing).offered &&
-    (way.gateway === undefined || !('because' in consentOfferedOf(provider.entry.name, way, listing.consent)))
+    (!takesTheRuntimesOwnClientAlone(way) ||
+      !('because' in consentOfferedOf(provider.entry.name, way, listing.consent)))
   );
 }
 
@@ -137,8 +143,12 @@ function asksValuesOfItsOwn({ placeholders }: CredentialWay): boolean {
   return placeholders !== undefined;
 }
 
+function installsWithoutItsClient(provider: Provider, way: CredentialWay, listing: Listing): boolean {
+  return way.installation !== undefined && 'because' in consentOfferedOf(provider.entry.name, way, listing.consent);
+}
+
 export function waysInOrderOf(provider: Provider, listing: Listing): readonly CredentialWay[] {
-  const { credentials } = provider.entry;
+  const credentials = provider.entry.credentials.filter((way) => !installsWithoutItsClient(provider, way, listing));
   const ofItsOwnValues = credentials.filter((way) => asksValuesOfItsOwn(way));
   const alone = credentials.filter(
     (way) => !ofItsOwnValues.includes(way) && isUnderTheOrgsOAuthClientAlone(provider, way, listing),
@@ -251,6 +261,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
           'key_file',
           'client_id',
           'token_request',
+          'installation',
         ]),
         ...actingOf(way),
         ...keyFileListedOf(way),

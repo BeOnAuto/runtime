@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
 
+import type { CredentialWay } from '@on.auto/providers';
 import { Schema } from 'effect';
 
 import { checkProviders, providersDocument, runProviders, shippedProviders, writeProviders } from './docs-providers.ts';
@@ -34,6 +35,45 @@ await test('the asset publishes every shipped provider, by name, in the order th
     shippedProviders.providers.map(({ entry }) => ({ name: entry.name, title: entry.title })),
   );
   assert.ok(providersDocument.endsWith('\n'));
+});
+
+const decodeReturned = Schema.decodeUnknownSync(
+  Schema.fromJsonString(
+    Schema.Struct({
+      providers: Schema.Array(
+        Schema.Struct({
+          name: Schema.String,
+          ways: Schema.Array(
+            Schema.Struct({
+              installation: Schema.optionalKey(
+                Schema.Struct({ returned: Schema.Struct({ installation: Schema.String }) }),
+              ),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+);
+
+function returnedOf(way: CredentialWay) {
+  return way.kind === 'authorization' && way.installation !== undefined
+    ? { installation: { returned: { installation: way.installation.returned.installation } } }
+    : {};
+}
+
+const declaredReturns = shippedProviders.providers.map(({ entry }) => ({
+  name: entry.name,
+  ways: entry.credentials.map((way) => returnedOf(way)),
+}));
+
+const anyWayInstalls = shippedProviders.providers.some(({ entry }) =>
+  entry.credentials.some((way) => 'installation' in returnedOf(way)),
+);
+
+await test('a way that installs an application publishes the parameter its installation comes back in, and no other way does', () => {
+  assert.deepEqual(decodeReturned(providersDocument).providers, declaredReturns);
+  assert.ok(anyWayInstalls);
 });
 
 await test('generation creates directories and preserves an unchanged asset for watchers', () => {

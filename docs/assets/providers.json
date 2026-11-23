@@ -675,6 +675,18 @@
       "ways": [
         {
           "kind": "authorization",
+          "description": "Auto's GitHub app. An owner of the GitHub organization installs it and chooses the repositories it can reach. It asks for no values.",
+          "scopes": [],
+          "more": [],
+          "own_client": false,
+          "installation": {
+            "returned": {
+              "installation": "installation_id"
+            }
+          }
+        },
+        {
+          "kind": "authorization",
           "description": "Sign in to GitHub and allow access to your repositories.",
           "scopes": [
             {

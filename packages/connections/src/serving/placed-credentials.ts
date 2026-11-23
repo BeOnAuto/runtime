@@ -16,6 +16,7 @@ import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
 import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
 import { literal, literalText, literalValues, pathValuesWritten } from './literal-values.ts';
+import { grantOf, issuerOf, mintsItsTokens, signsAnAssertion, type Installing } from './minted-credentials.ts';
 
 export interface GivenValue {
   readonly value: Redacted.Redacted;
@@ -47,11 +48,10 @@ const givenVariable = 'CONNECTION_CREDENTIAL';
 
 const noValuesPlaced: ReadonlyMap<string, string> = new Map();
 
-interface Credentialled {
+interface Credentialled extends Installing {
   readonly type: ConnectionType;
   readonly provider: string | null;
   readonly entry: ConnectionEntry;
-  readonly credential: Credential;
 }
 
 function referenceTo(variable: string): string {
@@ -76,8 +76,6 @@ const fieldsOfAPlacement: Readonly<Record<Placement, keyof Fields>> = {
 
 const nothingPlaced: ReadonlyMap<string, string> = new Map();
 
-const kindsMintingTokens: ReadonlySet<string> = new Set(['client_credentials', 'jwt_bearer']);
-
 function pointerOf(...path: readonly string[]): string {
   return path.map((segment) => `/${JsonPointer.escapeToken(segment)}`).join('');
 }
@@ -100,29 +98,6 @@ function placedValue(entry: ConnectionEntry, credential: Credential, variable: s
   };
 }
 
-type Granted = Pick<NonNullable<ServerEntryFields['auth']>, 'grant' | 'subject' | 'token_request'>;
-
-function requestedOf({ token_request: request }: Credential): Pick<Granted, 'token_request'> {
-  if (request === undefined) {
-    return {};
-  }
-  const { method, url, issued } = request;
-  const { access_token: accessToken, expires_at: expiresAt } = issued;
-  const ending = expiresAt === undefined ? {} : { expires_at: literalText(expiresAt) };
-  return {
-    token_request: { method, url: literalText(url), issued: { access_token: literalText(accessToken), ...ending } },
-  };
-}
-
-function grantOf(credential: Credential): Granted {
-  const { kind, subject } = credential;
-  if (kind !== 'jwt_bearer') {
-    return {};
-  }
-  const named = subject === undefined ? {} : { subject: literalText(subject) };
-  return { grant: kind, ...named, ...requestedOf(credential) };
-}
-
 type Discovery = Pick<NonNullable<ServerEntryFields['auth']>, 'discovery'>;
 
 const atTheIssuerOfTheWay: Discovery = { discovery: 'issuer' };
@@ -137,14 +112,14 @@ function placedClientCredentials(
 ): PlacedCredential {
   const { entry, credential } = credentialled;
   const reference = referenceTo(variable);
-  const algorithm = credential.kind === 'jwt_bearer' ? (named ?? assertionAlgorithm) : named;
+  const algorithm = signsAnAssertion(credential) ? (named ?? assertionAlgorithm) : named;
   const secret =
     algorithm === undefined
       ? { client_secret: reference }
       : { private_key: reference, algorithm: literalText(algorithm) };
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
   const parameters = credential.parameters === undefined ? {} : { parameters: literalValues(credential.parameters) };
-  const issuer = literalText(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
+  const issuer = literalText(issuerOf(credential));
   const clientId = Option.getOrThrow(Option.fromNullishOr(credential.client_id));
   const auth = {
     issuer,
@@ -152,7 +127,7 @@ function placedClientCredentials(
     ...scope,
     ...parameters,
     ...secret,
-    ...grantOf(credential),
+    ...grantOf(credentialled),
     ...discoveryOf(credentialled),
   };
   const given = ['client_id', ...Object.keys(secret)];
@@ -189,7 +164,7 @@ function placedCredentialOf(written: Credentialled, reference: NamedReference | 
   if (reference === undefined) {
     return { written: entry, placedAt: nothingPlaced };
   }
-  return kindsMintingTokens.has(credential.kind)
+  return mintsItsTokens(credential)
     ? placedClientCredentials({ ...written, entry }, reference)
     : placedValue(entry, credential, reference.variable);
 }

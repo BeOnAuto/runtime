@@ -32,6 +32,7 @@ export interface ProviderCredential extends WayAddresses, Partial<Readonly<Recor
   readonly subject?: string;
   readonly client_id?: string;
   readonly token_request?: TokenRequest;
+  readonly installation?: NonNullable<CredentialWay['installation']>;
 }
 
 export interface ProviderConnectionEntry {
@@ -123,9 +124,10 @@ function placedEach(written: Placed, values: Values): Placed {
 function assertedOf(
   way: CredentialWay,
   values: Values,
-): Pick<ProviderCredential, 'subject' | 'client_id' | 'token_request'> {
-  const { subject, client_id: clientId, token_request: request } = way;
+): Pick<ProviderCredential, 'subject' | 'client_id' | 'token_request' | 'installation'> {
+  const { subject, client_id: clientId, token_request: request, installation } = way;
   return {
+    ...(installation === undefined ? {} : { installation }),
     ...(subject === undefined ? {} : { subject: placedText(subject, values) }),
     ...(clientId === undefined ? {} : { client_id: placedText(clientId, values) }),
     ...(request === undefined ? {} : { token_request: { ...request, url: placedText(request.url, values) } }),

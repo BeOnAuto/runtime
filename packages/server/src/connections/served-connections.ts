@@ -81,6 +81,7 @@ function connectionServicesOf(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
+    registeredClients: settings.registeredClients,
     variables: settings.connectionVariables,
     pages,
     access: accessOf(settings),
@@ -107,6 +108,7 @@ function sourceServedBy(
     modelProviders: settings.modelProviders,
     providers: settings.providers,
     providerValues: settings.providerValues,
+    registeredClients: settings.registeredClients,
   });
 }
 

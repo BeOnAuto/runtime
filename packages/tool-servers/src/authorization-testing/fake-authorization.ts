@@ -1,8 +1,14 @@
 import { jwtBearerGrant } from '../assertions/signed-assertions.ts';
 import { json } from './authorization-answers.ts';
 import { assertionsGranted, tokenRequestsGranted } from './fake-assertions.ts';
-import { fakeClients, type ClientRegistration, type ExtensionGrant, type FakeClients } from './fake-clients.ts';
-import { fakeGrants, fakeTokens, type TokenRequest } from './fake-grants.ts';
+import {
+  fakeClients,
+  type ClientRegistration,
+  type ExtensionGrant,
+  type FakeAnswer,
+  type FakeClients,
+} from './fake-clients.ts';
+import { fakeGrants, fakeTokens, type FakeTokens, type TokenRequest } from './fake-grants.ts';
 
 export interface FakeAuthorization {
   readonly answer: (request: Readonly<Request>) => Promise<Response> | undefined;
@@ -153,6 +159,32 @@ async function formOf(request: Readonly<Request>): Promise<URLSearchParams> {
   return new URLSearchParams(new TextDecoder().decode(await request.arrayBuffer()));
 }
 
+const bearer = /^Bearer (?<token>.+)$/u;
+
+function answeredToItsTokens(tokens: FakeTokens, { status, body }: FakeAnswer) {
+  return (request: Readonly<Request>): Promise<Response> => {
+    const token = bearer.exec(request.headers.get('authorization') ?? '')?.groups?.['token'] ?? '';
+    return Promise.resolve(tokens.accepts(token) ? json(body, status) : json({ message: 'Bad credentials' }, 401));
+  };
+}
+
+function installationRoutesOf({ installationsAt, answersToItsTokens = {} }: ClientRegistration, tokens: FakeTokens) {
+  const listed: readonly Route[] =
+    installationsAt === undefined
+      ? []
+      : [
+          [
+            installationsAt.path,
+            answeredToItsTokens(tokens, { status: 200, body: { installations: installationsAt.installations } }),
+          ],
+        ];
+  const answered = Object.entries(answersToItsTokens).map(([path, answer]: readonly [string, FakeAnswer]): Route => [
+    path,
+    answeredToItsTokens(tokens, answer),
+  ]);
+  return [...listed, ...answered];
+}
+
 export function fakeAuthorization(origin: string, registration: ClientRegistration): FakeAuthorization {
   const clients = fakeClients(registration);
   const tokens = fakeTokens(registration);
@@ -189,6 +221,7 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
     ['/revoke', revoke],
     ...(registration.dynamicRegistration === true ? [['/register', clients.register] as const] : []),
     ...(registration.tokenRequestPath === undefined ? [] : [[registration.tokenRequestPath, requestedOwn] as const]),
+    ...installationRoutesOf(registration, tokens),
     ...documentRoutesOf(origin, registration),
   ]);
   return {

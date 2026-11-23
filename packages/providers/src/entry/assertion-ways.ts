@@ -1,6 +1,8 @@
 import { isJsonPointer, TokenRequestSchema, tokenRequestIssuesOf, type TokenRequest } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { InstallationSchema, installingWayIssuesOf, type InstallingWay } from './installation-ways.ts';
+
 const notAPointer = 'Expected a JSON Pointer into the key file, such as /private_key';
 
 const PointerSchema = Schema.String.check(
@@ -56,11 +58,12 @@ export const assertionFields = {
         'For jwt_bearer, the request that asks the service for a token, for a service that has its own: its method and its https URL under the issuer, sent with the signed assertion as its Bearer. In issued, the JSON Pointers to the token and to the time it ends in the answer',
     }),
   ),
+  installation: Schema.optionalKey(InstallationSchema),
 };
 
-export const assertionFieldNames = ['subject', 'key_file', 'client_id', 'token_request'] as const;
+export const assertionFieldNames = ['subject', 'key_file', 'client_id', 'token_request', 'installation'] as const;
 
-interface AssertingWay {
+interface AssertingWay extends InstallingWay {
   readonly kind: string;
   readonly issuer?: string | undefined;
   readonly scope?: string | undefined;
@@ -106,5 +109,6 @@ function requestIssuesOf({ token_request: request, issuer, subject, scope }: Ass
 }
 
 export function assertionIssuesOf(way: AssertingWay): readonly WayIssue[] {
-  return way.kind === 'jwt_bearer' ? [...clientIdIssuesOf(way), ...requestIssuesOf(way)] : [];
+  const signed = way.kind === 'jwt_bearer' ? [...clientIdIssuesOf(way), ...requestIssuesOf(way)] : [];
+  return [...signed, ...installingWayIssuesOf(way)];
 }

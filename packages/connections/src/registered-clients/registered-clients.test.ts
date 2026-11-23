@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from 'node:crypto';
+
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -171,5 +173,56 @@ describe('the client id and the algorithm of a registered client', () => {
         'CONNECTIONS: /registered_clients/1/algorithm: Expected a value with a length of at least 1',
       ].join('; '),
     );
+  });
+});
+
+const asAnApplication = {
+  ...withASecret,
+  application: {
+    private_key: '${EXAMPLE_PRIVATE_KEY}',
+    install_page: 'https://accounts.example.com/apps/auto/installations/new',
+  },
+};
+
+describe('the application of a registered client', () => {
+  it('is read with its private key from its reference, redacted, and the page where it is installed', () => {
+    const [client] = clientsOf(asAnApplication);
+
+    expect(client?.application?.installPage).toBe(asAnApplication.application.install_page);
+    expect(JSON.stringify(client)).not.toMatch(/PRIVATE KEY/u);
+    expect(registeredClientSecrets(clientsOf(asAnApplication)).map((secret) => Redacted.value(secret))).toEqual([
+      environment.EXAMPLE_CLIENT_SECRET,
+      environment.EXAMPLE_PRIVATE_KEY,
+    ]);
+  });
+
+  it('is read with a private key in PKCS #1 rewrapped in PKCS #8, which the signer takes', () => {
+    const { privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+    });
+    const connections = JSON.stringify({ registered_clients: [asAnApplication] });
+    const read = Effect.runSync(
+      readConnectionsSetting({ ...environment, EXAMPLE_PRIVATE_KEY: privateKey, CONNECTIONS: connections }),
+    );
+    const kept = registeredClientSecrets(read.registeredClients).map((secret) => Redacted.value(secret));
+
+    expect(kept.map((secret) => secret.split('\n')[0])).toEqual([
+      environment.EXAMPLE_CLIENT_SECRET,
+      '-----BEGIN PRIVATE KEY-----',
+    ]);
+  });
+
+  it.each([
+    ['a page that is no https address', { install_page: 'http://accounts.example.com/install' }, 'install_page'],
+    ['a page with a placeholder', { install_page: 'https://accounts.example.com/{app}/install' }, 'install_page'],
+    ['a page that holds a reference', { install_page: 'https://accounts.example.com/${EXAMPLE_APP}' }, 'install_page'],
+    ['a private key that is no reference', { private_key: 'not a reference' }, 'private_key'],
+    ['a private key whose variable is not set', { private_key: '${EXAMPLE_UNSET_KEY}' }, 'private_key'],
+  ] as const)('is refused with %s, at its place', (_case, changes, field) => {
+    const application = { ...asAnApplication.application, ...changes };
+
+    expect(refusalOf({ ...asAnApplication, application })).toContain(`${prefix}/application/${field}`);
   });
 });

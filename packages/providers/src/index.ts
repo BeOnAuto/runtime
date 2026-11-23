@@ -1,4 +1,10 @@
 export { WayKindSchema, holdsAClientId, wayFields, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
+export {
+  InstallationSchema,
+  accountNamePlaceholder,
+  installationIdPlaceholder,
+  type Installation,
+} from './entry/installation-ways.ts';
 export { consentEndpoints, consentIssuesOf, type ConsentFields } from './entry/consent-fields.ts';
 export {
   AccountTypeSchema,

@@ -32,6 +32,7 @@ export { postTypeNamedBy, readingTheRoomsName } from './place-name-calls.ts';
 export {
   agents,
   asAnInstalledApp,
+  asAnInstallingApp,
   asAServiceAccount,
   asTheCompanysApp,
   asTheServiceAccountItself,

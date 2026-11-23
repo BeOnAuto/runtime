@@ -12,7 +12,7 @@ import {
   type OfItsSealedValues,
   type RecordedConnectionEvent,
 } from './connection-events.ts';
-import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
+import { scopesAddedTo, scopesSaid, withItsInstallation, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
 import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
 import { isKeptRead, keptReadAfter, noReads, type KeptReads } from './kept-reads.ts';
@@ -168,7 +168,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
   const appSecretIds = data.app_secret_ids ?? {};
   return {
     connection: {
-      ...kept.connection,
+      ...withItsInstallation(kept.connection, data.installation),
       credential: credentialOf(kept, event),
       status: 'connected',
       connected_at: context.at,

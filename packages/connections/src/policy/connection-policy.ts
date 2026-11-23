@@ -16,11 +16,7 @@ import {
 import type { RegisteredClient } from '@on.auto/tool-servers';
 import { Data, Effect, Option, Result, Schema } from 'effect';
 
-import {
-  heldAsWritten,
-  referenceHoldingFields,
-  type ReferenceHoldingField,
-} from '../registered-clients/reference-fields.ts';
+import { heldAsWritten, referenceHoldingsOf } from '../registered-clients/reference-fields.ts';
 import { registeredClientsOf, RegisteredClientsSchema } from '../registered-clients/registered-clients.ts';
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
 import { AddedProvidersSchema, type AddedProviders } from './added-providers.ts';
@@ -137,9 +133,9 @@ interface ResolvedClient {
 }
 
 interface Substitution {
-  readonly field: ReferenceHoldingField;
   readonly pointer: string;
   readonly resolved: Substituted;
+  readonly placed: (client: WrittenClient, value: string) => WrittenClient;
 }
 
 export class ConnectionsSettingInvalid extends Data.TaggedError('connections_setting_invalid')<{
@@ -216,19 +212,19 @@ function problemsOf({ pointer, resolved }: Substitution): readonly SettingProble
 }
 
 function substitutionsOf(client: WrittenClient, index: number, environment: Environment): readonly Substitution[] {
-  return referenceHoldingFields.flatMap((field) => {
-    const text = client[field];
-    const pointer = pointerOf([registeredClientsKey, index, field]);
-    return text === undefined ? [] : [{ field, pointer, resolved: substituted(text, pointer, environment) }];
+  return referenceHoldingsOf(client).flatMap(({ path, text, placed }) => {
+    const pointer = pointerOf([registeredClientsKey, index, ...path]);
+    return [{ pointer, resolved: substituted(text, pointer, environment), placed }];
   });
 }
 
 function resolvedClientOf(client: WrittenClient, index: number, environment: Environment): ResolvedClient {
   const substitutions = substitutionsOf(client, index, environment);
-  const values: Partial<Record<ReferenceHoldingField, string>> = Object.fromEntries(
-    substitutions.map(({ field, resolved }) => [field, textOf(resolved.value)]),
+  const resolved = substitutions.reduce(
+    (written, { placed, resolved: { value } }) => placed(written, textOf(value)),
+    client,
   );
-  return { client: { ...client, ...values }, problems: substitutions.flatMap((each) => problemsOf(each)) };
+  return { client: resolved, problems: substitutions.flatMap((each) => problemsOf(each)) };
 }
 
 function clientsResolved(

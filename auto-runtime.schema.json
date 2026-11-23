@@ -550,6 +550,22 @@
                 },
                 "minItems": 1,
                 "description": "The scopes the client may ask at its issuers, each as a provider's way writes it: a consent takes the first client at its issuer that names every scope it asks, the scope of the way at a first consent, and with a group of the way's more the scopes the connection holds and the group's. Named for each client where several clients serve one issuer, and left out for a client that may ask any"
+              },
+              "application": {
+                "type": "object",
+                "properties": {
+                  "private_key": {
+                    "type": "string",
+                    "description": "The application's private key in PEM, in PKCS #1 or PKCS #8, which signs the requests for its tokens, as a reference such as ${EXAMPLE_APP_PRIVATE_KEY}"
+                  },
+                  "install_page": {
+                    "type": "string",
+                    "description": "The https address of the service's page where a person installs the application"
+                  }
+                },
+                "required": ["private_key", "install_page"],
+                "additionalProperties": false,
+                "description": "For a client registered as an application that people install on their accounts: its private key and the page where it is installed. Only a way of a provider that installs an application takes such a client, and such a way takes no other"
               }
             },
             "required": ["issuers", "client_id"],
@@ -2218,6 +2234,194 @@
                       "required": ["method", "url", "issued"],
                       "additionalProperties": false,
                       "description": "For jwt_bearer, the request that asks the service for a token, for a service that has its own: its method and its https URL under the issuer, sent with the signed assertion as its Bearer. In issued, the JSON Pointers to the token and to the time it ends in the answer"
+                    },
+                    "installation": {
+                      "type": "object",
+                      "properties": {
+                        "issuer": {
+                          "type": "string",
+                          "description": "The https URL of the service's API that gives the application's own tokens. The requests below lie under it"
+                        },
+                        "installations": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET"],
+                              "description": "The method of the request, GET"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL, under the issuer, that lists the installations the signed-in person can reach"
+                            },
+                            "list": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "account": {
+                              "type": "string"
+                            },
+                            "personal": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "minItems": 1
+                              }
+                            }
+                          },
+                          "required": ["method", "url", "list", "id", "name", "account", "personal"],
+                          "additionalProperties": false,
+                          "description": "The request, sent with the signed-in person's token, that lists the installations of the application the person can reach, and where its answer names each one"
+                        },
+                        "userinfo": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET"],
+                              "description": "The method of the request, GET"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL, under the issuer, that answers who the signed-in person is"
+                            },
+                            "id": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["method", "url", "id"],
+                          "additionalProperties": false,
+                          "description": "The request, sent with the signed-in person's token, that answers who they are, as the UserInfo endpoint of OpenID Connect does. Auto sends it only where an installation is on a personal account, and takes such an installation only where its account is the person's own"
+                        },
+                        "membership": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET"],
+                              "description": "The method of the request, GET"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL, under the issuer, that answers the signed-in person's membership of an organization. It holds {account_name}, the name of the account an installation is on, and no other placeholder"
+                            },
+                            "admin": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "minItems": 1
+                              }
+                            }
+                          },
+                          "required": ["method", "url", "admin"],
+                          "additionalProperties": false,
+                          "description": "The request, sent with the signed-in person's token, that answers their membership of the organization an installation is on. Auto takes an installation on an organization only where the answer meets admin; an answer of 403 or 404 says the person is not an admin of it"
+                        },
+                        "returned": {
+                          "type": "object",
+                          "properties": {
+                            "installation": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "The query parameter the service sends the person back with after an installation, which holds its ID"
+                            },
+                            "requested": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "minItems": 1
+                              },
+                              "description": "The query parameters, each with its values, that say the person only asked the account's owners to install the application, so nothing is installed yet"
+                            }
+                          },
+                          "required": ["installation"],
+                          "additionalProperties": false,
+                          "description": "What the service sends the person back with after its installation page"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": ["POST"],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": ["access_token"],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": ["method", "url", "issued"],
+                          "additionalProperties": false,
+                          "description": "The request that asks a token for the installation, signed with the private key of the application whoever runs Auto registered. Its URL holds {installation_id}, the ID of the installation the connection uses, and no other placeholder"
+                        }
+                      },
+                      "required": ["issuer", "installations", "userinfo", "membership", "returned", "token_request"],
+                      "additionalProperties": false,
+                      "description": "For authorization with application permissions, how a connection is made by installing the application whoever runs Auto registered: the person signs in at the way's issuer, Auto lists the installations they can reach and takes one only from that list, and only on an account they administer, their own or an organization they are an admin of, and asks each token for it with the application's private key"
                     },
                     "instructions": {
                       "type": "string",

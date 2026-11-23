@@ -9,6 +9,47 @@ headers:
   X-MCP-Toolsets: context,repos,issues,pull_requests,users
 credentials:
   - kind: authorization
+    permissions: application
+    issuer: https://github.com/login/oauth
+    authorization_endpoint: https://github.com/login/oauth/authorize
+    token_endpoint: https://github.com/login/oauth/access_token
+    clients: [registered]
+    installation:
+      issuer: https://api.github.com
+      installations:
+        method: GET
+        url: https://api.github.com/user/installations?per_page=100
+        list: /installations
+        id: /id
+        name: /account/login
+        account: /account/id
+        personal:
+          /account/type: [User]
+      userinfo:
+        method: GET
+        url: https://api.github.com/user
+        id: /id
+      membership:
+        method: GET
+        url: https://api.github.com/user/memberships/orgs/{account_name}
+        admin:
+          /role: [admin]
+          /state: [active]
+      returned:
+        installation: installation_id
+        requested:
+          setup_action: [request]
+      token_request:
+        method: POST
+        url: https://api.github.com/app/installations/{installation_id}/access_tokens
+        issued:
+          access_token: /token
+          expires_at: /expires_at
+    limitation: You choose the repositories at GitHub. It must be installed by an owner of your GitHub organization.
+    description: >-
+      Auto's GitHub app. An owner of the GitHub organization installs it and chooses the repositories it can reach. It
+      asks for no values.
+  - kind: authorization
     account_types: [service, personal]
     issuer: https://github.com/login/oauth
     scope: read:org repo

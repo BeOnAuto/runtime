@@ -729,16 +729,54 @@ connections:
       client_id: auto-runtime
 ```
 
-| Field                        | What it holds                                                                                                                                                                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `issuers`                    | The issuers the client is registered at, one at least, each an `https` URL or an `http` URL on a loopback address. One written with a placeholder, such as `{tenant}`, is kept as it is written             |
-| `client_id`                  | The client id the service issued                                                                                                                                                                            |
-| `client_secret`              | The client secret, as a reference to the variable that holds it, such as `${EXAMPLE_CLIENT_SECRET}`                                                                                                         |
-| `private_key`                | A private key in PEM that signs the client's assertion, as a reference, with `algorithm`, such as `RS256` or `ES256`, in place of a secret                                                                  |
-| `token_endpoint_auth_method` | Where the service's metadata leaves the choice, how the client authenticates: `client_secret_basic` or `client_secret_post` with a secret, `private_key_jwt` with a key, `none` without either              |
-| `scopes`                     | The scopes the client may ask, each written as a provider's way writes it, at least one. Name them for each client where several clients serve one issuer, and leave them out for a client that may ask any |
+| Field                        | What it holds                                                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `issuers`                    | The issuers the client is registered at, one at least, each an `https` URL or an `http` URL on a loopback address. One written with a placeholder, such as `{tenant}`, is kept as it is written                           |
+| `client_id`                  | The client id the service issued                                                                                                                                                                                          |
+| `client_secret`              | The client secret, as a reference to the variable that holds it, such as `${EXAMPLE_CLIENT_SECRET}`                                                                                                                       |
+| `private_key`                | A private key in PEM that signs the client's assertion, as a reference, with `algorithm`, such as `RS256` or `ES256`, in place of a secret                                                                                |
+| `token_endpoint_auth_method` | Where the service's metadata leaves the choice, how the client authenticates: `client_secret_basic` or `client_secret_post` with a secret, `private_key_jwt` with a key, `none` without either                            |
+| `scopes`                     | The scopes the client may ask, each written as a provider's way writes it, at least one. Name them for each client where several clients serve one issuer, and leave them out for a client that may ask any               |
+| `application`                | For an application people install on their accounts, its `private_key`, as a reference, and its `install_page`, as [A registered application that people install](#a-registered-application-that-people-install) sets out |
 
 A client that gives neither a secret nor a key is a public client. A way takes the first client at its issuer whose `scopes` cover the scope it asks, every scope of the way being one the client names, as written, and a client that names no `scopes` covers every way. Where several clients serve one issuer, each names its `scopes`: a client without them at an issuer another client names too, the same but for a trailing slash, stops Auto at start, since it would serve every way there that no client before it covers, and a client after it never, as a secret written out instead of referenced and a variable that is not set do, and the [configuration reference](configuration.md#connections) lists every check. A way no client covers is offered under the organization's own OAuth client alone, as [A connection under the organization's own OAuth client](#a-connection-under-the-organization-s-own-oauth-client) sets out, until you register a client that covers it. `client_secret` and `private_key` are the only fields that hold a reference: one anywhere else in the section, such as in an issuer or a `client_id`, stops Auto at start too. Auto keeps the references as they are written, so no secret of a client reaches `CONNECTIONS`, reads the values when it starts, and scrubs each secret and key from everything it records and answers, as it scrubs the secrets of its tool servers. The variables they name are ones Auto reads for itself, so `variables` may not name them.
+
+### A registered application that people install
+
+Some services connect through an application you register there, which a person installs on their account and chooses what it reaches, such as a GitHub App. A provider's way of consent that says `installation` connects that way. The person signs in at the service with your application's client, and Auto asks the service which installations of your application that person can reach. Auto takes an installation only from that answer: one the person chooses from that list, or the one the service sends them back with after they install your application on another account. It takes it only where the person administers the account it is on, their own account or an organization they are an admin of, which Auto asks the service at that moment; the list shows the others, which the person cannot choose. It keeps none of the person's tokens. Auto then asks each of the connection's tokens for that installation alone, signing the request with your application's private key. Only the person's browser goes to the service and back; Auto calls the service, and nothing calls Auto, so a runtime that takes no inbound connection connects this way too.
+
+List the application under `registered_clients` with an `application`:
+
+```yaml
+connections:
+  registered_clients:
+    - issuers: [https://github.com/login/oauth]
+      client_id: Iv23liEXAMPLE
+      client_secret: ${GITHUB_APP_CLIENT_SECRET}
+      application:
+        private_key: ${GITHUB_APP_PRIVATE_KEY}
+        install_page: https://github.com/apps/your-app/installations/new
+```
+
+| Field                      | What it holds                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `application.private_key`  | The application's private key in PEM, in PKCS #1 or PKCS #8, as a reference. Auto signs the request for each installation's token with it |
+| `application.install_page` | The https address of the service's page where a person installs your application. Auto adds the consent's `state` to it                   |
+
+A client with an `application` serves only a way that installs an application, and such a way takes that client alone, never Auto's consent service. Without one, `list_providers` shows the way as not offered, and people connect another way the provider offers.
+
+For `github`, register a GitHub App in your organization's settings, under Developer settings: give it the return address that [Let people connect by consent](#let-people-connect-by-consent) names for the `registered` source as its Callback URL, select "Request user authorization (OAuth) during installation", leave its webhook inactive, and give it the permissions the provider's company app way lists, Contents read-only and Issues, Pull requests and Webhooks read and write, and the organization permission Members read-only, with which Auto asks whether the person connecting an organization's installation is an admin of that organization. Choose who may install it. Generate a client secret and a private key, and set them in the two variables your `registered_clients` entry names. `install_page` is the app's public page followed by `/installations/new`.
+
+A provider of your own connects the same way through an `authorization` way with `permissions: application` that names `installation`, as `github`'s entry does. Its `installation` holds:
+
+- `issuer`, the https address of the service's API, under which the requests below lie;
+- `installations`, the `GET` request that lists the installations the signed-in person can reach, with JSON Pointers to the `list` in its answer and to the `id`, the `name` and the `account`, the ID of the account it is on, of each item, and `personal`, the conditions that hold only for an item on a person's own account, each a JSON Pointer with the values it may equal;
+- `userinfo`, the `GET` request that answers who the signed-in person is, as the UserInfo endpoint of OpenID Connect does, with the JSON Pointer to their `id`, which an installation on their own account names as its `account`;
+- `membership`, the `GET` request that answers the person's membership of an organization, whose URL holds `{account_name}`, the `name` of an installation's account, and no other placeholder, with `admin`, the conditions on its answer that hold only for an active admin, each a JSON Pointer with the values it may equal. An answer of 403 or 404 says the person is not an admin;
+- `returned`, with `installation`, the query parameter the service sends the person back with that holds a new installation's ID, and `requested`, the parameters and values that say the person only asked the account's owners for one;
+- `token_request`, written as a `jwt_bearer` way writes it, whose URL holds `{installation_id}` and no other placeholder.
+
+Each of these is required, so a way that cannot tell who administers an installation's account stops Auto at start. Such a way takes no `scope`, `parameters`, `more`, `gateway` or `oauth_client`.
 
 ## Let people connect by consent
 

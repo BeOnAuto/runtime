@@ -1,6 +1,7 @@
 import { omitVariables, pointerIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
 import { JsonPointer, Schema } from 'effect';
 
+import { AnswerConditionsSchema, noCondition } from './answer-conditions.ts';
 import { ArgumentsSchema, argumentIssuesOver, issuesOf, noLines, toolIssues, type Placed } from './part-checks.ts';
 
 const overAMessage = [
@@ -71,11 +72,6 @@ const ThreadSchema = Schema.Struct({
     each: EachMessageSchema,
   }).annotate({ description: "Where, in what the tool answered, the thread's messages are" }),
 });
-
-const AnswerConditionsSchema = Schema.Record(
-  Schema.String,
-  Schema.Array(Schema.NullOr(Schema.Union([Schema.String, Schema.Boolean]))).check(Schema.isMinLength(1)),
-);
 
 const SenderSchema = Schema.Struct({
   tool: ToolSchema.annotate({
@@ -177,8 +173,6 @@ function threadIssues(thread: Chat['thread']): readonly Placed[] {
     ]),
   ];
 }
-
-const noCondition = 'Expected at least one JSON Pointer with the values it may equal';
 
 function activeIssues(active: NonNullable<Chat['sender']['active']>): readonly Placed[] {
   const pointers = Object.keys(active);

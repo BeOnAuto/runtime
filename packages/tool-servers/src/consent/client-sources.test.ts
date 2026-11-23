@@ -186,6 +186,43 @@ describe('the client sources of a way under the organization’s own OAuth clien
   });
 });
 
+describe('the registered client of a way that installs an application', () => {
+  const issuer = 'https://accounts.example.com';
+  const application = {
+    ...accounts,
+    clientId: 'the-application',
+    application: { privateKey: Redacted.make('application-key-5c2a'), installPage: `${issuer}/apps/example/install` },
+  };
+  const had = {
+    registeredClients: [accounts, application],
+    publicUrl: 'https://runtime.example.com',
+    serviceClients: [{ issuer, client_id: 'auto' }],
+  };
+
+  it('is a client registered with its application, and a way that installs none never takes one', () => {
+    expect([
+      registeredClientFor(had.registeredClients, { issuer, installs: true })?.clientId,
+      registeredClientFor(had.registeredClients, { issuer })?.clientId,
+      registeredClientFor([application], { issuer }),
+      registeredClientFor([accounts], { issuer, installs: true }),
+    ]).toEqual(['the-application', '1234.apps.example.com', undefined, undefined]);
+  });
+
+  it('is its one source, never Auto’s consent service nor a client the runtime makes', () => {
+    const installing: WayOfClients = {
+      issuer,
+      installs: true,
+      clients: ['registered', 'metadata_document', 'dynamic'],
+    };
+
+    expect([
+      sourcesHad(installing, had),
+      sourcesHad(installing, { ...had, registeredClients: [accounts] }),
+      sourceTakenOf(installing, { ...had, registeredClients: [accounts] }),
+    ]).toEqual([['registered'], [], undefined]);
+  });
+});
+
 describe('the client of Auto’s consent service a way takes by its scope', () => {
   const issuer = 'https://accounts.example.com';
 

@@ -214,6 +214,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'client_id_title',
       'steps',
       'refresh_token_expires_in',
+      'installation',
       'limitation',
       ...ownValues,
     ],

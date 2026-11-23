@@ -1,0 +1,20 @@
+{
+  "type": "connection_connected",
+  "data": {
+    "connection": "connection-1",
+    "client_id": "auto-runtime",
+    "client_source": "registered",
+    "installation": {
+      "id": "41",
+      "name": "acme"
+    },
+    "connected_by": {
+      "id": "person:ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

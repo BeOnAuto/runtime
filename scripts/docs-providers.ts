@@ -78,6 +78,12 @@ function groupOf(group: ScopeGroup) {
   return { name: group.name, for: group.for, scopes: scopesOf(group) };
 }
 
+function installedOf({ installation }: Pick<CredentialWay, 'installation'>) {
+  return installation === undefined
+    ? {}
+    : { installation: { returned: { installation: installation.returned.installation } } };
+}
+
 function wayOf(way: CredentialWay) {
   const named = { kind: way.kind, ...described(way) };
   if (way.kind === 'authorization') {
@@ -86,6 +92,7 @@ function wayOf(way: CredentialWay) {
       scopes: scopesOf(way),
       more: (way.more ?? []).map((group) => groupOf(group)),
       own_client: way.oauth_client === 'required',
+      ...installedOf(way),
     };
   }
   if (way.kind === 'client_credentials') {

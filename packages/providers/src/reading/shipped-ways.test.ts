@@ -47,6 +47,7 @@ const hostsOfTheWays = [
   [[['displayvideo.googleapis.com', google]], [['displayvideo.googleapis.com', google]]],
   [[['doubleclickbidmanager.googleapis.com', google]]],
   [
+    [['api.githubcopilot.com', 'github.com', 'github.com', 'github.com', 'api.github.com']],
     [['api.githubcopilot.com', 'github.com']],
     [['api.githubcopilot.com']],
     [['api.githubcopilot.com', 'api.github.com']],

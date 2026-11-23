@@ -93,4 +93,22 @@ const wayChosenAsAnInstalledApp: readonly (typeof ConnectionEventSchema.Type)[] 
   },
 ];
 
-export const keyFileWayFacts = [...addedActingAsItself, ...wayChosenAsAnInstalledApp];
+const connectedThroughAnInstallation: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_connected',
+    data: {
+      ...ofTheConnection,
+      client_id: 'auto-runtime',
+      client_source: 'registered',
+      installation: { id: '41', name: 'acme' },
+      connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
+    },
+    context: acted,
+  },
+];
+
+export const keyFileWayFacts = [
+  ...addedActingAsItself,
+  ...wayChosenAsAnInstalledApp,
+  ...connectedThroughAnInstallation,
+];

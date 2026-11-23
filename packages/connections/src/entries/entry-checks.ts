@@ -22,6 +22,7 @@ export interface AdditionInput {
   readonly entry: ConnectionEntry;
   readonly documentText?: string | undefined;
   readonly credential: Credential;
+  readonly installation?: { readonly id: string } | undefined;
 }
 
 export interface EntryChecking {

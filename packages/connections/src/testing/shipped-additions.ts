@@ -62,7 +62,9 @@ function examplesOf({ entry }: Provider, way: CredentialWay): readonly Given[] {
 function additionsOf(provider: Provider): readonly ProviderAddition[] {
   return provider.entry.credentials.flatMap((way) =>
     examplesOf(provider, way).map((placeholders) =>
-      Result.getOrThrow(additionOfProvider(provider.entry, { placeholders, kind: way.kind })),
+      Result.getOrThrow(
+        additionOfProvider(provider.entry, { placeholders, kind: way.kind, canBeGiven: (offered) => offered === way }),
+      ),
     ),
   );
 }

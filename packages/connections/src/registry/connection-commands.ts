@@ -5,7 +5,7 @@ import type { ClientSource } from '@on.auto/tool-servers';
 import type { RecordedCredential } from './acting-fields.ts';
 import type { ConnectionDocument, ConnectionEntry, ConnectionType } from './connection-entry.ts';
 import type { IdentifiedUser, SigningSecretsRemoved } from './connection-events.ts';
-import type { Account, BrokenKind } from './connection.ts';
+import type { Account, BrokenKind, ListedInstallation } from './connection.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
 
@@ -108,14 +108,20 @@ export interface ConsentStart extends LinkUse, PlaybooksChoice {
   readonly says: Readonly<Record<string, string>>;
 }
 
+export interface InstallationChosen {
+  readonly chosen: string;
+  readonly listed: readonly ListedInstallation[];
+}
+
 export interface ConsentFinish extends Connecting {
   readonly type: 'finish';
   readonly state_sha256: string;
-  readonly secret_id: string;
+  readonly secret_id?: string;
   readonly client_id: string;
   readonly client_source: ClientSource;
   readonly scope?: string;
   readonly account?: Account;
+  readonly installation?: InstallationChosen;
 }
 
 export interface PlaybooksSetting {

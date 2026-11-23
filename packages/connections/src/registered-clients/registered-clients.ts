@@ -1,7 +1,10 @@
 import { alternatives } from '@on.auto/phrasing';
 import { isPinnableTemplate, pinnedTemplateShape } from '@on.auto/providers';
 import {
+  isPinnableUrl,
   isSameIssuer,
+  pkcs8Of,
+  type RegisteredApplication,
   type RegisteredClient,
   type RegisteredCredential,
   type TokenEndpointAuthMethod,
@@ -20,6 +23,19 @@ const tokenEndpointAuthMethods: readonly TokenEndpointAuthMethod[] = [
 const TokenEndpointAuthMethodSchema = Schema.Literals(tokenEndpointAuthMethods);
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
+
+const ApplicationSchema = Schema.Struct({
+  private_key: Schema.String.annotate({
+    description:
+      "The application's private key in PEM, in PKCS #1 or PKCS #8, which signs the requests for its tokens, as a reference such as ${EXAMPLE_APP_PRIVATE_KEY}",
+  }),
+  install_page: Schema.String.annotate({
+    description: "The https address of the service's page where a person installs the application",
+  }),
+}).annotate({
+  description:
+    'For a client registered as an application that people install on their accounts: its private key and the page where it is installed. Only a way of a provider that installs an application takes such a client, and such a way takes no other',
+});
 
 const RegisteredClientFieldsSchema = Schema.Struct({
   issuers: Schema.Array(Schema.String)
@@ -63,6 +79,7 @@ const RegisteredClientFieldsSchema = Schema.Struct({
           "The scopes the client may ask at its issuers, each as a provider's way writes it: a consent takes the first client at its issuer that names every scope it asks, the scope of the way at a first consent, and with a group of the way's more the scopes the connection holds and the group's. Named for each client where several clients serve one issuer, and left out for a client that may ask any",
       }),
   ),
+  application: Schema.optionalKey(ApplicationSchema),
 });
 
 type RegisteredClientFields = typeof RegisteredClientFieldsSchema.Type;
@@ -104,12 +121,28 @@ function textsAt(field: string, value: string | readonly string[]): readonly Pla
     : value.map((text, index) => ({ path: [field, index], text }));
 }
 
+function textsOfTheApplication({ application }: RegisteredClientFields): readonly PlacedText[] {
+  return application === undefined ? [] : [{ path: ['application', 'install_page'], text: application.install_page }];
+}
+
 function misplacedReferenceIssuesOf(client: RegisteredClientFields): readonly ClientIssue[] {
-  return Object.entries(client)
-    .flatMap(([field, value]: readonly [string, string | readonly string[]]) =>
+  const { application: _application, ...fields } = client;
+  return [
+    ...Object.entries(fields).flatMap(([field, value]: readonly [string, string | readonly string[]]) =>
       isReferenceHoldingField(field) ? [] : textsAt(field, value),
-    )
-    .flatMap(({ path, text }: PlacedText) => (holdsAReference(text) ? [{ path, issue: misplacedReference }] : []));
+    ),
+    ...textsOfTheApplication(client),
+  ].flatMap(({ path, text }: PlacedText) => (holdsAReference(text) ? [{ path, issue: misplacedReference }] : []));
+}
+
+const unpinnedPage =
+  'Expected the https address of the page, or an http address on a loopback address, with no placeholder';
+
+function applicationIssuesOf({ application }: RegisteredClientFields): readonly ClientIssue[] {
+  const page = application?.install_page;
+  return page === undefined || (isPinnableUrl(page) && !page.includes('{'))
+    ? []
+    : [{ path: ['application', 'install_page'], issue: unpinnedPage }];
 }
 
 function issuerIssuesOf({ issuers }: RegisteredClientFields): readonly ClientIssue[] {
@@ -159,7 +192,12 @@ function writtenClientIssuesOf(client: RegisteredClientFields): readonly ClientI
   const misplaced = misplacedReferenceIssuesOf(client);
   return misplaced.length > 0
     ? misplaced
-    : [...issuerIssuesOf(client), ...credentialIssuesOf(client), ...methodIssuesOf(client)];
+    : [
+        ...issuerIssuesOf(client),
+        ...credentialIssuesOf(client),
+        ...methodIssuesOf(client),
+        ...applicationIssuesOf(client),
+      ];
 }
 
 const scopesUnnamed =
@@ -203,6 +241,17 @@ function credentialOf({
       };
 }
 
+function applicationOf({ application }: RegisteredClientFields): { readonly application?: RegisteredApplication } {
+  return application === undefined
+    ? {}
+    : {
+        application: {
+          privateKey: Redacted.make(pkcs8Of(application.private_key) ?? application.private_key),
+          installPage: application.install_page,
+        },
+      };
+}
+
 export function registeredClientsOf(clients: readonly RegisteredClientFields[]): readonly RegisteredClient[] {
   return clients.map((client) => ({
     issuers: client.issuers,
@@ -210,6 +259,7 @@ export function registeredClientsOf(clients: readonly RegisteredClientFields[]):
     credential: credentialOf(client),
     tokenEndpointAuthMethod: client.token_endpoint_auth_method ?? null,
     ...(client.scopes === undefined ? {} : { scopes: client.scopes }),
+    ...applicationOf(client),
   }));
 }
 
@@ -221,5 +271,8 @@ function secretOf(credential: RegisteredCredential): readonly Redacted.Redacted[
 }
 
 export function registeredClientSecrets(clients: readonly RegisteredClient[]): readonly Redacted.Redacted[] {
-  return clients.flatMap(({ credential }) => secretOf(credential));
+  return clients.flatMap(({ credential, application }) => [
+    ...secretOf(credential),
+    ...(application === undefined ? [] : [application.privateKey]),
+  ]);
 }

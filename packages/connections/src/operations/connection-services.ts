@@ -4,6 +4,7 @@ import type {
   ConsentClient,
   KeptRow,
   ReadOnceThrough,
+  RegisteredClient,
   SecretKeepingFailure,
   SecretReadingFailure,
   TokensClaimed,
@@ -59,6 +60,7 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly pages: ConnectPages;
   readonly access: RuntimeAccess;
   readonly consent: ConsentClient;
+  readonly registeredClients?: readonly RegisteredClient[];
   readonly resolve?: Resolve;
   readonly fetch: typeof globalThis.fetch;
   readonly readOnceThrough: ReadOnceThrough;

@@ -2,6 +2,7 @@ import { articled, listed } from '@on.auto/phrasing';
 import {
   consentEndpoints,
   consentIssuesOf,
+  InstallationSchema,
   keyFieldNames,
   keyFields,
   wayAddresses,
@@ -92,6 +93,12 @@ export const CredentialFieldsSchema = Schema.Struct({
         "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends",
     }),
   ),
+  installation: Schema.optionalKey(
+    InstallationSchema.annotate({
+      description:
+        'For authorization with application permissions, how the connection is made by installing the application whoever runs Auto registered, and how each of its tokens is asked for the installation it uses',
+    }),
+  ),
   authorization_endpoint: Schema.optionalKey(
     wayFields.authorization_endpoint.annotate({
       description: 'For authorization, the authorization endpoint, where the server publishes no metadata',
@@ -161,6 +168,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'subject',
   'parameters',
   'token_request',
+  'installation',
   ...consentEndpoints,
   'pkce',
   'clients',
@@ -182,6 +190,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   authorization: {
     required: ['issuer'],
     optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
+    recorded: ['installation'],
   },
   jwt_bearer: { required: ['issuer'], optional: ['subject', 'client_id', 'scope', 'token_request'] },
 };

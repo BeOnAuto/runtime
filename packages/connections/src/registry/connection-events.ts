@@ -13,7 +13,7 @@ import { Schema } from 'effect';
 
 import { RecordedCredentialSchema, type RecordedCredential } from './acting-fields.ts';
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
-import { AccountSchema, BrokenKindSchema } from './connection.ts';
+import { AccountSchema, BrokenKindSchema, InstalledSchema } from './connection.ts';
 
 export const connectionsStream = 'connections';
 
@@ -164,10 +164,12 @@ export const ConnectionEventSchema = Schema.Union([
       scope: Schema.optionalKey(Schema.String),
       account: Schema.optionalKey(AccountSchema),
       app_secret_ids: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+      installation: Schema.optionalKey(InstalledSchema),
       connected_by: RecordedCallerSchema,
     }),
     ActedContextSchema,
   ),
+
   factOf(
     'connection_app_credential_refused',
     Schema.Struct({ ...ofTheConnection, name: Schema.String, reason: Schema.String }),

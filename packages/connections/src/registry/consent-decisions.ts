@@ -1,8 +1,15 @@
-import { Conflict, type InvalidInput, type NotFound } from '@on.auto/operations';
+import { Conflict, InvalidInput, type NotFound } from '@on.auto/operations';
 import { Result } from 'effect';
 
-import type { CommandMetadata, ConsentFinish, ConsentStart, LinkUse } from './connection-commands.ts';
+import type {
+  CommandMetadata,
+  ConsentFinish,
+  ConsentStart,
+  InstallationChosen,
+  LinkUse,
+} from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
+import type { Installed } from './connection.ts';
 import { clientUngivenOf } from './oauth-client-decisions.ts';
 import { playbooksChosenOf } from './playbooks-decisions.ts';
 import {
@@ -65,10 +72,76 @@ export function decideStart(command: ConsentStart & CommandMetadata, registry: R
   ]);
 }
 
-function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata): Decision {
+function unconfirmedInstallationOf(name: string): InvalidInput {
+  return new InvalidInput({
+    detail: `The service did not confirm that the person who signed in can reach this installation, so the connection ${name} was not connected. Connect it again.`,
+    issues: [
+      { pointer: '/installation', detail: 'Expected an installation the service lists for the person who signed in' },
+    ],
+  });
+}
+
+function unadministeredOf(name: string): InvalidInput {
+  return new InvalidInput({
+    detail: `Only someone who administers the account this installation is on can connect it, and the service did not confirm that the person who signed in does, so the connection ${name} was not connected.`,
+    issues: [
+      {
+        pointer: '/installation',
+        detail:
+          'Expected an installation on an account the person who signed in administers: their own, or an organization they are an admin of',
+      },
+    ],
+  });
+}
+
+type Installing = Result.Result<{ readonly installation?: Installed }, InvalidInput | Conflict>;
+
+function changedWhileSigningInOf(name: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} was not connected: how it connects changed while it was signing in. Connect it again.`,
+  });
+}
+
+function installationOf(kept: KeptWithLink, given: InstallationChosen | undefined): Installing {
+  const installs = kept.connection.credential.installation !== undefined;
+  if (installs !== (given !== undefined)) {
+    return Result.fail(changedWhileSigningInOf(kept.connection.name));
+  }
+  if (given === undefined) {
+    return Result.succeed({});
+  }
+  const confirmed = given.listed.find(({ id }) => id === given.chosen);
+  if (confirmed === undefined) {
+    return Result.fail(unconfirmedInstallationOf(kept.connection.name));
+  }
+  const { id, name, admin } = confirmed;
+  return admin ? Result.succeed({ installation: { id, name } }) : Result.fail(unadministeredOf(kept.connection.name));
+}
+
+function connectedFactsOf(
+  command: ConsentFinish,
+  installed: { readonly installation?: Installed },
+): readonly ConnectionEvent[] {
   const { connection, secret_id, client_id, client_source, scope, account, connected_by } = command;
-  const granted = scope === undefined ? {} : { scope };
-  const named = account === undefined ? {} : { account };
+  return [
+    { type: 'connection_approved', data: { connection } },
+    {
+      type: 'connection_connected',
+      data: {
+        connection,
+        ...(secret_id === undefined ? {} : { secret_id }),
+        client_id,
+        client_source,
+        ...(scope === undefined ? {} : { scope }),
+        ...(account === undefined ? {} : { account }),
+        ...installed,
+        connected_by,
+      },
+    },
+  ];
+}
+
+function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata): Decision {
   if (!isOpenConsent(kept, command.at)) {
     return Result.fail(noOpenConsent(kept.connection.name));
   }
@@ -76,13 +149,9 @@ function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata
   if (stateIssue !== undefined) {
     return Result.fail(stateIssue);
   }
-  return Result.map(underTheClientGiven(kept, client_id), () => [
-    { type: 'connection_approved', data: { connection } },
-    {
-      type: 'connection_connected',
-      data: { connection, secret_id, client_id, client_source, ...granted, ...named, connected_by },
-    },
-  ]);
+  return Result.flatMap(underTheClientGiven(kept, command.client_id), () =>
+    Result.map(installationOf(kept, command.installation), (installed) => connectedFactsOf(command, installed)),
+  );
 }
 
 export function decideFinish(command: ConsentFinish & CommandMetadata, registry: Registry): Decision {

@@ -196,7 +196,12 @@ describe('the way of GitHub that connects as the company’s own GitHub App', ()
     const { entry } = Result.getOrThrow(providerNamed(shipped, 'github'));
     const ofTheApp = Option.getOrThrow(Option.fromNullishOr(entry.credentials.at(-1)));
 
-    expect(entry.credentials.map(({ kind }) => kind)).toEqual(['authorization', 'secret', 'jwt_bearer']);
+    expect(entry.credentials.map(({ kind }) => kind)).toEqual([
+      'authorization',
+      'authorization',
+      'secret',
+      'jwt_bearer',
+    ]);
     expect([permissionsOf(ofTheApp), accountTypesOf(ofTheApp)]).toEqual(['application', []]);
     expect(ofTheApp).toMatchObject({
       issuer: 'https://api.github.com',
@@ -213,5 +218,48 @@ describe('the way of GitHub that connects as the company’s own GitHub App', ()
       'installation_id',
     ]);
     expect(ofTheApp.limitation).toBeDefined();
+  });
+});
+
+describe('the way of GitHub that connects through the GitHub App whoever runs Auto registered', () => {
+  it('comes first, acts as the app, signs in at GitHub with the registered client alone, takes an installation only where the person administers its account, and asks each installation’s token with the app’s key', () => {
+    const { entry } = Result.getOrThrow(providerNamed(shipped, 'github'));
+    const [first] = entry.credentials;
+    const ofAutosApp = Option.getOrThrow(Option.fromNullishOr(first));
+
+    expect([permissionsOf(ofAutosApp), accountTypesOf(ofAutosApp)]).toEqual(['application', []]);
+    expect(ofAutosApp).toMatchObject({
+      kind: 'authorization',
+      issuer: 'https://github.com/login/oauth',
+      clients: ['registered'],
+      installation: {
+        issuer: 'https://api.github.com',
+        installations: {
+          method: 'GET',
+          list: '/installations',
+          id: '/id',
+          name: '/account/login',
+          account: '/account/id',
+          personal: { '/account/type': ['User'] },
+        },
+        userinfo: { method: 'GET', url: 'https://api.github.com/user', id: '/id' },
+        membership: {
+          method: 'GET',
+          url: 'https://api.github.com/user/memberships/orgs/{account_name}',
+          admin: { '/role': ['admin'], '/state': ['active'] },
+        },
+        returned: { installation: 'installation_id', requested: { setup_action: ['request'] } },
+        token_request: {
+          method: 'POST',
+          url: 'https://api.github.com/app/installations/{installation_id}/access_tokens',
+          issued: { access_token: '/token', expires_at: '/expires_at' },
+        },
+      },
+    });
+    expect([ofAutosApp.scope, ofAutosApp.placeholders, ofAutosApp.limitation === undefined]).toEqual([
+      undefined,
+      undefined,
+      false,
+    ]);
   });
 });

@@ -20,6 +20,8 @@ export const servingWords = {
   consentEnded: (name: string) => `The consent of the connection ${name} was revoked or has ended, so ${reconnects}`,
   clientGone: (name: string) =>
     `The client the connection ${name} was made with is no longer registered, so ${reconnects}`,
+  applicationUnset: (name: string) =>
+    `The application the connection ${name} was made with is not set up on this runtime now, so whoever runs the runtime sets it up again; the connection stays as it is`,
   ownClientGone: (name: string) =>
     `The client secret of the organization's own OAuth client for the connection ${name} is no longer in the secret store, so ${reconnects} with its client ID and client secret given again`,
   keyUnknown: (name: string) =>

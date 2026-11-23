@@ -38,21 +38,22 @@ interface WayOfConsent {
 }
 
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
-  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'], oauth_client: oauthClient }) =>
-    kind === 'authorization' && issuer !== undefined
-      ? [
-          {
-            name: entry.name,
-            placeholders: examplesOf(entry),
-            issuer,
-            scope,
-            clients,
-            oauthClient: oauthClient === 'required',
-            vendor: vendorsOfTheShippedWays[entry.name],
-            requestOrigins: requestOriginsOf(entry),
-          },
-        ]
-      : [],
+  entry.credentials.flatMap(
+    ({ kind, issuer, scope, clients = ['registered'], oauth_client: oauthClient, installation }) =>
+      kind === 'authorization' && issuer !== undefined && installation === undefined
+        ? [
+            {
+              name: entry.name,
+              placeholders: examplesOf(entry),
+              issuer,
+              scope,
+              clients,
+              oauthClient: oauthClient === 'required',
+              vendor: vendorsOfTheShippedWays[entry.name],
+              requestOrigins: requestOriginsOf(entry),
+            },
+          ]
+        : [],
   ),
 );
 

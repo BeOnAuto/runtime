@@ -50,6 +50,26 @@ export const AccountSchema = Schema.Struct({
 
 export type Account = typeof AccountSchema.Type;
 
+export const InstalledSchema = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The ID the service gives the installation' }),
+  name: Schema.String.annotate({
+    description:
+      'The name of the account the application is installed on, as the service named it, for a person to read',
+  }),
+});
+
+export type Installed = typeof InstalledSchema.Type;
+
+export const ListedInstallationSchema = Schema.Struct({
+  ...InstalledSchema.fields,
+  admin: Schema.Boolean.annotate({
+    description:
+      'true where the person who signed in administers the account the installation is on: it is their own account, or an organization they are an admin of, as the service confirmed when it listed it. Only such an installation can be connected',
+  }),
+});
+
+export type ListedInstallation = typeof ListedInstallationSchema.Type;
+
 const SigningSecretSchema = Schema.Struct({
   set_at: Schema.String.annotate({ description: 'When it was set, in ISO 8601 UTC' }),
   previous_until: Schema.NullOr(Schema.String).annotate({
@@ -145,6 +165,12 @@ export const ConnectionSchema = Schema.Struct({
     description:
       'The app credentials the person gave beside the key when the connection was connected, each by its name and whether the service has refused it, never the value; empty where they gave none',
   }),
+  installation: Schema.optionalKey(
+    InstalledSchema.annotate({
+      description:
+        'The installation of the application that the connection uses, and the account it is installed on. It is absent where the connection uses no installation.',
+    }),
+  ),
 }).annotate({ identifier: 'Connection', description: 'A tool server the org added, shared by its playbooks' });
 
 export type Connection = typeof ConnectionSchema.Type;
@@ -199,6 +225,13 @@ export interface RecordedConnection extends Omit<Connection, 'credential_ends_wi
 export function connectionShown(connection: RecordedConnection, endsWith: string | null): Connection {
   const { permissions = null, ...credential } = connection.credential;
   return { ...connection, credential, permissions, credential_ends_with: endsWith };
+}
+
+export function withItsInstallation(
+  { installation: _before, ...connection }: RecordedConnection,
+  installed: Installed | undefined,
+): RecordedConnection {
+  return installed === undefined ? connection : { ...connection, installation: installed };
 }
 
 export function runsUnderTheOrgsOAuthClient({ credential }: Pick<RecordedConnection, 'credential'>): boolean {

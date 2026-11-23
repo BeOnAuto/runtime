@@ -29,6 +29,8 @@ const theOrgsOAuthClientAlone: readonly ClientSource[] = ['own'];
 
 const itsGatewayAlone: readonly ClientSource[] = ['gateway'];
 
+const aRegisteredApplicationAlone: readonly ClientSource[] = ['registered'];
+
 export type RegisteredCredential =
   | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
   | { readonly kind: 'private_key'; readonly privateKey: Redacted.Redacted; readonly algorithm: string }
@@ -36,12 +38,18 @@ export type RegisteredCredential =
 
 export type TokenEndpointAuthMethod = 'client_secret_basic' | 'client_secret_post' | 'private_key_jwt' | 'none';
 
+export interface RegisteredApplication {
+  readonly privateKey: Redacted.Redacted;
+  readonly installPage: string;
+}
+
 export interface RegisteredClient {
   readonly issuers: readonly string[];
   readonly clientId: string;
   readonly credential: RegisteredCredential;
   readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
   readonly scopes?: readonly string[];
+  readonly application?: RegisteredApplication;
 }
 
 export interface OwnClient {
@@ -75,6 +83,7 @@ export interface WayOfClients {
   readonly pkce?: WayPkce | undefined;
   readonly oauth_client?: WayOAuthClient | undefined;
   readonly gateway?: WayGateway | undefined;
+  readonly installs?: boolean | undefined;
 }
 
 export interface HadSources {
@@ -156,12 +165,24 @@ function bindsItsCodeAt({ credential }: RegisteredClient, way: WayOfClients): bo
   return credential.kind !== 'public' || !takesNoPkce(way);
 }
 
+function installsAnApplication({ installs }: Pick<WayOfClients, 'installs'>): boolean {
+  return installs === true;
+}
+
+function actsAsTheWayDoes({ application }: RegisteredClient, way: WayOfClients): boolean {
+  return (application !== undefined) === installsAnApplication(way);
+}
+
 export function registeredClientFor(
   clients: readonly RegisteredClient[],
   way: WayOfClients,
 ): RegisteredClient | undefined {
   return clients.find(
-    (client) => isRegisteredClientAt(client, way.issuer) && covers(client, way) && bindsItsCodeAt(client, way),
+    (client) =>
+      isRegisteredClientAt(client, way.issuer) &&
+      covers(client, way) &&
+      bindsItsCodeAt(client, way) &&
+      actsAsTheWayDoes(client, way),
   );
 }
 
@@ -243,6 +264,9 @@ function clientSourcesOf(way: WayOfClients): readonly ClientSource[] {
   }
   if (runsUnderTheOrgsOAuthClient(way)) {
     return theOrgsOAuthClientAlone;
+  }
+  if (installsAnApplication(way)) {
+    return aRegisteredApplicationAlone;
   }
   const listed = way.clients ?? defaultClientSources;
   return listed.includes('registered') ? [...listed, 'auto'] : listed;

@@ -148,6 +148,39 @@ export const asAnInstalledApp = {
   description: 'The ID, private key and installation of an app your company registers at Mail.',
 } as const;
 
+export const asAnInstallingApp = {
+  kind: 'authorization',
+  permissions: 'application',
+  issuer: 'https://login.mail.example.com/common',
+  clients: ['registered'],
+  installation: {
+    issuer: 'https://api.mail.example.com/apps',
+    installations: {
+      method: 'GET',
+      url: 'https://api.mail.example.com/apps/user/installations',
+      list: '/installations',
+      id: '/id',
+      name: '/account/name',
+      account: '/account/id',
+      personal: { '/account/kind': ['person'] },
+    },
+    userinfo: { method: 'GET', url: 'https://api.mail.example.com/apps/me', id: '/id' },
+    membership: {
+      method: 'GET',
+      url: 'https://api.mail.example.com/apps/me/memberships/{account_name}',
+      admin: { '/role': ['owner'], '/status': ['joined'] },
+    },
+    returned: { installation: 'installation', requested: { action: ['request'] } },
+    token_request: {
+      method: 'POST',
+      url: 'https://api.mail.example.com/apps/installations/{installation_id}/tokens',
+      issued: { access_token: '/token', expires_at: '/expires_at' },
+    },
+  },
+  limitation: 'It reaches only the mailboxes the app is installed on.',
+  description: 'The app whoever runs Auto registered at Mail, installed on your mailboxes.',
+} as const;
+
 export const mail: ProviderEntry = decodeEntry({
   name: 'mail',
   title: 'Mail',

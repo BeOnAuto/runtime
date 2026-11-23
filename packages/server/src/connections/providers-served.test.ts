@@ -31,8 +31,9 @@ function placementOf(provider: Provider) {
   return { kind, in: placedIn, name, scheme };
 }
 
-function consentOf(provider: Provider) {
-  const { kind, issuer, scope, clients } = wayOf(provider, 'authorization');
+function consentOf({ entry }: Provider) {
+  const signingIn = entry.credentials.find((way) => way.kind === 'authorization' && way.installation === undefined);
+  const { kind, issuer, scope, clients } = Option.getOrThrow(Option.fromNullishOr(signingIn));
   return { kind, issuer, scope, clients };
 }
 

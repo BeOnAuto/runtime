@@ -1,5 +1,7 @@
 import {
+  assertionAlgorithm,
   keptTokensIn,
+  registeredClientNamed,
   type ConnectionServer,
   type ConnectionTokens,
   type ConnectionUnready,
@@ -163,8 +165,21 @@ function referencedOf({ kept, services }: Serving): Given {
     : Effect.succeed({ value, algorithm: undefined });
 }
 
+function applicationKeyOf({ kept, services }: Serving): Given {
+  const { credential, name } = kept.connection;
+  const clients = services.registeredClients ?? [];
+  const named = registeredClientNamed(clients, String(credential.issuer), String(credential.client_id));
+  const key = named?.application?.privateKey;
+  return key === undefined
+    ? Effect.fail(notAllowed(servingWords.applicationUnset(name)))
+    : Effect.succeed({ value: key, algorithm: assertionAlgorithm });
+}
+
 export function givenOf(serving: Serving): Given {
   const { credential } = serving.kept.connection;
+  if (credential.installation !== undefined) {
+    return applicationKeyOf(serving);
+  }
   if (placesNoValue(credential)) {
     return Effect.undefined;
   }
@@ -205,7 +220,11 @@ export function consentAuthOf(
 ): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
   const { connection } = serving.kept;
   const { credential } = connection;
-  if (credential.kind !== 'authorization' || connectsThroughItsGateway(connection)) {
+  if (
+    credential.kind !== 'authorization' ||
+    connectsThroughItsGateway(connection) ||
+    credential.installation !== undefined
+  ) {
     return Effect.undefined;
   }
   return Effect.gen(function* () {

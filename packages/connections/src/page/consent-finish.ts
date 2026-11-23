@@ -1,94 +1,35 @@
-import { defineHttpOperation, OrgContext, type NotFound } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { defineHttpOperation, OrgContext } from '@on.auto/operations';
+import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
-import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { finishedConnectionOf } from '../registry/consent-decisions.ts';
-import { namedOf, openConsentOf, verifierOf, type ConsentServices, type FinishedConsent } from './consent-asking.ts';
+import { namedOf, openConsentOf, type FinishedConsent } from './consent-asking.ts';
+import { tokensUnkeptOf, wrongShapeOf } from './consent-refusals.ts';
 import {
-  askedForASignIn,
-  finishRefusalOf,
-  tokensUnkeptOf,
-  verifierUnreadOf,
-  wrongShapeOf,
-  type ConsentRefused,
-  type Returned,
-} from './consent-refusals.ts';
+  connectedAnswerOf,
+  FinishedSchema,
+  notRedeemableOf,
+  FinishingSchema,
+  isRedeemable,
+  redeemedOf,
+  returnedOf,
+  type Finishing,
+} from './consent-returns.ts';
 import { replacedCredentialOf } from './forgotten-credentials.ts';
+import { installationFinished, type InstallingServices, type Recording } from './installation-finish.ts';
 
-const GivenField = Schema.String.check(Schema.isMinLength(1));
+type OpenConsent = Effect.Success<ReturnType<typeof openConsentOf>>;
 
-const returnedFields = {
-  id: ConnectionIdField,
-  token: TokenField,
-  state: GivenField.annotate({ description: 'The state the person was sent back with' }),
-};
-
-const FinishingSchema = Schema.Union([
-  Schema.Struct({
-    ...returnedFields,
-    code: GivenField.annotate({ description: 'The code the authorization server sent the person back with' }),
-    iss: Schema.optionalKey(
-      GivenField.annotate({
-        description: 'The issuer the authorization server sent the person back with, where it sent one',
-      }),
-    ),
-  }).annotate({
-    description: "The finish of a consent begun with a client of this runtime's, which answers a code",
-  }),
-  Schema.Struct({
-    ...returnedFields,
-    handle: GivenField.annotate({
-      description:
-        "The handle Auto's consent service or the connection's gateway sent the person back with, which its tokens or its key are handed over for",
-    }),
-  }).annotate({ description: "The finish of a consent begun through Auto's consent service or a gateway" }),
-]);
-
-type Finishing = typeof FinishingSchema.Type;
-
-type LinkUse = Parameters<typeof finishedConnectionOf>[1];
-
-type OpenConsent = Parameters<typeof verifierOf>[0];
-
-interface Recording {
-  readonly use: LinkUse;
-  readonly stateSha256: string;
+interface Connecting extends Recording {
   readonly kept: OpenConsent;
-}
-
-function returnedOf(finishing: Finishing): Returned {
-  return 'handle' in finishing ? 'handle' : 'code';
-}
-
-function returnedFieldsOf(finishing: Finishing) {
-  return 'handle' in finishing ? { handle: finishing.handle } : { code: finishing.code, iss: finishing.iss };
-}
-
-function redeemedOf(
-  kept: OpenConsent,
-  finishing: Finishing,
-  services: ConsentServices,
-): Effect.Effect<FinishedConsent, ConsentRefused | NotFound> {
-  const { client_id: clientId, client_source: clientSource } = kept.consent;
-  const named = namedOf(kept.connection);
-  return Effect.gen(function* () {
-    const verifier = yield* verifierOf(kept, services, (detail) => verifierUnreadOf(named, detail));
-    const asked = yield* askedForASignIn(kept, services, kept.consent.scope);
-    const client = { client_id: clientId, client_source: clientSource };
-    return yield* services.consent
-      .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier })
-      .pipe(Effect.mapError((refusal) => finishRefusalOf(named, refusal, returnedOf(finishing))));
-  });
 }
 
 const recordedWith = Effect.fnUntraced(function* (
   finished: FinishedConsent,
   secretId: string,
   { use, stateSha256 }: Recording,
-  services: ConsentServices,
+  services: InstallingServices,
 ) {
   const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
@@ -106,7 +47,7 @@ const recordedWith = Effect.fnUntraced(function* (
   });
 });
 
-function connectedWith(finished: FinishedConsent, recording: Recording, services: ConsentServices) {
+function connectedWith(finished: FinishedConsent, recording: Connecting, services: InstallingServices) {
   const { secrets } = services;
   const named = namedOf(recording.kept.connection);
   return Effect.gen(function* () {
@@ -118,7 +59,7 @@ function connectedWith(finished: FinishedConsent, recording: Recording, services
   }).pipe(Effect.onError(() => finished.revoked));
 }
 
-const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, services: ConsentServices) {
+const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, services: InstallingServices) {
   const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token) };
   const acted = yield* actedNow;
   const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry(services), use));
@@ -129,13 +70,19 @@ const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, se
   if (wrongShape !== undefined) {
     return yield* Effect.fail(wrongShape);
   }
+  if (kept.connection.credential.installation !== undefined) {
+    return yield* installationFinished(kept, finishing, { use, stateSha256 }, services);
+  }
+  if (!isRedeemable(finishing)) {
+    return yield* Effect.fail(notRedeemableOf);
+  }
   const finished = yield* redeemedOf(kept, finishing, services);
   const { before, after } = yield* connectedWith(finished, { use, stateSha256, kept }, services);
   yield* replacedCredentialOf(before, after, services);
-  return connectionShown(after.connection, null);
+  return connectedAnswerOf(after.connection);
 });
 
-export function defineFinishConsent(services: ConsentServices) {
+export function defineFinishConsent(services: InstallingServices) {
   return defineHttpOperation('org', 'command', {
     name: 'finish',
     title: 'Finish consent',
@@ -145,6 +92,7 @@ export function defineFinishConsent(services: ConsentServices) {
       'The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them.',
       'Where the secret store cannot read the verifier just now, it answers unavailable and the same code may be tried again; where it cannot keep the tokens once the code is redeemed, it answers unavailable, revokes them, and the person starts again, since the code is spent.',
       'On a runtime that signs people in, only an admin of the organization may finish it.',
+      'A connection made by installing an application connects only to an installation that the service lists for the person who signed in, on an account they administer, their own or an organization they are an admin of, as the service confirms at that moment. It keeps none of their tokens. With no installation chosen, it answers the installations they can reach, each marked whether they administer its account, and the page where they install the application, and connects nothing. Where the service sent the person back with an installation and none was chosen, it answers the ID of that installation and connects nothing: start the consent again, and finish it with that ID as installation. Where the service says the person only asked for an installation, it answers requested and connects nothing.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent/code' },
     body: { kind: 'json' },
@@ -152,7 +100,7 @@ export function defineFinishConsent(services: ConsentServices) {
     mayChangeOutside: true,
     connectionsManagement: true,
     inputSchema: FinishingSchema,
-    outputSchema: ConnectionSchema,
+    outputSchema: FinishedSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (finishing) {
       const { org } = yield* OrgContext;

@@ -2,9 +2,7 @@ import { referencedVariablesOf } from '@on.auto/config';
 import { listed } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
-export const referenceHoldingFields = ['client_secret', 'private_key'] as const;
-
-export type ReferenceHoldingField = (typeof referenceHoldingFields)[number];
+const referenceHoldingFields = ['client_secret', 'private_key'] as const;
 
 export const misplacedReference = `Holds a reference to an environment variable, which only ${listed(referenceHoldingFields.map((field) => `the ${field}`))} of a registered client may hold`;
 
@@ -23,3 +21,37 @@ export const heldAsWritten = Schema.makeFilter(
   undefined,
   true,
 );
+
+interface HoldingReferences {
+  readonly client_secret?: string;
+  readonly private_key?: string;
+  readonly application?: { readonly private_key: string; readonly install_page: string };
+}
+
+export interface ReferenceHolding<Client> {
+  readonly path: readonly string[];
+  readonly text: string;
+  readonly placed: (client: Client, value: string) => Client;
+}
+
+export function referenceHoldingsOf<Client extends HoldingReferences>(
+  client: Client,
+): readonly ReferenceHolding<Client>[] {
+  const { application } = client;
+  const atTheTop = referenceHoldingFields.flatMap((field): readonly ReferenceHolding<Client>[] => {
+    const text = client[field];
+    return text === undefined
+      ? []
+      : [{ path: [field], text, placed: (written, value) => ({ ...written, [field]: value }) }];
+  });
+  return application === undefined
+    ? atTheTop
+    : [
+        ...atTheTop,
+        {
+          path: ['application', 'private_key'],
+          text: application.private_key,
+          placed: (written, value) => ({ ...written, application: { ...application, private_key: value } }),
+        },
+      ];
+}

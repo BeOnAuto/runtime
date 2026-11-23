@@ -11,6 +11,11 @@ export interface ExtensionGrant {
   readonly parameters: Readonly<Record<string, string>>;
 }
 
+export interface FakeAnswer {
+  readonly status: number;
+  readonly body: unknown;
+}
+
 export interface ClientRegistration {
   readonly clientId: string;
   readonly extensionGrant?: ExtensionGrant;
@@ -36,6 +41,8 @@ export interface ClientRegistration {
   readonly endpointHost?: string;
   readonly subjects?: readonly string[];
   readonly tokenRequestPath?: string;
+  readonly installationsAt?: { readonly path: string; readonly installations: readonly unknown[] };
+  readonly answersToItsTokens?: Readonly<Record<string, FakeAnswer>>;
   readonly takesBasicSecrets?: boolean;
   readonly takesPostedSecrets?: boolean;
   readonly takesPublicClientsAlone?: boolean;
