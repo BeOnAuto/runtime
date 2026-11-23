@@ -38,7 +38,6 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'decline_connection_request',
   'set_connection_playbooks',
   'set_connection_account_type',
-  'set_connection_model',
   'set_connection_signing_secret',
   'remove_connection_signing_secret',
   'read_link',
@@ -108,7 +107,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(38);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(37);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

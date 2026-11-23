@@ -7,7 +7,7 @@ import {
 import { Effect, Option } from 'effect';
 
 import { providingOf } from '../providers/provider-providing.ts';
-import { connectionsOfAnOrgIn } from '../registry/connection-rows-read.ts';
+import { connectionsOfAnOrgReadTogetherIn } from '../registry/connection-rows-read.ts';
 import { newestFirst } from '../registry/registry.ts';
 import { replacedConnectionWords, replacedOf } from '../replacements/replaced-providers.ts';
 import { connectedAtOf, loggedCauses } from './given-credentials.ts';
@@ -68,11 +68,11 @@ function orgConnectionOf(serving: Serving): OrgConnection {
 
 export function makeConnectionSource(services: ServingServices): ConnectionSource {
   const unreadable = loggedCauses();
-  const { registry, providers } = services;
+  const connectionsOfAnOrg = connectionsOfAnOrgReadTogetherIn(services.registry, services.providers);
   return {
     takesConnections: services.policy.peopleMayAdd,
     connectionsOf: (org) =>
-      Effect.map(connectionsOfAnOrgIn(registry, org, providers), (listed) =>
+      Effect.map(connectionsOfAnOrg(org), (listed) =>
         newestFirst(listed)
           .filter((kept) => kept.connection.status !== 'removed')
           .map((kept) => orgConnectionOf({ org, kept, services, unreadable })),

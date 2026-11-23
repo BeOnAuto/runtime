@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 
+import { askedTogether } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 import { providerListOf, providerOf } from '@on.auto/providers/testing';
 import type {
@@ -168,6 +169,38 @@ describe('the connections of an org as tool servers', () => {
           'Nobody has approved the connection crm yet; it needs to be approved on the page its link opens, or reconnected for a new link',
       },
     });
+  });
+});
+
+describe('the connections of an org asked together', () => {
+  it('are read once for every read of them while one asking lasts, and each time otherwise', async () => {
+    const ledger = watchedLedger();
+    const h = harness({ ledger });
+    await added(h, crm);
+    await connectedConnectionSource(h, notes);
+    const source = sourceOf(h);
+    const record = `rows ${connectionRowsName}`;
+    const readsOf = async (asking: Effect.Effect<unknown>) => {
+      const before = ledger.asked().length;
+      await Effect.runPromise(asking);
+      return ledger.asked().slice(before);
+    };
+    const threeReads = Effect.all(
+      [source.connectionsOf('acme'), source.connectionsOf('acme'), source.connectionsOf('acme')],
+      {
+        concurrency: 'unbounded',
+      },
+    );
+
+    const together = await readsOf(askedTogether(threeReads));
+    const alone = await readsOf(threeReads);
+    const listed = await Effect.runPromise(askedTogether(threeReads));
+
+    expect(together).toEqual([record]);
+    expect(alone).toEqual([record, record, record]);
+    expect(listed.map((connections) => connections.map(({ id }) => id))).toEqual(
+      Array.from({ length: 3 }, () => listed[0]?.map(({ id }) => id)),
+    );
   });
 });
 

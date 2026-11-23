@@ -110,11 +110,11 @@ function registryOpenedFor(
 type Opened = Awaited<ReturnType<typeof signInAndStoresOpened>>;
 
 function chatWiringOf(chat: Opened['chat'], runtime: Parameters<Serve>[0], registry: Registry) {
-  const through = { readOnceThrough: registry.readOnceThrough, chatModels: registry.modelChoice };
+  const through = { readOnceThrough: registry.readOnceThrough };
   return chat === undefined
     ? { through, over: {} }
     : {
-        through: { ...through, connectionRemoved: chat.connectionRemoved },
+        through: { ...through, chatModels: registry.modelChoice, connectionRemoved: chat.connectionRemoved },
         over: { chatOver: chat.over(runtime, registry) },
       };
 }

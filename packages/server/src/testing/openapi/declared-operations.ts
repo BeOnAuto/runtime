@@ -70,7 +70,6 @@ const managingConnections: ReadonlySet<string> = new Set([
   'org/remove_connection',
   'org/remove_connection_signing_secret',
   'org/set_connection_account_type',
-  'org/set_connection_model',
   'org/set_connection_playbooks',
   'org/set_connection_signing_secret',
   'org/start',

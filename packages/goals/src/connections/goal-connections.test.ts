@@ -1,4 +1,4 @@
-import { PlaybookContext, playbookLedgerOf, type PlaybookAddress } from '@on.auto/operations';
+import { AskedTogether, PlaybookContext, playbookLedgerOf, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -114,6 +114,37 @@ describe('the connections of a goal', () => {
 
     expect(failing.goals[0]).not.toHaveProperty('connections');
     expect(unasked.goals[0]).not.toHaveProperty('connections');
+  });
+});
+
+describe('the servers of the workflows of a playbook', () => {
+  it('are asked about all at once, in one asking, so the connections they are told from are read once', async () => {
+    const book = await playbookWithTwoGoals();
+    await functionSaved(book, { type: 'lookup', name: 'ticket-rows', front: 'call:\n  server: tickets\n  tool: rows' });
+    await workflowSaved(book, 'audit-customers', experiments.id, calling(['lookup', 'ticket-rows']));
+    const servers: string[] = [];
+    const asked = { now: 0, most: 0, servers, askings: new Set<unknown>() };
+    const watched: ServerConnected = (_address, server) =>
+      Effect.gen(function* () {
+        asked.askings.add(yield* AskedTogether);
+        asked.servers.push(server);
+        asked.now += 1;
+        asked.most = Math.max(asked.most, asked.now);
+        yield* Effect.yieldNow;
+        asked.now -= 1;
+        return server === 'crm-api';
+      });
+
+    const [tracked] = (await readOf(book, watched)).goals;
+
+    expect(tracked?.connections?.map(({ server, connected }) => [server, connected])).toEqual([
+      ['chat', false],
+      ['crm-api', true],
+      ['tickets', false],
+    ]);
+    expect(asked.servers.toSorted()).toEqual(['chat', 'crm-api', 'tickets']);
+    expect(asked.most).toBe(3);
+    expect([...asked.askings]).toEqual([expect.objectContaining({ asked: 'together' })]);
   });
 });
 

@@ -1,6 +1,13 @@
+import { AskedTogether, defineQuery, type Together } from '@on.auto/operations';
+import { Effect, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { listNotesOfTheOrg, notebookOperations, notebookOperationsAnnouncingWaits } from '../testing/notebook.ts';
+import {
+  listNotesOfTheOrg,
+  notebookOperations,
+  notebookOperationsAnnouncingWaits,
+  plainly,
+} from '../testing/notebook.ts';
 import {
   acmeAdmin,
   acmeAlphaWriter,
@@ -12,8 +19,27 @@ import {
 
 let server: OperationServer;
 
+const askings: (Together | undefined)[] = [];
+
+const askingOfTheRead = defineQuery('playbook', {
+  name: 'asking_of_the_read',
+  title: 'Asking of the read',
+  description:
+    'Tells which asking the read is part of. Use it to see the reads of a query asked together. `name` is unread.',
+  route: { method: 'GET', path: '/asking' },
+  inputSchema: Schema.Struct({ name: Schema.optionalKey(Schema.String) }),
+  outputSchema: Schema.Struct({ read: Schema.Boolean }),
+  reasons: [],
+  handle: () =>
+    Effect.gen(function* () {
+      askings.push(yield* AskedTogether);
+      return { read: true };
+    }),
+  plainLanguage: plainly('tell the asking of the read'),
+});
+
 beforeAll(async () => {
-  server = await operationServer({ operations: [...notebookOperations, listNotesOfTheOrg] });
+  server = await operationServer({ operations: [...notebookOperations, listNotesOfTheOrg, askingOfTheRead] });
 });
 
 afterAll(async () => {
@@ -64,6 +90,22 @@ describe('the query endpoint of an org, over HTTP', () => {
       data: { latest_note: null },
       errors: [{ path: ['latest_note'], extensions: { code: 'forbidden' } }],
     });
+  });
+});
+
+describe('the reads of one query', () => {
+  it('are asked together, every playbook and level of it in the one asking, and each query in its own', async () => {
+    const query = JSON.stringify({
+      query:
+        '{ alpha: asking_of_the_read(playbook: "alpha") { read } beta: asking_of_the_read(playbook: "beta") { read } }',
+    });
+
+    const answers = [await posted('/v1/orgs/acme/query', query), await posted('/v1/orgs/acme/query', query)];
+
+    expect(answers.map(({ status }) => status)).toEqual([200, 200]);
+    const [first, second, third, fourth] = askings;
+    expect(first).toEqual({ asked: 'together' });
+    expect([second, third === first, fourth]).toEqual([first, false, third]);
   });
 });
 

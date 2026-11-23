@@ -1,5 +1,6 @@
 import {
   everyProjectedRow,
+  readOnceTogether,
   type ProjectedKeyedRow,
   type ProjectedRowsQuery,
   type ProjectionReader,
@@ -40,10 +41,18 @@ export function connectionsKeptIn(
   return Effect.map(everyProjectedRow(read, [addedPositionColumn]), (rows) => registryOfRows(rows, providers));
 }
 
-export function connectionsOfAnOrgIn(
+function connectionsOfAnOrgIn(
   reader: Pick<ProjectionReader, 'readProjectedRows'>,
   org: string,
   providers: ProviderList,
 ): Effect.Effect<Registry> {
   return connectionsKeptIn((query) => reader.readProjectedRows(connectionRowsName, { org }, query), providers);
+}
+
+export function connectionsOfAnOrgReadTogetherIn(
+  reader: Pick<ProjectionReader, 'readProjectedRows'>,
+  providers: ProviderList,
+): (org: string) => Effect.Effect<Registry> {
+  const keptOnce = readOnceTogether<Registry>();
+  return (org) => keptOnce.read(org, connectionsOfAnOrgIn(reader, org, providers));
 }

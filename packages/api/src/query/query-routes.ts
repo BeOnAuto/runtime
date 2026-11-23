@@ -1,5 +1,13 @@
-import { rejected, type Catalog, type Dispatcher, type DispatcherServices, type Outcome } from '@on.auto/operations';
-import { Effect, Result } from 'effect';
+import {
+  AskedTogether,
+  rejected,
+  togetherAsked,
+  type Catalog,
+  type Dispatcher,
+  type DispatcherServices,
+  type Outcome,
+} from '@on.auto/operations';
+import { Context, Effect, Result } from 'effect';
 
 import type { AppRuntime } from '../app-runtime.ts';
 import { callerOfAnotherOrg } from '../authentication/challenges.ts';
@@ -41,7 +49,7 @@ export function queryRoutes({
         return problemResponse(asked.failure);
       }
       const reads = together(dispatcher, { caller, org });
-      const context = routes.callContext(c.req.raw);
+      const context = Context.add(routes.callContext(c.req.raw), AskedTogether, togetherAsked());
       const { status, body } = await queryAnswered(serving, asked.success, (each) => {
         const resolvers: ((outcome: Outcome) => void)[] = [];
         const answers = each.map(

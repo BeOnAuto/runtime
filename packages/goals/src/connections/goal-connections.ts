@@ -1,5 +1,5 @@
 import { workflowServersIn } from '@on.auto/definitions/goals';
-import { PlaybookContext, type PlaybookAddress, type PlaybookReader } from '@on.auto/operations';
+import { askedTogether, PlaybookContext, type PlaybookAddress, type PlaybookReader } from '@on.auto/operations';
 import type { GoalGap } from '@on.auto/playbooks';
 import { Effect, Exit } from 'effect';
 
@@ -93,8 +93,10 @@ const goalConnectionsIn = Effect.fnUntraced(function* (
   const address = yield* PlaybookContext;
   const asked = distinct([...servers.values()].flat());
   const answered = yield* Effect.exit(
-    Effect.forEach(asked, (server) =>
-      Effect.map(connected(address, server), (is): readonly [string, boolean] => [server, is]),
+    Effect.forEach(
+      asked,
+      (server) => Effect.map(connected(address, server), (is): readonly [string, boolean] => [server, is]),
+      { concurrency: 'unbounded' },
     ),
   );
   return Exit.isSuccess(answered)
@@ -122,5 +124,7 @@ export function readWithTheConnections(
 ): Effect.Effect<GoalsRead, never, PlaybookReader | PlaybookContext> {
   return connected === undefined
     ? Effect.succeed(read)
-    : Effect.map(goalConnectionsIn(workflows, connected), (connections) => withTheConnections(read, connections));
+    : Effect.map(askedTogether(goalConnectionsIn(workflows, connected)), (connections) =>
+        withTheConnections(read, connections),
+      );
 }

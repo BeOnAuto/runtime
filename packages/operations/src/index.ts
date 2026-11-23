@@ -147,6 +147,8 @@ export { eventMetadataOf } from './reading/event-metadata.ts';
 export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
+export { AskedTogether, askedTogether, readOnceTogether, togetherAsked } from './reading/read-together.ts';
+export type { Together } from './reading/read-together.ts';
 export { OperationsServed } from './dispatch/operations-served.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
@@ -238,12 +240,8 @@ export type { OperationKind, OperationScope } from './caller/operation-scope.ts'
 export { settle } from './dispatch/settle.ts';
 export { RejectionCauseSchema, RejectionKindSchema, type RejectionCause } from './outcome/rejection-cause.ts';
 export { SettlementSchema, type SettledRejection, type Settlement } from './outcome/settlement.ts';
-export {
-  IncompleteDetailsSchema,
-  IncompleteReasonSchema,
-  type IncompleteDetails,
-  type IncompleteReason,
-} from './outcome/incomplete-details.ts';
+export { IncompleteDetailsSchema, IncompleteReasonSchema } from './outcome/incomplete-details.ts';
+export type { IncompleteDetails, IncompleteReason } from './outcome/incomplete-details.ts';
 export type { MultiStreamWriter, PlaybookRecordedReader, PlaybookRunOutcomesReader } from './ledger/stream-ports.ts';
 export type { RecordedReader, RunOutcomesReader, StreamAges, StreamDecision } from './ledger/stream-ports.ts';
 export type { StreamReader, StreamWriter } from './ledger/stream-ports.ts';
