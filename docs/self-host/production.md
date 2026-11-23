@@ -28,6 +28,7 @@ A deployment for a team is the container from [Run with Docker](docker.md), with
 | A plan for logs                        | [Read the logs](#read-the-logs)                                                             |
 | A plan for upgrades                    | [Upgrades](#upgrades)                                                                       |
 | A route to models and tools, if needed | [Reach models and tools through your network](#reach-models-and-tools-through-your-network) |
+| @Auto in Slack, if wanted              | [Let members talk to @Auto in Slack](#let-members-talk-to-auto-in-slack)                    |
 | A way for people to inspect runs       | [Inspect runs on a team runtime](#inspect-runs-on-a-team-runtime)                           |
 
 ## Put HTTPS in front
@@ -228,6 +229,35 @@ The server calls model providers and the tool servers you configure.
 - At each start the server also sends one anonymous [usage ping](configuration.md#usage-ping) to `get.on.auto`. Where your network blocks it, the server gives up after 3 seconds and runs on. `DO_NOT_TRACK=1` stops it.
 
 [Set up a model provider](models.md#behind-an-outbound-proxy-with-a-private-certificate-authority) has an example.
+
+## Let members talk to @Auto in Slack
+
+Members of your organization can mention @Auto in Slack, or send it a direct message, and Auto answers them, as [Talk to @Auto through your app](../integrations/slack.md#talk-to-auto-through-your-app) shows. That page also says who may talk to @Auto. Your server needs:
+
+- **Sign-in.** An `https` `PUBLIC_URL`, as [Let people sign in](security.md#let-people-sign-in) shows. A server that signs no one in answers nobody who writes to @Auto.
+- **A model provider**, as [Set up a model provider](models.md) shows. An admin chooses one of its models on the Slack Bot connection in Studio. Until then, Auto answers nobody in Slack.
+- **A Slack Bot connection with its app-level token**, and outgoing HTTPS and WebSocket connections to Slack on port 443, as [Create your app and connect it](../integrations/slack.md#create-your-app-and-connect-it) shows.
+
+Auto recognizes a member in Slack by their email address only where your sign-in says it's verified, in the standard claim `email_verified`. Where your identity provider doesn't send it, each member signs in to Auto once from Slack instead.
+
+With a standby, only the server that runs the workflows keeps the connection to Slack, and the standby takes it over with the workflows ([Choose one server or a standby](#run-several-servers)).
+
+### What Auto keeps of a conversation
+
+Auto keeps each conversation with @Auto in the ledger's database, in tables of its own, apart from every playbook's history:
+
+- what members wrote to @Auto, and its answers;
+- the other messages of a thread it read while taking part in it;
+- which Slack member is which person in Auto, by their IDs.
+
+Each conversation is encrypted under a key of its own, which Auto keeps with its other secrets, sealed under the [secrets key](#keep-the-secrets-key). Auto never keeps the email addresses it compares. Nothing is deleted after a time. What Auto does for a member, such as a run it starts, is in the playbook's history, and stays there.
+
+These delete what Auto keeps of conversations:
+
+- Removing the Slack Bot connection deletes its conversations, and which member is which.
+- A member who sends @Auto `disconnect` ends the link they made by signing in. What they wrote stays.
+- When an admin removes a member, Auto stops answering them and their link goes too. What they wrote stays.
+- For a request to delete, `admin delete-chat` deletes everything one member wrote, or one conversation ([Admin commands](security.md#admin-commands)). It takes the workspace's ID, which begins with `T`, as [Slack's help](https://slack.com/help/articles/221769328-Locate-your-Slack-URL-or-ID) shows, and the member's ID, which **Copy member ID** under **More** in their Slack profile copies.
 
 ## Inspect runs on a team runtime
 

@@ -196,15 +196,17 @@ A workflow run keeps acting for the caller who started it, with the permissions 
 
 ## Admin commands
 
-Three commands help whoever runs a server that signs people in. Run them as `npx @on.auto/runtime admin …`, or in the container as `docker exec <container> node packages/server/src/admin-command.ts …`. The admin commands read and write the server's ledger: run them where the server runs, with its settings. The server can be running or stopped.
+These commands are for whoever runs your Auto server. They're for a server that signs people in. Run them as `npx @on.auto/runtime admin …`, or in the container as `docker exec <container> node packages/server/src/admin-command.ts …`. The admin commands read and write the server's ledger: run them where the server runs, with its settings. The server can be running or stopped.
 
-| Command                     | What it does                                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `admin grant-admin <email>` | Make a person who has signed in an Admin, for when every Admin has left                                     |
-| `admin reset-setup`         | Start setup over, for when the first sign-in tied this server to the wrong organization. Signs everyone out |
-| `admin register-client`     | Register this server with the identity provider again, for when its registration there was deleted          |
+| Command                                                              | What it does                                                                                                                                 |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin grant-admin <email>`                                          | Make a person who has signed in an Admin, for when every Admin has left                                                                      |
+| `admin reset-setup`                                                  | Start setup over, for when the first sign-in tied this server to the wrong organization. Signs everyone out                                  |
+| `admin register-client`                                              | Register this server with the identity provider again, for when its registration there was deleted                                           |
+| `admin delete-chat member <account> <member>`                        | Delete everything the server keeps that a member of a chat app wrote, and their link to Auto, for when they ask for it to be deleted         |
+| `admin delete-chat conversation <account> <conversation> [<thread>]` | Delete what the server keeps of a conversation with Auto in a chat app, or of one of its threads, for when someone asks for it to be deleted |
 
-[Troubleshooting](troubleshooting.md#every-admin-has-left) says what each fixes.
+`<account>` is the ID of the account the chat app's connection is for, such as a Slack workspace's ID, and the other values are IDs in that account. [Let members talk to @Auto in Slack](production.md#let-members-talk-to-auto-in-slack) says where to find them. [Troubleshooting](troubleshooting.md#every-admin-has-left) says when you need `grant-admin`, `reset-setup` or `register-client`.
 
 ## Local mode
 
