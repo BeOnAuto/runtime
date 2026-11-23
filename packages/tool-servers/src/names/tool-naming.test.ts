@@ -66,7 +66,7 @@ describe('a tool that is not offered', () => {
     expect(await refusalOf(access, 'graph/search', 'graph/echo')).toMatchObject({
       _tag: 'tool_not_offered',
       because: 'tool_not_allowed',
-      detail: 'The operator of this server does not allow graph/echo',
+      detail: 'Whoever runs this server does not allow graph/echo',
     });
   });
 });

@@ -187,12 +187,12 @@ describe('the base_url of an HTTP API given its document in document_text', () =
     [
       'a private address',
       'https://10.0.0.7/v1',
-      'A connection may not reach the host 10.0.0.7, a private address, unless its operator names the host in connections.allowed_hosts',
+      'A connection may not reach the host 10.0.0.7, a private address, unless whoever runs this server names the host in connections.allowed_hosts',
     ],
     [
       'a loopback address',
       'https://127.0.0.1/v1',
-      'A connection may not reach the host 127.0.0.1, a loopback address, unless its operator names the host in connections.allowed_hosts',
+      'A connection may not reach the host 127.0.0.1, a loopback address, unless whoever runs this server names the host in connections.allowed_hosts',
     ],
     [
       'the address of cloud metadata',

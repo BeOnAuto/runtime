@@ -170,7 +170,7 @@ describe('the hosts a document by its address names', () => {
       status: 'rejected',
       reason: 'forbidden',
       detail:
-        'A connection may not reach the host 10.0.0.9, a private address, unless its operator names the host in connections.allowed_hosts',
+        'A connection may not reach the host 10.0.0.9, a private address, unless whoever runs this server names the host in connections.allowed_hosts',
     });
   });
 

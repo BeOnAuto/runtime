@@ -11,7 +11,7 @@ The English the runtime words its results in: the functions that list, quote, co
 - `counted(count, noun)` counts a `Noun`, `{ one, other }`, in the number's plain form and the noun's form for that number, `1 reasoning function`, `two hundred and three reasoning functions`; `plainNumber(number)` is that plain form, a whole number from 100 to 599 spelled out, so that no count reads as a status code, and any other number in digits.
 - `articled(noun)` gives a noun its indefinite article, `an input`, `a run`.
 - `capitalized(text)` puts the first character in capitals, and `asSentence(text)` ends a text with a full stop where it does not end as a sentence already.
-- `changedOnlyByWhoeverRunsTheServer` is how a guide says who can change the limits a runtime's operator sets, "can be changed only by whoever runs the server", the one wording of the guides that name such a limit.
+- `changedOnlyByWhoeverRunsTheServer` is how a guide says who can change the limits a runtime's settings set, "can be changed only by whoever runs the server", the one wording of the guides that name such a limit.
 
 ## Bounds
 

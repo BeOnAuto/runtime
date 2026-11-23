@@ -46,7 +46,7 @@ export const LicenseKey = Schema.String.annotate({
 const anAllocation = Schema.makeFilter(
   (text: string) =>
     Option.isSome(signedIn(text)) ||
-    'Expected the offline credits an operator of Auto signed for this runtime, as the JSON of their payload, signature and kid',
+    'Expected the offline credits the Auto team signed for this runtime, as the JSON of their payload, signature and kid',
 );
 
 const AllocationText = Schema.String.check(anAllocation);
@@ -59,7 +59,7 @@ const LicenseInFile = Schema.Struct({
   ),
   allocation: Schema.optionalKey(
     Schema.String.annotate({
-      description: `The offline credits an operator of Auto signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as \${ALLOCATION}. ${allocationVariable} wins over it`,
+      description: `The offline credits the Auto team signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as \${ALLOCATION}. ${allocationVariable} wins over it`,
     }).check(anAllocation),
   ),
 }).annotate({

@@ -113,7 +113,7 @@ function allocationGiven(text: string): LicenseCommand {
     onNone: () => (_port, asking) =>
       Effect.sync(() => {
         asking.console.error(
-          'Offline credits are the JSON an operator of Auto signed, {"payload":"…","signature":"…","kid":"…"}, given whole as one argument',
+          'Offline credits are the JSON the Auto team signed, {"payload":"…","signature":"…","kid":"…"}, given whole as one argument',
         );
         return 1;
       }),

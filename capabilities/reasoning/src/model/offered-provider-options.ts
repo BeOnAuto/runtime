@@ -5,8 +5,8 @@ import type { OpenAILanguageModelChatOptions, OpenAILanguageModelResponsesOption
 import { Predicate, type Schema } from 'effect';
 
 type Withholding =
-  | 'it attributes the request on the operator account'
-  | 'it stores or reuses state on the operator account'
+  | "it attributes the request on the server's provider account"
+  | "it stores or reuses state on the server's provider account"
   | 'it chooses routing, fallbacks or capacity'
   | 'it sets request headers or betas'
   | 'it brings in tools or servers'
@@ -41,8 +41,8 @@ function withheld(why: Withholding): Withheld {
   return { offered: false, why };
 }
 
-const attribution = withheld('it attributes the request on the operator account');
-const stored = withheld('it stores or reuses state on the operator account');
+const attribution = withheld("it attributes the request on the server's provider account");
+const stored = withheld("it stores or reuses state on the server's provider account");
 const routing = withheld('it chooses routing, fallbacks or capacity');
 const headers = withheld('it sets request headers or betas');
 const tools = withheld('it brings in tools or servers');

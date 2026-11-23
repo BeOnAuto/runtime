@@ -198,7 +198,7 @@ The arguments in `with` are the tool's own, named as its `input_schema` names th
 
 How a call ends when it goes wrong:
 
-- Before anything is sent: when the playbook may not use the tool server, the operator does not allow the tool, or the server does not list it, the run ends `unavailable` as `tool_not_offered`, in words that name `search`. When the server cannot be reached, it ends `unavailable` as `tool_server_failed`. Either can be run again.
+- Before anything is sent: when the playbook may not use the tool server, the tool is not allowed, or the server does not list it, the run ends `unavailable` as `tool_not_offered`, in words that name `search`. When the server cannot be reached, it ends `unavailable` as `tool_server_failed`. Either can be run again.
 - Once the call is sent, it is in the run's history. When the tool server fails on it, or the tool returns an error:
   - a tool marked `reads` ends the run `unavailable` as `tools_unfinished`, status 503. A workflow may try it again.
   - any other tool may have changed something, so the run ends `conflict` as `effect_unknown`, status 409. A workflow's retry on status 503 does not match it.
@@ -225,7 +225,7 @@ Write a delivery from what the tool returns, not from memory:
 
    The `reply` rule maps the words of a reply to the answer; see [Answering by reply](#answering-by-reply). [Tool blocks](#tool-blocks) gives each key, whether it is required and its default.
 
-4. Write `deliver` with `server`, `tool`, `with` and `sent`. Show the person the whole document, and save it with `create_definition`, `type` interaction, once they agree. A run refuses a server this playbook may not use, or a tool its operator does not allow, in words that name `search`.
+4. Write `deliver` with `server`, `tool`, `with` and `sent`. Show the person the whole document, and save it with `create_definition`, `type` interaction, once they agree. A run refuses a server this playbook may not use, or a tool that is not allowed, in words that name `search`.
 
 The arguments of `deliver.with`, `replies.with` and `tell.with` are typed as written:
 
@@ -333,7 +333,7 @@ Other rules checked when saved:
 - `wait` lies between `PT5S` and `PT1H`, and is `PT5S` when left out.
 - A function that reads replies and writes no `tell`, or `tell: all` or `tell: refusals`, is refused when its server can be asked and its provider does not say how its conversations are replied to, as a server added by hand does not: `Nothing says how a reply is answered through chat, so nobody could be told what became of theirs; write tell.with, the arguments of post_message that post under the message, or tell: none to stay silent`.
 - A function whose read lists oldest first and gives no `time` is refused unless the read's arguments name the request's own message, as a thread's do with `sent.id`, since an old message could be taken as the answer to a new request.
-- The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool its operator does not allow, is `unavailable` with the kind `tool_not_offered`.
+- The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool is not allowed, is `unavailable` with the kind `tool_not_offered`.
 
 ## Tool blocks
 
@@ -347,7 +347,7 @@ A request uses the tools of one server, `deliver.server`:
 | Read the replies          | `replies.tool`                                                                                                   |
 | Tell the party of a reply | The provider's own way of replying and marking, or `replies.tell.tool`, or `deliver.tool` when `tell` names none |
 
-A function with `call` uses `call.tool` on `call.server`. A run checks every tool its function names before it sends anything: the server must serve the playbook, and the operator must allow the tool. Otherwise the run is `unavailable` with the kind `tool_not_offered`.
+A function with `call` uses `call.tool` on `call.server`. A run checks every tool its function names before it sends anything: the server must serve the playbook, and the tool must be allowed. Otherwise the run is `unavailable` with the kind `tool_not_offered`.
 
 ### `call`
 
@@ -549,7 +549,7 @@ How replies are taken:
 | `conflict`, kind `unworkable`                  | A function with `call`: the tool refused the arguments                                                                                                                                                                                                           |
 | `conflict`, kind `unworkable`                  | A function with `call`: the answer has nothing to read, or nothing where `read` points                                                                                                                                                                           |
 | `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record, about 1 MiB as JSON, or holds a value `output.schema` refuses                                                                                                                          |
-| `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent                                                            |
+| `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent                                                                         |
 | `unavailable`, kind `tool_server_failed`       | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                                                            |
 | `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe                                                                                                                               |
 | `conflict`, kind `effect_unknown`              | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                                                                                          |
@@ -616,7 +616,7 @@ The limits for what one call may send and for the requests a playbook holds open
 
 <div data-audience="operator">
 
-On a runtime of one's own, the arguments of a call take what its operator sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program, and a playbook holds at once the open requests its operator sets with [`INTERACTION_OPEN_REQUESTS`](../self-host/configuration.md#interaction-functions), 10,000 unless set. Auto Cloud sets its own.
+On a runtime of one's own, the arguments of a call take what whoever runs it sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program, and a playbook holds at once the open requests whoever runs it sets with [`INTERACTION_OPEN_REQUESTS`](../self-host/configuration.md#interaction-functions), 10,000 unless set. Auto Cloud sets its own.
 
 </div>
 
@@ -734,6 +734,6 @@ A notification takes no answer, so its page counts what was sent. The page guide
 
 ## Availability
 
-Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers the operator configures and of the org's connections, or is held for an agent. See [Functions and availability](../concepts/functions.md#availability).
+Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers that whoever runs the server configures and of the org's connections, or is held for an agent. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

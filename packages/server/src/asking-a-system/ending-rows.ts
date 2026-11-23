@@ -68,9 +68,9 @@ export const beforeAnything: Rows = [
     sentNothing('tool_server_not_configured', 'No tool server named chat is configured for this playbook'),
   ],
   [
-    'a tool the operator does not allow',
+    'a tool that is not allowed',
     { server: { entry: { allowed: ['search'] } } },
-    sentNothing('tool_not_allowed', 'The operator of this server does not allow chat/thread'),
+    sentNothing('tool_not_allowed', 'Whoever runs this server does not allow chat/thread'),
   ],
   [
     'a server that cannot be reached',

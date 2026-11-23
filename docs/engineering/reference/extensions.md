@@ -1,6 +1,6 @@
 # Extension contract
 
-This contributor reference describes how to implement an extension. Operators should use the [extension configuration reference](../../self-host/configuration.md#extensions) for installation and settings.
+This contributor reference describes how to implement an extension. To install an extension and change its settings, use the [extension configuration reference](../../self-host/configuration.md#extensions).
 
 ## Manifest and version
 

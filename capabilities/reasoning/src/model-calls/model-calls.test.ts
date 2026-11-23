@@ -24,7 +24,7 @@ describe('a provider certificate this server does not trust', () => {
     const failure = await failed(access, textRequest('openai/gpt-5', { run_id: 'exec-1' }));
 
     expect(failure.detail).toBe(
-      'The TLS certificate of openai is not trusted by this server; its operator must add the certificate authority',
+      'The TLS certificate of openai is not trusted by this server; whoever runs it must add the certificate authority',
     );
     expect(recording.hints()).toEqual([
       {

@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 const AllocationGivenSchema = Schema.Struct({
   allocation: SignedSchema.annotate({
-    description: 'The allocation an operator of Auto signed for this installation: its payload, signature and kid',
+    description: 'The allocation the Auto team signed for this installation: its payload, signature and kid',
   }),
 });
 
@@ -32,7 +32,7 @@ export function defineActivateAllocation(license: Pick<LicensePorts, 'allocate'>
     name: 'activate_allocation',
     title: 'Activate allocation',
     description: [
-      'Gives this runtime the offline credits an operator of Auto signed for it, for a runtime that does not reach Auto: credits it spends where Auto cannot see, until the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order.',
+      'Gives this runtime the offline credits the Auto team signed for it, for a runtime that does not reach Auto: credits it spends where Auto cannot see, until the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order.',
       'From then on the runtime starts each new run against those credits itself, asking Auto nothing, until they are spent or their date has passed.',
       'It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another runtime or past its date is refused as a conflict of the kind license_invalid.',
     ].join(' '),

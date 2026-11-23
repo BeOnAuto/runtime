@@ -12,7 +12,7 @@ Use one where the work needs judgement or language. It judges or writes from wha
 
 ## A function document
 
-The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](mcp.md#model-information), or with one the operator of your runtime confirms.
+The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](mcp.md#model-information), or with one that whoever runs the server confirms.
 
 <!-- prettier-ignore -->
 ````markdown
@@ -226,19 +226,19 @@ To have the answers enforced, rewrite what a warning names:
 
 ## Tools
 
-`tools` lists the tools a run may call, from the tool servers the operator configured for the playbook and the connections people added to its org. Name them only where what the model searches for next depends on what it has just read, as when it searches again with better words until it can answer. A read whose arguments the input or an earlier step gives belongs in a lookup function, and the workflow hands its answer to this function, as the `start` guide sets out under Build from the job. Choosing from the input what to search for or open is not exploring, and neither is choosing which of a search's hits to read: a reasoning function with no tools makes each choice, one lookup searches, and another reads each chosen item in a `for`, as [A lookup for each item](workflow-format.md#a-lookup-for-each-item) shows. A function whose tools are all marked reads is still saved, and run when you ask. Its save answers a notice that says so when its tool servers list their tools within two seconds, and so does a run you ask for that succeeds. When that notice comes, move those reads to lookup functions, or keep the tools and tell the person what the model searches for after a read.
+`tools` lists the tools a run may call, from the tool servers that whoever runs the server configured for the playbook and the connections people added to its org. Name them only where what the model searches for next depends on what it has just read, as when it searches again with better words until it can answer. A read whose arguments the input or an earlier step gives belongs in a lookup function, and the workflow hands its answer to this function, as the `start` guide sets out under Build from the job. Choosing from the input what to search for or open is not exploring, and neither is choosing which of a search's hits to read: a reasoning function with no tools makes each choice, one lookup searches, and another reads each chosen item in a `for`, as [A lookup for each item](workflow-format.md#a-lookup-for-each-item) shows. A function whose tools are all marked reads is still saved, and run when you ask. Its save answers a notice that says so when its tool servers list their tools within two seconds, and so does a run you ask for that succeeds. When that notice comes, move those reads to lookup functions, or keep the tools and tell the person what the model searches for after a read.
 
-Write each as `server/tool`, or `server/*` for every tool of a server that the operator allows; a connection is named the same way, by its name:
+Write each as `server/tool`, or `server/*` for every allowed tool of a server; a connection is named the same way, by its name:
 
 ```yaml
 tools: [notes/search, notes/read_note]
 ```
 
-`server/*` gives every tool the server lists that the server's `allowed` setting names. When the operator left `allowed` out, it gives every tool the server lists. A tool written in another form, or listed twice, is refused when the document is saved.
+`server/*` gives every tool the server lists that the server's `allowed` setting names. When `allowed` is left out, it gives every tool the server lists. A tool written in another form, or listed twice, is refused when the document is saved.
 
 ### Find the tool names
 
-Do not guess tool names. `search` lists the servers set up for the playbook and the tools the operator allows on each; when there are many, give it `terms`, a few words of what the function should do. `introspect` reads one tool in full. Call a tool once before you name it, as a run would: `query_connection` for a tool marked `reads`, `execute_connection` for any tool once the person agrees. Each returns the `text` the run's model would see and is recorded in the playbook's history; see [Calling a tool by hand](http.md#calling-a-tool-by-hand).
+Do not guess tool names. `search` lists the servers set up for the playbook and the tools allowed on each; when there are many, give it `terms`, a few words of what the function should do. `introspect` reads one tool in full. Call a tool once before you name it, as a run would: `query_connection` for a tool marked `reads`, `execute_connection` for any tool once the person agrees. Each returns the `text` the run's model would see and is recorded in the playbook's history; see [Calling a tool by hand](http.md#calling-a-tool-by-hand).
 
 ### Before the model is called
 
@@ -251,7 +251,7 @@ A run checks its tools after it confirms that its model is offered, and before i
 | `tool_not_offered`   | `tool_not_listed`            | The server does not list the tool                                                                                                                                                                                                                                                |
 | `tool_not_offered`   | `connection_pending`         | The server is a connection nobody has approved yet                                                                                                                                                                                                                               |
 | `tool_not_offered`   | `connection_broken`          | The server is a connection whose server refused its credential, whose credential is gone from the secret store or is not the tokens of a consent, whose consent was revoked or has ended, whose client is no longer registered, or whose provider is replaced here; reconnect it |
-| `tool_not_offered`   | `connection_not_allowed`     | The server is a connection a rule of the operator no longer allows                                                                                                                                                                                                               |
+| `tool_not_offered`   | `connection_not_allowed`     | The server is a connection a rule of the runtime no longer allows                                                                                                                                                                                                                |
 | `tool_not_offered`   | `connection_unavailable`     | The server is a connection whose credential cannot be read just now; try again later                                                                                                                                                                                             |
 | `tool_server_failed` | `unreachable`                | The server cannot be reached, or does not respond in time                                                                                                                                                                                                                        |
 | `tool_server_failed` | `failing`                    | The server fails, or refuses to list its tools                                                                                                                                                                                                                                   |
@@ -328,7 +328,7 @@ Each call adds two events to the run's history, appended as they happen:
    - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, `shown_format`, the format the model was shown the result in, the duration and the JSON-RPC id. A run performed again shows its model each result exactly as the first attempt did, in the format its event names.
    - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, `cancelled`, or `interrupted` for a call whose attempt ended before it answered, which the run makes again; see [A run performed again](#a-run-performed-again)), the failure message, the duration and the JSON-RPC id.
 
-Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the operator sets `record_content: false` for the server. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.
+Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the server's entry sets `record_content: false`. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.
 
 An image a tool answers is kept as an asset of the run, apart from the result, when the result is kept:
 
@@ -360,7 +360,7 @@ Inspect its history and any external effects before deliberately starting a new 
 
 ### Setting up tools
 
-Tool access works in every runtime, whether started with npx or Docker, once the playbook has a tool server: one the operator configures under `tool_servers`, or a connection a person adds to its org. The operator binds each server under `tool_servers` to an org, and optionally to some of its playbooks. Its `allowed` setting narrows the server's tools; see the [Configuration reference](../self-host/configuration.md#tool-servers). Connecting an external agent does not give the function that agent's tools, credentials or accounts; see [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function).
+Tool access works in every runtime, whether started with npx or Docker, once the playbook has a tool server: one that whoever runs the server configures under `tool_servers`, or a connection a person adds to its org. Each server under `tool_servers` is bound to an org, and optionally to some of its playbooks. Its `allowed` setting narrows the server's tools; see the [Configuration reference](../self-host/configuration.md#tool-servers). Connecting an external agent does not give the function that agent's tools, credentials or accounts; see [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function).
 
 ## How a run ends
 
@@ -377,7 +377,7 @@ Every rejection is a problem document, and is recorded on the run.
 | A JSON answer is cut off at `max_output_tokens`                                          | `conflict`, kind `unworkable`: by what the run called, what to move into a function of its own, then raise `config.max_output_tokens`                                           | 409        |
 | The answer is too large for the 1 MiB a run records                                      | `conflict`, kind `unworkable`: lower `config.max_output_tokens`                                                                                                                 | 409        |
 | The provider signals the request is too long                                             | `conflict`, kind `unworkable`                                                                                                                                                   | 409        |
-| The model is outside the operator's allowed models                                       | `unavailable`, kind `model_not_offered`, `because: "model_not_allowed"`                                                                                                         | 503        |
+| The model is outside the models the server allows                                        | `unavailable`, kind `model_not_offered`, `because: "model_not_allowed"`                                                                                                         | 503        |
 | The provider is not configured, or its certificate is not trusted                        | `unavailable`                                                                                                                                                                   | 503        |
 | The provider rejects the credentials                                                     | `unavailable`, with the HTTP status                                                                                                                                             | 503        |
 | The provider limits the rate of requests                                                 | `unavailable`, with the seconds to wait when it said                                                                                                                            | 503        |
@@ -394,7 +394,7 @@ Every rejection is a problem document, and is recorded on the run.
 What the rejections say:
 
 - A provider's rejection names the provider, the HTTP status and what it means. It quotes the provider's own words only where [Provider messages](model-settings.md#provider-messages) allow them.
-- A rejection for a provider that is not configured names that provider, with the configured providers and the aliases. A rejection for an untrusted certificate says that the operator must act. Neither names a setting. When other providers are configured but not this one, the kind is `model_not_offered` and `because` is `provider_not_configured`.
+- A rejection for a provider that is not configured names that provider, with the configured providers and the aliases. A rejection for an untrusted certificate says that whoever runs the server must act. Neither names a setting. When other providers are configured but not this one, the kind is `model_not_offered` and `because` is `provider_not_configured`.
 - Nothing is sent to a model outside the allowed models.
 - A request that is too long is explained under [Limits on time and failures](#limits-on-time-and-failures). The tool endings are explained under [Before the model is called](#before-the-model-is-called) and [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish).
 
@@ -480,7 +480,7 @@ These are never offered, for any provider:
 
 - Anything the front matter sets, such as the effort level (`config.reasoning`), the token limit or how a JSON schema is sent (`output`).
 - Credentials, and attribution such as `user`, `metadata` or `labels`.
-- Anything stored or reused on the operator's account: `store`, `previousResponseId`, `conversation`, `container`, `cacheControl`, `cachedContent`, and prompt cache keys and retention.
+- Anything stored or reused on the server's provider account: `store`, `previousResponseId`, `conversation`, `container`, `cacheControl`, `cachedContent`, and prompt cache keys and retention.
 - Routing, fallbacks, capacity and service tiers.
 - Request headers and betas, such as `anthropicBeta`.
 - Tools and servers, such as `mcpServers`.
@@ -493,7 +493,7 @@ An option that is not offered is refused when the document is saved. The problem
 
 ### Options for a gateway
 
-A gateway is an endpoint the operator configures under its own name. Every field under the gateway's name, or its camel-case form (`my-gateway` and `myGateway`), goes into the request body unchanged. `user` is read from `openaiCompatible`. A gateway gives meaning to body fields its operator may not want a function to set: attribution and budgets, routing and fallbacks, mock answers, endpoints and credentials. So under any of these namespaces, a function may set only the top-level fields the operator lists in the gateway's `allowed_provider_options`. By default that list is empty. The operator cannot allow a field the runtime sets, such as `temperature`.
+A gateway is an endpoint that whoever runs the server configures under its own name. Every field under the gateway's name, or its camel-case form (`my-gateway` and `myGateway`), goes into the request body unchanged. `user` is read from `openaiCompatible`. A gateway gives meaning to body fields that whoever runs the server may not want a function to set: attribution and budgets, routing and fallbacks, mock answers, endpoints and credentials. So under any of these namespaces, a function may set only the top-level fields that whoever runs the server lists in the gateway's `allowed_provider_options`. By default that list is empty. Whoever runs the server cannot allow a field the runtime sets, such as `temperature`.
 
 Saving does not know which gateways are configured, so these checks happen when the function runs:
 

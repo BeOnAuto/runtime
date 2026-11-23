@@ -21,8 +21,8 @@ const offered: Readonly<Record<string, readonly string[]>> = {
 };
 
 const reasons = [
-  'it attributes the request on the operator account',
-  'it stores or reuses state on the operator account',
+  "it attributes the request on the server's provider account",
+  "it stores or reuses state on the server's provider account",
   'it chooses routing, fallbacks or capacity',
   'it sets request headers or betas',
   'it brings in tools or servers',

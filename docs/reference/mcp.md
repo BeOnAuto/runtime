@@ -12,7 +12,7 @@ To connect Claude Code, Claude Desktop or Codex, follow the [quick start](../get
 
 MCP here is an inbound interface: an external agent connects to Auto Runtime and calls its operations. It does not configure tools inside a reasoning function.
 
-A reasoning function can call tools itself, through tool servers the runtime's operator configures or through [connections](#connections) people add to their organization. That outbound connection is set up in Auto, never by adding an endpoint to an external agent. The operator lists each server and the tools it allows in [`tool_servers`](../self-host/configuration.md#tool-servers), and a function names those tools in its [`tools`](reasoning-format.md#tools). [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function) explains the difference.
+A reasoning function can call tools itself, through tool servers that whoever runs the server configures or through [connections](#connections) people add to their organization. That outbound connection is set up in Auto, never by adding an endpoint to an external agent. Whoever runs the server lists each tool server and its allowed tools in [`tool_servers`](../self-host/configuration.md#tool-servers), and a function names those tools in its [`tools`](reasoning-format.md#tools). [Tool access inside a reasoning function](../concepts/functions.md#tool-access-inside-a-reasoning-function) explains the difference.
 
 ## Endpoints {#endpoint-scope}
 
@@ -78,11 +78,11 @@ Hosted Auto signs you in when your agent connects; account creation is part of t
 
 An MCP client sends the same credentials as any HTTP caller, and has the same permissions; see [Requests and access](http.md#requests-and-access). A client connects in one of three ways:
 
-- Signed in. Hosted Auto uses this flow by default. For a self-hosted runtime, the operator enables sign-in with `PUBLIC_URL`. Your agent discovers where to sign you in and opens the browser for you.
+- Signed in. Hosted Auto uses this flow by default. For a self-hosted runtime, whoever runs it enables sign-in with `PUBLIC_URL`. Your agent discovers where to sign you in and opens the browser for you.
 - With no credential, when a self-hosted server runs in [local mode](../self-host/security.md#local-mode). It listens only on a loopback address and trusts requests from that computer. Never expose local mode through a tunnel or public proxy.
 - With an [API key](../self-host/security.md#api-keys), sent as `Authorization: Bearer <key>`. Keep it in the connection configuration, outside prompts and function documents.
 
-[Authentication and security](../self-host/security.md) says how an operator sets each of these up. The [Sign-in and token reference](authentication.md) gives the rules the server applies.
+[Authentication and security](../self-host/security.md) says how to set each of these up. The [Sign-in and token reference](authentication.md) gives the rules the server applies.
 
 ### Signing in from an MCP client
 
@@ -263,9 +263,9 @@ Five tools work with the tool servers of the playbook, those set up in the confi
 - `introspect` and `dry_run` change nothing and call no tool, but they ask the servers for their tool lists. So their hints say read-only and open-world, and a key that may read the playbook is offered them.
 - Each tool carries its mark: `reads` when it only reads, `acts` when it may change something, and `unmarked` when nothing marks it, which counts as `acts`. `search` and `dry_run` answer it as `mark`, and `introspect` beside the hints its server gives, `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` as it gives them, with `marked_by`: `server` for the hints its server lists it with, or the lack of them, `method` for the HTTP method of an operation of an HTTP API, `catalogue` for the entry of its provider, and `settings` for its entry in the [configuration](../self-host/configuration.md#the-mark-of-a-tool). `search` with `only: read` keeps the tools marked `reads`, and with `only: write` the others.
 - `query_connection` and `execute_connection` need `playbook:write` whatever the tool does, so a key that may only read is offered neither. Each call is recorded in the playbook's history.
-- `query_connection` calls only a tool marked `reads`, and refuses any other as `unavailable` of the kind `tool_not_read_only`, so it is marked read-only. `execute_connection` calls a tool whatever its mark, so it is marked destructive. Many of the tools they call belong to third parties: a connection's MCP server, a provider's API, or an HTTP API an operator set up. The runtime cannot always tell whether such a tool only reads or changes something. `search` with `only: read`, `introspect` and `dry_run` show a tool's mark without calling it.
+- `query_connection` calls only a tool marked `reads`, and refuses any other as `unavailable` of the kind `tool_not_read_only`, so it is marked read-only. `execute_connection` calls a tool whatever its mark, so it is marked destructive. Many of the tools they call belong to third parties: a connection's MCP server, a provider's API, or an HTTP API that whoever runs the server set up. The runtime cannot always tell whether such a tool only reads or changes something. `search` with `only: read`, `introspect` and `dry_run` show a tool's mark without calling it.
 - A call that names a server or a tool the playbook may not use is refused, and the refusal's words say what `search` shows.
-- A connection is listed with `connection`, its id, and named by its name. One that is not ready is refused, and listed unavailable, with `because` `connection_pending` while nobody has approved it, `connection_broken` once its server answered `401`, or a code its provider's `failure_codes` names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, its client is no longer registered, or the provider it was made from is replaced here, in words that say what mends it, most often `reconnect_connection`, `connection_not_allowed` when a rule of the operator no longer takes it, or `connection_unavailable` while its credential cannot be read just now, which a later call may find put right.
+- A connection is listed with `connection`, its id, and named by its name. One that is not ready is refused, and listed unavailable, with `because` `connection_pending` while nobody has approved it, `connection_broken` once its server answered `401`, or a code its provider's `failure_codes` names for a refused credential, its credential is gone from the secret store or is not the tokens of a consent, its consent was revoked or has ended, its client is no longer registered, or the provider it was made from is replaced here, in words that say what mends it, most often `reconnect_connection`, `connection_not_allowed` when a rule of the runtime no longer takes it, or `connection_unavailable` while its credential cannot be read just now, which a later call may find put right.
 - Each server carries `provider`: the name of the provider a connection was added from or an entry of the configuration names, or `null` for a server given by hand.
 - On `/mcp` and the org endpoint, to a caller who may add a connection, `search` also lists in `providers` the [providers](http.md#providers) a person may connect that no server serves yet, found by `terms` as tools are, each with its `name`, `title` and `description` and, where its way offers groups of scopes beyond its first consent, `more`, each group by the name `add_connection` takes as `more` and what it is for. A provider none of whose ways is offered, as while a value whoever runs Auto sets for it is not set, is left out. An agent asked to connect a service, or for one no server serves, finds its provider there by the service's words and connects it with `add_connection`. A key, a caller who may only read and a runtime where nobody may add get no `providers`, and neither does `search` with `server`.
 - When no server serves the playbook, the words of `search` say that whoever runs the server sets one up. Where people may add connections, they also say that a person adds one, or, where `search` lists a provider, that a person connects a provider it lists.
@@ -306,7 +306,7 @@ A connection is a tool server that a person adds to the org through their agent,
 - As an MCP server given by hand is added, and before anything is recorded, the runtime asks it once how it authenticates, with one request that carries no token, and reads the protected resource metadata it names:
   - Where that metadata names an authorization server the runtime takes, the connection records `authorization` with that server as its issuer, whether the agent left the credential out or gave `authorization` with its `kind` alone. A `none`, `secret` or `reference` is refused at `/credential/kind`, in words that name the authorization server and say to leave the credential out. A `client_credentials` credential stands as given.
   - Where the server names none, `authorization` is refused at `/credential/kind`, in words that say the server offers no consent, and any other kind the agent gave stands. A credential left out is refused at `/credential`, in words that say the server names no way of its own and ask how its credential is sent.
-  - A server that does not answer, or whose host the operator's rules refuse, is refused whatever the kind.
+  - A server that does not answer, or whose host the runtime's rules refuse, is refused whatever the kind.
 - Once connected, a connection is a tool server of the org: a function names it by its name as `name/tool`, `list_connection_tools` lists its tools, and `search`, `introspect`, `dry_run`, `query_connection` and `execute_connection` reach it, as [Tool servers](#tool-servers) describes.
 - A link works until its connection is connected or removed, or until a newer link replaces it. Where the person no longer has the link, `reconnect_connection` gives the connection a new one, as it gives one to a connection that is broken or to a connected one whose credential the person replaces, so the person gives its credential or signs in again on Studio's page; nothing else of the connection changes, but where it adds the connection again, as below. The new link replaces the one before, and the token of the one before is answered in words that say a newer link replaced it. It answers as `add_connection` does, asking a client that opens links to open it, and refuses a removed connection, which is added again instead. A broken connection of a `reference` takes no link: the runtime finds its variable set and connects it again at once, or refuses it while the variable is not set, since it reads its variables when it starts. Where people sign in, the person who added the connection reconnects it. Where the runtime lets a person of the organization reconnect a connection of the provider whoever added it, that person may reconnect it instead, for a connection made from a provider another replaces and for one another person added that is still `pending`: either is removed and added again under its name, for the same playbooks, as theirs to finish, and a caller the runtime starts no connection of the provider for is refused in words that say who can.
 - `list_connections` answers each connection with `more`, the groups of scopes its provider's way names that it does not hold yet and a client set up here can ask, each `{ name, for }`, `for` what the group is for in the person's words, as `Share your files with other people.` for `share` in the example of [A consent that asks more](../self-host/connections.md#a-consent-that-asks-more). `reconnect_connection` given `more`, a group's name, gives a connection that is pending, connected or broken a link whose consent asks the scopes the connection asked that it was granted with the group's, so the person allows more and keeps what they allowed before; a connected connection stays connected as it is until the person finishes. A group the way does not name is refused as `invalid_input` at `/more`, and one the connection holds already or no client set up here covers as `conflict`. A plain link asks the scopes the credential asks with those the connection asked since and was granted, so a group allowed once is kept.
@@ -314,7 +314,7 @@ A connection is a tool server that a person adds to the org through their agent,
 - Each connection answers `asked_scopes`, which grow by a group's scopes as a consent that asks more starts, and `granted_scopes`, each scope with `says`, the sentence of its provider's way or of the group that says what the connection can do through it, or `null` where the way says nothing of it, as for a server given by hand, and `broken`, `{ kind, detail, at }` while it is broken: the kind of the break, the runtime's words and when it broke.
 - `add_connection`, `reconnect_connection` and `remove_connection` need `org:write`, and `list_connections` and `list_connection_tools` need `org:read`. `get_connection`, which reads one connection by its id, `set_connection_playbooks`, which sets which playbooks may use one and needs `org:write`, and `decline_connection_request`, which declines a request and needs `org:write`, are served over HTTP alone; `list_connections` shows whether the person approved a connection, in the `status` of each.
 
-[Connections](http.md#connections) gives the fields, limits and refusals, and [Let people add connections](../self-host/connections.md) the flow and the rules the operator sets.
+[Connections](http.md#connections) gives the fields, limits and refusals, and [Let people add connections](../self-host/connections.md) the flow and the rules whoever runs the server sets.
 
 ### License
 
@@ -413,26 +413,26 @@ The result has the shape of the OpenAI API's list of models, with fields of its 
 }
 ```
 
-| Field            | Meaning                                                                                                                                                                                                    |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `object`         | `"list"`                                                                                                                                                                                                   |
-| `data`           | The entries, sorted by `id`, each `id` once                                                                                                                                                                |
-| `catalog_status` | `complete`, or `partial` when a provider could not be asked, so its models are missing or are its last list                                                                                                |
-| `narrowed`       | `true` when `allowed_models` or `ALLOWED_MODELS` is set, so the list holds only what the operator allows; `false` when nothing narrows it, and a definition may name any model of the configured providers |
-| `listed_at`      | When the oldest provider list in the result was read; the time of the response when no provider was queried                                                                                                |
-| `provider_setup` | Only from a runtime started with npx, when no `provider` is given and it lists no model: how the person adds a model provider                                                                              |
+| Field            | Meaning                                                                                                                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `object`         | `"list"`                                                                                                                                                                                                              |
+| `data`           | The entries, sorted by `id`, each `id` once                                                                                                                                                                           |
+| `catalog_status` | `complete`, or `partial` when a provider could not be asked, so its models are missing or are its last list                                                                                                           |
+| `narrowed`       | `true` when `allowed_models` or `ALLOWED_MODELS` is set, so the list holds only what whoever runs the server allows; `false` when nothing narrows it, and a definition may name any model of the configured providers |
+| `listed_at`      | When the oldest provider list in the result was read; the time of the response when no provider was queried                                                                                                           |
+| `provider_setup` | Only from a runtime started with npx, when no `provider` is given and it lists no model: how the person adds a model provider                                                                                         |
 
 Each entry contains `id`, `object: "model"`, `created` and `owned_by`. The last six fields in this table appear only where they apply:
 
 | Field            | Meaning                                                                                                                                                                                                    |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`             | The model as a definition names it, `<provider>/<model id>`, or an alias as its operator wrote it                                                                                                          |
+| `id`             | The model as a definition names it, `<provider>/<model id>`, or an alias as whoever runs the server wrote it                                                                                               |
 | `created`        | When the provider released or added the model, in seconds since 1970, as the provider says; `0` when it does not say                                                                                       |
 | `owned_by`       | The provider prefix that serves the model; for an alias, the prefix of its target. Never the owner a provider reports                                                                                      |
 | `name`           | The provider's name for the model, only when the provider reports one                                                                                                                                      |
 | `context_window` | The most input tokens, only when the provider reports it                                                                                                                                                   |
 | `max_tokens`     | The most output tokens, only when the provider reports it                                                                                                                                                  |
-| `alias`          | `true` for every alias its operator named, whether or not `resolved_to` shows its target; no other entry has it                                                                                            |
+| `alias`          | `true` for every alias that whoever runs the server named, whether or not `resolved_to` shows its target; no other entry has it                                                                            |
 | `resolved_to`    | For an alias, the reference it is sent to; left out when that is a Bedrock ARN, which names an account and a region                                                                                        |
 | `pattern`        | `true` for an id that ends in `*`, which stands for any model id. It is a wildcard alias, or `<provider>/*` for a provider that lists nothing and has no declared models, such as Bedrock, Azure or Vertex |
 
@@ -440,8 +440,8 @@ How to read it:
 
 - Use a concrete `id` as the reasoning function's `model`.
 - A wildcard describes a supported prefix; it is not a model to run.
-- `catalog_status: "partial"` means a provider's list is missing or stale. It does not mean the server has no models. The caller sees only `partial`; the operator's log says why the list could not be read.
-- Model access rules also apply when a function runs. A model the operator does not allow is refused before the provider is called, as [Responses and errors](http.md#responses-and-errors) says.
+- `catalog_status: "partial"` means a provider's list is missing or stale. It does not mean the server has no models. The caller sees only `partial`; the server's log says why the list could not be read.
+- Model access rules also apply when a function runs. A model that whoever runs the server does not allow is refused before the provider is called, as [Responses and errors](http.md#responses-and-errors) says.
 
 How long a list is kept:
 
@@ -452,7 +452,7 @@ What the list leaves out:
 
 - a model that an alias redirects, since a definition that names it reaches the alias instead. With `anthropic/*` sent to a gateway, the models Anthropic lists are left out, and `anthropic/*` is listed;
 - an alias whose target provider is not configured, since a definition cannot call it;
-- any model the operator's allow list does not allow;
+- any model the server's allow list does not allow;
 - an entry whose id is empty, longer than 256 characters, contains a space, a control character or a `*`, or is a Bedrock ARN;
 - a `name` longer than 100 characters or on more than one line, though its entry is kept;
 - every key, token, base URL, header, query parameter, account, project, region and Bedrock ARN, every price, description or other field a provider adds, and the owner a provider reports.
@@ -462,12 +462,12 @@ The plain-language summary of the result follows these rules:
 - It names at most 20 models and counts the rest. It names each by the name its provider gives, or else by the last part of its id.
 - A name two providers share gets its provider in brackets. A name one provider repeats is replaced by the last part of the id.
 - It says which providers accept any model id, such as `It can also call any openai model.`
-- When the list is narrowed, it then says `It lists only the models its operator allows.`
+- When the list is narrowed, it then says `It lists only the models that whoever runs this server allows.`
 - A `partial` result ends with `The list may be incomplete: a provider could not be asked just now.`
 
 A server with six models, for example, says: `This server can call 6 models through anthropic and gateway: Claude Haiku 4.5 (anthropic), Claude Opus 4.1, Claude Sonnet 4.5, Qwen3-14B, Claude Haiku 4.5 (gateway), and fast.`
 
-[Set up a model provider](../self-host/models.md) explains how an operator sets up a provider. The [Model settings reference](model-settings.md) covers aliases, declared models, the allow list and how each list is built.
+[Set up a model provider](../self-host/models.md) explains how to set up a provider. The [Model settings reference](model-settings.md) covers aliases, declared models, the allow list and how each list is built.
 
 This catalog lists language models, not MCP tools. `search` finds the tools of the tool servers a playbook's functions may use. A separately managed tool library is still planned.
 

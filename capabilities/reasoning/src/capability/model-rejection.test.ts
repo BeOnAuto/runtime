@@ -84,12 +84,12 @@ const cannotServe: readonly (readonly [string, () => ModelFailure, string])[] = 
     () =>
       new ProviderNotConfigured({
         detail:
-          'The TLS certificate of openai is not trusted by this server; its operator must add the certificate authority',
+          'The TLS certificate of openai is not trusted by this server; whoever runs it must add the certificate authority',
         provider: 'openai',
         configured: ['openai', 'anthropic'],
         missing: ['NODE_EXTRA_CA_CERTS'],
       }),
-    'The TLS certificate of openai is not trusted by this server; its operator must add the certificate authority',
+    'The TLS certificate of openai is not trusted by this server; whoever runs it must add the certificate authority',
   ],
   [
     'credentials_rejected',

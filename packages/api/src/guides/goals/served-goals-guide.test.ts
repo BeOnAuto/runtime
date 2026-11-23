@@ -114,7 +114,7 @@ describe('the terminology and recipes of a server that keeps goals', () => {
     expect(withGoals).toContain(
       `\n${createStep}${goalsInFirstPlaybook}\n4. Call list_models where this connection has it`,
     );
-    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([6318, 7060]);
+    expect([byteLengthOf(without), byteLengthOf(withGoals)]).toEqual([6321, 7063]);
     expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytes);
     expect(byteLengthOf(withGoals)).toBeLessThanOrEqual(mostRecipeBytesWhere(true));
     expect(internalTermsIn(goalsInFirstPlaybook)).toEqual([]);

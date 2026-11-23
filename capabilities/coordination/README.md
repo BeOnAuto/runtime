@@ -2,7 +2,7 @@
 
 The workflow adapter parses a `WorkflowDefinitionDocument` from YAML in the Open Workflow Specification DSL. This document type is an alias for `JsonObject`; the parser applies the existing DSL checks. It is separate from the named, versioned definition stored in the registry. The adapter runs the workflow machine of [`@on.auto/workflow-engine`](../../packages/workflow-engine), hosted in Node by [`@on.auto/workflow-host`](../../packages/workflow-host). Workflows coordinate functions and control steps; they are not another function type. A workflow is a definition of the type `workflow`.
 
-Public documentation explains [workflows and their availability](../../docs/concepts/workflows.md) and [the workflow format](../../docs/reference/workflow-format.md), published at [on.auto/docs](https://on.auto/docs/). The [workflow storage and failover guide](../../docs/self-host/workflows.md) describes running them for an operator, and the repository-only [workflow run reference](../../docs/engineering/reference/workflow-format.md) holds the implementation details.
+Public documentation explains [workflows and their availability](../../docs/concepts/workflows.md) and [the workflow format](../../docs/reference/workflow-format.md), published at [on.auto/docs](https://on.auto/docs/). The [workflow storage and failover guide](../../docs/self-host/workflows.md) describes running them for whoever runs the server, and the repository-only [workflow run reference](../../docs/engineering/reference/workflow-format.md) holds the implementation details.
 
 ## Entry
 

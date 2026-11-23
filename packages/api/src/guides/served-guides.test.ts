@@ -219,7 +219,7 @@ describe('the recipes that give a playbook tools', () => {
       'For a step that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3010, 5134,
+      3013, 5137,
     ]);
   });
 });
@@ -241,8 +241,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [5725, 3825, 3742],
-      [5134, 3010, 3742],
+      [5728, 3828, 3742],
+      [5137, 3013, 3742],
     ]);
   });
 });

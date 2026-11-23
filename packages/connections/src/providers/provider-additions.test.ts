@@ -359,7 +359,7 @@ describe('the rules a connection added by a provider passes', () => {
     expect(await adding(harness({ policy: connectionPolicyOf({ people_may_add: false }) }), acmeTracker)).toMatchObject(
       {
         reason: 'forbidden',
-        detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
+        detail: 'People may not add connections on this runtime: whoever runs it sets up its tool servers',
       },
     );
   });

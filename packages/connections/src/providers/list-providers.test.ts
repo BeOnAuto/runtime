@@ -263,7 +263,7 @@ describe('whether a caller may add', () => {
       { may_add: false, refusal: 'The caller lacks the org:write permission' },
       {
         may_add: false,
-        refusal: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
+        refusal: 'People may not add connections on this runtime: whoever runs it sets up its tool servers',
       },
       { may_add: true, refusal: null },
     ]);

@@ -2384,7 +2384,7 @@
         },
         "allocation": {
           "type": "string",
-          "description": "The offline credits an operator of Auto signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as ${ALLOCATION}. AUTO_RUNTIME_ALLOCATION wins over it"
+          "description": "The offline credits the Auto team signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as ${ALLOCATION}. AUTO_RUNTIME_ALLOCATION wins over it"
         }
       },
       "additionalProperties": false,

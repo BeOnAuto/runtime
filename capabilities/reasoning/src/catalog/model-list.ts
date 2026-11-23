@@ -5,7 +5,7 @@ const Count = Schema.Int.check(Schema.isGreaterThan(0));
 const ModelEntrySchema = Schema.Struct({
   id: Schema.String.annotate({
     description:
-      'The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as its operator wrote it',
+      'The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as whoever runs this server wrote it',
   }),
   object: Schema.Literal('model'),
   created: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).annotate({
@@ -22,7 +22,8 @@ const ModelEntrySchema = Schema.Struct({
   ),
   alias: Schema.optionalKey(
     Schema.Literal(true).annotate({
-      description: 'true for an alias its operator named, whether or not resolved_to shows where it is sent',
+      description:
+        'true for an alias that whoever runs this server named, whether or not resolved_to shows where it is sent',
     }),
   ),
   resolved_to: Schema.optionalKey(
@@ -51,7 +52,7 @@ export const ModelListSchema = Schema.Struct({
   }),
   narrowed: Schema.Boolean.annotate({
     description:
-      'true when the operator allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers',
+      'true when whoever runs this server allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers',
   }),
   listed_at: Schema.String.annotate({
     description: 'When the oldest list of models in the answer was read from its provider, in ISO 8601',

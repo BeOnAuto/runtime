@@ -231,18 +231,18 @@ When a lookup function runs, the runtime reads the mark again, as it lists the s
 
 ## How a run ends
 
-| Ending                                   | When                                                                                                                                                                                                                                                   |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output. For `runs`, the runs it read, which may be none                                                                                             |
-| `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                                                                                              |
-| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass the most a call may send to its server                                                                                                                                               |
-| `conflict`, kind `unworkable`            | `runs.words` renders more than 1,000 characters, `runs.since` renders neither a day nor a date and time, or either renders a structure                                                                                                                 |
-| `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it                                                                         |
-| `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                                                                                                 |
-| `unavailable`, kind `tool_not_offered`   | The server no longer serves the playbook, its operator no longer allows the tool, the server no longer lists it, or the connection that serves it is not ready, with a `because` such as `connection_pending` or `connection_broken`. Nothing was sent |
-| `unavailable`, kind `tool_server_failed` | The tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                                                                          |
-| `unavailable`, kind `tools_unfinished`   | The call was sent and then failed: the server failed on it or did not respond within 30 seconds, `because` `server_failed`, or the tool returned an error, `because` `tool_error`                                                                      |
-| `failed`                                 | The runtime itself broke down                                                                                                                                                                                                                          |
+| Ending                                   | When                                                                                                                                                                                                                                          |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output. For `runs`, the runs it read, which may be none                                                                                    |
+| `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                                                                                     |
+| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass the most a call may send to its server                                                                                                                                      |
+| `conflict`, kind `unworkable`            | `runs.words` renders more than 1,000 characters, `runs.since` renders neither a day nor a date and time, or either renders a structure                                                                                                        |
+| `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it                                                                |
+| `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                                                                                        |
+| `unavailable`, kind `tool_not_offered`   | The server no longer serves the playbook, the tool is no longer allowed, the server no longer lists it, or the connection that serves it is not ready, with a `because` such as `connection_pending` or `connection_broken`. Nothing was sent |
+| `unavailable`, kind `tool_server_failed` | The tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                                                                 |
+| `unavailable`, kind `tools_unfinished`   | The call was sent and then failed: the server failed on it or did not respond within 30 seconds, `because` `server_failed`, or the tool returned an error, `because` `tool_error`                                                             |
+| `failed`                                 | The runtime itself broke down                                                                                                                                                                                                                 |
 
 Every call of a lookup function reads, and so does a read of runs, so a run that could not finish changed nothing, and trying again under a new run id is safe. A run that called its tool and did not succeed is never run again under its run id: a request with that id returns `conflict` with the kind `tools_called` and the because `only_read`. [Retrying under a run id](http.md#retrying-under-a-run-id) gives every case.
 
@@ -271,7 +271,7 @@ The limits for what one call may send <span data-variable="lookup.bounds_changed
 
 <div data-audience="operator">
 
-On a runtime of one's own, the arguments of a call take what its operator sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program. Auto Cloud sets its own.
+On a runtime of one's own, the arguments of a call take what whoever runs it sets with [`TOOL_CALL_MAX_REQUEST_MIB`](../self-host/configuration.md#tool-calls), 16 MiB unless set, and at most 4 MiB to a server started as a program. Auto Cloud sets its own.
 
 </div>
 
@@ -294,6 +294,6 @@ Show numbers over time as a chart keyed by the period a run is about, and anythi
 
 ## Availability
 
-Lookup functions are available in every runtime. A lookup reads through the tools of the tool servers the operator configures and of the org's connections, or reads the runs the playbook keeps. See [Functions and availability](../concepts/functions.md#availability).
+Lookup functions are available in every runtime. A lookup reads through the tools of the tool servers that whoever runs the server configures and of the org's connections, or reads the runs the playbook keeps. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

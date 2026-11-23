@@ -248,7 +248,7 @@ describe('listed models', () => {
         narrowed: true,
       });
       expect(plainTextIn(listed)).toBe(
-        'This server can call 2 models through anthropic and gateway: Claude Sonnet 4.5 and fast. It lists only the models its operator allows.',
+        'This server can call 2 models through anthropic and gateway: Claude Sonnet 4.5 and fast. It lists only the models that whoever runs this server allows.',
       );
       expect(internalTermsIn(plainTextIn(listed))).toEqual([]);
     });

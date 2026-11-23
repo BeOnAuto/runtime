@@ -67,7 +67,7 @@ export function hostRefusalOf(allowedHosts: readonly string[] | null, host: stri
       });
 }
 
-const operatorNames = 'unless its operator names the host in connections.allowed_hosts';
+const operatorNames = 'unless whoever runs this server names the host in connections.allowed_hosts';
 
 function reservedRefusalOf(host: string, reached: string): Forbidden {
   const unless = operatorMayNameHost(host) ? `, ${operatorNames}` : '';
@@ -177,7 +177,8 @@ export function gatewayRefusalOf(
     : new Forbidden({ detail: gatewayWordsOf(reached, addition.provider === null) });
 }
 
-const variablesRule = 'A reference may name only a variable the operator lists in connections.variables';
+const variablesRule =
+  'A reference may name only a variable that whoever runs this server lists in connections.variables';
 
 function referenceRefusal(variables: readonly string[], { credential }: Addition): Forbidden | undefined {
   const { kind, variable = '' } = credential;
@@ -253,7 +254,7 @@ export function addingRefusalOf({ peopleMayAdd }: ConnectionPolicy): Forbidden |
   return peopleMayAdd
     ? undefined
     : new Forbidden({
-        detail: 'People may not add connections on this runtime: its operator sets up its tool servers itself',
+        detail: 'People may not add connections on this runtime: whoever runs it sets up its tool servers',
       });
 }
 
@@ -273,6 +274,6 @@ export function useRefusalOf(
   return policy.peopleMayAdd
     ? rulesRefusalOf(policy, addition, provided)
     : new Forbidden({
-        detail: 'This runtime uses no connection: its operator sets up its tool servers itself',
+        detail: 'This runtime uses no connection: whoever runs it sets up its tool servers',
       });
 }

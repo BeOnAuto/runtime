@@ -12,7 +12,7 @@ function mcpAt(url: string) {
   return { ...notes, entry: { url } };
 }
 
-const namedByTheOperator = ', unless its operator names the host in connections.allowed_hosts';
+const namedByTheOperator = ', unless whoever runs this server names the host in connections.allowed_hosts';
 
 const answering = { consenting: { fetch: serversTakingASecret } };
 

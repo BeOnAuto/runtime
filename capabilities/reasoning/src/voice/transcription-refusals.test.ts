@@ -49,7 +49,7 @@ const requestRefusals = [
     {
       reason: 'unavailable',
       detail:
-        'The TLS certificate of relay is not trusted by this server; its operator must add the certificate authority',
+        'The TLS certificate of relay is not trusted by this server; whoever runs it must add the certificate authority',
     },
   ],
 ] as const;

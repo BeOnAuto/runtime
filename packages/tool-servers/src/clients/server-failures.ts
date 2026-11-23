@@ -75,7 +75,7 @@ function isHostUnresolved(cause: object): cause is HostUnresolved {
 }
 
 export const untrustedCertificate =
-  'The TLS certificate of the tool server is not trusted by this server; its operator must add the certificate authority with NODE_EXTRA_CA_CERTS';
+  'The TLS certificate of the tool server is not trusted by this server; whoever runs this server must add the certificate authority with NODE_EXTRA_CA_CERTS';
 
 function httpFailure(status: number): ServerFailure {
   return { kind: httpKinds.get(status) ?? 'failing', message: answeredHttpWords(status) };

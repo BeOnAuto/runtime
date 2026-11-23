@@ -4340,7 +4340,7 @@
       ]
     },
     {
-      "sha256": "5e9b48599c90e56f887ca7cac6db5e489a83ea00aa7abc1ecd824a4d295106f1",
+      "sha256": "802c4eaaa4b5d376f7ef1df266c9a360710207151790b21a721a6b204615e7b6",
       "tier": 2,
       "received": [
         {
@@ -4356,7 +4356,7 @@
         "",
         "# Create your first playbook",
         "",
-        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
         "2. Call list_playbooks.",
@@ -4505,7 +4505,7 @@
       ]
     },
     {
-      "sha256": "4f1951dae1665b189ed20c951a9663ff24a6d802577da4d7cd68bab0e2487bc1",
+      "sha256": "ffb404528918d9ce4473cdf202cc52f13bcffd1ba3e90c3d6840fa34126612bf",
       "tier": 2,
       "received": [
         {
@@ -4522,7 +4522,7 @@
         "",
         "# Give the playbook tools",
         "",
-        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call search to see the tool servers this playbook may use and their tools, each with its `mark`; when the person named a server, give its name as `server`, and give `terms`, a few words of what the person wants done, to find the tools that fit among many. Call introspect for the input_schema of a tool before writing its arguments.",
         "2. When no server is listed, or not the one the person wants, or search says a server's connection is `connection_broken`, follow the connect-a-service recipe: it connects the service, or reconnects it, and sets it up for what the playbook will do there; then call search again. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it.",
@@ -5473,7 +5473,7 @@
       ]
     },
     {
-      "sha256": "f311a732dcec539d4d366574207a8474dde7a4d17d471d762fce173f4f1bedfd",
+      "sha256": "65cac00acf5930706e1e15969700660f8c3b95f76470ddc8aae5a8bae240d68b",
       "tier": 3,
       "received": [
         {
@@ -5728,7 +5728,7 @@
         "| `conflict`, kind `unworkable` | `runs.words` renders more than 1,000 characters, `runs.since` renders neither a day nor a date and time, or either renders a structure |",
         "| `conflict`, kind `unworkable` | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it |",
         "| `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent |",
-        "| `unavailable`, kind `tool_not_offered` | The server no longer serves the playbook, its operator no longer allows the tool, the server no longer lists it, or the connection that serves it is not ready, with a `because` such as `connection_pending` or `connection_broken`. Nothing was sent |",
+        "| `unavailable`, kind `tool_not_offered` | The server no longer serves the playbook, the tool is no longer allowed, the server no longer lists it, or the connection that serves it is not ready, with a `because` such as `connection_pending` or `connection_broken`. Nothing was sent |",
         "| `unavailable`, kind `tool_server_failed` | The tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent |",
         "| `unavailable`, kind `tools_unfinished` | The call was sent and then failed: the server failed on it or did not respond within 30 seconds, `because` `server_failed`, or the tool returned an error, `because` `tool_error` |",
         "| `failed` | The runtime itself broke down |",
@@ -5777,7 +5777,7 @@
         "",
         "## Availability",
         "",
-        "Lookup functions are available in every runtime. A lookup reads through the tools of the tool servers the operator configures and of the org's connections, or reads the runs the playbook keeps. See [Functions and availability](https://on.auto/docs/concepts/functions#availability).",
+        "Lookup functions are available in every runtime. A lookup reads through the tools of the tool servers that whoever runs the server configures and of the org's connections, or reads the runs the playbook keeps. See [Functions and availability](https://on.auto/docs/concepts/functions#availability).",
         ""
       ]
     },
@@ -5889,7 +5889,7 @@
       ]
     },
     {
-      "sha256": "250c343b24fe611a9720bc275207f25414c7d64e0e1a98b83d6a1c38d91f1849",
+      "sha256": "6dea1b21d3a1e536beef44ba5652623e341cefa27cc40fd6689aa2fad31c5f86",
       "tier": 3,
       "received": [
         {
@@ -5924,7 +5924,7 @@
         "- Auto Runtime: The software you install or deploy, with npx or Docker, that stores and runs playbooks. Technical pages also call it the runtime, and call one running copy of it the server.",
         "- Auto Studio: The interface for inspecting and managing playbooks.",
         "- Agent: An AI client the user works with, such as a coding agent, that connects to Auto Runtime. It is separate from the runtime and from Auto Studio.",
-        "- Connection: Authorized access to a service. Most pages mean your agent's link to Auto, which the quick start names auto-runtime. A connection of an org is a tool server that a person adds through their agent, by a provider's name or as a server given by hand, and approves on Studio's page. The org owns it. Every playbook of the org may use it, or only the playbooks it names. The runtime seals a credential in its secret store and never holds it with the connection. A reference credential is the exception: it is the value of a variable that whoever runs the runtime sets in its environment, and nothing seals it. The tool servers the operator sets up are Auto's other connections to other services, and one tool server can serve several playbooks. Your agent's connections to its other accounts stay with your agent.",
+        "- Connection: Authorized access to a service. Most pages mean your agent's link to Auto, which the quick start names auto-runtime. A connection of an org is a tool server that a person adds through their agent, by a provider's name or as a server given by hand, and approves on Studio's page. The org owns it. Every playbook of the org may use it, or only the playbooks it names. The runtime seals a credential in its secret store and never holds it with the connection. A reference credential is the exception: it is the value of a variable that whoever runs the runtime sets in its environment, and nothing seals it. The tool servers that whoever runs the runtime sets up are Auto's other connections to other services, and one tool server can serve several playbooks. Your agent's connections to its other accounts stay with your agent.",
         "- Method: The business's approach to a piece of work: what evidence matters, how decisions are made and what should happen next. It needs no Method resource.",
         "- Definition: A reusable function or workflow that someone saves in a playbook.",
         "- Function: A definition of one reusable operation, with declared inputs, outputs and behavior.",
@@ -5973,7 +5973,7 @@
         "- Caller: Whoever a request acts for: a key, the local developer or a signed-in person, named on every fact it records. A run acts for the caller that started it, and a run a trigger starts acts as the playbook itself.",
         "- Acts for: The person a run works on behalf of, its acts_for, which grants the run nothing. A run a trigger starts still acts as the playbook, and acts for whoever saved or restored the version it runs, unless that person has left the org, where the runtime knows the org's members; the runs its steps start act for the same person.",
         "- Key: A credential the runtime issues itself, for a machine, a pipeline, an agent or a grant over some of an org's playbooks.",
-        "- Local developer: The caller of every request in local mode, on the developer's own machine, with every permission in every org. A server is in local mode when neither sign-in nor keys are set and it either listens only on a loopback address or its operator declares it local with ACCESS_MODE=local, as for a container on the developer's own machine.",
+        "- Local developer: The caller of every request in local mode, on the developer's own machine, with every permission in every org. A server is in local mode when neither sign-in nor keys are set and it either listens only on a loopback address or whoever runs it declares it local with ACCESS_MODE=local, as for a container on the developer's own machine.",
         "- Signed-in person: A person the Auto identity service signs in. They act in the org their sign-in names, or in their own where it names none, with the permissions their token grants, and are recorded under their subject.",
         "",
         "Supporting assets:",
@@ -5981,7 +5981,7 @@
         "- Prompt: Instructions and input framing supplied to a language model by a reasoning function. The prompt is not the entire function.",
         "- Skill: A reusable package of task guidance and its resources. It supplies guidance rather than naming every component it uses. Planned: a reasoning function cannot use a skill yet.",
         "- Tool: A calling interface for an operation, including an operation outside the playbook or a function exposed to a caller. A function exposed as a tool keeps its function type and identity.",
-        "- Tool server: An MCP server, or an HTTP API described by an OpenAPI document, whose tools functions may call: one the runtime's operator sets up, or a connection a person adds to the organization.",
+        "- Tool server: An MCP server, or an HTTP API described by an OpenAPI document, whose tools functions may call: one that whoever runs the server sets up, or a connection a person adds to the organization.",
         "- Provider: A service Auto connects to. A model provider offers language models. The providers a person may connect offer tools, each an MCP server or an HTTP API Auto knows by its name, so a connection to one takes its name, its placeholders and a credential.",
         "- Placeholder: A value of a provider's entry that differs from one connection to the next, such as the subdomain of a site or the id of an account, which the person gives when they connect.",
         "- Registered client: The client identity whoever runs Auto registered with an authorization server: a client id with a secret, a private key, or nothing for a public client. connections.registered_clients in the settings file holds them.",
@@ -6346,7 +6346,7 @@
       ]
     },
     {
-      "sha256": "2b3d2cbe00cf05edc22d95e3b59d9dadfc64ca48ce95c0a863ba650cc100dda9",
+      "sha256": "1d17643464f0ad99a795eb5fc938c17ea21c49d4fc6c8b3ca6a15d93a9e9c258",
       "tier": 3,
       "received": [
         {
@@ -6368,7 +6368,7 @@
         "",
         "## A function document",
         "",
-        "The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](https://on.auto/docs/reference/mcp#model-information), or with one the operator of your runtime confirms.",
+        "The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](https://on.auto/docs/reference/mcp#model-information), or with one that whoever runs the server confirms.",
         "",
         "````markdown",
         "---",
@@ -6581,19 +6581,19 @@
         "",
         "## Tools",
         "",
-        "`tools` lists the tools a run may call, from the tool servers the operator configured for the playbook and the connections people added to its org. Name them only where what the model searches for next depends on what it has just read, as when it searches again with better words until it can answer. A read whose arguments the input or an earlier step gives belongs in a lookup function, and the workflow hands its answer to this function, as the `start` guide sets out under Build from the job. Choosing from the input what to search for or open is not exploring, and neither is choosing which of a search's hits to read: a reasoning function with no tools makes each choice, one lookup searches, and another reads each chosen item in a `for`, as [A lookup for each item](https://on.auto/docs/reference/workflow-format#a-lookup-for-each-item) shows. A function whose tools are all marked reads is still saved, and run when you ask. Its save answers a notice that says so when its tool servers list their tools within two seconds, and so does a run you ask for that succeeds. When that notice comes, move those reads to lookup functions, or keep the tools and tell the person what the model searches for after a read.",
+        "`tools` lists the tools a run may call, from the tool servers that whoever runs the server configured for the playbook and the connections people added to its org. Name them only where what the model searches for next depends on what it has just read, as when it searches again with better words until it can answer. A read whose arguments the input or an earlier step gives belongs in a lookup function, and the workflow hands its answer to this function, as the `start` guide sets out under Build from the job. Choosing from the input what to search for or open is not exploring, and neither is choosing which of a search's hits to read: a reasoning function with no tools makes each choice, one lookup searches, and another reads each chosen item in a `for`, as [A lookup for each item](https://on.auto/docs/reference/workflow-format#a-lookup-for-each-item) shows. A function whose tools are all marked reads is still saved, and run when you ask. Its save answers a notice that says so when its tool servers list their tools within two seconds, and so does a run you ask for that succeeds. When that notice comes, move those reads to lookup functions, or keep the tools and tell the person what the model searches for after a read.",
         "",
-        "Write each as `server/tool`, or `server/*` for every tool of a server that the operator allows; a connection is named the same way, by its name:",
+        "Write each as `server/tool`, or `server/*` for every allowed tool of a server; a connection is named the same way, by its name:",
         "",
         "```yaml",
         "tools: [notes/search, notes/read_note]",
         "```",
         "",
-        "`server/*` gives every tool the server lists that the server's `allowed` setting names. When the operator left `allowed` out, it gives every tool the server lists. A tool written in another form, or listed twice, is refused when the document is saved.",
+        "`server/*` gives every tool the server lists that the server's `allowed` setting names. When `allowed` is left out, it gives every tool the server lists. A tool written in another form, or listed twice, is refused when the document is saved.",
         "",
         "### Find the tool names",
         "",
-        "Do not guess tool names. `search` lists the servers set up for the playbook and the tools the operator allows on each; when there are many, give it `terms`, a few words of what the function should do. `introspect` reads one tool in full. Call a tool once before you name it, as a run would: `query_connection` for a tool marked `reads`, `execute_connection` for any tool once the person agrees. Each returns the `text` the run's model would see and is recorded in the playbook's history; see [Calling a tool by hand](https://on.auto/docs/reference/http#calling-a-tool-by-hand).",
+        "Do not guess tool names. `search` lists the servers set up for the playbook and the tools allowed on each; when there are many, give it `terms`, a few words of what the function should do. `introspect` reads one tool in full. Call a tool once before you name it, as a run would: `query_connection` for a tool marked `reads`, `execute_connection` for any tool once the person agrees. Each returns the `text` the run's model would see and is recorded in the playbook's history; see [Calling a tool by hand](https://on.auto/docs/reference/http#calling-a-tool-by-hand).",
         "",
         "### Before the model is called",
         "",
@@ -6606,7 +6606,7 @@
         "| `tool_not_offered` | `tool_not_listed` | The server does not list the tool |",
         "| `tool_not_offered` | `connection_pending` | The server is a connection nobody has approved yet |",
         "| `tool_not_offered` | `connection_broken` | The server is a connection whose server refused its credential, whose credential is gone from the secret store or is not the tokens of a consent, whose consent was revoked or has ended, whose client is no longer registered, or whose provider is replaced here; reconnect it |",
-        "| `tool_not_offered` | `connection_not_allowed` | The server is a connection a rule of the operator no longer allows |",
+        "| `tool_not_offered` | `connection_not_allowed` | The server is a connection a rule of the runtime no longer allows |",
         "| `tool_not_offered` | `connection_unavailable` | The server is a connection whose credential cannot be read just now; try again later |",
         "| `tool_server_failed` | `unreachable` | The server cannot be reached, or does not respond in time |",
         "| `tool_server_failed` | `failing` | The server fails, or refuses to list its tools |",
@@ -6677,7 +6677,7 @@
         "   - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, `shown_format`, the format the model was shown the result in, the duration and the JSON-RPC id. A run performed again shows its model each result exactly as the first attempt did, in the format its event names.",
         "   - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, `cancelled`, or `interrupted` for a call whose attempt ended before it answered, which the run makes again; see A run performed again), the failure message, the duration and the JSON-RPC id.",
         "",
-        "Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the operator sets `record_content: false` for the server. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.",
+        "Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the server's entry sets `record_content: false`. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.",
         "",
         "An image a tool answers is kept as an asset of the run, apart from the result, when the result is kept:",
         "",
@@ -6709,7 +6709,7 @@
         "",
         "### Setting up tools",
         "",
-        "Tool access works in every runtime, whether started with npx or Docker, once the playbook has a tool server: one the operator configures under `tool_servers`, or a connection a person adds to its org. The operator binds each server under `tool_servers` to an org, and optionally to some of its playbooks. Its `allowed` setting narrows the server's tools; see the [Configuration reference](https://on.auto/docs/self-host/configuration#tool-servers). Connecting an external agent does not give the function that agent's tools, credentials or accounts; see [Tool access inside a reasoning function](https://on.auto/docs/concepts/functions#tool-access-inside-a-reasoning-function).",
+        "Tool access works in every runtime, whether started with npx or Docker, once the playbook has a tool server: one that whoever runs the server configures under `tool_servers`, or a connection a person adds to its org. Each server under `tool_servers` is bound to an org, and optionally to some of its playbooks. Its `allowed` setting narrows the server's tools; see the [Configuration reference](https://on.auto/docs/self-host/configuration#tool-servers). Connecting an external agent does not give the function that agent's tools, credentials or accounts; see [Tool access inside a reasoning function](https://on.auto/docs/concepts/functions#tool-access-inside-a-reasoning-function).",
         "",
         "## How a run ends",
         "",
@@ -6726,7 +6726,7 @@
         "| A JSON answer is cut off at `max_output_tokens` | `conflict`, kind `unworkable`: by what the run called, what to move into a function of its own, then raise `config.max_output_tokens` | 409 |",
         "| The answer is too large for the 1 MiB a run records | `conflict`, kind `unworkable`: lower `config.max_output_tokens` | 409 |",
         "| The provider signals the request is too long | `conflict`, kind `unworkable` | 409 |",
-        "| The model is outside the operator's allowed models | `unavailable`, kind `model_not_offered`, `because: \"model_not_allowed\"` | 503 |",
+        "| The model is outside the models the server allows | `unavailable`, kind `model_not_offered`, `because: \"model_not_allowed\"` | 503 |",
         "| The provider is not configured, or its certificate is not trusted | `unavailable` | 503 |",
         "| The provider rejects the credentials | `unavailable`, with the HTTP status | 503 |",
         "| The provider limits the rate of requests | `unavailable`, with the seconds to wait when it said | 503 |",
@@ -6743,7 +6743,7 @@
         "What the rejections say:",
         "",
         "- A provider's rejection names the provider, the HTTP status and what it means. It quotes the provider's own words only where [Provider messages](https://on.auto/docs/reference/model-settings#provider-messages) allow them.",
-        "- A rejection for a provider that is not configured names that provider, with the configured providers and the aliases. A rejection for an untrusted certificate says that the operator must act. Neither names a setting. When other providers are configured but not this one, the kind is `model_not_offered` and `because` is `provider_not_configured`.",
+        "- A rejection for a provider that is not configured names that provider, with the configured providers and the aliases. A rejection for an untrusted certificate says that whoever runs the server must act. Neither names a setting. When other providers are configured but not this one, the kind is `model_not_offered` and `because` is `provider_not_configured`.",
         "- Nothing is sent to a model outside the allowed models.",
         "- A request that is too long is explained under Limits on time and failures. The tool endings are explained under Before the model is called and When a tool-calling run cannot finish.",
         "",
@@ -6829,7 +6829,7 @@
         "",
         "- Anything the front matter sets, such as the effort level (`config.reasoning`), the token limit or how a JSON schema is sent (`output`).",
         "- Credentials, and attribution such as `user`, `metadata` or `labels`.",
-        "- Anything stored or reused on the operator's account: `store`, `previousResponseId`, `conversation`, `container`, `cacheControl`, `cachedContent`, and prompt cache keys and retention.",
+        "- Anything stored or reused on the server's provider account: `store`, `previousResponseId`, `conversation`, `container`, `cacheControl`, `cachedContent`, and prompt cache keys and retention.",
         "- Routing, fallbacks, capacity and service tiers.",
         "- Request headers and betas, such as `anthropicBeta`.",
         "- Tools and servers, such as `mcpServers`.",
@@ -6842,7 +6842,7 @@
         "",
         "### Options for a gateway",
         "",
-        "A gateway is an endpoint the operator configures under its own name. Every field under the gateway's name, or its camel-case form (`my-gateway` and `myGateway`), goes into the request body unchanged. `user` is read from `openaiCompatible`. A gateway gives meaning to body fields its operator may not want a function to set: attribution and budgets, routing and fallbacks, mock answers, endpoints and credentials. So under any of these namespaces, a function may set only the top-level fields the operator lists in the gateway's `allowed_provider_options`. By default that list is empty. The operator cannot allow a field the runtime sets, such as `temperature`.",
+        "A gateway is an endpoint that whoever runs the server configures under its own name. Every field under the gateway's name, or its camel-case form (`my-gateway` and `myGateway`), goes into the request body unchanged. `user` is read from `openaiCompatible`. A gateway gives meaning to body fields that whoever runs the server may not want a function to set: attribution and budgets, routing and fallbacks, mock answers, endpoints and credentials. So under any of these namespaces, a function may set only the top-level fields that whoever runs the server lists in the gateway's `allowed_provider_options`. By default that list is empty. Whoever runs the server cannot allow a field the runtime sets, such as `temperature`.",
         "",
         "Saving does not know which gateways are configured, so these checks happen when the function runs:",
         "",
@@ -6856,7 +6856,7 @@
       ]
     },
     {
-      "sha256": "b6d41fc0f884cbbddaceff578e4921e837d96f3bfd7abb6fe1450ece42a0b5e9",
+      "sha256": "2f971757fab9355f0c13492492451b6d6e3f574dd69b3c0661d435b55aa6b69a",
       "tier": 3,
       "received": [
         {
@@ -7063,7 +7063,7 @@
         "",
         "How a call ends when it goes wrong:",
         "",
-        "- Before anything is sent: when the playbook may not use the tool server, the operator does not allow the tool, or the server does not list it, the run ends `unavailable` as `tool_not_offered`, in words that name `search`. When the server cannot be reached, it ends `unavailable` as `tool_server_failed`. Either can be run again.",
+        "- Before anything is sent: when the playbook may not use the tool server, the tool is not allowed, or the server does not list it, the run ends `unavailable` as `tool_not_offered`, in words that name `search`. When the server cannot be reached, it ends `unavailable` as `tool_server_failed`. Either can be run again.",
         "- Once the call is sent, it is in the run's history. When the tool server fails on it, or the tool returns an error:",
         "  - a tool marked `reads` ends the run `unavailable` as `tools_unfinished`, status 503. A workflow may try it again.",
         "  - any other tool may have changed something, so the run ends `conflict` as `effect_unknown`, status 409. A workflow's retry on status 503 does not match it.",
@@ -7090,7 +7090,7 @@
         "",
         "   The `reply` rule maps the words of a reply to the answer; see Answering by reply. Tool blocks gives each key, whether it is required and its default.",
         "",
-        "4. Write `deliver` with `server`, `tool`, `with` and `sent`. Show the person the whole document, and save it with `create_definition`, `type` interaction, once they agree. A run refuses a server this playbook may not use, or a tool its operator does not allow, in words that name `search`.",
+        "4. Write `deliver` with `server`, `tool`, `with` and `sent`. Show the person the whole document, and save it with `create_definition`, `type` interaction, once they agree. A run refuses a server this playbook may not use, or a tool that is not allowed, in words that name `search`.",
         "",
         "The arguments of `deliver.with`, `replies.with` and `tell.with` are typed as written:",
         "",
@@ -7198,7 +7198,7 @@
         "- `wait` lies between `PT5S` and `PT1H`, and is `PT5S` when left out.",
         "- A function that reads replies and writes no `tell`, or `tell: all` or `tell: refusals`, is refused when its server can be asked and its provider does not say how its conversations are replied to, as a server added by hand does not: `Nothing says how a reply is answered through chat, so nobody could be told what became of theirs; write tell.with, the arguments of post_message that post under the message, or tell: none to stay silent`.",
         "- A function whose read lists oldest first and gives no `time` is refused unless the read's arguments name the request's own message, as a thread's do with `sent.id`, since an old message could be taken as the answer to a new request.",
-        "- The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool its operator does not allow, is `unavailable` with the kind `tool_not_offered`.",
+        "- The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool is not allowed, is `unavailable` with the kind `tool_not_offered`.",
         "",
         "## Tool blocks",
         "",
@@ -7212,7 +7212,7 @@
         "| Read the replies | `replies.tool` |",
         "| Tell the party of a reply | The provider's own way of replying and marking, or `replies.tell.tool`, or `deliver.tool` when `tell` names none |",
         "",
-        "A function with `call` uses `call.tool` on `call.server`. A run checks every tool its function names before it sends anything: the server must serve the playbook, and the operator must allow the tool. Otherwise the run is `unavailable` with the kind `tool_not_offered`.",
+        "A function with `call` uses `call.tool` on `call.server`. A run checks every tool its function names before it sends anything: the server must serve the playbook, and the tool must be allowed. Otherwise the run is `unavailable` with the kind `tool_not_offered`.",
         "",
         "### `call`",
         "",
@@ -7414,7 +7414,7 @@
         "| `conflict`, kind `unworkable` | A function with `call`: the tool refused the arguments |",
         "| `conflict`, kind `unworkable` | A function with `call`: the answer has nothing to read, or nothing where `read` points |",
         "| `conflict`, kind `unworkable` | A function with `call`: the part at `read` is more than a run may record, about 1 MiB as JSON, or holds a value `output.schema` refuses |",
-        "| `unavailable`, kind `tool_not_offered` | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent |",
+        "| `unavailable`, kind `tool_not_offered` | A server the function names does not serve the playbook, or does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent |",
         "| `unavailable`, kind `tool_server_failed` | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent |",
         "| `unavailable`, kind `tools_unfinished` | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe |",
         "| `conflict`, kind `effect_unknown` | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides |",
@@ -7592,7 +7592,7 @@
         "",
         "## Availability",
         "",
-        "Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers the operator configures and of the org's connections, or is held for an agent. See [Functions and availability](https://on.auto/docs/concepts/functions#availability).",
+        "Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers that whoever runs the server configures and of the org's connections, or is held for an agent. See [Functions and availability](https://on.auto/docs/concepts/functions#availability).",
         ""
       ]
     },
@@ -8886,7 +8886,7 @@
       ]
     },
     {
-      "sha256": "20011093be34fe99387b98e1aa1ea47e95eaa5845c4f14a346f2f4ba291257f9",
+      "sha256": "3710e8fba67262a6cd589c5c496f5b0aa9e8d0e84c31830c3cc5173dfd465d57",
       "tier": 3,
       "received": [
         {
@@ -9124,7 +9124,7 @@
         "| Field | Value |",
         "| --- | --- |",
         "| `model` | The model the document names |",
-        "| `own_key` | `true` where the gateway is reached with the runtime operator's own key, and `false` where the runtime reaches it with a key it is lent |",
+        "| `own_key` | `true` where the gateway is reached with the runtime's own key, and `false` where the runtime reaches it with a key it is lent |",
         "| `duration_ms` | How long the run took |",
         "| `cost_usd` | The cost in US dollars the gateway answered, where it answered one |",
         "",
@@ -9442,7 +9442,7 @@
       ]
     },
     {
-      "sha256": "98fbd5d9e7d0010e5f722e5c037c2d02da909fbb5294464214bbf321bf694acc",
+      "sha256": "776191f3b5338495833f8829d04b82fcd1979b117f61c827c982f460aa4e120a",
       "tier": 3,
       "received": [
         {
@@ -9776,7 +9776,7 @@
         "",
         "A tool call, a step or an answer is in the playbook's history alone, and a fold never sees it. [Events](https://on.auto/docs/reference/events), the `events` guide, says what each event holds, with the attributes that say how it came about, such as `caller` and `calldepth`.",
         "",
-        "An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported to the operator once.",
+        "An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported once to whoever runs the server.",
         "",
         "### The filters of the events",
         "",
@@ -10486,7 +10486,7 @@
       ]
     },
     {
-      "sha256": "e4ecb5d14fa80b390718a4a2b339cf1e08a17d72310ba5bb86a6a347d3ed17af",
+      "sha256": "5d86c370a2a7ee3c9e3de2dbb5fe37261b0931ce15c316c99c5a5c54fb461287",
       "tier": 2,
       "received": [
         {
@@ -10502,7 +10502,7 @@
       "lines": [
         "# Create your first playbook",
         "",
-        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A first playbook is built in the order of the start guide's Build from the job: what the person wants it to achieve, the workflow that achieves it, then its steps as functions. Read the start guide with get_guide if you have not yet. Read a type's guide before you write a function of that type, and the workflow guide before you write the workflow. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. Give the person the `studio` link that each create or run answers, to its page in Studio. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Ask the person what the playbook is for, in their own words, and the first job it should do again and again: what it is given or must find, what it must work out, who must decide or be told, and the result they want from it. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as \"every morning\" or \"whenever one arrives\", take that as the answer rather than asking again. Where a person must approve or decide, ask once where they want to be asked, as the start guide's Asking a person says. Where the job itself sends a notice, ask once where it goes: a channel or their direct messages.",
         "2. Call list_playbooks.",
@@ -10552,7 +10552,7 @@
       ]
     },
     {
-      "sha256": "03506f555be22d513e47c8828f6181a4e04a5cd33a6f6467ed9d36960254d89c",
+      "sha256": "9bd568cb7962c5004136820c350af48847c88b763d0b87e8eecf19c4d2072338",
       "tier": 2,
       "received": [
         {
@@ -10568,7 +10568,7 @@
       "lines": [
         "# Give the playbook tools",
         "",
-        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.",
+        "A tool of a connected service is put to work by the function type its use needs, and the tool itself says which: search gives each tool a `mark`. A read by a tool marked reads, searching included, is a lookup function: one call and no model, whether its arguments come from the run's input or from an earlier step's answer. An act, by a tool marked acts or unmarked, is an interaction function, which calls it with `call`: it answers at once and spends no model call. A reasoning function names tools in `tools` only where its model must explore, meaning what it looks for next depends on what it just read; choosing what to look for, what to open or which hits to read is not exploring, as the start guide's Build from the job says. Read a type's guide with get_guide before you write a function of that type. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.",
         "",
         "1. Call search to see the tool servers this playbook may use and their tools, each with its `mark`; when the person named a server, give its name as `server`, and give `terms`, a few words of what the person wants done, to find the tools that fit among many. Call introspect for the input_schema of a tool before writing its arguments.",
         "2. When no server is listed, or not the one the person wants, or search says a server's connection is `connection_broken`, follow the connect-a-service recipe: it connects the service, or reconnects it, and sets it up for what the playbook will do there; then call search again. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it.",
@@ -10869,7 +10869,7 @@
       ]
     },
     {
-      "sha256": "b45cb3554fdb829608ce876e215414f374413e2eda49659520e5bef5c2cfbaa9",
+      "sha256": "f2288836429ed5fdb3ae8e364597480cf0dd228594b51dc4a55d2893f50fd529",
       "tier": 3,
       "received": [
         {
@@ -10901,7 +10901,7 @@
         "- Auto Runtime: The software you install or deploy, with npx or Docker, that stores and runs playbooks. Technical pages also call it the runtime, and call one running copy of it the server.",
         "- Auto Studio: The interface for inspecting and managing playbooks.",
         "- Agent: An AI client the user works with, such as a coding agent, that connects to Auto Runtime. It is separate from the runtime and from Auto Studio.",
-        "- Connection: Authorized access to a service. Most pages mean your agent's link to Auto, which the quick start names auto-runtime. A connection of an org is a tool server that a person adds through their agent, by a provider's name or as a server given by hand, and approves on Studio's page. The org owns it. Every playbook of the org may use it, or only the playbooks it names. The runtime seals a credential in its secret store and never holds it with the connection. A reference credential is the exception: it is the value of a variable that whoever runs the runtime sets in its environment, and nothing seals it. The tool servers the operator sets up are Auto's other connections to other services, and one tool server can serve several playbooks. Your agent's connections to its other accounts stay with your agent.",
+        "- Connection: Authorized access to a service. Most pages mean your agent's link to Auto, which the quick start names auto-runtime. A connection of an org is a tool server that a person adds through their agent, by a provider's name or as a server given by hand, and approves on Studio's page. The org owns it. Every playbook of the org may use it, or only the playbooks it names. The runtime seals a credential in its secret store and never holds it with the connection. A reference credential is the exception: it is the value of a variable that whoever runs the runtime sets in its environment, and nothing seals it. The tool servers that whoever runs the runtime sets up are Auto's other connections to other services, and one tool server can serve several playbooks. Your agent's connections to its other accounts stay with your agent.",
         "- Method: The business's approach to a piece of work: what evidence matters, how decisions are made and what should happen next. It needs no Method resource.",
         "- Definition: A reusable function or workflow that someone saves in a playbook.",
         "- Function: A definition of one reusable operation, with declared inputs, outputs and behavior.",
@@ -10948,7 +10948,7 @@
         "- Caller: Whoever a request acts for: a key, the local developer or a signed-in person, named on every fact it records. A run acts for the caller that started it, and a run a trigger starts acts as the playbook itself.",
         "- Acts for: The person a run works on behalf of, its acts_for, which grants the run nothing. A run a trigger starts still acts as the playbook, and acts for whoever saved or restored the version it runs, unless that person has left the org, where the runtime knows the org's members; the runs its steps start act for the same person.",
         "- Key: A credential the runtime issues itself, for a machine, a pipeline, an agent or a grant over some of an org's playbooks.",
-        "- Local developer: The caller of every request in local mode, on the developer's own machine, with every permission in every org. A server is in local mode when neither sign-in nor keys are set and it either listens only on a loopback address or its operator declares it local with ACCESS_MODE=local, as for a container on the developer's own machine.",
+        "- Local developer: The caller of every request in local mode, on the developer's own machine, with every permission in every org. A server is in local mode when neither sign-in nor keys are set and it either listens only on a loopback address or whoever runs it declares it local with ACCESS_MODE=local, as for a container on the developer's own machine.",
         "- Signed-in person: A person the Auto identity service signs in. They act in the org their sign-in names, or in their own where it names none, with the permissions their token grants, and are recorded under their subject.",
         "",
         "Supporting assets:",
@@ -10956,7 +10956,7 @@
         "- Prompt: Instructions and input framing supplied to a language model by a reasoning function. The prompt is not the entire function.",
         "- Skill: A reusable package of task guidance and its resources. It supplies guidance rather than naming every component it uses. Planned: a reasoning function cannot use a skill yet.",
         "- Tool: A calling interface for an operation, including an operation outside the playbook or a function exposed to a caller. A function exposed as a tool keeps its function type and identity.",
-        "- Tool server: An MCP server, or an HTTP API described by an OpenAPI document, whose tools functions may call: one the runtime's operator sets up, or a connection a person adds to the organization.",
+        "- Tool server: An MCP server, or an HTTP API described by an OpenAPI document, whose tools functions may call: one that whoever runs the server sets up, or a connection a person adds to the organization.",
         "- Provider: A service Auto connects to. A model provider offers language models. The providers a person may connect offer tools, each an MCP server or an HTTP API Auto knows by its name, so a connection to one takes its name, its placeholders and a credential.",
         "- Placeholder: A value of a provider's entry that differs from one connection to the next, such as the subdomain of a site or the id of an account, which the person gives when they connect.",
         "- Registered client: The client identity whoever runs Auto registered with an authorization server: a client id with a secret, a private key, or nothing for a public client. connections.registered_clients in the settings file holds them.",

@@ -225,7 +225,7 @@ describe('a tool its operator disallowed after a request asked through it', () =
     expect(facts.at(-1)).toMatchObject({
       type: 'delivery_failed',
       because: 'tool_not_offered',
-      detail: 'The operator of this server does not allow chat/post_message',
+      detail: 'Whoever runs this server does not allow chat/post_message',
     });
     expect(answered.status).toBe(200);
     expect(chat.received()).toEqual([]);
@@ -251,7 +251,7 @@ describe('a delivery through a tool this playbook may not use, over HTTP', () =>
       {
         refusal: {
           because: 'tool_not_allowed',
-          detail: 'The operator of this server does not allow chat/post_message',
+          detail: 'Whoever runs this server does not allow chat/post_message',
         },
         types: ['run_started', 'run_rejected'],
       },

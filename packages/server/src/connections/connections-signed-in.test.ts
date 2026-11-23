@@ -188,7 +188,7 @@ describe('a server on loopback on a runtime that signs people in', () => {
       status: 403,
       body: {
         detail:
-          'A connection may not reach the host 127.0.0.1, a loopback address, unless its operator names the host in connections.allowed_hosts',
+          'A connection may not reach the host 127.0.0.1, a loopback address, unless whoever runs this server names the host in connections.allowed_hosts',
       },
     });
   });

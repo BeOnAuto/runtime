@@ -28,7 +28,7 @@ Real work often combines types. A budget review might compute the totals, reason
 
 Hosted Auto runs reasoning, lookup, interaction, prediction, computation and generation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-[The self-hosted runtime](../self-host.md) runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
+[The self-hosted runtime](../self-host.md) runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever tool servers are set up on the runtime, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
 
 These are planned and not available yet:
 
@@ -101,11 +101,11 @@ Choose generation when the result is a picture or spoken words. Writing the text
 
 ## Tool access inside a reasoning function
 
-A reasoning function can call the tools of tool servers that the runtime's operator configures, and of connections, the tool servers a person adds to their organization through their agent and approves in Studio. A tool server is a service Auto can reach for a playbook, such as an MCP server or an HTTP API. The function names the tools it may use. During a run, the model can call them and read the results before it writes its answer. The run's history records each call. A read whose arguments the run's input or an earlier step can give belongs in a [lookup function](#lookup) instead.
+A reasoning function can call the tools of tool servers that whoever runs the server configures, and of connections, the tool servers a person adds to their organization through their agent and approves in Studio. A tool server is a service Auto can reach for a playbook, such as an MCP server or an HTTP API. The function names the tools it may use. During a run, the model can call them and read the results before it writes its answer. The run's history records each call. A read whose arguments the run's input or an earlier step can give belongs in a [lookup function](#lookup) instead.
 
 Your agent's tools are not the function's tools. Connecting an external agent to Auto does not give the function access to that agent's tools, credentials or accounts. Your agent can still gather evidence through its own accounts and pass it in as input.
 
-A connection serves every playbook of its organization, or only the playbooks it names. The runtime's operator decides which of its own tool servers each playbook may use, and which connections people may add. A tool server can itself be a gateway, such as Apollo GraphOS Agent Services, that fronts an organization's systems and applies its own policies. Auto's model gateways connect to language models and provide no tools. Skill references and a separately managed tool library are still planned.
+A connection serves every playbook of its organization, or only the playbooks it names. Whoever runs the server decides which of the server's own tool servers each playbook may use, and which connections people may add. A tool server can itself be a gateway, such as Apollo GraphOS Agent Services, that fronts an organization's systems and applies its own policies. Auto's model gateways connect to language models and provide no tools. Skill references and a separately managed tool library are still planned.
 
 - [Give a function tools](../guides/tools.md) walks through finding a tool, trying it and naming it in a function.
 - [Reasoning function format](../reference/reasoning-format.md#tools) gives the rules for a run that calls tools, including when it is not run again.

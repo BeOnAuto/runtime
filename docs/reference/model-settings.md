@@ -8,7 +8,7 @@ head:
 
 # Model settings reference
 
-This page holds the rules behind the model settings, as the operator sees them. [Set up a model provider](../self-host/models.md) shows how to configure a provider and check that it works. The [configuration reference](../self-host/configuration.md#models) lists every model setting.
+This page holds the rules behind the model settings, as whoever runs the server sees them. [Set up a model provider](../self-host/models.md) shows how to configure a provider and check that it works. The [configuration reference](../self-host/configuration.md#models) lists every model setting.
 
 Two views live on other pages:
 
@@ -144,7 +144,7 @@ declared_models:
 
 `list_models` lists the models this server can call, so an agent names one that works instead of guessing. An agent with `org:read` calls it as an MCP tool, or as `GET /v1/orgs/{org}/models` over HTTP. Its optional input `provider` lists only what one provider prefix serves and asks no other provider.
 
-[Model information](mcp.md#model-information) describes what it returns: its fields, `catalog_status: "partial"`, how long the server keeps each list, and what the result never carries (keys, endpoints, accounts, regions, Bedrock ARNs, prices and a provider's own owner). When a list cannot be read, the caller learns only that it is `partial`, and the operator learns why from the log. This section covers what you configure.
+[Model information](mcp.md#model-information) describes what it returns: its fields, `catalog_status: "partial"`, how long the server keeps each list, and what the result never carries (keys, endpoints, accounts, regions, Bedrock ARNs, prices and a provider's own owner). When a list cannot be read, the caller learns only that it is `partial`, and whoever runs the server learns why from the log. This section covers what you configure.
 
 ### Where each list comes from
 
@@ -172,7 +172,7 @@ Which entries are kept:
 
 Nothing is read when the server starts. A list is read when `list_models` first needs it, or when a run that calls tools needs its model's context window.
 
-### What the operator's log says
+### What the server's log says
 
 When a provider responds to a list request with an error status, the server logs the warning of [Provider messages](#provider-messages) with `model` as `null`. The message is bounded, and the secrets of the settings are redacted, as for a model call.
 
@@ -198,13 +198,13 @@ The reasoning function guide that `get_guide` serves ends with one sentence abou
 
 Each failure has a kind. You see it as the `error.type` of the metric `gen_ai.client.operation.duration` (see [Telemetry](../self-host/telemetry.md)). The caller of the reasoning function gets a rejection, which [How a run ends](reasoning-format.md#how-a-run-ends) lists. The tables below sort the model failures by who fixes them.
 
-The operator fixes these:
+Whoever runs the server fixes these:
 
 | What went wrong                                                                                                                                                                              | Kind                      | Fix                                              |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------ |
 | `allowed_models` does not allow the model. Nothing is sent                                                                                                                                   | `model_not_allowed`       | Allow the model, or name an offered one          |
 | The provider is not configured, or no provider has that prefix                                                                                                                               | `provider_not_configured` | Configure the provider, or name a configured one |
-| The provider's TLS certificate is not trusted, or its SDK found a setting missing                                                                                                            | `provider_not_configured` | Follow the [operator hint](#operator-hints)      |
+| The provider's TLS certificate is not trusted, or its SDK found a setting missing                                                                                                            | `provider_not_configured` | Follow the [hint in the log](#hints-in-the-log)  |
 | HTTP 401 or 403, an API key Google refuses with HTTP 400 and the reason `API_KEY_INVALID`, or no credential from the AWS chain, Google application default credentials or Microsoft Entra ID | `credentials_rejected`    | Fix the credentials or the role                  |
 
 These pass, so a retry can work:
@@ -240,7 +240,7 @@ More rules:
 A caller who reports a failure quotes its detail. These are the details the model failures give, beyond what [How a run ends](reasoning-format.md#how-a-run-ends) says:
 
 - `provider_not_configured` gives `unavailable`. When other providers are configured, its kind is `model_not_offered`, with `because: "provider_not_configured"`. Its detail is described in [When a provider is not configured](#when-a-provider-is-not-configured).
-- A TLS certificate that is not trusted, or a setting the provider's SDK found missing, gives `unavailable`, saying that the operator must act.
+- A TLS certificate that is not trusted, or a setting the provider's SDK found missing, gives `unavailable`, saying that whoever runs the server must act.
 - `credentials_rejected` gives `unavailable`, with the HTTP status when there was one. It reads like `openai rejected the credentials (HTTP 401)`, or `No credentials could be obtained for bedrock from its credential source`.
 - `rate_limited` says how many seconds to wait, or to try later. `provider_unavailable` and `timed_out` say to try again later.
 - `output_invalid` for an answer that does not match its schema gives up to 5 issues and says to try again. After the [one correction](#an-answer-that-misses-its-schema), it says `after one correction`; when the run had no room for it, it says `no correction was attempted` and why. For a JSON answer cut off at `max_output_tokens`, it is `conflict` of the kind `unworkable`, saying what to move out of the function by what the run called, then to raise `config.max_output_tokens`: where it called no tool, to give each piece of work an answer holds a function of its own; where it called tools that only read, to move each read whose arguments the input or an earlier step could give into a lookup function and hand the function what it read; and where it called a tool that may act, to move out each call whose arguments the input or an earlier step could give, a read into a lookup function and an act into an interaction function. It names no tool. A request too long after the run's tools answered says too to move each read into a lookup function, whose `read` keeps only the part the job needs.
@@ -286,7 +286,7 @@ Even then, the caller gets only the first line, at most 300 characters, after `T
 
 For a gateway, and for a built-in provider at an overridden endpoint, the caller gets only structured facts: the provider prefix, the HTTP status, what the status means, and the error code the body carries, cut at 64 characters. A gateway whose messages are safe to show opts in with `expose_provider_messages: true` in its entry.
 
-The operator always gets the message. For every call that a provider responded to with an error, the server logs a warning:
+Whoever runs the server always gets the message. For every call that a provider responded to with an error, the server logs a warning:
 
 ```json
 {
@@ -307,11 +307,11 @@ The operator always gets the message. For every call that a provider responded t
 - `provider_message` is at most 2,000 characters and never holds the request body.
 - `run_id` is the id of the run that made the call.
 
-Providers sometimes echo what they were sent. So in what the caller and the operator get, the server replaces each of these with `[redacted]` when it is at least 8 characters long: the secrets of the model settings, which are API keys, tokens, and the keys, headers and query parameters of gateways. It replaces the instructions and each message of the prompt with `[prompt]`, under the same length rule. A quote of only part of the prompt stays in the message.
+Providers sometimes echo what they were sent. So in what the caller and whoever runs the server get, the server replaces each of these with `[redacted]` when it is at least 8 characters long: the secrets of the model settings, which are API keys, tokens, and the keys, headers and query parameters of gateways. It replaces the instructions and each message of the prompt with `[prompt]`, under the same length rule. A quote of only part of the prompt stays in the message.
 
-### Operator hints
+### Hints in the log
 
-A failure that only the operator can fix tells the caller what happened and that the operator must act. It never names a setting. What to set goes to the operator, as a warning log:
+A failure that only whoever runs the server can fix tells the caller what happened and who must act. It never names a setting. What to set goes to the server's log, as a warning:
 
 ```json
 {
@@ -341,7 +341,7 @@ It is a model reference, `provider/model`, split at its first `/` as a definitio
 Both take the multipart body of OpenAI's transcription route: `file`, the recording with its media type, named `recording.webm`, `recording.ogg`, `recording.mp4` or `recording.wav` by its type, and `model`, everything after the first `/` of the reference. The runtime reads `text` from the JSON answer. A gateway entry serves the voice model only where its gateway serves that route.
 
 - Any other provider, a value that is not `provider/model`, or `openai` without `OPENAI_API_KEY`, stops the start with `model_settings_invalid`, which names the setting and what it expects: `The model settings are invalid. VOICE_MODEL: Expected openai/<model> or <gateway>/<model> for a gateway of model_gateways`.
-- Aliases and `allowed_models` do not apply to it: they govern the models a definition names, and the voice model is named by the operator alone.
+- Aliases and `allowed_models` do not apply to it: they govern the models a definition names, and only whoever runs the server names the voice model.
 - A call is tried again as a model call is ([Retries](#retries)), within 60 seconds for every attempt.
 - A failure is sorted into the kinds of [When a model call fails](#when-a-model-call-fails), and the caller of `transcribe` gets what the caller of a reasoning function gets for it: the provider's own words only under the rules of [Provider messages](#provider-messages), so a gateway's only where its entry sets `expose_provider_messages`.
 - Each call that reaches the model records one fact on the organization's ledger: `voice_transcribed` when the model answered, and `voice_refused`, with the failure's kind, when it did not ([Voice](http.md#voice)). The entry's `cost_header` fills the `cost_usd` of `voice_transcribed`, which is `null` where the entry names no header or the gateway answers none. The recording and its text are never recorded. A transcription is not a run, so it starts no run and the runtime's meter counts nothing for it.
@@ -356,7 +356,7 @@ The server never logs or returns:
 - the text of an answer that failed to parse or validate;
 - an API key, token or secret header. Settings keep secrets redacted, and a settings error names the setting, never its value.
 
-About models, the server logs only the lines this page and [Set up a model provider](../self-host/models.md#check-the-start-up-line) show: the start-up lines, provider messages and operator hints. A provider's warnings go to the run's `warnings`, not to the log. With telemetry on, the spans of model calls carry prompts and answers only when `TELEMETRY_CONTENT=true` (see [Telemetry](../self-host/telemetry.md#what-is-recorded)).
+About models, the server logs only the lines this page and [Set up a model provider](../self-host/models.md#check-the-start-up-line) show: the start-up lines, provider messages and hints. A provider's warnings go to the run's `warnings`, not to the log. With telemetry on, the spans of model calls carry prompts and answers only when `TELEMETRY_CONTENT=true` (see [Telemetry](../self-host/telemetry.md#what-is-recorded)).
 
 ## Answers that are JSON
 
@@ -431,5 +431,5 @@ A JSON answer whose schema is sent to the provider in [the portable form](#the-p
 - When the provider refuses the second request too, with HTTP 400 or 422, the schema was not the cause. The call fails as `definition_invalid`, and the rejection says: `gateway refused the request (HTTP 400): the request was rejected as invalid. The answer schema was not the cause; check the model's settings in the definition, such as temperature or reasoning, or choose another model`. A second request that fails another way, such as with HTTP 429 or past the call's deadline, fails the call as that request did.
 - The call's `model_call_answered`, or its `model_call_failed`, records `schema_refusal`: its `outcome`, `described`, `refused_again`, or `skipped` with `because: time`, and the refused request's `status` and `duration_ms` ([A reasoning function's model calls](http.md#a-reasoning-function-s-model-calls)). An answer to the second request, whether it could be used or not, also records `output_mode: described`, as through a gateway without structured outputs.
 - The call's `usage`, `cost_usd` and `request_bytes` are those of the requests the model answered, since a refused request reports no usage. Its `duration_ms` includes the refused request.
-- The provider's words for both requests go to the operator, under the rules of [Provider messages](#provider-messages).
+- The provider's words for both requests go to whoever runs the server, under the rules of [Provider messages](#provider-messages).
 - The metric `auto.on.json_answers` counts each refusal as `schema_refused`, with no output mode, beside the outcome of the answer asked for in the instructions. A refusal the provider repeats for the described request is not counted, since the schema was not the cause.

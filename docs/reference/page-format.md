@@ -327,7 +327,7 @@ The fold sees the events of its own playbook that its filters take, in the order
 
 A tool call, a step or an answer is in the playbook's history alone, and a fold never sees it. [Events](events.md), the `events` guide, says what each event holds, with the attributes that say how it came about, such as `caller` and `calldepth`.
 
-An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported to the operator once.
+An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported once to whoever runs the server.
 
 ### The filters of the events
 

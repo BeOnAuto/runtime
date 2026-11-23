@@ -180,7 +180,7 @@ NODE_EXTRA_CA_CERTS=/etc/ssl/certs/internal-ca.pem
 - The cloud credential endpoints must not go through the proxy: `169.254.169.254` (EC2, GCE and Azure instance metadata), `169.254.170.2` (ECS task roles), `169.254.170.23` (EKS Pod Identity) and `metadata.google.internal`.
 - `NODE_EXTRA_CA_CERTS` adds the certificate authority to every TLS connection Node makes.
 
-A provider certificate that is still not trusted is never retried. The caller is told that the provider's certificate is not trusted by this server and that its operator must add the certificate authority. You get a hint naming `NODE_EXTRA_CA_CERTS` in the log (see [Operator hints](../reference/model-settings.md#operator-hints)).
+A provider certificate that is still not trusted is never retried. The caller is told that the provider's certificate is not trusted by this server and that whoever runs it must add the certificate authority. You get a hint naming `NODE_EXTRA_CA_CERTS` in the log (see [Hints in the log](../reference/model-settings.md#hints-in-the-log)).
 
 Mutual TLS to the model endpoints is not supported.
 

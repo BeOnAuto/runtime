@@ -14,7 +14,7 @@ const noKeyToSignWith = new Conflict({
 });
 
 const nothingToReport = new Conflict({
-  detail: 'This runtime holds no offline credits to report on: an operator of Auto issues them for it',
+  detail: 'This runtime holds no offline credits to report on: the Auto team issues them for it',
 });
 
 interface Worded {

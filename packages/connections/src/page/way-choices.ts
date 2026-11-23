@@ -25,7 +25,7 @@ export function defineChooseWay(services: Choosing) {
       'Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing.',
       "A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for.",
       'A connection that is connected or broken is refused as conflict.',
-      "A way the operator's rules do not allow is refused as forbidden.",
+      "A way the runtime's rules do not allow is refused as forbidden.",
       'On a runtime that signs people in, only an admin of the organization may choose.',
     ].join(' '),
     route: { method: 'PUT', path: '/connections/{id}/way' },

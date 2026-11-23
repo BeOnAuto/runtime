@@ -21,10 +21,11 @@ function modelsOf({ providers, aliases }: OfferedModels): string {
   if (providers.length === 0) {
     return aliases.length === 0
       ? noProvider
-      : `a reasoning function names one of the models its operator named: ${namedModels(aliases)}`;
+      : `a reasoning function names one of the models that whoever runs this server named: ${namedModels(aliases)}`;
   }
   const examples = providers.map((provider) => `${provider}/<model id>`).join(' or ');
-  const named = aliases.length === 0 ? '' : `, or one of the models its operator named: ${namedModels(aliases)}`;
+  const named =
+    aliases.length === 0 ? '' : `, or one of the models that whoever runs this server named: ${namedModels(aliases)}`;
   return `a reasoning function names its model through ${listed(providers)}, written ${examples}${named}`;
 }
 

@@ -126,7 +126,7 @@ A run answers the [asset](output-shapes.md#asset) it made:
 | `input.schema` | No       | A JSON Schema of the input. The input is a JSON object; one the schema does not allow is `invalid_input`                                                                                                                                                                                                              |
 | `parameters`   | No       | The [parameters](#parameters) of the kind, each within the limits of the model                                                                                                                                                                                                                                        |
 | `references`   | No       | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see [References](#references)                                                                                                                                                            |
-| `expires`      | No       | How long the asset is kept before it expires, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset <span data-variable="generation.kept">does not expire</span><span data-audience="operator">, unless the runtime's operator sets how long assets are kept</span>                  |
+| `expires`      | No       | How long the asset is kept before it expires, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset <span data-variable="generation.kept">does not expire</span><span data-audience="operator">, unless whoever runs the server sets how long assets are kept</span>                 |
 | `page`         | No       | The [page](page-format.md) that presents its runs                                                                                                                                                                                                                                                                     |
 
 The prompt is everything after the front matter. It is a [template](template.md) that reads `input`, `today`, the date as `YYYY-MM-DD`, and `now`, the time in ISO 8601, and it must render text: a list or an object written whole is refused. For audio, the prompt is the text the model speaks.
@@ -246,7 +246,7 @@ The reference a run answers is the [asset shape](output-shapes.md#asset):
 
 <div data-audience="developer">
 
-An asset expires only where its function sets `expires` or the runtime's operator sets how long assets are kept. When it expires, the runtime records `asset_expired` on the asset's stream, with its size, and its id as a reference is then refused. It then removes the content, unless another part of the playbook holds the same bytes, such as another asset made the same, or they were kept again within the last hour. Bytes another asset holds are removed when the last asset that holds them expires. Once the content is removed, the runtime records `asset_content_removed` on the asset's stream, with its size and digest, and an address answered before reads nothing more.
+An asset expires only where its function sets `expires` or whoever runs the server sets how long assets are kept. When it expires, the runtime records `asset_expired` on the asset's stream, with its size, and its id as a reference is then refused. It then removes the content, unless another part of the playbook holds the same bytes, such as another asset made the same, or they were kept again within the last hour. Bytes another asset holds are removed when the last asset that holds them expires. Once the content is removed, the runtime records `asset_content_removed` on the asset's stream, with its size and digest, and an address answered before reads nothing more.
 
 </div>
 
@@ -272,7 +272,7 @@ A model whose provider takes minutes to make what it is asked for, as a video's 
 
 Meanwhile the runtime asks the gateway at `/videos/{id}` how the generation stands: five seconds after the request, then every 10, 20 and 30 seconds, or, where the provider says how far it has got, about half the time that leaves, from five seconds to a minute. Once the provider has made it, the runtime fetches its bytes from `/videos/{id}/content` and keeps them as an asset, as for an image, and the run succeeds with the asset's reference. Both are paths of the video API of a LiteLLM gateway.
 
-A run waits 10 minutes at most, unless its operator sets another time from 1 to 60 minutes. A generation not made by then ends the run `unavailable`, kind `generation_timed_out`. One the provider fails to make ends the run as the gateway answers. Either way the run's record holds the cost the request spent. However many times the runtime finds a generation made, it keeps one asset of it, under an id the run's deferral gives.
+A run waits 10 minutes at most, unless whoever runs the server sets another time from 1 to 60 minutes. A generation not made by then ends the run `unavailable`, kind `generation_timed_out`. One the provider fails to make ends the run as the gateway answers. Either way the run's record holds the cost the request spent. However many times the runtime finds a generation made, it keeps one asset of it, under an id the run's deferral gives.
 
 </div>
 
@@ -302,12 +302,12 @@ A run refused before the gateway answers keeps no asset and records no cost. A r
 
 A run that succeeds records the asset's reference as its output and, as its `record`:
 
-| Field         | Value                                                                                                                                                                                                                      |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `model`       | The model the document names                                                                                                                                                                                               |
-| `own_key`     | `true` where the gateway is reached with the runtime operator's own key<span data-audience="operator">, the one its entry of `MODEL_GATEWAYS` gives</span>, and `false` where the runtime reaches it with a key it is lent |
-| `duration_ms` | How long the run took<span data-audience="developer operator">, for a generation the provider finishes later from the request to its bytes kept</span>                                                                     |
-| `cost_usd`    | The cost in US dollars the gateway answered, where it answered one<span data-audience="operator">: in the header its entry names as `cost_header`, where it names one</span>                                               |
+| Field         | Value                                                                                                                                                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`       | The model the document names                                                                                                                                                                                      |
+| `own_key`     | `true` where the gateway is reached with the runtime's own key<span data-audience="operator">, the one its entry of `MODEL_GATEWAYS` gives</span>, and `false` where the runtime reaches it with a key it is lent |
+| `duration_ms` | How long the run took<span data-audience="developer operator">, for a generation the provider finishes later from the request to its bytes kept</span>                                                            |
+| `cost_usd`    | The cost in US dollars the gateway answered, where it answered one<span data-audience="operator">: in the header its entry names as `cost_header`, where it names one</span>                                      |
 
 Each run counts once on the runtime's meter, as a run of every other function does. The meter counts the run, not the model call it makes.<span data-audience="user"> On hosted Auto, the model call uses credits of its own, in addition to the run's, as [Pricing](https://on.auto/pricing) explains.</span>
 
@@ -340,7 +340,7 @@ The bounds of a generation the provider finishes later:
 
 <div data-audience="operator">
 
-A limit above that has a setting below is a default, which holds where the runtime's operator sets no other value, as the configuration reference sets out for [generation functions](../self-host/configuration.md#generation-functions) and for [assets](../self-host/configuration.md#assets). Hosted Auto sets values of its own for some of them, the storage quota among them.
+A limit above that has a setting below is a default, which holds where whoever runs the server sets no other value, as the configuration reference sets out for [generation functions](../self-host/configuration.md#generation-functions) and for [assets](../self-host/configuration.md#assets). Hosted Auto sets values of its own for some of them, the storage quota among them.
 
 | Bound                                                | Setting                                        |
 | ---------------------------------------------------- | ---------------------------------------------- |

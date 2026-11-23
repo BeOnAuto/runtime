@@ -58,7 +58,7 @@ const outbound: Recognizer = (error, { provider, configured }) => {
   return error.reason === 'credential_lookup_failed'
     ? credentialsUnavailable(provider)
     : new ProviderNotConfigured({
-        detail: `The TLS certificate of ${provider} is not trusted by this server; its operator must add the certificate authority`,
+        detail: `The TLS certificate of ${provider} is not trusted by this server; whoever runs it must add the certificate authority`,
         provider,
         configured,
         missing: ['NODE_EXTRA_CA_CERTS'],
@@ -129,7 +129,7 @@ function isMissingSetting(error: unknown): error is LoadAPIKeyError | LoadSettin
 const missingSetting: Recognizer = (error, { provider, configured }) =>
   isMissingSetting(error)
     ? new ProviderNotConfigured({
-        detail: `${provider} is missing a setting on this server; its operator must add it`,
+        detail: `${provider} is missing a setting on this server; whoever runs this server must add it`,
         provider,
         configured,
         missing: [],

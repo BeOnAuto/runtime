@@ -121,7 +121,7 @@ describe('a run whose delivery names a tool this playbook may not use', () => {
     expect(asked).toMatchObject({
       ...notOffered,
       because: 'tool_not_allowed',
-      detail: `The operator of this server does not allow chat/${tool}`,
+      detail: `Whoever runs this server does not allow chat/${tool}`,
     });
     expect(tools.calls()).toEqual([]);
   });

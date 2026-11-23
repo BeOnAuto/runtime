@@ -66,7 +66,7 @@ curl --request POST http://localhost:5555/v1/orgs/local/playbooks/sales/definiti
 curl http://localhost:5555/v1/orgs/local/playbooks/sales/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a
 ```
 
-A document with a problem is rejected with every problem and its line. An input that does not match the schema is rejected before any model is called. A provider that is not configured answers `503`; its missing settings are reported to the operator, not exposed to the caller. [Reasoning function format](reasoning-format.md) describes the document and recorded result. [HTTP API](../../reference/http.md) describes the operations. An assistant does the same over [MCP](mcp.md), where tool descriptions explain the supported definition formats.
+A document with a problem is rejected with every problem and its line. An input that does not match the schema is rejected before any model is called. A provider that is not configured answers `503`; its missing settings are reported to whoever runs the server, not exposed to the caller. [Reasoning function format](reasoning-format.md) describes the document and recorded result. [HTTP API](../../reference/http.md) describes the operations. An assistant does the same over [MCP](mcp.md), where tool descriptions explain the supported definition formats.
 
 A workflow coordinates function calls and control steps, including branches, waits and event listeners. The server runs it durably and keeps its history in the ledger. Write `welcome.yaml`, a workflow that runs the greeting above, then waits for the customer's reply. Its page heads each run with the reply, and charts the customers who replied each day:
 

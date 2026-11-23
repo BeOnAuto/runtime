@@ -55,7 +55,7 @@ describe('a tool this playbook is not offered', () => {
         reason: 'unavailable',
         kind: 'tool_not_offered',
         because: 'tool_not_allowed',
-        detail: 'The operator of this server does not allow graph/search',
+        detail: 'Whoever runs this server does not allow graph/search',
       },
       { kind: 'tool_not_offered', because: 'tool_server_not_configured' },
       { kind: 'tool_not_offered', because: 'tool_server_not_configured' },

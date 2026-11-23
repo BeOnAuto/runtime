@@ -28,13 +28,13 @@ describe('the sentence the reasoning-function guide ends with on a server', () =
         toolsConfigured: false,
       }),
     ).toBe(
-      `On this server, a reasoning function names its model through gateway, written gateway/<model id>, or one of the models its operator named: house/fast, anthropic/*, where a name that ends in * stands for any model id, so anthropic/<model id> runs; no tool server is configured, so it may name no tools; ${onlyItsOperators}.`,
+      `On this server, a reasoning function names its model through gateway, written gateway/<model id>, or one of the models that whoever runs this server named: house/fast, anthropic/*, where a name that ends in * stands for any model id, so anthropic/<model id> runs; no tool server is configured, so it may name no tools; ${onlyItsOperators}.`,
     );
   });
 
   it('names only the models its operator named where no provider may be named directly', () => {
     expect(onThisServer({ offered: { providers: [], aliases: ['house/fast'] }, toolsConfigured: false })).toBe(
-      `On this server, a reasoning function names one of the models its operator named: house/fast; no tool server is configured, so it may name no tools; ${onlyItsOperators}.`,
+      `On this server, a reasoning function names one of the models that whoever runs this server named: house/fast; no tool server is configured, so it may name no tools; ${onlyItsOperators}.`,
     );
   });
 

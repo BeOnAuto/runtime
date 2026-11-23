@@ -18,7 +18,7 @@ export const everyDocumentCarriesItsPage =
   "Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Write it as its type's guide shows under Its page. Read the page guide for the playbook's own page, or a page that folds other events or sets charts side by side.";
 
 export const modelsOfAServer =
-  'A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.';
+  'A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.';
 
 export const goalsInsertedAfter = 'or use the playbook they name when list_playbooks shows it.';
 

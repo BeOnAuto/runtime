@@ -94,7 +94,7 @@ Otherwise it starts the run at the free rate the last license carried. A runtime
 
 Each report sends the runtime's counts. Auto takes credits for the licensed runs it has not charged before, never twice for the same count, and answers a fresh license. It takes the credits that expire soonest first, and Free plan credits only up to what is left of the day's 15. What credits can't cover is owed as overage on a plan that has it, and written off on Free.
 
-A count lower than what Auto already charged takes nothing. Auto flags it for its operators, and the runtime keeps running. A ledger restored from an older copy reports the lower count once, and counts on from `charged_through` after that.
+A count lower than what Auto already charged takes nothing. It is flagged for the Auto team, and the runtime keeps running. A ledger restored from an older copy reports the lower count once, and counts on from `charged_through` after that.
 
 When Auto can't be reached, or answers with something it did not sign for this runtime, the runtime keeps its last license.
 
@@ -145,7 +145,7 @@ Offline credits serve a runtime that can't reach Auto. Auto moves them out of th
 | Refresh            | A runtime that reaches Auto now and then refreshes them every day, which gives them their days again                                                                 |
 | Reports            | A runtime that reaches Auto reports what it spent every hour. For one that never does, an admin carries its reports to Studio                                        |
 
-Each report counts everything spent so far, under the next number. A later report replaces an earlier one, so a lost report costs nothing. Auto pauses offline credits whose report counts fewer runs than one before it, or reuses a number, as a ledger restored from an older copy does, until its operators have looked at them.
+Each report counts everything spent so far, under the next number. A later report replaces an earlier one, so a lost report costs nothing. Auto pauses offline credits whose report counts fewer runs than one before it, or reuses a number, as a ledger restored from an older copy does, until the Auto team has looked at them.
 
 When Auto closes offline credits, what they didn't spend goes back to the credits it came from. A runtime that reaches Auto gives up closed or paused offline credits at its next refresh, and from then on runs by its key, or without one.
 

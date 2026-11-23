@@ -65,7 +65,7 @@ const serverFields = {
 
 const searchedFields = {
   tool_count: Schema.Int.annotate({
-    description: 'How many of its tools the operator allows that this search considered, after only',
+    description: 'How many of its allowed tools this search considered, after only',
   }),
   cards: Schema.optionalKey(Schema.String.annotate({ description: cardsDescription })),
 };

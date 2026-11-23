@@ -53,7 +53,7 @@ interface Refusal {
 const digest = 'd'.repeat(64);
 
 function notAllowed(tool: string): Refusal {
-  return { because: 'tool_not_allowed', detail: `The operator of this server does not allow chat/${tool}` };
+  return { because: 'tool_not_allowed', detail: `Whoever runs this server does not allow chat/${tool}` };
 }
 
 function notConfigured(server: string): Refusal {

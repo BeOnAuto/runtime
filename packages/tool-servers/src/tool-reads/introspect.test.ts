@@ -148,7 +148,7 @@ describe('introspect refusing', () => {
         reason: 'unavailable',
         kind: 'tool_not_offered',
         because: 'tool_not_allowed',
-        detail: 'The operator of this server does not allow graph/search',
+        detail: 'Whoever runs this server does not allow graph/search',
       },
     ]);
     expect(fake.seen()).toEqual([]);

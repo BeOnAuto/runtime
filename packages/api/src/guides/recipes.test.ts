@@ -10,7 +10,7 @@ async function recipeCarrying(name: string, ...carried: readonly string[]): Prom
 }
 
 const modelSentence =
-  ' A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.\n';
+  ' A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, whoever runs it configures a model provider: https://on.auto/docs/self-host/configuration#models.\n';
 
 describe('the recipes whose function calls a model', () => {
   it('say so at the top, and point to the model settings of a server of their own', async () => {

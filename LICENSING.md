@@ -6,7 +6,7 @@ This page explains the license in plain language. If anything here conflicts wit
 
 ## What the public edition includes
 
-This repository, the npm package `@on.auto/runtime` and the image `onauto/runtime` are the public edition of Auto Runtime. The default throughout is the Elastic License 2.0, unless a file header or a license file specifies another license. Its prediction functions forecast with the runtime's own forecaster. An extension an operator installs and lists, built outside this repository, carries its own license.
+This repository, the npm package `@on.auto/runtime` and the image `onauto/runtime` are the public edition of Auto Runtime. The default throughout is the Elastic License 2.0, unless a file header or a license file specifies another license. Its prediction functions forecast with the runtime's own forecaster. An extension that whoever runs the server installs and lists, built outside this repository, carries its own license.
 
 ## What you can do for free
 

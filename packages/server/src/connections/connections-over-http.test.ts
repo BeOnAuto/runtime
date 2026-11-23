@@ -123,7 +123,7 @@ const refusedAddresses: readonly (readonly [string, string, string])[] = [
   ['https://metadata.google.internal/computeMetadata/v1', 'metadata.google.internal', 'a cloud metadata host'],
 ];
 
-const namedByTheOperator = ', unless its operator names the host in connections.allowed_hosts';
+const namedByTheOperator = ', unless whoever runs this server names the host in connections.allowed_hosts';
 
 function refusalFor(host: string, kind: string): string {
   const unless = kind.startsWith('a cloud metadata') ? '' : namedByTheOperator;

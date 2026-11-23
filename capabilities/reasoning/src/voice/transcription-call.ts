@@ -169,7 +169,7 @@ const unsent = Effect.fnUntraced(function* (
   const untrusted: FailedAttempt = {
     failed: Effect.fail(
       new ProviderNotConfigured({
-        detail: `The TLS certificate of ${provider} is not trusted by this server; its operator must add the certificate authority`,
+        detail: `The TLS certificate of ${provider} is not trusted by this server; whoever runs it must add the certificate authority`,
         provider,
         configured: [],
         missing: ['NODE_EXTRA_CA_CERTS'],

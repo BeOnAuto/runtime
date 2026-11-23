@@ -90,14 +90,14 @@ describe('the provider options of a definition', () => {
   it('refuse every other option, naming it and saying it is not offered', () => {
     expect(issuesIn(documentOf(`model: anthropic/claude-sonnet-4-5\n${withheldOptions}`))).toEqual([
       'Line 5, /provider_options/anthropic/thinking/blockBinding: thinking.blockBinding is not offered: thinking takes type, budgetTokens, display',
-      'Line 6, /provider_options/anthropic/metadata: metadata is not offered: it attributes the request on the operator account',
+      "Line 6, /provider_options/anthropic/metadata: metadata is not offered: it attributes the request on the server's provider account",
       'Line 7, /provider_options/anthropic/anthropicBeta: anthropicBeta is not offered: it sets request headers or betas',
       'Line 8, /provider_options/anthropic/mcpServers: mcpServers is not offered: it brings in tools or servers',
-      'Line 9, /provider_options/openai/store: store is not offered: it stores or reuses state on the operator account',
+      "Line 9, /provider_options/openai/store: store is not offered: it stores or reuses state on the server's provider account",
       'Line 9, /provider_options/openai/temperature: temperature is not offered: openai offers textVerbosity, reasoningMode, logitBias',
       'Line 10, /provider_options/bedrock/thinking: thinking is not offered: it adds raw fields to the request',
       'Line 10, /provider_options/bedrock/inferenceConfig: inferenceConfig is not offered: bedrock offers reasoningConfig',
-      'Line 11, /provider_options/google/labels: labels is not offered: it attributes the request on the operator account',
+      "Line 11, /provider_options/google/labels: labels is not offered: it attributes the request on the server's provider account",
       `Line 12, /provider_options/Not_A_Gateway: Not_A_Gateway is not a provider namespace: ${namespaces}`,
     ]);
   });

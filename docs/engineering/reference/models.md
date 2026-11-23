@@ -1,6 +1,6 @@
 # Model access
 
-This repository-only page describes the library behind [Set up a model provider](../../self-host/models.md) and the [model settings reference](../../reference/model-settings.md): the model access of `@on.auto/reasoning` (`capabilities/reasoning`) and how the server wires it. The public page holds the operator's and the caller's view, the settings, log lines and rejections. This page holds the function names, callback signatures, failure objects and SDK behavior that contributors need. Keep both accurate when the behavior changes.
+This repository-only page describes the library behind [Set up a model provider](../../self-host/models.md) and the [model settings reference](../../reference/model-settings.md): the model access of `@on.auto/reasoning` (`capabilities/reasoning`) and how the server wires it. The public page holds what whoever runs the server and the caller see: the settings, log lines and rejections. This page holds the function names, callback signatures, failure objects and SDK behavior that contributors need. Keep both accurate when the behavior changes.
 
 ## Building model access
 
@@ -70,7 +70,7 @@ A model call reports a message for every `APICallError` whose message is not emp
 
 ### Plain words
 
-`modelsListed` names at most 20 models, then `<n> more`. A model is named by the name its provider gives, else by the last part of its id. A name two providers share gets the provider in parentheses; a name that is still repeated is replaced by the last part of the id. Wildcard entries follow as `any <provider> model`, or `any <provider> model starting with <start>`. A `narrowed` answer then says `It lists only the models its operator allows.` A `partial` answer ends with `The list may be incomplete: a provider could not be asked just now.` An empty answer says `This server has no model it can call`, with `through <provider>` when a provider was chosen.
+`modelsListed` names at most 20 models, then `<n> more`. A model is named by the name its provider gives, else by the last part of its id. A name two providers share gets the provider in parentheses; a name that is still repeated is replaced by the last part of the id. Wildcard entries follow as `any <provider> model`, or `any <provider> model starting with <start>`. A `narrowed` answer then says `It lists only the models that whoever runs this server allows.` A `partial` answer ends with `The list may be incomplete: a provider could not be asked just now.` An empty answer says `This server has no model it can call`, with `through <provider>` when a provider was chosen.
 
 ## Requests and failures
 
@@ -123,7 +123,7 @@ No failure or defect carries the request or response bodies the SDK keeps on its
 
 ### Scrubbing
 
-`providerTextScrubber(settings, options)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`, then applies the option `scrubProviderText` when the composer gives one. It is the one scrub of what a provider says: a model call, a list of models and a transcription each take it, so it reaches the reports, the operator hints, the `provider_message` and the error code in the `detail` of a failure, and so the `model_call_failed` fact and the caller's rejection, which are made of the failure. A composer passes `scrubProviderText` for secrets the settings do not hold, such as a key its own `fetch` adds to each request. `scrubberFor(policy, request)` (`src/model-calls/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
+`providerTextScrubber(settings, options)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`, then applies the option `scrubProviderText` when the composer gives one. It is the one scrub of what a provider says: a model call, a list of models and a transcription each take it, so it reaches the reports, the hints in the log, the `provider_message` and the error code in the `detail` of a failure, and so the `model_call_failed` fact and the caller's rejection, which are made of the failure. A composer passes `scrubProviderText` for secrets the settings do not hold, such as a key its own `fetch` adds to each request. `scrubberFor(policy, request)` (`src/model-calls/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
 
 ## SDK globals
 

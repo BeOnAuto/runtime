@@ -4598,7 +4598,7 @@
                         "properties": {
                           "id": {
                             "type": "string",
-                            "description": "The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as its operator wrote it"
+                            "description": "The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as whoever runs this server wrote it"
                           },
                           "object": {
                             "type": "string",
@@ -4634,7 +4634,7 @@
                             "enum": [
                               true
                             ],
-                            "description": "true for an alias its operator named, whether or not resolved_to shows where it is sent"
+                            "description": "true for an alias that whoever runs this server named, whether or not resolved_to shows where it is sent"
                           },
                           "resolved_to": {
                             "type": "string",
@@ -4667,7 +4667,7 @@
                     },
                     "narrowed": {
                       "type": "boolean",
-                      "description": "true when the operator allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers"
+                      "description": "true when whoever runs this server allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers"
                     },
                     "listed_at": {
                       "type": "string",
@@ -5050,7 +5050,7 @@
                               },
                               "tool_count": {
                                 "type": "integer",
-                                "description": "How many of its tools the operator allows that this search considered, after only"
+                                "description": "How many of its allowed tools this search considered, after only"
                               },
                               "cards": {
                                 "type": "string",
@@ -13995,7 +13995,7 @@
       "put": {
         "operationId": "choose_way",
         "summary": "Choose way",
-        "description": "Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, the values that way asks for, and the account type where that way acts as an account. The connection keeps its id, its name, its playbooks and its link. A sign-in started and the organization's own OAuth client given for the way it had before are dropped. When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes. Choosing the way the connection already has with other values records the choice again: a sign-in started and the organization's own OAuth client given are dropped, and the account type stays as it is unless one is given. Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing. A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for. A connection that is connected or broken is refused as conflict. A way the operator's rules do not allow is refused as forbidden. On a runtime that signs people in, only an admin of the organization may choose.",
+        "description": "Chooses how a connection that is not connected yet connects, through its open link: one of the ways its provider or its server offers, the values that way asks for, and the account type where that way acts as an account. The connection keeps its id, its name, its playbooks and its link. A sign-in started and the organization's own OAuth client given for the way it had before are dropped. When another way is chosen without an account type, the type is personal if the way takes personal accounts, and otherwise the type the way takes. Choosing the way the connection already has with other values records the choice again: a sign-in started and the organization's own OAuth client given are dropped, and the account type stays as it is unless one is given. Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing. A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for. A connection that is connected or broken is refused as conflict. A way the runtime's rules do not allow is refused as forbidden. On a runtime that signs people in, only an admin of the organization may choose.",
         "tags": [
           "connections"
         ],
@@ -18930,7 +18930,7 @@
       "post": {
         "operationId": "activate_allocation",
         "summary": "Activate allocation",
-        "description": "Gives this runtime the offline credits an operator of Auto signed for it, for a runtime that does not reach Auto: credits it spends where Auto cannot see, until the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order. From then on the runtime starts each new run against those credits itself, asking Auto nothing, until they are spent or their date has passed. It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another runtime or past its date is refused as a conflict of the kind license_invalid.",
+        "description": "Gives this runtime the offline credits the Auto team signed for it, for a runtime that does not reach Auto: credits it spends where Auto cannot see, until the date Auto signed into them, 30 days after they were issued or last refreshed, or 90 under an Enterprise order. From then on the runtime starts each new run against those credits itself, asking Auto nothing, until they are spent or their date has passed. It answers the allocation, its credits, what was spent of them and when it must be refreshed by; one not signed by Auto, for another runtime or past its date is refused as a conflict of the kind license_invalid.",
         "tags": [
           "license"
         ],
@@ -18968,7 +18968,7 @@
                       "kid"
                     ],
                     "additionalProperties": false,
-                    "description": "The allocation an operator of Auto signed for this installation: its payload, signature and kid"
+                    "description": "The allocation the Auto team signed for this installation: its payload, signature and kid"
                   }
                 },
                 "required": [
@@ -26557,7 +26557,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models that whoever runs this server allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -27256,7 +27256,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models that whoever runs this server allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -27947,7 +27947,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                              "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models that whoever runs this server allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -35590,7 +35590,7 @@
                               },
                               "tool_count": {
                                 "type": "integer",
-                                "description": "How many of its tools the operator allows that this search considered, after only"
+                                "description": "How many of its allowed tools this search considered, after only"
                               },
                               "cards": {
                                 "type": "string",

@@ -18,13 +18,13 @@ await test('docs distinguish inbound MCP from the tools a reasoning function cal
   const functions = readFileSync(join(docs, 'concepts/functions.md'), 'utf8');
   assert.ok(mcp.includes('inbound interface'));
   assert.ok(mcp.includes('It does not configure tools inside a reasoning function'));
-  assert.ok(mcp.includes("through tool servers the runtime's operator configures"));
+  assert.ok(mcp.includes('through tool servers that whoever runs the server configures'));
   assert.ok(mcp.includes('never by adding an endpoint to an external agent'));
-  assert.ok(functions.includes('Tool access is available wherever the runtime'));
+  assert.ok(functions.includes('Tool access is available wherever tool servers are set up on the runtime'));
   assert.ok(functions.includes('model gateways connect to language models'));
   assert.ok(
     functions.includes(
-      "A reasoning function can call the tools of tool servers that the runtime's operator configures",
+      'A reasoning function can call the tools of tool servers that whoever runs the server configures',
     ),
   );
   assert.ok(
@@ -63,6 +63,6 @@ await test('the configuration of tool servers documents recording and credential
   assert.ok(configuration.includes('anyone who may read the playbook reads them'));
   assert.ok(http.includes('`tool_call_answered` when the tool answered'));
   assert.ok(http.includes('`tool_call_failed` when it never answered'));
-  assert.ok(http.includes('unless the operator turns `record_content` off for the server'));
+  assert.ok(http.includes('unless `record_content` is turned off for the server'));
   assert.ok(http.includes('absence of an answer does not prove it was cancelled before acting'));
 });

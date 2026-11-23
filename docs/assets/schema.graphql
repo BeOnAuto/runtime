@@ -2139,7 +2139,7 @@ type RunReadRejectionUnavailable {
   kind: String
 
   """
-  Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content
+  Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models that whoever runs this server allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content
   """
   because: String
   cause: RejectionCause
@@ -3877,9 +3877,7 @@ type SearchAnswerServers1 {
   """
   renders: String
 
-  """
-  How many of its tools the operator allows that this search considered, after only
-  """
+  """How many of its allowed tools this search considered, after only"""
   tool_count: Float!
 
   """
@@ -4891,7 +4889,7 @@ type ListModelsAnswer {
   catalog_status: String!
 
   """
-  true when the operator allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers
+  true when whoever runs this server allows only some models, so the list holds only those; false when a reasoning function may name any model of the configured providers
   """
   narrowed: Boolean!
 
@@ -4908,7 +4906,7 @@ type ListModelsAnswer {
 
 type ListModelsAnswerData {
   """
-  The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as its operator wrote it
+  The model as a reasoning function names it, provider/model id, such as anthropic/claude-sonnet-4-5; an alias as whoever runs this server wrote it
   """
   id: String!
   object: String!
@@ -4931,7 +4929,7 @@ type ListModelsAnswerData {
   max_tokens: Float
 
   """
-  true for an alias its operator named, whether or not resolved_to shows where it is sent
+  true for an alias that whoever runs this server named, whether or not resolved_to shows where it is sent
   """
   alias: Boolean
 
@@ -5009,9 +5007,7 @@ type SearchInOrgAnswerServers1 {
   """
   playbooks: [String!]!
 
-  """
-  How many of its tools the operator allows that this search considered, after only
-  """
+  """How many of its allowed tools this search considered, after only"""
   tool_count: Float!
 
   """

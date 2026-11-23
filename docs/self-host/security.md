@@ -20,7 +20,7 @@ The runtime recognizes three kinds of caller:
 
 ## Who can call a server
 
-Who can call a server follows from two settings, `PUBLIC_URL` and `API_KEYS`, and from the address the server listens on, unless its operator declares local mode with `ACCESS_MODE=local`:
+Who can call a server follows from two settings, `PUBLIC_URL` and `API_KEYS`, and from the address the server listens on, unless whoever runs it declares local mode with `ACCESS_MODE=local`:
 
 | Settings                                                                                         | Where the server listens                                                          | Who can call it                                                                                         |
 | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -215,7 +215,7 @@ A server is in local mode when both of these hold:
 - it listens only on a loopback address: `localhost`, `::1`, or an address in `127.0.0.0/8` such as `127.0.0.1`;
 - neither `PUBLIC_URL` nor `API_KEYS` is set, not even to `API_KEYS=[]`.
 
-A server whose port only this computer reaches, though it listens on every address, is in local mode where its operator declares it with `ACCESS_MODE=local`, `access_mode: local` in the file. A container is one: Docker publishes its port on `127.0.0.1` alone, which the server inside cannot see ([Run with Docker](docker.md#on-your-own-machine)). The declaration trusts that publish, so never give it with a wider one, and every container on the same Docker network reaches the port whatever the publish, acting as the local developer. It stops the start beside `API_KEYS`, even `[]`, beside a `PUBLIC_URL` that is not on `localhost`, `127.0.0.1` or `[::1]`, and without a `PUBLIC_URL` on a server that listens beyond the loopback, such as a container. There the `PUBLIC_URL` names the address this computer reaches the server at, which its links point at, and signs no one in. The server then behaves as in local mode on a loopback address. Local mode, declared or not, stops the start beside a `WEBHOOK_URL`.
+A server whose port only this computer reaches, though it listens on every address, is in local mode where whoever runs it declares it with `ACCESS_MODE=local`, `access_mode: local` in the file. A container is one: Docker publishes its port on `127.0.0.1` alone, which the server inside cannot see ([Run with Docker](docker.md#on-your-own-machine)). The declaration trusts that publish, so never give it with a wider one, and every container on the same Docker network reaches the port whatever the publish, acting as the local developer. It stops the start beside `API_KEYS`, even `[]`, beside a `PUBLIC_URL` that is not on `localhost`, `127.0.0.1` or `[::1]`, and without a `PUBLIC_URL` on a server that listens beyond the loopback, such as a container. There the `PUBLIC_URL` names the address this computer reaches the server at, which its links point at, and signs no one in. The server then behaves as in local mode on a loopback address. Local mode, declared or not, stops the start beside a `WEBHOOK_URL`.
 
 `npx @on.auto/runtime` and `pnpm dev` listen on `127.0.0.1`, so they run in local mode until you set `PUBLIC_URL` or `API_KEYS`. Signing people in needs an `https` `PUBLIC_URL` ([Let people sign in](#let-people-sign-in)).
 

@@ -52,7 +52,7 @@ const answerWithoutDetails = Object.assign(
 
 const unreadable = 'The response of mock could not be read';
 
-const missingSetting = 'mock is missing a setting on this server; its operator must add it';
+const missingSetting = 'mock is missing a setting on this server; whoever runs this server must add it';
 
 const classifications: readonly (readonly [Readonly<Error>, string, string])[] = [
   [

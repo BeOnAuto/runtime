@@ -30,7 +30,7 @@ function policyOf(fields: ConnectionPolicyFields) {
 function notAllowedUnlessNamed(host: string, reached: string): string {
   const unless = reached.startsWith('a cloud metadata')
     ? ''
-    : ', unless its operator names the host in connections.allowed_hosts';
+    : ', unless whoever runs this server names the host in connections.allowed_hosts';
   return `A connection may not reach the host ${host}, ${reached}${unless}`;
 }
 

@@ -79,7 +79,7 @@ function nothingWords(provider: string | undefined, providerSetup: string | unde
     : 'This server has no model it can call; provider_setup says how the person adds one.';
 }
 
-const allowedOnly = 'It lists only the models its operator allows.';
+const allowedOnly = 'It lists only the models that whoever runs this server allows.';
 
 const incomplete = 'The list may be incomplete: a provider could not be asked just now.';
 

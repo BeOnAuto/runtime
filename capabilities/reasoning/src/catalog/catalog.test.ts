@@ -194,16 +194,16 @@ describe('the plain words for a list an allow list narrows', () => {
     const narrowed: ListDetails = { narrowed: true };
 
     expect(modelsListed(listOf([model('gateway/fast', 'gateway')], narrowed))).toBe(
-      'This server can call 1 model through gateway: fast. It lists only the models its operator allows.',
+      'This server can call 1 model through gateway: fast. It lists only the models that whoever runs this server allows.',
     );
     expect(modelsListed(listOf([model('bedrock/*', 'bedrock', { pattern: true })], narrowed))).toBe(
-      'This server can call any bedrock model. It lists only the models its operator allows.',
+      'This server can call any bedrock model. It lists only the models that whoever runs this server allows.',
     );
     expect(modelsListed(listOf([], narrowed), 'mistral')).toBe(
-      'This server has no model it can call through mistral. It lists only the models its operator allows.',
+      'This server has no model it can call through mistral. It lists only the models that whoever runs this server allows.',
     );
     expect(modelsListed(listOf([model('gateway/fast', 'gateway')], { ...narrowed, catalog_status: 'partial' }))).toBe(
-      'This server can call 1 model through gateway: fast. It lists only the models its operator allows. The list may be incomplete: a provider could not be asked just now.',
+      'This server can call 1 model through gateway: fast. It lists only the models that whoever runs this server allows. The list may be incomplete: a provider could not be asked just now.',
     );
   });
 });
