@@ -18,3 +18,37 @@ credentials:
       prompt: consent
     clients: [registered]
     description: Sign in to Google and allow Google Docs.
+  - kind: jwt_bearer
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/documents.readonly https://www.googleapis.com/auth/documents
+    says:
+      https://www.googleapis.com/auth/documents.readonly: See all Google Docs documents.
+      https://www.googleapis.com/auth/documents: See, change, create and delete all Google Docs documents.
+    key_file:
+      client_id: /client_email
+      private_key: /private_key
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **Google Docs API** is turned on.
+          - Open the service account. On the **Keys** tab, select **Add key**, then **Create new key**. Choose **JSON** as the **Key type** and select **Create**. Google downloads the key as a file. It is the only copy.
+          - Copy the service account's email address. You need it in the next step.
+
+          If Google does not let you create a key, your organization has turned key creation off. Ask whoever manages Google Cloud at your company.
+      pages:
+        - title: Share your documents with it
+          page: https://drive.google.com/
+          page_title: Open Google Drive
+          instructions: |-
+            - Select a document or a folder and select **Share**.
+            - Enter the service account's email address and select **Viewer**, **Commenter** or **Editor**. Playbooks can update a document only as an Editor.
+            - Untick **Notify people**, since a service account receives no email. Then select **Share**.
+
+            Anyone who can share a document can do this, as with a colleague, now or later.
+      key:
+        title: Enter the details here
+        instructions: Choose the key file Google downloaded.
+    description: Connect as a service account your company creates at Google.

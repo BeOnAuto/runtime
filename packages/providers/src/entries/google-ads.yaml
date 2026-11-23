@@ -31,3 +31,44 @@ credentials:
       prompt: consent
     clients: [registered]
     description: Sign in to Google and allow Google Ads.
+  - kind: jwt_bearer
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/adwords
+    says:
+      https://www.googleapis.com/auth/adwords: See, create, change and delete Google Ads accounts and data.
+    key_file:
+      client_id: /client_email
+      private_key: /private_key
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **Google Ads API** is turned on.
+          - Open the service account. On the **Keys** tab, select **Add key**, then **Create new key**. Choose **JSON** as the **Key type** and select **Create**. Google downloads the key as a file. It is the only copy.
+          - Copy the service account's email address. You need it in the next step.
+
+          If Google does not let you create a key, your organization has turned key creation off. Ask whoever manages Google Cloud at your company.
+      pages:
+        - title: Ask Google for access to real accounts
+          page: https://console.cloud.google.com/google/ads-apis/overview
+          page_title: Open the Google Ads API overview
+          instructions: |-
+            - Turning the API on gives the project **Test access**, which works on test accounts only.
+            - On the **Google Ads API Overview** page of the same project, apply for **Explorer access**. Google reviews it automatically and approves it in most cases.
+
+            You can close this page and come back when Google has approved it.
+        - title: Add it as a user in Google Ads
+          page: https://ads.google.com/
+          page_title: Open Google Ads
+          instructions: |-
+            - Sign in to your Google Ads account as an administrator and go to **Admin**, then **Access and security**.
+            - On the **Users** tab, select the **+** button.
+            - Enter the service account's email address in **Email**, select an access level other than **Email only**, and select **Add account**.
+
+            This step needs an administrator of the Google Ads account.
+      key:
+        title: Enter the details here
+        instructions: Choose the key file Google downloaded.
+    description: Connect as a service account your company creates at Google.

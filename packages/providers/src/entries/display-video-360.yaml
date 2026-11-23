@@ -30,3 +30,37 @@ credentials:
 
           If the person who signs in is outside your organization, select **External** and publish the app. While the app is in **Testing**, Google ends each sign-in after seven days.
     description: Sign in to Google and allow Display & Video 360.
+  - kind: jwt_bearer
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/display-video
+    says:
+      https://www.googleapis.com/auth/display-video: See, create, change and permanently delete Display & Video 360 entities and reports.
+    key_file:
+      client_id: /client_email
+      private_key: /private_key
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **Display & Video 360 API** is turned on.
+          - Open the service account. On the **Keys** tab, select **Add key**, then **Create new key**. Choose **JSON** as the **Key type** and select **Create**. Google downloads the key as a file. It is the only copy.
+          - Copy the service account's email address. You need it in the next step.
+
+          If Google does not let you create a key, your organization has turned key creation off. Ask whoever manages Google Cloud at your company.
+      pages:
+        - title: Add it as a user in Display & Video 360
+          page: https://displayvideo.google.com/
+          page_title: Open Display & Video 360
+          instructions: |-
+            - From the upper right corner, go to **User management and email preferences**, then **User management**.
+            - Select **New user** and enter a name and the service account's email address.
+            - Select **Add partners or advertisers**, tick the ones it should reach, and select **Select**.
+            - In **Role**, choose **Admin**, **Standard** or **Read only**. Then select **Save**.
+
+            This step needs an admin user of Display & Video 360.
+      key:
+        title: Enter the details here
+        instructions: Choose the key file Google downloaded.
+    description: Connect as a service account your company creates at Google.

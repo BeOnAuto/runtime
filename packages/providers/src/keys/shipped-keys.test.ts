@@ -131,6 +131,45 @@ describe('the ways of a key of Atlassian and Stripe', () => {
   });
 });
 
+function keyFileStepsOf({ name, credentials }: ProviderEntry) {
+  return credentials
+    .filter(({ kind }) => kind === 'jwt_bearer')
+    .map(({ key_page: keyPage, key_page_title: keyPageTitle, steps }) => [
+      name,
+      keyPage,
+      keyPageTitle === undefined,
+      steps?.key_page === undefined,
+      steps?.pages?.map(({ page, page_title: pageTitle }) => [page, pageTitle === undefined]),
+      steps?.key === undefined,
+    ]);
+}
+
+const serviceAccounts = 'https://console.cloud.google.com/iam-admin/serviceaccounts';
+
+function stepsOfAKeyFile(name: string, pages: readonly string[]) {
+  return [name, serviceAccounts, false, false, pages.map((page) => [page, false]), false];
+}
+
+describe('the ways of a key file of the shipped providers', () => {
+  it('decode with the page where the service account is made, the label of its button, and the steps of the page, each with the page it opens and the label of the button that opens it', () => {
+    expect(shipped.providers.flatMap(({ entry }) => keyFileStepsOf(entry))).toEqual([
+      stepsOfAKeyFile('campaign-manager-360', ['https://campaignmanager.google.com/']),
+      stepsOfAKeyFile('display-video-360', ['https://displayvideo.google.com/']),
+      stepsOfAKeyFile('gmail', ['https://admin.google.com/ac/owl/domainwidedelegation']),
+      stepsOfAKeyFile('google-ads', [
+        'https://console.cloud.google.com/google/ads-apis/overview',
+        'https://ads.google.com/',
+      ]),
+      stepsOfAKeyFile('google-analytics', ['https://analytics.google.com/']),
+      stepsOfAKeyFile('google-analytics-admin', ['https://analytics.google.com/']),
+      stepsOfAKeyFile('google-docs', ['https://drive.google.com/']),
+      stepsOfAKeyFile('google-sheets', ['https://drive.google.com/']),
+      stepsOfAKeyFile('google-slides', ['https://drive.google.com/']),
+      stepsOfAKeyFile('youtube-analytics', ['https://studio.youtube.com/']),
+    ]);
+  });
+});
+
 describe('the patterns of the keys of the shipped providers', () => {
   it('take the keys their vendors document, and refuse a key of another kind', () => {
     expect([

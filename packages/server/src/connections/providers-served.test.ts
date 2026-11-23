@@ -125,6 +125,14 @@ function signingInAt(issuers: string): readonly string[] {
 const atGoogle = signingInAt('https://accounts.google.com');
 const atMicrosoft = signingInAt('https://login.microsoftonline.com/');
 
+const signingWithAKeyFile = shippedProviders
+  .filter(({ entry }) => entry.credentials.some(({ kind }) => kind === 'jwt_bearer'))
+  .map(({ entry }) => entry.name);
+
+function withTheKeyFile(ways: readonly string[]): Readonly<Record<string, readonly string[]>> {
+  return Object.fromEntries(signingWithAKeyFile.map((name) => [name, ways]));
+}
+
 function waysExpected(
   ofTheOthers: Readonly<Record<string, readonly string[]>>,
   atGoogleAndMicrosoft: readonly string[],
@@ -146,6 +154,7 @@ const waysWithoutAClient = {
   atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
   github: ['secret offered', underTheOrgsOAuthClientAlone],
+  ...withTheKeyFile(['jwt_bearer offered', underTheOrgsOAuthClientAlone]),
   gmail: [underTheOrgsOAuthClientAlone, 'jwt_bearer offered'],
   'google-drive': [underTheOrgsOAuthClientAlone],
   hubspot: [underTheOrgsOAuthClientAlone],
@@ -172,7 +181,7 @@ const waysWithAClient = {
   atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
   github: ['authorization offered', 'secret offered'],
-  gmail: ['authorization offered', 'jwt_bearer offered'],
+  ...withTheKeyFile(['authorization offered', 'jwt_bearer offered']),
   'google-drive': ['authorization offered'],
   hubspot: ['authorization offered'],
   linear: ['authorization offered'],
@@ -204,7 +213,7 @@ describe('the ways of the providers a server lists', () => {
       waysExpected(waysWithAClient, ['authorization offered']),
       names,
     ]);
-    expect([atGoogle.length, atMicrosoft.length]).toEqual([16, 5]);
+    expect([atGoogle.length, atMicrosoft.length, signingWithAKeyFile.length]).toEqual([16, 5, 10]);
   });
 });
 

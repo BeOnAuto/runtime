@@ -52,9 +52,18 @@ describe('the tools every shipped document offers, by the way of each provider',
 
     expect(toolSetsOfEachProvider(byWay)).toEqual([
       ['adobe-analytics', 1],
+      ['campaign-manager-360', 1],
+      ['display-video-360', 1],
       ['gmail', 1],
+      ['google-ads', 1],
+      ['google-analytics', 1],
+      ['google-analytics-admin', 1],
+      ['google-docs', 1],
+      ['google-sheets', 1],
+      ['google-slides', 1],
       ['onedrive', 1],
       ['outlook', 1],
+      ['youtube-analytics', 1],
     ]);
   });
 });

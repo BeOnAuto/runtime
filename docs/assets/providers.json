@@ -466,6 +466,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -568,6 +572,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -808,6 +816,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [
@@ -884,6 +896,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -958,6 +974,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1028,6 +1048,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1194,6 +1218,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1252,6 +1280,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -2201,7 +2233,7 @@
     {
       "name": "youtube-analytics",
       "title": "YouTube Analytics",
-      "description": "Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue, by day, video, country and the other dimensions YouTube offers.",
+      "description": "Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue. As your company's own app it reports as a content owner: set ids to contentOwner== followed by the owner's ID, and filter by channel.",
       "website": "https://developers.google.com/youtube/analytics",
       "server": {
         "type": "openapi",
@@ -2225,6 +2257,10 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],

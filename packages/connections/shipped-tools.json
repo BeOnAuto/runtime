@@ -60,7 +60,43 @@
     "dfareporting.creatives.list": "c246c080247b33803eb8c5c1cf82b84e7ac1b02e079476936215ee36c9b3433d",
     "dfareporting.sites.list": "eb0fb4942aea949d87633ecc5bd2216a822e6217a128b7a01e740a63a955613f"
   },
+  "campaign-manager-360, jwt_bearer": {
+    "dfareporting.userProfiles.list": "1ab8f735a9bd3d7da1cebc6e4d772a8513c082037252f82e203c6c7d14ed32fe",
+    "dfareporting.userProfiles.get": "84581328dd93229d69d57254394191a27187b8aa6948a7e79200e338991820d0",
+    "dfareporting.reports.list": "0daaddce9f31a2baeb604737d36ca0a98e3b9e823ca3c819c4b50d72b74d1df5",
+    "dfareporting.reports.insert": "58439bf0ed8b492fada59502ff1bacbea5bf1a162d4fbf9e454571866980dda7",
+    "dfareporting.reports.get": "43e077a61836713f72cee3209fb20ca9ed3ab4689a80376b2f6586d65336a309",
+    "dfareporting.reports.run": "7c59561bb5918023501c922008bbc66186a3e665e6b3352012e5274e1d3d6290",
+    "dfareporting.reports.files.list": "6a1de923f38d29af6c9f724e94737376be3f138ec63de91031eab75c0cedfdb1",
+    "dfareporting.reports.files.get": "68c66678bb64a2d9236fc031c9116071479351b7f6c9b5c763f7dcab9bc6cdcf",
+    "dfareporting.files.get": "01f0c448a0576e04fb45eaaa04c838f14cd728747f94b1cf7c4909dd6af52d11",
+    "dfareporting.dimensionValues.query": "2d1c4fb99b26b4e2b519d2650e89eefeea6c97a04bfc91091a11568d9c6aa2d5",
+    "dfareporting.reports.compatibleFields.query": "c88ab6f18d30f21bc68790742699b7fadd1d15a848d32ecf5f7eb51b31306a38",
+    "dfareporting.campaigns.list": "a56e69b5a921da8bea5e11cef0beb8ff665be0564a0d57119d360c0a2e68a497",
+    "dfareporting.campaigns.get": "b557a298174736268b3b8fbf96a1ba827d7718fcd1b53ca2de973812665c4979",
+    "dfareporting.advertisers.list": "ac827868abfc53dc00d1fa5599a43dda414918ec9e87dd3921f1a38da3973314",
+    "dfareporting.placements.list": "47d33ca79c897c3c9c0e702ffab9cde6d1fc2ea342efee04f597becc3603a385",
+    "dfareporting.ads.list": "0436ae4feface681e5482c241f50ea6e6e420c2bf25b0c08701f22cd1a4a044a",
+    "dfareporting.creatives.list": "c246c080247b33803eb8c5c1cf82b84e7ac1b02e079476936215ee36c9b3433d",
+    "dfareporting.sites.list": "eb0fb4942aea949d87633ecc5bd2216a822e6217a128b7a01e740a63a955613f"
+  },
   "display-video-360, authorization": {
+    "displayvideo.partners.list": "7b185d25d03bc962ad52ea0f9f5b5fb5d3724e2982e9fb48a6118482426e33dc",
+    "displayvideo.advertisers.list": "baf4b070abc5659b031888a58b9a78fd61465f677d50330f7ec6649496943651",
+    "displayvideo.advertisers.get": "d7c4adc7c997864ad103a19f3b8904980959f4c323216ca7e096d6c18b0666dd",
+    "displayvideo.advertisers.campaigns.list": "3c067e66276040c5401e08c319a5dfa967b6df595f3a24116e59b67edb1cb235",
+    "displayvideo.advertisers.campaigns.get": "41876d2f5691f86c25153894b100ba4dbf1e616558f13ac8e5fd330ef441a1c3",
+    "displayvideo.advertisers.campaigns.patch": "6c54353f645c1884be0f5fa0f9f01c2506de3761d8cbad5823fe782460c22e53",
+    "displayvideo.advertisers.insertionOrders.list": "2d1244e7fe770c9ba347a0da54e3425222f5c9ba8f30de7c0b7cf30428dc5a86",
+    "displayvideo.advertisers.insertionOrders.get": "b530c3f1a35c7146dca9fcf599966db071833177df15ac27aa432b7f31a8ecfb",
+    "displayvideo.advertisers.insertionOrders.patch": "e27a891f72eb97ccb3632705a04ad3eb1b15ef0c24ddaa87cd031d9fc2940fe8",
+    "displayvideo.advertisers.lineItems.list": "58d5c2b4916fbb2cd6906b377e0efa2851fdcb4184402ef0f7cf2d0501ccf212",
+    "displayvideo.advertisers.lineItems.get": "7972480bf71a117c3e1f1a30fd4bf087a702fadb4f971bdb1661a702be3b80b1",
+    "displayvideo.advertisers.lineItems.patch": "3743547ac26961ed6e2e267071cfd63328883b1ef864a9fa14658e16062ed706",
+    "displayvideo.advertisers.adGroups.list": "3cd2bee8fa9e9023cfb672fd6e75a9fdac1cb4037ebf334d914db91f99e49f2d",
+    "displayvideo.advertisers.creatives.list": "1d411ac409194d6031e162de2710a170108ccdb8b4b43b1a7a0f1b18fc987790"
+  },
+  "display-video-360, jwt_bearer": {
     "displayvideo.partners.list": "7b185d25d03bc962ad52ea0f9f5b5fb5d3724e2982e9fb48a6118482426e33dc",
     "displayvideo.advertisers.list": "baf4b070abc5659b031888a58b9a78fd61465f677d50330f7ec6649496943651",
     "displayvideo.advertisers.get": "d7c4adc7c997864ad103a19f3b8904980959f4c323216ca7e096d6c18b0666dd",
@@ -113,7 +149,32 @@
     "googleads.customers.adGroups.mutate": "efbadd9cb6f08bc10ecaa47c6b93e234264a00a48fcc78bb2bd6ce2270aea8b4",
     "googleads.customers.adGroupCriteria.mutate": "f0309d11e4a211a17b70d29d0326433049c99a7560353d7d34e6c70924b0cd13"
   },
+  "google-ads, jwt_bearer": {
+    "googleads.customers.listAccessibleCustomers": "0768a6f0f454be70479fb83839d0cacde5c72fe6b24e097d0d25b3354c88ae01",
+    "googleads.customers.googleAds.search": "6895fd58d890e08e8f9a9c92bd16892dbbce940572d124f957494ecfea6ae44d",
+    "googleads.customers.googleAds.searchStream": "93c161e2b6bab90b7afd0ba734b4691071a6d405f4cb0f236ec802edaa11ab1b",
+    "googleads.googleAdsFields.search": "145e866a78fac32c03658c9f3d0a1e57a6f87f245aea403218f10260655b36cd",
+    "googleads.googleAdsFields.get": "25dff4faa649089f8397587754f00c3a7fed155ae2f2ad36f27c402180cfb3a6",
+    "googleads.customers.googleAds.mutate": "e80191be82a8bf2ae78587bbb34d8b27ab5a45f089b4d97e5ba9845940f610a9",
+    "googleads.customers.campaigns.mutate": "49763ea447989a8bf32cb231803dd88de01b90b9ffdff4bc9f515eb37fd264a7",
+    "googleads.customers.campaignBudgets.mutate": "17f1db53b59045595fa2c96c3894742096bfd5f79098a4935919d8004262f8d9",
+    "googleads.customers.adGroups.mutate": "efbadd9cb6f08bc10ecaa47c6b93e234264a00a48fcc78bb2bd6ce2270aea8b4",
+    "googleads.customers.adGroupCriteria.mutate": "f0309d11e4a211a17b70d29d0326433049c99a7560353d7d34e6c70924b0cd13"
+  },
   "google-analytics, authorization": {
+    "analyticsdata.properties.runReport": "2550c3f4e7c14862a38cc575e390f25cde042776cccf358534b079d84efca4ce",
+    "analyticsdata.properties.runPivotReport": "0824dc02b7ad236a6e11f497a011d9d91e99c1e754a976dd1ea9b7a87677084a",
+    "analyticsdata.properties.batchRunReports": "1eb80bf4572b0c2fd29757164ceb4d1c568618bf14c965a21af9c6b3b67e8d7b",
+    "analyticsdata.properties.batchRunPivotReports": "8d7068f337aed313339530f2c88ae75542f636a1fa17ee16b9d2b5509233fdb3",
+    "analyticsdata.properties.runRealtimeReport": "046e92310018597e64e28423add6933ede512469fbd5553b54bf824b5c4d6478",
+    "analyticsdata.properties.checkCompatibility": "c9d854758bee6e217ec2493c3e3e22313f2efba3ba640da710f3c4e1bf39936e",
+    "analyticsdata.properties.getMetadata": "4c6ca5b2cf961e76de26c1d922050c6a052f5005bde651428dc04b84da5c8954",
+    "analyticsdata.properties.audienceExports.list": "58e67b142eb34bde2e725a5ac4c1c44806deb52c5b4e4c1640735f6e968cb111",
+    "analyticsdata.properties.audienceExports.create": "2940f4bbcd80039722e89aa43971bd1ed9d35058071e4e9d3281e1bb6652eebc",
+    "analyticsdata.properties.audienceExports.get": "1df26f9f29a729e0094100db05fd3f6650257860ca3f7a29890e00e31f03c879",
+    "analyticsdata.properties.audienceExports.query": "dffe6f964fb82bb5210ac23c5d9ae55255a5894598710d60d2cb5e44927e7565"
+  },
+  "google-analytics, jwt_bearer": {
     "analyticsdata.properties.runReport": "2550c3f4e7c14862a38cc575e390f25cde042776cccf358534b079d84efca4ce",
     "analyticsdata.properties.runPivotReport": "0824dc02b7ad236a6e11f497a011d9d91e99c1e754a976dd1ea9b7a87677084a",
     "analyticsdata.properties.batchRunReports": "1eb80bf4572b0c2fd29757164ceb4d1c568618bf14c965a21af9c6b3b67e8d7b",
@@ -137,7 +198,22 @@
     "analyticsadmin.properties.keyEvents.list": "138de3f9d6dbf157f6d2702ee918ec09ae10642af9afcf8d3ac12cd66842f15a",
     "analyticsadmin.properties.runAccessReport": "e410c58f503ff230c9f94fe0e26e09d8978b301c85f606745beab13626513c5a"
   },
+  "google-analytics-admin, jwt_bearer": {
+    "analyticsadmin.accountSummaries.list": "f9ba579682d266111b3e2e77fe0f874cffc4ba46dec3579d79e0b4799a9b1d11",
+    "analyticsadmin.accounts.list": "cb4449e77e4b21d51984a76aa71dc9b97ccee82d4a3ff22b88b83903247f79de",
+    "analyticsadmin.properties.list": "e1be340ea18301791556c0a93bc9915e83611a1a4b6b81cb367a47cb7b048e10",
+    "analyticsadmin.properties.get": "5f6cc89d4911e84af024bf92d4ad9c2018c0a5fc9a16603e3a90807773fb948f",
+    "analyticsadmin.properties.dataStreams.list": "2a120ddc4929aa71b804c2bfabadba94a60b6972bbadad2aacc3616466e0e6e4",
+    "analyticsadmin.properties.customDimensions.list": "e6ca6f8c4c997f0d70ddf4b1b1823b16a3bc44879b0cea68053a0091f85b9da3",
+    "analyticsadmin.properties.customMetrics.list": "6a5507c6a18afe90bad98f922c67b06eee41ec22f28729f414978f7fdb9217bb",
+    "analyticsadmin.properties.keyEvents.list": "138de3f9d6dbf157f6d2702ee918ec09ae10642af9afcf8d3ac12cd66842f15a",
+    "analyticsadmin.properties.runAccessReport": "e410c58f503ff230c9f94fe0e26e09d8978b301c85f606745beab13626513c5a"
+  },
   "google-docs, authorization": {
+    "docs.documents.get": "de31dd7d0d413f3ef935c15f1e7555e0b6d107763afab185a764bc961cae5f1e",
+    "docs.documents.batchUpdate": "3d70ad8281b1a34d11e14cef54e21b34f6a2bedac1367174f20c7270c9770884"
+  },
+  "google-docs, jwt_bearer": {
     "docs.documents.get": "de31dd7d0d413f3ef935c15f1e7555e0b6d107763afab185a764bc961cae5f1e",
     "docs.documents.batchUpdate": "3d70ad8281b1a34d11e14cef54e21b34f6a2bedac1367174f20c7270c9770884"
   },
@@ -168,7 +244,19 @@
     "sheets.spreadsheets.values.batchUpdate": "6c55edf5e9519b34db43fadcf16cb7d9cede8b12f044afcd6d62516e815d42df",
     "sheets.spreadsheets.batchUpdate": "20c7cdbccd985e608c0532f5e82bd24d7b67267549c45405ed9bc3de653e3619"
   },
+  "google-sheets, jwt_bearer": {
+    "sheets.spreadsheets.get": "76b9c8dc721a723e0192d0c438044627ba1d6d79e4b2d930998f194319d94352",
+    "sheets.spreadsheets.values.get": "2d2281af4abfe5384fc0b4bb64e949eeed7514eb4487bfd0b611ed8ea1dae9a6",
+    "sheets.spreadsheets.values.update": "5a8be1327bc2e8e8c0d809b8a5a66fa444fbe8dabbcff54889e74a7c5039e8bf",
+    "sheets.spreadsheets.values.append": "0750b6041591b20700806a4c594761a0473df377ee4908dc29b782606d8c8c82",
+    "sheets.spreadsheets.values.batchUpdate": "6c55edf5e9519b34db43fadcf16cb7d9cede8b12f044afcd6d62516e815d42df",
+    "sheets.spreadsheets.batchUpdate": "20c7cdbccd985e608c0532f5e82bd24d7b67267549c45405ed9bc3de653e3619"
+  },
   "google-slides, authorization": {
+    "slides.presentations.get": "c4ecaef1fbe297e23cfd199fc0d79dd59ae16ebe8685e290f7287a1797759630",
+    "slides.presentations.batchUpdate": "39698ee1e7f281bcdbce3f95c909af1e1c007962d44a1f1fbc25e02343d84928"
+  },
+  "google-slides, jwt_bearer": {
     "slides.presentations.get": "c4ecaef1fbe297e23cfd199fc0d79dd59ae16ebe8685e290f7287a1797759630",
     "slides.presentations.batchUpdate": "39698ee1e7f281bcdbce3f95c909af1e1c007962d44a1f1fbc25e02343d84928"
   },
@@ -281,6 +369,9 @@
     "youtube.videos.list": "9dc1a1e2bf63357de433973380831e8b4ffa26275885c233aea8f61a0eb4ce8c"
   },
   "youtube-analytics, authorization": {
+    "youtubeAnalytics.reports.query": "c7f3f44780c29ed544fa8d1e76bb0dafb9ee1ade288af0dd1aa219443630683a"
+  },
+  "youtube-analytics, jwt_bearer": {
     "youtubeAnalytics.reports.query": "c7f3f44780c29ed544fa8d1e76bb0dafb9ee1ade288af0dd1aa219443630683a"
   },
   "youtube-management, authorization": {

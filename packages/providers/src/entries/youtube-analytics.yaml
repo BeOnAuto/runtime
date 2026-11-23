@@ -1,6 +1,6 @@
 name: youtube-analytics
 title: YouTube Analytics
-description: Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue, by day, video, country and the other dimensions YouTube offers.
+description: "Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue. As your company's own app it reports as a content owner: set ids to contentOwner== followed by the owner's ID, and filter by channel."
 summary: Lets your playbooks run YouTube Analytics reports on views, watch time, audience and revenue.
 website: https://developers.google.com/youtube/analytics
 type: openapi
@@ -31,3 +31,39 @@ credentials:
 
           If the account that manages the channel is outside your organization, select **External** and publish the app. While the app is in **Testing**, Google ends each sign-in after seven days.
     description: Sign in to Google and allow YouTube Analytics.
+  - kind: jwt_bearer
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/yt-analytics.readonly https://www.googleapis.com/auth/yt-analytics-monetary.readonly
+    says:
+      https://www.googleapis.com/auth/yt-analytics.readonly: See YouTube Analytics reports for YouTube content.
+      https://www.googleapis.com/auth/yt-analytics-monetary.readonly: See monetary and non-monetary YouTube Analytics reports for YouTube content.
+    key_file:
+      client_id: /client_email
+      private_key: /private_key
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **YouTube Analytics API** is turned on.
+          - Open the service account. On the **Keys** tab, select **Add key**, then **Create new key**. Choose **JSON** as the **Key type** and select **Create**. Google downloads the key as a file. It is the only copy.
+          - Copy the service account's email address. You need it in the next step.
+
+          If Google does not let you create a key, your organization has turned key creation off. Ask whoever manages Google Cloud at your company.
+      pages:
+        - title: Invite it in YouTube Studio Content Manager
+          page: https://studio.youtube.com/
+          page_title: Open YouTube Studio
+          instructions: |-
+            - In the left menu, select **Settings**, then **Permissions**.
+            - Select **Invite**. In **Email**, enter the service account's email address.
+            - In **Access**, choose a role. For revenue reports, choose one that includes permission to view revenue data.
+            - Select **Done**, then **Save**.
+
+            This step needs the administrator of the Content Manager account.
+      key:
+        title: Enter the details here
+        instructions: Choose the key file Google downloaded.
+    limitation: "It can't act as a YouTube channel, so it works only if your company has a YouTube Content Manager account."
+    description: Connect as a service account your company creates at Google.
