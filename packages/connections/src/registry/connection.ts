@@ -153,12 +153,20 @@ export const ModelField = Schema.String.annotate({
   description: 'The id of the model Auto answers members with, as list_models writes it',
 });
 
+export const ChatCredentialField = Schema.optionalKey(
+  Schema.String.annotate({
+    description:
+      'The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it.',
+  }),
+);
+
+export const MaySetModelField = Schema.Boolean.annotate({
+  description: 'true when this caller may choose the model. false when it may not.',
+});
+
 export const ChatField = Schema.optionalKey(
   Schema.Struct({
-    credential: Schema.String.annotate({
-      description:
-        'The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials',
-    }),
+    credential: ChatCredentialField,
     held: Schema.Boolean.annotate({
       description:
         'true while the connection holds that credential, given when it was last connected, even if the service has refused it. false when it does not hold it.',
@@ -166,9 +174,13 @@ export const ChatField = Schema.optionalKey(
     model: Schema.NullOr(ModelField).annotate({
       description: 'The id of the model Auto answers members with, as list_models writes it. null until one is chosen.',
     }),
-    may_set_model: Schema.Boolean.annotate({
-      description: 'true when this caller may choose the model. false when it may not.',
-    }),
+    default_model: Schema.optionalKey(
+      Schema.String.annotate({
+        description:
+          'The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen.',
+      }),
+    ),
+    may_set_model: MaySetModelField,
   }).annotate({
     description:
       'Whether members can write to Auto through this connection, and the model Auto answers them with. Left out where they cannot.',

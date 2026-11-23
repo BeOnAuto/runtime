@@ -7213,7 +7213,7 @@
                           "properties": {
                             "credential": {
                               "type": "string",
-                              "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials"
+                              "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
                             },
                             "held": {
                               "type": "boolean",
@@ -7231,13 +7231,16 @@
                               ],
                               "description": "The id of the model Auto answers members with, as list_models writes it. null until one is chosen."
                             },
+                            "default_model": {
+                              "type": "string",
+                              "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen."
+                            },
                             "may_set_model": {
                               "type": "boolean",
                               "description": "true when this caller may choose the model. false when it may not."
                             }
                           },
                           "required": [
-                            "credential",
                             "held",
                             "model",
                             "may_set_model"
@@ -8076,7 +8079,7 @@
                       "properties": {
                         "credential": {
                           "type": "string",
-                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials"
+                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
                         },
                         "held": {
                           "type": "boolean",
@@ -8094,13 +8097,16 @@
                           ],
                           "description": "The id of the model Auto answers members with, as list_models writes it. null until one is chosen."
                         },
+                        "default_model": {
+                          "type": "string",
+                          "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen."
+                        },
                         "may_set_model": {
                           "type": "boolean",
                           "description": "true when this caller may choose the model. false when it may not."
                         }
                       },
                       "required": [
-                        "credential",
                         "held",
                         "model",
                         "may_set_model"
@@ -12635,7 +12641,7 @@
                       "properties": {
                         "credential": {
                           "type": "string",
-                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials"
+                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
                         },
                         "held": {
                           "type": "boolean",
@@ -12653,13 +12659,16 @@
                           ],
                           "description": "The id of the model Auto answers members with, as list_models writes it. null until one is chosen."
                         },
+                        "default_model": {
+                          "type": "string",
+                          "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen."
+                        },
                         "may_set_model": {
                           "type": "boolean",
                           "description": "true when this caller may choose the model. false when it may not."
                         }
                       },
                       "required": [
-                        "credential",
                         "held",
                         "model",
                         "may_set_model"
@@ -13893,7 +13902,7 @@
                       "properties": {
                         "credential": {
                           "type": "string",
-                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials"
+                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
                         },
                         "held": {
                           "type": "boolean",
@@ -13911,13 +13920,16 @@
                           ],
                           "description": "The id of the model Auto answers members with, as list_models writes it. null until one is chosen."
                         },
+                        "default_model": {
+                          "type": "string",
+                          "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen."
+                        },
                         "may_set_model": {
                           "type": "boolean",
                           "description": "true when this caller may choose the model. false when it may not."
                         }
                       },
                       "required": [
-                        "credential",
                         "held",
                         "model",
                         "may_set_model"
@@ -16328,7 +16340,7 @@
                       "properties": {
                         "credential": {
                           "type": "string",
-                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials"
+                          "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
                         },
                         "held": {
                           "type": "boolean",
@@ -16346,13 +16358,16 @@
                           ],
                           "description": "The id of the model Auto answers members with, as list_models writes it. null until one is chosen."
                         },
+                        "default_model": {
+                          "type": "string",
+                          "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen."
+                        },
                         "may_set_model": {
                           "type": "boolean",
                           "description": "true when this caller may choose the model. false when it may not."
                         }
                       },
                       "required": [
-                        "credential",
                         "held",
                         "model",
                         "may_set_model"
@@ -18618,6 +18633,28 @@
                                   "description": "A value that differs per connection, which the person gives when they connect"
                                 },
                                 "description": "The values this way asks for beside the provider's placeholders, which add_connection and choose_way take in placeholders. Left out where the way asks for none."
+                              },
+                              "chat": {
+                                "type": "object",
+                                "properties": {
+                                  "credential": {
+                                    "type": "string",
+                                    "description": "The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it."
+                                  },
+                                  "default_model": {
+                                    "type": "string",
+                                    "description": "The id of the model Auto answers members with while none is chosen, as list_models writes it."
+                                  },
+                                  "may_set_model": {
+                                    "type": "boolean",
+                                    "description": "true when this caller may choose the model. false when it may not."
+                                  }
+                                },
+                                "required": [
+                                  "may_set_model"
+                                ],
+                                "additionalProperties": false,
+                                "description": "Present where members can write to Auto through a connection made this way. Set its model with set_connection_model once it is connected."
                               },
                               "offered": {
                                 "type": "boolean",

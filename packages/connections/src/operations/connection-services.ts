@@ -38,8 +38,13 @@ interface RemovedConnection {
 
 export type ConnectionRemoved = (removed: RemovedConnection) => Effect.Effect<void>;
 
+interface ChatThroughAGateway {
+  readonly defaultModel: Effect.Effect<string>;
+}
+
 export interface ChatModels {
   readonly refusalOf: (model: string) => Effect.Effect<string | undefined>;
+  readonly throughAGateway?: ChatThroughAGateway;
 }
 
 export interface ConnectionServices extends StartsOfConnections {

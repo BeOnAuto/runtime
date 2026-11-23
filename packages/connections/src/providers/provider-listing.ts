@@ -16,6 +16,8 @@ import type { ClientSource, HadSources, WayGateway, WayOAuthClient } from '@on.a
 import { Struct, type Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
+import type { ChatOffered } from '../registry/connection-commands.ts';
+import { chatThroughOf, type ChatAnswering, type ChatHosting } from './chat-answers.ts';
 import { consentOfferedOf } from './consent-offered.ts';
 import {
   listedWayOf,
@@ -33,8 +35,14 @@ export interface Listing {
   readonly consent: HadSources;
 }
 
+interface ListedChats {
+  readonly throughAGateway: boolean;
+  readonly answering: ChatAnswering;
+}
+
 interface ListingOfTheRuntime extends Listing {
   readonly opensSockets: boolean;
+  readonly chats?: ListedChats;
 }
 
 function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPolicy): boolean {
@@ -206,6 +214,26 @@ export function offeredAppCredentialsOf(
   });
 }
 
+export function chatOfferedOn(provider: Provider, way: CredentialWay, hosting: ChatHosting): ChatOffered | undefined {
+  if (hosting.throughAGateway && way.gateway !== undefined) {
+    return { through: 'gateway' };
+  }
+  const opening =
+    provider.entry.chat === undefined
+      ? undefined
+      : offeredAppCredentialsOf(provider, way, hosting).find(({ destination }) => destination.chat !== undefined);
+  return opening === undefined ? undefined : { through: 'app_credential', credential: opening.credential.name };
+}
+
+function chatListedOf(provider: Provider, way: CredentialWay, { opensSockets, chats }: ListingOfTheRuntime) {
+  if (chats === undefined) {
+    return {};
+  }
+  const { throughAGateway, answering } = chats;
+  const offered = chatOfferedOn(provider, way, { opensSockets, throughAGateway });
+  return offered === undefined ? {} : { chat: { ...chatThroughOf(offered, answering), may_set_model: answering.may } };
+}
+
 function actingOf(way: CredentialWay) {
   const permissions = permissionsOf(way);
   const accountTypes = accountTypesOf(way);
@@ -240,6 +268,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
         ...actingOf(way),
         ...wayPlaceholdersOf(way),
         ...appCredentialsListedOf(provider, way, listing),
+        ...chatListedOf(provider, way, listing),
         scopes: scopesSaidBy(way),
         more: moreSaidBy(way),
         ...wayOfferingOf(way, offering, provider, listing),

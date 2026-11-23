@@ -2,7 +2,7 @@ import { defineHttpOperation, type HttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { ConnectionWithChatSchema, ModelField } from '../registry/connection.ts';
-import { chatAnswerOf, chatOfferedFor, maySetModel, modelGivenOf, type Chatting } from './connection-chat.ts';
+import { chatAnswerOf, chatAnsweringOf, chatOfferedFor, modelGivenOf, type Chatting } from './connection-chat.ts';
 import { ConnectionIdField } from './connection-fields.ts';
 import type { ChatModels, ConnectionServices } from './connection-services.ts';
 import { foundConnection, recordInRegistry } from './registry-access.ts';
@@ -40,7 +40,7 @@ export function defineSetConnectionModel(services: Setting, models: ChatModels) 
         ...(chat === undefined ? {} : { chat }),
       }).pipe(Effect.catchTag('forbidden', Effect.die));
       const shown = yield* shownConnection(services.secrets, kept);
-      return { ...shown, ...chatAnswerOf(kept, chat, yield* maySetModel(chatting)) };
+      return { ...shown, ...chatAnswerOf(kept, chat, yield* chatAnsweringOf([chat], chatting)) };
     }),
   });
   return operation;

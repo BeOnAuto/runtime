@@ -3,6 +3,7 @@ import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
+import { ChatCredentialField, MaySetModelField } from '../registry/connection.ts';
 
 const ListedScopesSchema = Schema.Array(
   Schema.Struct({
@@ -166,6 +167,20 @@ export const ListedWaySchema = Schema.Struct({
     Schema.Array(ListedPlaceholderSchema).annotate({
       description:
         "The values this way asks for beside the provider's placeholders, which add_connection and choose_way take in placeholders. Left out where the way asks for none.",
+    }),
+  ),
+  chat: Schema.optionalKey(
+    Schema.Struct({
+      credential: ChatCredentialField,
+      default_model: Schema.optionalKey(
+        Schema.String.annotate({
+          description: 'The id of the model Auto answers members with while none is chosen, as list_models writes it.',
+        }),
+      ),
+      may_set_model: MaySetModelField,
+    }).annotate({
+      description:
+        'Present where members can write to Auto through a connection made this way. Set its model with set_connection_model once it is connected.',
     }),
   ),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),

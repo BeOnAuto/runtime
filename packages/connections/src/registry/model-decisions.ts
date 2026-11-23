@@ -28,15 +28,15 @@ function noChatRefusal(name: string): Conflict {
   return new Conflict({ detail: `Members cannot write to Auto through the connection ${name}, so it takes no model.` });
 }
 
-export function holdsTheChatsCredential(
-  { app_credentials: held }: Pick<RecordedConnection, 'app_credentials'>,
-  { credential }: ChatOffered,
+export function holdsTheChat(
+  { app_credentials: held, status }: Pick<RecordedConnection, 'app_credentials' | 'status'>,
+  chat: ChatOffered,
 ): boolean {
-  return held.some(({ name }) => name === credential);
+  return chat.through === 'gateway' ? status === 'connected' : held.some(({ name }) => name === chat.credential);
 }
 
-function opensTheChat(chat: ChatOffered | undefined, given: Readonly<Record<string, string>>): boolean {
-  return chat !== undefined && Object.hasOwn(given, chat.credential);
+export function opensTheChat(chat: ChatOffered | undefined, given: Readonly<Record<string, string>>): boolean {
+  return chat?.through === 'app_credential' && Object.hasOwn(given, chat.credential);
 }
 
 function issueOfTheModelGiven(name: string, opens: boolean, { notOffered }: ModelGiven): InvalidInput | undefined {
@@ -71,7 +71,7 @@ function settingRefusalOf(
   if (connection.status === 'removed') {
     return removedRefusal(connection.name);
   }
-  if (chat === undefined || !holdsTheChatsCredential(connection, chat)) {
+  if (chat === undefined || !holdsTheChat(connection, chat)) {
     return noChatRefusal(connection.name);
   }
   return model.notOffered === undefined ? undefined : modelNotTaken(connection.name, model.notOffered);

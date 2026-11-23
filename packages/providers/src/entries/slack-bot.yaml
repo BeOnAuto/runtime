@@ -287,11 +287,9 @@ credentials:
       - name: app_level_token
         description: Slack app-level token
         title: Get replies instantly
-        instructions: >-
-          With it, Slack tells Auto at once when someone replies to a request or posts a message that starts a
-          workflow. Without it, Auto checks for replies on a timer, and no workflow starts from a message.
-          In Slack, select **Basic Information**, then under
-          **App-Level Tokens** select **Generate Token and Scopes**. Enter any name, add the scope `connections:write`,
-          select **Generate**, then copy the token and paste it here.
+        instructions: |-
+          Auto gets replies the moment they're posted, instead of checking on a timer.
+
+          In Slack, select **Basic Information**, then under **App-Level Tokens** select **Generate Token and Scopes**. Enter any name, add the scope `connections:write`, select **Generate**, then copy the token and paste it here.
         example: xapp-…
         pattern: ^xapp-.+$

@@ -60,9 +60,16 @@ export interface ModelGiven {
   readonly notOffered?: string;
 }
 
-export interface ChatOffered {
+interface ChatThroughAnAppCredential {
+  readonly through: 'app_credential';
   readonly credential: string;
 }
+
+interface ChatThroughItsGateway {
+  readonly through: 'gateway';
+}
+
+export type ChatOffered = ChatThroughAnAppCredential | ChatThroughItsGateway;
 
 export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly type: 'give';

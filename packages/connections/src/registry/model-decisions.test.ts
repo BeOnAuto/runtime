@@ -12,7 +12,9 @@ const connection = 'connection-1';
 
 const ada = { id: 'person:ada', name: 'Ada Lovelace' } as const;
 
-const chat: ChatOffered = { credential: 'app_level_token' };
+const chat: ChatOffered = { through: 'app_credential', credential: 'app_level_token' };
+
+const throughItsGateway: ChatOffered = { through: 'gateway' };
 
 const added: RecordedConnectionEvent = {
   type: 'connection_added',
@@ -118,6 +120,18 @@ const settings = [
     command: { ...settingTheModel, model: { model: 'acme/gone', notOffered: 'Not offered' } },
     outcome: atTheModel,
   },
+  {
+    name: 'records the model of a connection whose chat goes through its gateway once it is connected',
+    facts: [added, holding({})],
+    command: { ...settingTheModel, chat: throughItsGateway, model: fast },
+    outcome: ['connection_model_set acme/fast'],
+  },
+  {
+    name: 'refuses a connection whose chat goes through its gateway while it is pending',
+    facts: [added],
+    command: { ...settingTheModel, chat: throughItsGateway, model: fast },
+    outcome: { _tag: 'conflict' },
+  },
 ] as const;
 
 describe('setting the model of a connection', () => {
@@ -182,6 +196,12 @@ const connectings = [
     name: 'refuses a model the server does not offer, at its field',
     facts: [added, linked],
     command: { ...giving, model: { model: 'acme/gone', notOffered: 'Not offered' } },
+    outcome: atTheModel,
+  },
+  {
+    name: 'refuses a model given for a chat that goes through the connection’s gateway, which no credential given here opens',
+    facts: [added, linked],
+    command: { ...givingWithoutAChat, chat: throughItsGateway, model: fast },
     outcome: atTheModel,
   },
 ] as const;

@@ -2,11 +2,12 @@ import { Caller, defineHttpOperation, mayCall, type Runnable } from '@on.auto/op
 import { Effect, Schema } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
+import { chatAnsweringOf, chatHostingOf, type Chatting } from '../operations/connection-chat.ts';
 import { opensSockets } from '../operations/connection-services.ts';
 import { startOf, type ConnectionStart, type StartsOfConnections } from '../policy/connection-starts.ts';
 import { approvingAskedOf } from '../policy/policy-rules.ts';
 import { ProvidersSchema, type ListedProvider } from './listed-providers.ts';
-import { listedProviders } from './provider-listing.ts';
+import { chatOfferedOn, listedProviders } from './provider-listing.ts';
 import { addingRefusedTo, type OfferingServices } from './provider-offering.ts';
 
 type Reconnecting = Pick<ListedProvider, 'may_reconnect' | 'reconnect_refusal'>;
@@ -33,9 +34,25 @@ function withWhoReconnects(services: StartsOfConnections) {
 interface Asked {
   readonly adding: Runnable<'org'>;
   readonly approving: Runnable<'org'>;
+  readonly chatting: Chatting | undefined;
 }
 
-export function defineListProviders(listing: OfferingServices & StartsOfConnections, { adding, approving }: Asked) {
+const chatsListedOf = Effect.fnUntraced(function* (listing: OfferingServices, chatting: Chatting | undefined) {
+  if (chatting === undefined) {
+    return {};
+  }
+  const hosting = chatHostingOf(listing, chatting);
+  const offered = listing.providers.providers.flatMap((provider) =>
+    provider.entry.credentials.map((way) => chatOfferedOn(provider, way, hosting)),
+  );
+  const answering = yield* chatAnsweringOf(offered, chatting);
+  return { chats: { throughAGateway: hosting.throughAGateway, answering } };
+});
+
+export function defineListProviders(
+  listing: OfferingServices & StartsOfConnections,
+  { adding, approving, chatting }: Asked,
+) {
   return defineHttpOperation('org', 'query', {
     name: 'list_providers',
     title: 'List providers',
@@ -56,9 +73,10 @@ export function defineListProviders(listing: OfferingServices & StartsOfConnecti
       const refusal = yield* addingRefusedTo(listing, adding, caller);
       const mayApprove = yield* mayCall(approvingAskedOf(approving, caller));
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
+      const chats = yield* chatsListedOf(listing, chatting);
       return {
         providers: yield* Effect.forEach(
-          listedProviders({ ...listing, consent, opensSockets: opensSockets(listing) }),
+          listedProviders({ ...listing, consent, opensSockets: opensSockets(listing), ...chats }),
           withWhoReconnects(listing),
         ),
         may_add: refusal === null,

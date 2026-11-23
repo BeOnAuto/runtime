@@ -209,3 +209,7 @@ export function fakeChatModels(offered: readonly string[]): ChatModels {
       Effect.succeed(offered.includes(model) ? undefined : `${model} is not one of the models this server offers`),
   };
 }
+
+export function fakeChatModelsThroughAGateway(offered: readonly string[], defaultModel: string): ChatModels {
+  return { ...fakeChatModels(offered), throughAGateway: { defaultModel: Effect.succeed(defaultModel) } };
+}

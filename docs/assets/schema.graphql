@@ -5629,9 +5629,9 @@ Whether members can write to Auto through this connection, and the model Auto an
 """
 type ListedConnectionChat {
   """
-  The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials
+  The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it.
   """
-  credential: String!
+  credential: String
 
   """
   true while the connection holds that credential, given when it was last connected, even if the service has refused it. false when it does not hold it.
@@ -5642,6 +5642,11 @@ type ListedConnectionChat {
   The id of the model Auto answers members with, as list_models writes it. null until one is chosen.
   """
   model: String
+
+  """
+  The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen.
+  """
+  default_model: String
 
   """true when this caller may choose the model. false when it may not."""
   may_set_model: Boolean!
@@ -6142,9 +6147,9 @@ Whether members can write to Auto through this connection, and the model Auto an
 """
 type LinkedConnectionChat {
   """
-  The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials
+  The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it.
   """
-  credential: String!
+  credential: String
 
   """
   true while the connection holds that credential, given when it was last connected, even if the service has refused it. false when it does not hold it.
@@ -6155,6 +6160,11 @@ type LinkedConnectionChat {
   The id of the model Auto answers members with, as list_models writes it. null until one is chosen.
   """
   model: String
+
+  """
+  The id of the model Auto answers members with while none is chosen, as list_models writes it. Left out where Auto answers nobody until one is chosen.
+  """
+  default_model: String
 
   """true when this caller may choose the model. false when it may not."""
   may_set_model: Boolean!
@@ -6301,6 +6311,11 @@ type ProviderCredentials {
   """
   placeholders: [ProviderCredentialsPlaceholders!]
 
+  """
+  Present where members can write to Auto through a connection made this way. Set its model with set_connection_model once it is connected.
+  """
+  chat: ProviderCredentialsChat
+
   """Whether a person may connect the provider this way here"""
   offered: Boolean!
 
@@ -6434,6 +6449,24 @@ type ProviderCredentialsPlaceholders {
 type ProviderCredentialsPlaceholdersChoices {
   value: String!
   title: String!
+}
+
+"""
+Present where members can write to Auto through a connection made this way. Set its model with set_connection_model once it is connected.
+"""
+type ProviderCredentialsChat {
+  """
+  The name of the app credential that lets members write to Auto through this connection, as give_credential takes it in app_credentials. Left out where the connection needs no further credential for it.
+  """
+  credential: String
+
+  """
+  The id of the model Auto answers members with while none is chosen, as list_models writes it.
+  """
+  default_model: String
+
+  """true when this caller may choose the model. false when it may not."""
+  may_set_model: Boolean!
 }
 
 """

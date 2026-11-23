@@ -33,6 +33,10 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     ...model.operations,
     ...signingOperationsOf(services),
     ...page.operations,
-    defineListProviders(services, { adding: adding.registration, approving: page.approving.registration }),
+    defineListProviders(services, {
+      adding: adding.registration,
+      approving: page.approving.registration,
+      chatting: model.chatting,
+    }),
   ];
 }

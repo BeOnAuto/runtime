@@ -2,15 +2,16 @@ import { Effect } from 'effect';
 
 import {
   chatAnswerOf,
+  chatAnsweringOf,
   chatOfferedFor,
   mayChooseTheModel,
-  maySetModel,
   modelGivenOf,
   type ChatReading,
   type Chatting,
 } from '../operations/connection-chat.ts';
+import type { ChatAnswering } from '../providers/chat-answers.ts';
 import type { ChatOffered } from '../registry/connection-commands.ts';
-import { modelRefusalAtConnect, type ModelAtConnect } from '../registry/model-decisions.ts';
+import { modelRefusalAtConnect, opensTheChat, type ModelAtConnect } from '../registry/model-decisions.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 
 interface Asked {
@@ -21,15 +22,7 @@ interface Asked {
 interface ModelChoice {
   readonly choice: ModelAtConnect;
   readonly chat: ChatOffered | undefined;
-  readonly may: boolean;
-}
-
-function opensTheChat(chat: ChatOffered | undefined, { appsGiven }: Asked): boolean {
-  return chat !== undefined && Object.hasOwn(appsGiven, chat.credential);
-}
-
-function mayAsked(asked: Asked, chat: ChatOffered | undefined, chatting: Chatting) {
-  return asked.model === undefined && chat === undefined ? Effect.succeed(false) : maySetModel(chatting);
+  readonly answering: ChatAnswering;
 }
 
 const modelOfTheConnect = Effect.fnUntraced(function* (model: string, opens: boolean, chatting: Chatting) {
@@ -38,8 +31,8 @@ const modelOfTheConnect = Effect.fnUntraced(function* (model: string, opens: boo
 });
 
 const chattedChoice = Effect.fnUntraced(function* (asked: Asked, chat: ChatOffered | undefined, chatting: Chatting) {
-  const opens = opensTheChat(chat, asked);
-  const may = yield* mayAsked(asked, chat, chatting);
+  const opens = opensTheChat(chat, asked.appsGiven);
+  const answering = yield* chatAnsweringOf([chat], chatting);
   const model = asked.model === undefined ? undefined : yield* modelOfTheConnect(asked.model, opens, chatting);
   const chosen: ModelChoice = {
     choice: {
@@ -47,7 +40,7 @@ const chattedChoice = Effect.fnUntraced(function* (asked: Asked, chat: ChatOffer
       ...(chat === undefined ? {} : { chat }),
     },
     chat,
-    may,
+    answering,
   };
   return chosen;
 });
@@ -59,7 +52,7 @@ const choiceOf = Effect.fnUntraced(function* (kept: KeptConnection, asked: Asked
     const unchatted: ModelChoice = {
       choice: asked.model === undefined ? {} : { model: { model: asked.model } },
       chat,
-      may: false,
+      answering: { may: false, defaultModel: {} },
     };
     return unchatted;
   }
@@ -67,10 +60,10 @@ const choiceOf = Effect.fnUntraced(function* (kept: KeptConnection, asked: Asked
 });
 
 export const modelAtConnect = Effect.fnUntraced(function* (kept: KeptConnection, asked: Asked, reading: ChatReading) {
-  const { choice, chat, may } = yield* choiceOf(kept, asked, reading);
+  const { choice, chat, answering } = yield* choiceOf(kept, asked, reading);
   const refusal = modelRefusalAtConnect(kept, choice, asked.appsGiven);
   if (refusal !== undefined) {
     return yield* Effect.fail(refusal);
   }
-  return { choice, answerOf: (after: KeptConnection) => chatAnswerOf(after, chat, may) };
+  return { choice, answerOf: (after: KeptConnection) => chatAnswerOf(after, chat, answering) };
 });

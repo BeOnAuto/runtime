@@ -2,10 +2,15 @@ import { Caller, Forbidden, mayCallEach, type Runnable } from '@on.auto/operatio
 import { providerFoundBy } from '@on.auto/providers';
 import { Effect } from 'effect';
 
-import { offeredAppCredentialsOf } from '../providers/provider-listing.ts';
+import {
+  chatThroughOf,
+  type ChatAnswering,
+  type ChatHosting,
+  type DefaultModelAnswered,
+} from '../providers/chat-answers.ts';
+import { chatOfferedOn } from '../providers/provider-listing.ts';
 import type { ChatOffered, ModelGiven } from '../registry/connection-commands.ts';
-import type { RecordedConnection } from '../registry/connection.ts';
-import { holdsTheChatsCredential } from '../registry/model-decisions.ts';
+import { holdsTheChat } from '../registry/model-decisions.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import { wayOfTheConnection } from '../registry/what-connections-act-as.ts';
 import { opensSockets, type ChatModels, type ConnectionServices } from './connection-services.ts';
@@ -24,45 +29,80 @@ const modelForAdmins = new Forbidden({
   kind: 'permission_denied',
 });
 
-export function chatOfferedFor(
-  connection: Pick<RecordedConnection, 'provider' | 'credential'>,
-  reading: ChatReading,
-): ChatOffered | undefined {
-  const provider = reading.chatting === undefined ? undefined : providerFoundBy(reading.providers, connection.provider);
-  const way = wayOfTheConnection(connection, reading.providers);
-  if (provider?.entry.chat === undefined || way === undefined) {
-    return undefined;
-  }
-  const opening = offeredAppCredentialsOf(provider, way, { opensSockets: opensSockets(reading) }).find(
-    ({ destination }) => destination.chat !== undefined,
-  );
-  return opening === undefined ? undefined : { credential: opening.credential.name };
+export function chatHostingOf(reading: Pick<ConnectionServices, 'sockets'>, { models }: Chatting): ChatHosting {
+  return { opensSockets: opensSockets(reading), throughAGateway: models.throughAGateway !== undefined };
 }
 
-export const maySetModel = Effect.fnUntraced(function* ({ setting }: Chatting) {
+export function chatOfferedFor(
+  connection: Pick<KeptConnection['connection'], 'provider' | 'credential'>,
+  reading: ChatReading,
+): ChatOffered | undefined {
+  const { chatting } = reading;
+  const provider = providerFoundBy(reading.providers, connection.provider);
+  const way = wayOfTheConnection(connection, reading.providers);
+  return chatting === undefined || provider === undefined || way === undefined
+    ? undefined
+    : chatOfferedOn(provider, way, chatHostingOf(reading, chatting));
+}
+
+const maySetModel = Effect.fnUntraced(function* ({ setting }: Chatting) {
   const caller = yield* Caller;
   const [may] = yield* mayCallEach([{ operation: setting, caller, org: caller.org }]);
   return may === true;
 });
 
+function isThroughAGateway(offered: ChatOffered | undefined): boolean {
+  return offered?.through === 'gateway';
+}
+
+function defaultModelAnsweredOf(
+  { models }: Chatting,
+  offered: readonly (ChatOffered | undefined)[],
+): Effect.Effect<DefaultModelAnswered> {
+  const gateway = models.throughAGateway;
+  return gateway === undefined || !offered.some((each) => isThroughAGateway(each))
+    ? Effect.succeed({})
+    : Effect.map(gateway.defaultModel, (model) => ({ default_model: model }));
+}
+
+export const chatAnsweringOf = Effect.fnUntraced(function* (
+  offered: readonly (ChatOffered | undefined)[],
+  chatting: Chatting | undefined,
+) {
+  const unanswered: ChatAnswering = { may: false, defaultModel: {} };
+  if (chatting === undefined || offered.every((each) => each === undefined)) {
+    return unanswered;
+  }
+  const answering: ChatAnswering = {
+    may: yield* maySetModel(chatting),
+    defaultModel: yield* defaultModelAnsweredOf(chatting, offered),
+  };
+  return answering;
+});
+
 interface ChatAnswer {
   readonly chat?: {
-    readonly credential: string;
+    readonly credential?: string;
     readonly held: boolean;
     readonly model: string | null;
+    readonly default_model?: string;
     readonly may_set_model: boolean;
   };
 }
 
-export function chatAnswerOf(kept: KeptConnection, offered: ChatOffered | undefined, may: boolean): ChatAnswer {
+export function chatAnswerOf(
+  kept: KeptConnection,
+  offered: ChatOffered | undefined,
+  answering: ChatAnswering,
+): ChatAnswer {
   return offered === undefined
     ? {}
     : {
         chat: {
-          credential: offered.credential,
-          held: holdsTheChatsCredential(kept.connection, offered),
+          ...chatThroughOf(offered, answering),
+          held: holdsTheChat(kept.connection, offered),
           model: kept.model,
-          may_set_model: may,
+          may_set_model: answering.may,
         },
       };
 }
@@ -73,9 +113,8 @@ function answeredOf(kept: KeptConnection, reading: ChatReading): ChatOffered | u
 
 export const chatsAnsweredOf = Effect.fnUntraced(function* (kept: readonly KeptConnection[], reading: ChatReading) {
   const offered = kept.map((each) => answeredOf(each, reading));
-  const { chatting } = reading;
-  const may = chatting !== undefined && offered.some((each) => each !== undefined) && (yield* maySetModel(chatting));
-  return kept.map((each, at) => chatAnswerOf(each, offered[at], may));
+  const answering = yield* chatAnsweringOf(offered, reading.chatting);
+  return kept.map((each, at) => chatAnswerOf(each, offered[at], answering));
 });
 
 export function modelGivenOf(model: string, { models }: Chatting): Effect.Effect<ModelGiven> {
