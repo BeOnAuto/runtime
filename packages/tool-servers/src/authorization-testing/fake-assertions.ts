@@ -15,7 +15,7 @@ const headerOfText = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Str
 
 const ClaimsSchema = Schema.Struct({
   iss: Schema.String,
-  sub: Schema.String,
+  sub: Schema.optionalKey(Schema.String),
   aud: Schema.String,
   iat: Schema.Number,
   exp: Schema.Number,
@@ -74,7 +74,7 @@ export function assertionsGranted(
       return json({ error: 'invalid_grant' }, 400);
     }
     const { subjects } = registration;
-    return subjects === undefined || subjects.includes(claims.sub)
+    return claims.sub === undefined || subjects === undefined || subjects.includes(claims.sub)
       ? json(tokens.minted({ requested, clientId: registration.clientId, grant: undefined }))
       : json({ error: 'unauthorized_client' }, 401);
   };

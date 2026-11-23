@@ -23,7 +23,7 @@ export const assertionFields = {
   subject: Schema.optionalKey(
     Schema.String.check(Schema.isMinLength(1)).annotate({
       description:
-        'For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider',
+        'For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider. Leave it out where the service account acts as itself: Auto then asks for a token for the service account, and the JWT names no subject',
     }),
   ),
   key_file: Schema.optionalKey(KeyFileSchema),

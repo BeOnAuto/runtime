@@ -223,17 +223,17 @@
               "grant": {
                 "type": "string",
                 "enum": ["client_credentials", "jwt_bearer"],
-                "description": "How Auto asks for a token. client_credentials, the default, asks for a token for the client itself. jwt_bearer asks with a JWT that private_key signs, as RFC 7523 sets out, for the account subject names, as a service account does. It takes private_key with its algorithm and subject, and no client_secret"
+                "description": "How Auto asks for a token. client_credentials, the default, asks for a token for the client itself. jwt_bearer asks with a JWT that private_key signs, as RFC 7523 sets out, for the account subject names, or for the client itself where subject is left out, as a service account does. It takes private_key with its algorithm, and no client_secret"
               },
               "subject": {
                 "type": "string",
                 "minLength": 1,
-                "description": "With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in"
+                "description": "With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in. Left out, the token is asked for the client itself"
               }
             },
             "required": ["issuer", "client_id"],
             "additionalProperties": false,
-            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names"
+            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names, or for the client itself where subject is left out"
           },
           "command": {
             "type": "string",
@@ -2083,7 +2083,7 @@
                     "subject": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider"
+                      "description": "For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider. Leave it out where the service account acts as itself: Auto then asks for a token for the service account, and the JWT names no subject"
                     },
                     "key_file": {
                       "type": "object",

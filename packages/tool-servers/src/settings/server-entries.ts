@@ -41,18 +41,18 @@ const AuthSchema = Schema.Struct({
   grant: Schema.optionalKey(
     Schema.Literals(['client_credentials', 'jwt_bearer']).annotate({
       description:
-        'How Auto asks for a token. client_credentials, the default, asks for a token for the client itself. jwt_bearer asks with a JWT that private_key signs, as RFC 7523 sets out, for the account subject names, as a service account does. It takes private_key with its algorithm and subject, and no client_secret',
+        'How Auto asks for a token. client_credentials, the default, asks for a token for the client itself. jwt_bearer asks with a JWT that private_key signs, as RFC 7523 sets out, for the account subject names, or for the client itself where subject is left out, as a service account does. It takes private_key with its algorithm, and no client_secret',
     }),
   ),
   subject: Schema.optionalKey(
     Schema.String.check(Schema.isMinLength(1)).annotate({
       description:
-        'With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in',
+        'With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in. Left out, the token is asked for the client itself',
     }),
   ),
 }).annotate({
   description:
-    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names",
+    "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names, or for the client itself where subject is left out",
 });
 
 const remoteFields = {

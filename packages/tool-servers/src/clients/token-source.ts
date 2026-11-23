@@ -154,7 +154,7 @@ function assertionOf(settings: MintingAuth, { scope }: Asking): Assertion {
   return {
     issuer: settings.issuer,
     clientId: settings.client_id,
-    subject: Option.getOrThrow(Option.fromNullishOr(settings.subject)),
+    subject: settings.subject,
     scope,
     privateKey,
     algorithm,

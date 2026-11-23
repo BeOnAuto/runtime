@@ -1,7 +1,14 @@
 import { generateKeyPairSync } from 'node:crypto';
 
 import type { ProviderList } from '@on.auto/providers';
-import { asAServiceAccount, mail, providerListOf, providerOf, signingInToMail } from '@on.auto/providers/testing';
+import {
+  asAServiceAccount,
+  asTheServiceAccountItself as wayOfTheServiceAccountItself,
+  mail,
+  providerListOf,
+  providerOf,
+  signingInToMail,
+} from '@on.auto/providers/testing';
 import { fakeMcpInProcess, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
 export const robot = 'robot@acme.example.com';
@@ -20,6 +27,7 @@ export interface ServiceAccount {
 interface Delegation {
   readonly subjects?: readonly string[];
   readonly namedIssuer?: string;
+  readonly actsAsItself?: boolean;
 }
 
 function rsaKeys() {
@@ -30,13 +38,17 @@ function rsaKeys() {
   });
 }
 
-export function serviceAccountAt({ subjects = [inbox], namedIssuer }: Delegation = {}): ServiceAccount {
+export function serviceAccountAt({
+  subjects = [inbox],
+  namedIssuer,
+  actsAsItself = false,
+}: Delegation = {}): ServiceAccount {
   const { publicKey, privateKey } = rsaKeys();
   const named = namedIssuer === undefined ? {} : { issuer: namedIssuer };
   const issuer = fakeMcpInProcess({
     client: { clientId: robot, publicKey, expiresInSeconds: 3600, subjects, ...named },
   });
-  const way = { ...asAServiceAccount, issuer: issuer.origin };
+  const way = { ...(actsAsItself ? wayOfTheServiceAccountItself : asAServiceAccount), issuer: issuer.origin };
   const keyFile = JSON.stringify({
     type: 'service_account',
     ...otherPartsOfTheFile,
@@ -56,3 +68,5 @@ export const asTheServiceAccount = {
   credential: { kind: 'jwt_bearer' },
   placeholders: { inbox },
 } as const;
+
+export const asTheServiceAccountItself = { provider: 'mail', credential: { kind: 'jwt_bearer' } } as const;

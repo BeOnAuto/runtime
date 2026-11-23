@@ -173,7 +173,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
     required: ['issuer'],
     optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
   },
-  jwt_bearer: { required: ['issuer', 'subject'], optional: ['client_id', 'scope'] },
+  jwt_bearer: { required: ['issuer'], optional: ['subject', 'client_id', 'scope'] },
 };
 
 function fieldsTakenBy(credential: CredentialFields): TakenFields {

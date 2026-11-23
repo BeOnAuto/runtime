@@ -239,6 +239,21 @@ describe('a token asked with a signed assertion of a service account', () => {
   });
 });
 
+describe('a token asked with a signed assertion of a service account that acts as itself', () => {
+  it('is asked for the client with an assertion that names no subject, where the auth block names none', async () => {
+    const { publicKey, privateKey } = rsaKeys();
+    const issuer = served({ clientSecret: undefined, clientId: robot, publicKey, subjects: [] });
+    const asking = askingFetch();
+    const { subject: _subject, ...itself } = asAServiceAccount(issuer, privateKey);
+    const { source, clock } = sourceOf(issuer, itself, asking.fetch, fromTheIssuer(issuer));
+
+    const token = await source.token();
+
+    expect(token).toMatch(/^token-/u);
+    expect(assertionsSentTo(asking.bodies(), clock.now / 1000)).toEqual([[undefined, 0, 300]]);
+  });
+});
+
 describe('a token a service account is not given', () => {
   it('fails as a refused key where the token endpoint refuses the assertion, and as a failure where it answers 503', async () => {
     const { publicKey, privateKey } = rsaKeys();

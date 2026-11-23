@@ -1,0 +1,31 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "mail",
+    "server_type": "openapi",
+    "provider": "mail",
+    "placeholders": {},
+    "entry": {
+      "document": "https://mail.example.com/openapi.json",
+      "base_url": "https://api.mail.example.com/v1/self"
+    },
+    "credential": {
+      "kind": "jwt_bearer",
+      "permissions": "application",
+      "issuer": "https://login.mail.example.com",
+      "scope": "mail.read"
+    },
+    "says": {
+      "mail.read": "Read the mail of the mailbox."
+    },
+    "added_by": {
+      "id": "person:ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

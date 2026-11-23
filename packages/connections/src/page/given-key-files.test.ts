@@ -10,6 +10,7 @@ import { ada, harness, operationNamed, recordedAs, type Harness, type HarnessOpt
 import { preparedOf, sourceOver } from '../testing/served-connections.ts';
 import {
   asTheServiceAccount,
+  asTheServiceAccountItself,
   inbox,
   otherPartsOfTheFile,
   robot,
@@ -94,6 +95,46 @@ describe('a key file given for a connection that signs an assertion', () => {
     expect(
       [bodyOf(account.privateKey), ...Object.values(otherPartsOfTheFile)].filter((part) => written.includes(part)),
     ).toEqual([]);
+  });
+});
+
+function actingAsItself(): ServiceAccount {
+  const account = serviceAccountAt({ subjects: [], actsAsItself: true });
+  closing.push(account.issuer.close);
+  return account;
+}
+
+describe('a key file given for a connection whose way names no account, as a service account acting as itself', () => {
+  it('is added with no subject, checked by one token asked for the client itself, then kept and served with no subject', async () => {
+    const account = actingAsItself();
+    const askedWhenKept: number[] = [];
+    const h = harnessOf(account, {
+      beforeKeeping: () => Promise.resolve(askedWhenKept.push(account.issuer.tokenRequests())),
+    });
+    const { id, token } = await added(h, asTheServiceAccountItself);
+    const [recorded] = await h.facts();
+
+    const given = await giving(h, { id, token, key_file: account.keyFile });
+    const { settings } = await preparedOf(sourceOver(h, { providers: account.providers }), id);
+
+    expect(recorded).toMatchObject({ type: 'connection_added', data: { placeholders: {} } });
+    expect(recorded?.data).toHaveProperty('credential', {
+      kind: 'jwt_bearer',
+      permissions: 'application',
+      issuer: account.issuer.origin,
+      scope: 'mail.read',
+    });
+    expect(given).toMatchObject({
+      status: 'succeeded',
+      output: { id, status: 'connected', credential: { kind: 'jwt_bearer', client_id: robot } },
+    });
+    expect(askedWhenKept).toEqual([1]);
+    expect([...h.secrets.values().values()]).toEqual([account.privateKey]);
+    expect(settings.auth).toMatchObject({ client_id: robot, grant: 'jwt_bearer', credential: { kind: 'private_key' } });
+    expect([given, settings.auth].map((answered) => JSON.stringify(answered).includes('"subject"'))).toEqual([
+      false,
+      false,
+    ]);
   });
 });
 

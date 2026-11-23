@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { mostPageSteps, stepsSchemaOf } from '../keys/key-fields.ts';
 import { problemsOf } from '../testing/entry-problems.ts';
-import { asAServiceAccount, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import { asAServiceAccount, asTheServiceAccountItself, mail, signingInToMail } from '../testing/own-app-providers.ts';
 import { accountTypesOf, permissionsOf } from './account-types.ts';
 
 type Fields = Readonly<Record<string, unknown>>;
@@ -29,7 +29,7 @@ function pagesOf(count: number): readonly unknown[] {
 }
 
 const refusals: readonly (readonly [string, Fields, readonly string[]])[] = [
-  ['no subject', withoutASubject, ['/credentials/1/subject']],
+  ['no subject but a placeholder only a subject would take', withoutASubject, ['/credentials/1/placeholders/inbox']],
   ['no key file', withoutAKeyFile, ['/credentials/1/key_file']],
   [
     'a field of another kind',
@@ -61,6 +61,13 @@ const refusals: readonly (readonly [string, Fields, readonly string[]])[] = [
 describe('a way that signs an assertion, of the kind jwt_bearer', () => {
   it('takes its issuer, its subject, where its key file holds its values, its own values and the steps of its page', () => {
     expect(withTheServiceAccount({})).toEqual([]);
+  });
+
+  it('takes no subject, for a service account that acts as itself, and then no placeholder only a subject would take', () => {
+    expect(pathsOf(asTheServiceAccountItself)).toEqual([]);
+    expect(pathsOf({ ...asTheServiceAccountItself, account_types: ['service'] })).toEqual([
+      '/credentials/1/account_types',
+    ]);
   });
 
   it('acts as the app, so it takes no account_types and its permissions are application', () => {

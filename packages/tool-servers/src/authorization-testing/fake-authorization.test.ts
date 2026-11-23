@@ -114,7 +114,7 @@ interface Asserted {
   readonly registration?: ClientRegistration;
   readonly privateKey?: string;
   readonly alg?: string;
-  readonly sub?: string;
+  readonly sub?: string | null;
   readonly aud?: string;
   readonly lastsSeconds?: number;
   readonly asserted?: (signed: string) => Readonly<Record<string, string>>;
@@ -129,10 +129,9 @@ async function assertionAnswered({
   lastsSeconds = 300,
   asserted = (signed) => ({ assertion: signed }),
 }: Asserted) {
-  const signed = await new SignJWT({})
+  const signed = await new SignJWT(sub === null ? {} : { sub })
     .setProtectedHeader({ alg })
     .setIssuer('robot')
-    .setSubject(sub)
     .setAudience(aud)
     .setIssuedAt(1_800_000_000)
     .setExpirationTime(1_800_000_000 + lastsSeconds)
@@ -147,11 +146,13 @@ async function assertionAnswered({
 }
 
 describe('the token endpoint of a fake that takes a signed assertion', () => {
-  it('grants a token to an assertion its client signed for that endpoint and a subject it may act as, and refuses any other as the service does', async () => {
+  it('grants a token to an assertion its client signed for that endpoint and a subject it may act as, or for the client itself where it names none, and refuses any other as the service does', async () => {
     expect(
       await Promise.all([
         assertionAnswered({}),
         assertionAnswered({ registration: robot, sub: 'ceo' }),
+        assertionAnswered({ sub: null }),
+        assertionAnswered({ registration: { ...robot, subjects: [] }, sub: null }),
         assertionAnswered({ privateKey: rsaKeys().privateKey }),
         assertionAnswered({
           registration: { clientId: 'robot', clientSecret: 'robot-secret', expiresInSeconds: 3600 },
@@ -164,6 +165,8 @@ describe('the token endpoint of a fake that takes a signed assertion', () => {
         assertionAnswered({ sub: 'ceo' }),
       ]),
     ).toEqual([
+      [200, 'token'],
+      [200, 'token'],
       [200, 'token'],
       [200, 'token'],
       [400, 'invalid_grant'],

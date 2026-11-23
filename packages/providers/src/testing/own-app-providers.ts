@@ -1,4 +1,4 @@
-import { Schema } from 'effect';
+import { Schema, Struct } from 'effect';
 
 import { ProviderEntrySchema, type ProviderEntry } from '../entry/provider-entry.ts';
 
@@ -98,6 +98,23 @@ export const asAServiceAccount = {
     key: { title: 'Enter the details here', instructions: 'Choose the key file and name the mailbox.' },
   },
   description: 'A service account your company creates at Mail.',
+} as const;
+
+export const asTheServiceAccountItself = {
+  ...Struct.omit(asAServiceAccount, ['subject', 'placeholders', 'steps', 'description']),
+  steps: {
+    key_page: asAServiceAccount.steps.key_page,
+    pages: [
+      {
+        title: 'Add it as a user at Mail',
+        instructions: 'Add the service account as a user of the mailboxes it reads.',
+        page: 'https://admin.mail.example.com/users',
+        page_title: 'Open the users of Mail',
+      },
+    ],
+    key: { title: 'Enter the details here', instructions: 'Choose the key file.' },
+  },
+  description: 'A service account your company creates at Mail, acting as itself.',
 } as const;
 
 export const mail: ProviderEntry = decodeEntry({

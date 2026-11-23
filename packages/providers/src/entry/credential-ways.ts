@@ -160,8 +160,8 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   },
   none: { required: [], optional: [] },
   jwt_bearer: {
-    required: ['issuer', 'subject', 'key_file'],
-    optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps', 'limitation', ...ownValues],
+    required: ['issuer', 'key_file'],
+    optional: ['subject', 'scope', 'says', 'key_page', 'key_page_title', 'steps', 'limitation', ...ownValues],
   },
   authorization: {
     required: ['issuer'],

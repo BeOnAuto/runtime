@@ -27,7 +27,7 @@ const firstServerError = 500;
 export interface Assertion {
   readonly issuer: string;
   readonly clientId: string;
-  readonly subject: string;
+  readonly subject: string | undefined;
   readonly scope: string | undefined;
   readonly privateKey: Redacted.Redacted;
   readonly algorithm: string;
@@ -85,14 +85,18 @@ function claimsOf({ scope }: Assertion): { readonly scope?: string } {
   return scope === undefined || scope === '' ? {} : { scope };
 }
 
+function namingItsSubject(signing: SignJWT, subject: string | undefined): SignJWT {
+  return subject === undefined ? signing : signing.setSubject(subject);
+}
+
 async function signedFor(assertion: Assertion, audience: string, asserting: Asserting): Promise<string> {
   const { lifetimeMs = assertionLifetimeMs } = asserting;
   const key = await importPKCS8(Redacted.value(assertion.privateKey), assertion.algorithm);
   const issuedAt = Math.floor(asserting.now() / millisOfASecond);
-  return new SignJWT(claimsOf(assertion))
+  const signing = new SignJWT(claimsOf(assertion))
     .setProtectedHeader({ alg: assertion.algorithm, typ: 'JWT' })
-    .setIssuer(assertion.clientId)
-    .setSubject(assertion.subject)
+    .setIssuer(assertion.clientId);
+  return namingItsSubject(signing, assertion.subject)
     .setAudience(audience)
     .setIssuedAt(issuedAt)
     .setExpirationTime(issuedAt + Math.floor(lifetimeMs / millisOfASecond))

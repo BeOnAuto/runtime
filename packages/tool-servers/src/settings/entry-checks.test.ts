@@ -104,19 +104,22 @@ function grantsOf(servers: readonly ServerSettings[]): readonly unknown[] {
 }
 
 describe('the grant of an auth block', () => {
-  it('reads jwt_bearer beside a private key and the subject the token is asked for, and nothing beside client credentials', () => {
+  it('reads jwt_bearer beside a private key, with the subject the token is asked for or with none, for the client itself, and nothing beside client credentials', () => {
     const { servers } = settingsOf({
       mail: { ...graph, auth: { ...issuedToARobot, ...itsKey, ...ofTheInbox, grant: 'jwt_bearer' } },
+      itself: { ...graph, auth: { ...issuedToARobot, ...itsKey, grant: 'jwt_bearer' } },
       graph: { ...graph, auth: { ...issuedToARobot, ...itsKey, grant: 'client_credentials' } },
     });
 
     expect(grantsOf(servers)).toEqual([
       ['jwt_bearer', 'inbox@acme.example.com'],
+      ['jwt_bearer', undefined],
       [undefined, undefined],
     ]);
+    expect(servers.map((server) => authOf(server))[1]).not.toHaveProperty('subject');
   });
 
-  it('refuses jwt_bearer with a client secret or with no subject, and a subject beside any other grant', () => {
+  it('refuses jwt_bearer with a client secret or with no private key, with a subject or without, and a subject beside any other grant', () => {
     const issued = issuedToARobot;
     const key = itsKey;
     const subject = ofTheInbox;
@@ -125,10 +128,10 @@ describe('the grant of an auth block', () => {
     expect(
       problemsOf({
         secret: { ...graph, auth: { ...issued, ...aSecret, ...subject, grant: 'jwt_bearer' } },
-        unnamed: { ...graph, auth: { ...issued, ...key, grant: 'jwt_bearer' } },
+        unsigned: { ...graph, auth: { ...issued, ...aSecret, grant: 'jwt_bearer' } },
         stray: { ...graph, auth: { ...issued, ...key, ...subject } },
       }),
-    ).toEqual(['TOOL_SERVERS/secret/auth', 'TOOL_SERVERS/unnamed/auth', 'TOOL_SERVERS/stray/auth/subject']);
+    ).toEqual(['TOOL_SERVERS/secret/auth', 'TOOL_SERVERS/unsigned/auth', 'TOOL_SERVERS/stray/auth/subject']);
   });
 });
 

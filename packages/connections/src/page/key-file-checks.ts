@@ -34,7 +34,7 @@ export function keyFileChecked(
     const assertion = {
       issuer: Option.getOrThrow(Option.fromNullishOr(issuer)),
       clientId,
-      subject: Option.getOrThrow(Option.fromNullishOr(subject)),
+      subject,
       scope,
       privateKey: Redacted.make(privateKey),
       algorithm: assertionAlgorithm,

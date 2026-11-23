@@ -1,9 +1,14 @@
 import { mail, providerListOf, providerOf } from '@on.auto/providers/testing';
-import { Option, Result } from 'effect';
+import { Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { RecordedCredential } from './acting-fields.ts';
-import type { ConnectionAdded, RecordedConnectionEvent, WayChosen } from './connection-events.ts';
+import {
+  ConnectionEventSchema,
+  type ConnectionAdded,
+  type RecordedConnectionEvent,
+  type WayChosen,
+} from './connection-events.ts';
 import { registryDeciderOf } from './registry-decider.ts';
 
 const providers = providerListOf(providerOf(mail));
@@ -181,5 +186,26 @@ describe('a connection whose way was chosen with its values, as the stream folds
       placeholders: values,
       entry: { document: 'https://mail.example.com/openapi.json', base_url: atTheMailbox },
     });
+  });
+});
+
+const decodedFact = Schema.decodeUnknownResult(ConnectionEventSchema);
+
+function chosenWith(credential: Readonly<Record<string, unknown>>): unknown {
+  return { type: 'connection_way_chosen', data: { ...ofTheConnection, credential, says: {} }, context: acted };
+}
+
+describe('the credential of a way that signs an assertion, as a fact records it', () => {
+  it('holds its issuer, and the account the token is asked for where its way names one, as earlier releases recorded it, and nothing another kind takes', () => {
+    const signing = { kind: 'jwt_bearer', permissions: 'application', issuer: 'https://login.mail.example.com' };
+    const outcomes = [
+      { ...signing, subject: 'inbox@acme.example.com', scope: 'mail.read' },
+      { ...signing, scope: 'mail.read' },
+      { kind: 'jwt_bearer', subject: 'inbox@acme.example.com' },
+      { ...signing, clients: ['registered'] },
+      { ...signing, subject: '' },
+    ].map((credential: Readonly<Record<string, unknown>>) => Result.isSuccess(decodedFact(chosenWith(credential))));
+
+    expect(outcomes).toEqual([true, true, false, false, false]);
   });
 });

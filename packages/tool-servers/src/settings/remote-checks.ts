@@ -50,8 +50,7 @@ function checkedCredential(name: string, { client_secret, private_key, algorithm
 
 type Granted = Pick<AuthSettings, 'grant' | 'subject'>;
 
-const assertionExpected =
-  'Expected private_key with its algorithm, and subject, which grant jwt_bearer takes, and no client_secret';
+const assertionExpected = 'Expected private_key with its algorithm, which grant jwt_bearer takes, and no client_secret';
 
 const subjectOfAnAssertion = 'Expected subject only beside grant jwt_bearer, which asks for a token for that account';
 
@@ -59,9 +58,10 @@ function checkedGrant(name: string, { grant, subject, private_key, client_secret
   if (grant !== 'jwt_bearer') {
     return subject === undefined ? accepted({}) : refused(name, ['auth', 'subject'], subjectOfAnAssertion);
   }
-  return subject !== undefined && private_key !== undefined && client_secret === undefined
-    ? accepted({ grant, subject })
-    : refused(name, ['auth'], assertionExpected);
+  if (private_key === undefined || client_secret !== undefined) {
+    return refused(name, ['auth'], assertionExpected);
+  }
+  return accepted(subject === undefined ? { grant } : { grant, subject });
 }
 
 function authSettingsOf(auth: Auth, granted: Granted, credential: MintingCredential): AuthSettings {

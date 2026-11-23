@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '../index.ts';
 import { providerOf } from '../testing/fixture-providers.ts';
-import { asAServiceAccount, asTheCompanysApp, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import {
+  asAServiceAccount,
+  asTheCompanysApp,
+  asTheServiceAccountItself,
+  mail,
+  signingInToMail,
+} from '../testing/own-app-providers.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -98,5 +104,20 @@ describe('a way that signs an assertion for an account', () => {
       permissions: 'application',
       account_types: [],
     });
+  });
+});
+
+describe('a way that signs an assertion for the service account itself', () => {
+  it('is added with no subject and no value, acting as the app', () => {
+    const provider = providerOf({ ...mail, credentials: [signingInToMail, asTheServiceAccountItself] });
+    const addition = Result.getOrThrow(additionOfProvider(provider.entry, { kind: 'jwt_bearer' }));
+
+    expect(addition).toMatchObject({
+      credential: { kind: 'jwt_bearer', issuer: 'https://login.mail.example.com', scope: 'mail.read' },
+      placeholders: {},
+      permissions: 'application',
+      account_types: [],
+    });
+    expect(addition.credential).not.toHaveProperty('subject');
   });
 });

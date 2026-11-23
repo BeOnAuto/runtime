@@ -118,9 +118,10 @@ function placedValue(entry: ConnectionEntry, credential: Credential, variable: s
 }
 
 function grantOf({ kind, subject }: Credential): Pick<NonNullable<ServerEntryFields['auth']>, 'grant' | 'subject'> {
-  return kind === 'jwt_bearer'
-    ? { grant: kind, subject: literalText(Option.getOrThrow(Option.fromNullishOr(subject))) }
-    : {};
+  if (kind !== 'jwt_bearer') {
+    return {};
+  }
+  return subject === undefined ? { grant: kind } : { grant: kind, subject: literalText(subject) };
 }
 
 type Discovery = Pick<NonNullable<ServerEntryFields['auth']>, 'discovery'>;

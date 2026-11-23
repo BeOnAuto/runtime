@@ -52,6 +52,7 @@ const histories: readonly (readonly (readonly [string, string])[])[] = [
     ['0.72.0', 'connection_way_chosen'],
   ],
   [['0.70.0', 'connection_added'], ...laterRelease],
+  [['0.73.0', 'connection_added'], ...laterRelease],
   [
     ['0.71.0', 'connection_added'],
     ['0.70.0', 'connection_account_type_set'],

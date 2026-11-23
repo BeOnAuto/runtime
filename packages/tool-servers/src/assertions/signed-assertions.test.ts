@@ -114,6 +114,33 @@ describe('a token asked with a signed assertion', () => {
   });
 });
 
+describe('the subject of a token asked', () => {
+  it('is the account the assertion names, its claims in the order they always had, or none, for the client itself, where it names none', async () => {
+    const fake = issuer({ subjects: [] });
+    const namingTheInbox = issuer();
+    const asking = askingFetch();
+
+    const ofTheClient = await assertedTokensOf(assertionOf(fake, { subject: undefined }), {
+      fetch: asking.fetch,
+      ...atTheMoment,
+    });
+    await assertedTokensOf(assertionOf(namingTheInbox), { fetch: asking.fetch, ...atTheMoment });
+    const itself = decodeJwt(sentAssertion(asking.bodies(), 0));
+    const forTheInbox = decodeJwt(sentAssertion(asking.bodies(), 1));
+
+    expect(ofTheClient).toEqual({ access_token: aToken, expires_in: 3600 });
+    expect(itself).toEqual({
+      iss: robot,
+      aud: `${fake.origin}/token`,
+      scope: readScope,
+      iat: moment / 1000,
+      exp: moment / 1000 + 300,
+    });
+    expect(Object.keys(forTheInbox)).toEqual(['scope', 'iss', 'sub', 'aud', 'iat', 'exp']);
+    expect(forTheInbox).toMatchObject({ sub: inbox });
+  });
+});
+
 describe('the assertion of a token asked', () => {
   it('lasts the lifetime it is given, and carries no scope where the way asks none', async () => {
     const fake = issuer();
