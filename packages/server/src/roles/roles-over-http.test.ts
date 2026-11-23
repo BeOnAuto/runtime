@@ -118,7 +118,7 @@ describe('every call of a runtime that signs people in, decided by the role each
       { status: 403, body: { reason: 'forbidden', kind: 'permission_denied' } },
     ]);
     expect(mayDo).toEqual([
-      { permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'] },
+      { permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write', 'playbook:run'] },
       { permissions: ['org:read', 'playbook:read'] },
     ]);
     expect([offeredAsAViewer.includes('list_playbooks'), offeredAsAViewer.includes('create_playbook')]).toEqual([

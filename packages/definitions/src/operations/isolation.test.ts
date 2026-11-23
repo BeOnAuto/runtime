@@ -79,7 +79,10 @@ describe('a caller that may only read', () => {
     expect(await call(createDefinition, toAlpha(acmeReader, { ...hello, name: 'wave' }))).toEqual(readOnly);
     expect(await call(updateDefinition, toAlpha(acmeReader, hello))).toEqual(readOnly);
     expect(await call(retireDefinition, toAlpha(acmeReader, greet))).toEqual(readOnly);
-    expect(await call(runDefinition, toAlpha(acmeReader, greet))).toEqual(readOnly);
+    expect(await call(runDefinition, toAlpha(acmeReader, greet))).toEqual({
+      ...readOnly,
+      detail: 'The caller lacks the playbook:write or playbook:run permission',
+    });
     expect(await call(getDefinition, toAlpha(acmeReader, greet))).toMatchObject({ status: 'succeeded' });
     expect(await call(listDefinitions, toAlpha(acmeReader, { type: 'echo' }))).toMatchObject({ status: 'succeeded' });
     expect(await call(getRun, toAlpha(acmeReader, { run_id: runId }))).toMatchObject({

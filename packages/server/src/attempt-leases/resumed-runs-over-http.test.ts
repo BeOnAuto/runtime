@@ -54,7 +54,7 @@ describe('a reasoning run a client started, whose process died', () => {
 
     expect(ended.body).toMatchObject({
       status: 'rejected',
-      rejection: { reason: 'unavailable', detail: 'The caller lacks the playbook:write permission' },
+      rejection: { reason: 'unavailable', detail: 'The caller lacks the playbook:write or playbook:run permission' },
     });
     expect(server.modelCalls()).toBe(0);
   });

@@ -72,7 +72,17 @@ const whatReadingPermits = [
   'playbook/validate',
 ];
 
-const whatOnlyWritingPermits = [
+const whatRunningPermits = [
+  'playbook/answer_interaction',
+  'playbook/cancel_run',
+  'playbook/make_next_attempt',
+  'playbook/publish_event',
+  'playbook/refuse_next_attempt',
+  'playbook/run_definition',
+  'playbook/send_run_event',
+];
+
+const whatOnlyChangingPermits = [
   'org/activate_allocation',
   'org/activate_license',
   'org/add_connection',
@@ -97,24 +107,21 @@ const whatOnlyWritingPermits = [
   'org/start',
   'org/unassign_role',
   'org/update_playbook',
-  'playbook/answer_interaction',
-  'playbook/cancel_run',
   'playbook/create_definition',
   'playbook/execute_connection',
-  'playbook/make_next_attempt',
   'playbook/move_definitions',
   'playbook/pause_definition',
-  'playbook/publish_event',
   'playbook/query_connection',
-  'playbook/refuse_next_attempt',
   'playbook/restore_definition',
   'playbook/resume_definition',
   'playbook/retire_definition',
-  'playbook/run_definition',
-  'playbook/send_run_event',
   'playbook/start_definition_version',
   'playbook/update_definition',
 ];
+
+const whatOnlyWritingPermits = [...whatRunningPermits, ...whatOnlyChangingPermits].toSorted();
+
+const whatReadingAndRunningPermit = [...whatReadingPermits, ...whatRunningPermits].toSorted();
 
 const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted();
 
@@ -158,6 +165,8 @@ const whatPlaybookAlphaMayDoAsItself = [
   'org/transcribe',
 ].toSorted();
 
+const atTheirCompanysServer = 'in Studio at their company’s server, holding every permission';
+
 const pinned = [
   { caller: 'Admin, in Studio', allowed: everything },
   { caller: 'Admin, through their connected agent', allowed: everythingButWhatManagesPermissions },
@@ -168,6 +177,13 @@ const pinned = [
   { caller: 'Editor, asking @Auto in Slack', allowed: everythingButWhatOnlyAnAdminChanges },
   { caller: 'Editor, in a run they started', allowed: everythingButWhatOnlyAnAdminChanges },
   { caller: 'Editor, through an agent they approved to read', allowed: whatReadingPermits },
+  { caller: `Editor, ${atTheirCompanysServer}`, allowed: everythingButWhatOnlyAnAdminChanges },
+  { caller: 'Operator, in Studio', allowed: whatReadingAndRunningPermit },
+  { caller: 'Operator, through their connected agent', allowed: whatReadingAndRunningPermit },
+  { caller: 'Operator, asking @Auto in Slack', allowed: whatReadingAndRunningPermit },
+  { caller: 'Operator, in a run they started', allowed: everythingButWhatOnlyAnAdminChanges },
+  { caller: 'Operator, through an agent they approved to read', allowed: whatReadingPermits },
+  { caller: `Operator, ${atTheirCompanysServer}`, allowed: whatReadingAndRunningPermit },
   { caller: 'Viewer, in Studio', allowed: whatReadingPermits },
   { caller: 'Viewer, through their connected agent', allowed: whatReadingPermits },
   { caller: 'Viewer, asking @Auto in Slack', allowed: whatReadingPermits },
@@ -176,6 +192,7 @@ const pinned = [
   { caller: 'An Editor of another org, in Studio', allowed: [] },
   { caller: 'An API key', allowed: everythingButWhatManagesPermissions },
   { caller: 'An API key that reads', allowed: whatReadingPermits },
+  { caller: 'An API key that runs', allowed: whatReadingAndRunningPermit },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', allowed: whatPlaybookAlphaMayDoAsItself },
   { caller: 'The local developer', allowed: everythingButWhatManagesPermissions },
 ];
@@ -204,6 +221,17 @@ const refusedForTheRoleOrTheTokenType = [
   { caller: 'Editor, asking @Auto in Slack', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
   { caller: 'Editor, in a run they started', forTheRole: [], forTheTokenType: [] },
   { caller: 'Editor, through an agent they approved to read', forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
+  { caller: `Editor, ${atTheirCompanysServer}`, forTheRole: whatOnlyAnAdminChanges, forTheTokenType: [] },
+  { caller: 'Operator, in Studio', forTheRole: whatOnlyChangingPermits, forTheTokenType: [] },
+  { caller: 'Operator, through their connected agent', forTheRole: whatOnlyChangingPermits, forTheTokenType: [] },
+  { caller: 'Operator, asking @Auto in Slack', forTheRole: whatOnlyChangingPermits, forTheTokenType: [] },
+  { caller: 'Operator, in a run they started', forTheRole: [], forTheTokenType: [] },
+  {
+    caller: 'Operator, through an agent they approved to read',
+    forTheRole: whatOnlyChangingPermits,
+    forTheTokenType: [],
+  },
+  { caller: `Operator, ${atTheirCompanysServer}`, forTheRole: whatOnlyChangingPermits, forTheTokenType: [] },
   { caller: 'Viewer, in Studio', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
   { caller: 'Viewer, through their connected agent', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
   { caller: 'Viewer, asking @Auto in Slack', forTheRole: whatOnlyWritingPermits, forTheTokenType: [] },
@@ -212,6 +240,7 @@ const refusedForTheRoleOrTheTokenType = [
   { caller: 'An Editor of another org, in Studio', forTheRole: everything, forTheTokenType: [] },
   { caller: 'An API key', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'An API key that reads', forTheRole: [], forTheTokenType: whatManagesPermissions },
+  { caller: 'An API key that runs', forTheRole: [], forTheTokenType: whatManagesPermissions },
   { caller: 'Playbook alpha, in a run a trigger or a schedule started', forTheRole: [], forTheTokenType: [] },
   { caller: 'The local developer', forTheRole: [], forTheTokenType: whatManagesPermissions },
 ];
@@ -251,7 +280,7 @@ function approvingOfThoseAdding(rows: readonly DecidedRow[]): readonly (readonly
 }
 
 describe('adding a connection, as the decision point the server loads decides who may also approve it', () => {
-  it('lets an admin, a key and the local developer approve what they add, so each is answered a link, and leaves an editor and a viewer in a run a request', () => {
+  it('lets an admin, a key and the local developer approve what they add, so each is answered a link, and leaves an editor, an operator and a viewer in a run a request', () => {
     expect(approvingOfThoseAdding(table)).toEqual([
       ['Admin, in Studio', true],
       ['Admin, through their connected agent', true],
@@ -261,6 +290,8 @@ describe('adding a connection, as the decision point the server loads decides wh
       ['Editor, through their connected agent', false],
       ['Editor, asking @Auto in Slack', false],
       ['Editor, in a run they started', false],
+      [`Editor, ${atTheirCompanysServer}`, false],
+      ['Operator, in a run they started', false],
       ['Viewer, in a run they started', false],
       ['An API key', true],
       ['The local developer', true],

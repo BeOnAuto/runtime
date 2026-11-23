@@ -1,4 +1,4 @@
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, normalizedPermissions } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import { pageOriginsOf, type PageSettings } from '../access/page-origins.ts';
@@ -12,7 +12,7 @@ export const autoIdentityService = 'https://clerk.on.auto';
 
 const organizationScope = 'user:org:read';
 
-export const signInScopes: readonly string[] = [organizationScope, ...allPermissions];
+export const signInScopes: readonly string[] = [organizationScope, ...normalizedPermissions(allPermissions)];
 
 export interface DefaultIdentityProvider {
   readonly issuer: string;

@@ -3,6 +3,7 @@ import {
   PermissionSchema,
   allPermissions,
   defineHttpOperation,
+  withIncludedPermissions,
   signedInPersonPrefix,
   type CallerIdentity,
   type Permission,
@@ -18,7 +19,7 @@ const NothingAsked = Schema.Record(Schema.String, Schema.Never);
 const CallerAnsweredSchema = Schema.Struct({
   permissions: Schema.Array(PermissionSchema).annotate({
     description:
-      'The permissions the caller may use in the org, of org:read, org:write, playbook:read and playbook:write',
+      'The permissions the caller may use in the org, of org:read, org:write, playbook:read, playbook:write and playbook:run',
   }),
 });
 
@@ -40,7 +41,8 @@ function permissionsWithin(
   caller: CallerIdentity,
   permitted: (permission: Permission) => boolean,
 ): readonly Permission[] {
-  return allPermissions.filter((permission) => caller.permissions.includes(permission) && permitted(permission));
+  const held = withIncludedPermissions(caller.permissions);
+  return allPermissions.filter((permission) => held.includes(permission) && permitted(permission));
 }
 
 function permissionsOf(caller: CallerIdentity, roles: RoleAssignments | null) {

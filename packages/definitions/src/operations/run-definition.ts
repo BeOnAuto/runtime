@@ -28,6 +28,7 @@ export function defineRunDefinition(capabilities: readonly Capability[]) {
       title: 'Run definition',
       description,
       route: { method: 'POST', path: '/definitions/{type}/{name}/run' },
+      permittedBy: ['playbook:write', 'playbook:run'],
       reachesOutside: known.reachesOutside,
       mayChangeOutside: capabilities.some(({ mayChangeOutside }) => mayChangeOutside),
       inputSchema: Schema.Struct({

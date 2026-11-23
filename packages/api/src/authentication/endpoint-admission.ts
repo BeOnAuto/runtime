@@ -1,5 +1,5 @@
 import type { ProtectedResource } from '@on.auto/identity';
-import { allPermissions, canAccessPlaybook, type CallerIdentity } from '@on.auto/operations';
+import { allPermissions, canAccessPlaybook, normalizedPermissions, type CallerIdentity } from '@on.auto/operations';
 
 import type { Problem } from '../problem/problem-document.ts';
 import { problemOf, problemResponse } from '../problem/problem.ts';
@@ -31,7 +31,7 @@ function judged(caller: CallerIdentity | undefined, org: string, playbook: strin
 function refused(problem: Problem, resource: ProtectedResource | undefined, path: string): Response {
   return problemResponse(
     problem,
-    problem.reason === 'forbidden' ? insufficientScope(resource, allPermissions, path) : {},
+    problem.reason === 'forbidden' ? insufficientScope(resource, normalizedPermissions(allPermissions), path) : {},
   );
 }
 

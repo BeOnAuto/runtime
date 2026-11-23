@@ -1,5 +1,6 @@
 import { userInfo } from 'node:os';
 
+import { allPermissions } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -66,7 +67,7 @@ describe('authenticatorFor on a loopback address with neither sign-in nor API ke
       id: 'local',
       name: 'ada',
       org: 'globex',
-      permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'],
+      permissions: allPermissions,
       playbooks: '*',
     });
     expect(authenticator.resource).toBeUndefined();

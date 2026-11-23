@@ -1,4 +1,5 @@
 import {
+  normalizedPermissions,
   settle,
   type Catalog,
   type Dispatcher,
@@ -46,7 +47,7 @@ export function handlerFor(
   { dispatcher, runCall }: OperationRoutesOptions,
   { resource, callContext }: Routes,
 ): RouteHandler {
-  const forbidden = insufficientScope(resource, registration.permissions);
+  const forbidden = insufficientScope(resource, normalizedPermissions(registration.permissions));
   return async (c) => {
     const org = String(c.req.param('org'));
     const caller = c.get('principal').callerIn(org);

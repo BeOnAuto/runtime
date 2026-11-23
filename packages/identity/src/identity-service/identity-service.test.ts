@@ -1,4 +1,4 @@
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, normalizedPermissions } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { identityServiceOf, type IssuerFetch } from '../index.ts';
@@ -85,10 +85,12 @@ describe('the person a token names', () => {
   });
 });
 
+const theFour = normalizedPermissions(allPermissions);
+
 const readScopes = ['org:read', 'playbook:read'];
 
 const grantedScopes: ReadonlyArray<readonly [string, string, readonly string[]]> = [
-  ['every scope a sign-in asks for', 'user:org:read org:read org:write playbook:read playbook:write', allPermissions],
+  ['every scope a sign-in asks for', 'user:org:read org:read org:write playbook:read playbook:write', theFour],
   ['the two read scopes', 'user:org:read org:read playbook:read', readScopes],
   ['none of the four permissions', 'user:org:read', []],
   [
@@ -122,10 +124,10 @@ describe('the permissions of the person a token names', () => {
 
   it('are the four for a token that holds them without user:org:read, since org_id is what binds the org', async () => {
     const { identityService, token } = await signedTokens(fakeIssuer('https://login.example'), atStart);
-    const scope = allPermissions.join(' ');
+    const scope = theFour.join(' ');
 
     expect(await identityService.personOf(await token({ scope }), '/mcp')).toMatchObject({
-      own: { id: 'person:ada', org: 'acme', permissions: allPermissions },
+      own: { id: 'person:ada', org: 'acme', permissions: theFour },
     });
   });
 });

@@ -22,7 +22,7 @@ export const PersonField = ContextReference.check(Schema.isMinLength(1)).annotat
 
 export const RoleField = Schema.Literals(builtInRoleIds).annotate({
   description:
-    'admin, who manages the members; editor, who builds, runs and changes playbooks; or viewer, who views and comments',
+    'admin, who manages the members; editor, who builds, runs and changes playbooks; operator, who runs playbooks and answers requests; or viewer, who views and comments',
 });
 
 const PrincipalSchema = Schema.Struct({
@@ -32,7 +32,7 @@ const PrincipalSchema = Schema.Struct({
 
 const RoleSchema = Schema.Struct({
   type: Schema.Literal('built_in').annotate({ description: 'built_in, a role every release of Auto ships' }),
-  id: Schema.String.annotate({ description: 'admin, editor or viewer' }),
+  id: Schema.String.annotate({ description: 'admin, editor, operator or viewer' }),
 }).annotate({ description: 'The role' });
 
 const ScopeSchema = Schema.Struct({

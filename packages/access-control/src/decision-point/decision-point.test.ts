@@ -36,6 +36,7 @@ import {
   requestOf,
   runDefinition,
   type TestOperation,
+  updateDefinition,
 } from '../testing/access-testing.ts';
 import { pinnedTableBehaviour } from '../testing/pinned-table-behaviour.ts';
 import {
@@ -81,13 +82,6 @@ function countedByKind(outcomes: readonly Outcome[]): Readonly<Record<string, nu
   }
   return Object.fromEntries(counted);
 }
-
-const runs: TestOperation = { ...runDefinition, permissions: ['playbook:write', 'playbook:run'] };
-
-const changes: TestOperation = { ...runDefinition, name: 'update_definition' };
-
-const operators =
-  '@id("operator")\npermit (principal in Role::"operator", action in [Action::"org:read", Action::"playbook:read", Action::"playbook:run"], resource);';
 
 const ready: { prepared?: PreparedPolicies } = {};
 
@@ -210,23 +204,26 @@ describe('operator', () => {
   beforeAll(async () => {
     const cedar = cedarOf(await cedarOnDisk());
     ready.prepared = preparedPolicies(cedar, {
-      schema: accessSchemaOf(
-        await filesOnDisk.text(accessSchemaFile),
-        [...allPermissions, 'playbook:run'],
-        [runs, changes, getDefinition],
-      ),
-      policies: `${await filesOnDisk.text(builtInPoliciesFile)}\n${operators}`,
+      schema: accessSchemaOf(await filesOnDisk.text(accessSchemaFile), allPermissions, [
+        runDefinition,
+        updateDefinition,
+        getDefinition,
+      ]),
+      policies: await filesOnDisk.text(builtInPoliciesFile),
     });
   });
 
   describe('a level that runs and answers but cannot change', () => {
     it('is one more policy and one more permission, declared beside write by the operations that run, with no change to the question', () => {
-      expect([askedAs('operator', runs), askedAs('operator', getDefinition), askedAs('operator', changes)]).toEqual([
-        'allow by operator',
-        'allow by operator',
+      expect([
+        askedAs('operator', runDefinition),
+        askedAs('operator', getDefinition),
+        askedAs('operator', updateDefinition),
+      ]).toEqual(['allow by operator', 'allow by operator', 'deny by ']);
+      expect([askedAs('editor', runDefinition), askedAs('viewer', runDefinition)]).toEqual([
+        'allow by editor',
         'deny by ',
       ]);
-      expect([askedAs('editor', runs), askedAs('viewer', runs)]).toEqual(['allow by editor', 'deny by ']);
     });
   });
 });

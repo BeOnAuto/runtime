@@ -28,7 +28,7 @@ describe('the shapes of the members operations', () => {
     ]).toEqual([true, true]);
   });
 
-  it('take an email address with an @ and a dot after it, at most 254 characters, an editor or a viewer invited, and an invitation’s id', () => {
+  it('take an email address with an @ and a dot after it, at most 254 characters, an editor, an operator or a viewer invited, and an invitation’s id', () => {
     const addresses = [
       'sam@example.com',
       `${'s'.repeat(242)}@example.com`,
@@ -38,7 +38,12 @@ describe('the shapes of the members operations', () => {
     ];
 
     expect(addresses.map((address) => isAnAddress(address))).toEqual([true, true, false, false, false]);
-    expect(['editor', 'viewer', 'admin'].map((role) => isARoleInvited(role))).toEqual([true, true, false]);
+    expect(['editor', 'operator', 'viewer', 'admin'].map((role) => isARoleInvited(role))).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
     expect([anInvitation.id, 'i'.repeat(65), 'an/id'].map((id) => isAnInvitationsId(id))).toEqual([true, false, false]);
   });
 });

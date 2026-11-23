@@ -5,6 +5,7 @@ import {
   allPermissions,
   type CallerIdentity,
   canAccessPlaybook,
+  normalizedPermissions,
   type OperationKind,
   type OperationScope,
   OrgIdSchema,
@@ -13,11 +14,13 @@ import {
   PermissionSchema,
   PlaybookAccessSchema,
   PlaybookIdSchema,
+  withIncludedPermissions,
 } from '../index.ts';
 import { acmeAdmin, acmeAlphaReader } from '../testing/callers.ts';
 import { harness, toOrg, toPlaybook } from '../testing/harness.ts';
 import { getNote } from '../testing/notes.ts';
 import { getPlaybookLabel, labelPlaybook, listPlaybookLabels, relabelPlaybook } from '../testing/playbook-labels.ts';
+import { permissionIncluding } from './permission.ts';
 
 const derived: ReadonlyArray<readonly [OperationKind, OperationScope, Permission]> = [
   ['query', 'org', 'org:read'],
@@ -27,20 +30,65 @@ const derived: ReadonlyArray<readonly [OperationKind, OperationScope, Permission
 ];
 
 describe('permissions', () => {
-  it('are four, one per scope and access', () => {
-    expect(allPermissions).toEqual(['org:read', 'org:write', 'playbook:read', 'playbook:write']);
+  it('are one per scope and access, and one to run playbooks', () => {
+    expect(allPermissions).toEqual(['org:read', 'org:write', 'playbook:read', 'playbook:write', 'playbook:run']);
   });
 
   it.each(derived)('make a %s at %s scope need %s', (kind, scope, permission) => {
     expect(permissionFor(kind, scope)).toBe(permission);
   });
 
-  it('decode only the four names', () => {
+  it('decode only their names', () => {
     const isPermission = Schema.is(PermissionSchema);
 
     expect(allPermissions.every((permission) => isPermission(permission))).toBe(true);
     expect(isPermission('org:admin')).toBe(false);
   });
+});
+
+describe('a permission another includes', () => {
+  it('is running playbooks, which changing them includes, and no other', () => {
+    expect(allPermissions.map((permission) => [permission, permissionIncluding(permission)])).toEqual([
+      ['org:read', undefined],
+      ['org:write', undefined],
+      ['playbook:read', undefined],
+      ['playbook:write', undefined],
+      ['playbook:run', 'playbook:write'],
+    ]);
+  });
+
+  it.each([
+    [['playbook:write'], ['playbook:write', 'playbook:run']],
+    [
+      ['org:read', 'playbook:read'],
+      ['org:read', 'playbook:read'],
+    ],
+    [
+      ['playbook:run', 'org:read'],
+      ['org:read', 'playbook:run'],
+    ],
+    [[], []],
+  ] satisfies ReadonlyArray<readonly [readonly Permission[], readonly Permission[]]>)(
+    'is held with the one that includes it, so %j hold %j, in the order of the permissions',
+    (held: readonly Permission[], withTheIncluded: readonly Permission[]) => {
+      expect(withIncludedPermissions(held)).toEqual(withTheIncluded);
+    },
+  );
+
+  it.each([
+    [allPermissions, ['org:read', 'org:write', 'playbook:read', 'playbook:write']],
+    [['playbook:write', 'playbook:run'], ['playbook:write']],
+    [['playbook:run'], ['playbook:run']],
+    [
+      ['playbook:read', 'playbook:run'],
+      ['playbook:read', 'playbook:run'],
+    ],
+  ] satisfies ReadonlyArray<readonly [readonly Permission[], readonly Permission[]]>)(
+    'is left out of a list that holds the one that includes it, so %j normalize to %j',
+    (listed: readonly Permission[], normalized: readonly Permission[]) => {
+      expect(normalizedPermissions(listed)).toEqual(normalized);
+    },
+  );
 });
 
 const isOrgId = Schema.is(OrgIdSchema);

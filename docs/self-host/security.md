@@ -106,19 +106,22 @@ The server loads the policies as it starts, and logs once which engine and how m
 
 ### The roles
 
-The policies hold three roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin. Everyone after joins with the role of the invitation they bring or, without one, with the organization's default role, a viewer unless an admin changes it. Where an admin requires an invitation to join, a person who signs in without one is refused. An admin changes roles and removes members. A person an admin removed stays removed when they sign in again.
+The policies hold four roles. The runtime records who holds which ([Roles](../reference/http.md#roles)), and decides each call of a signed-in person by the role they hold as they make it. The first person to sign in is the admin. Everyone after joins with the role of the invitation they bring or, without one, with the organization's default role, a viewer unless an admin changes it. Where an admin requires an invitation to join, a person who signs in without one is refused. An admin changes roles and removes members. A person an admin removed stays removed when they sign in again.
 
 An invitation is a link that an admin or an editor makes and shares. Only an admin invites an admin. The server sends no email. The invited person opens the link and signs in, in the same browser, and joins with the invitation's role. A link works once and expires after 30 days. A member who was removed comes back by a new invitation.
 
-| Role   | What a person with it may do                                                      |
-| ------ | --------------------------------------------------------------------------------- |
-| Admin  | Manages members. Can do everything an editor can.                                 |
-| Editor | Builds, runs and changes playbooks, and connects accounts.                        |
-| Viewer | Views playbooks, runs and results, and can comment. Can't run or change anything. |
+| Role     | What a person with it may do                                                      |
+| -------- | --------------------------------------------------------------------------------- |
+| Admin    | Manages members. Can do everything an editor can.                                 |
+| Editor   | Builds, runs and changes playbooks, and connects accounts.                        |
+| Operator | Runs playbooks and answers requests. Can't change playbooks or connect accounts.  |
+| Viewer   | Views playbooks, runs and results, and can comment. Can't run or change anything. |
 
 A role applies wherever the person uses Auto, including their connected agents.
 
 What a Viewer may do follows from what each operation declares about itself, never from its name: a Viewer may call an operation that a read permission, `org:read` or `playbook:read`, permits. Those are the operations that read, and the few changes anyone who may read makes: a comment, resolving or reopening one, marking activity as seen, and writing out a comment spoken aloud. A Viewer cannot run a function or a workflow, stop a run or send it an event, answer a request in Studio or through an agent, publish an event, create, change, pause, retire or restore anything, or add, change, remove or use a connection. Their connected agents, and Auto answering them in a conversation, are held to the same, whatever the agent was approved to do.
+
+An Operator may do what a Viewer may, and may also call an operation that the permission `playbook:run` permits. Those are the operations that start, answer or stop a run: running a function or a workflow, answering a request, sending a run the event it waits for, stopping a run and publishing an event. An Operator cannot create, change, pause, retire or restore anything, add, change or remove a connection, or call a connection's tools outside a run. Their connected agents, and Auto answering them in a conversation, are held to the same.
 
 A workflow run keeps acting as the person who started it, with the permissions they had when it started, for as long as it runs ([What happens when access is revoked](../reference/authentication.md#what-happens-when-access-is-revoked)), so making that person a Viewer does not stop a run they already started. A signed-in person who holds no role may do nothing. A person who is not a member of the org may still answer a request a playbook sent them, where it reached them: they make no call to the runtime, and their answer reaches the run through the connection the request went out by.
 
@@ -152,12 +155,12 @@ Give each machine, pipeline or agent that does not sign in its own key. Use a ke
 
 `--log-driver none` keeps the key out of Docker's log driver, which could otherwise store or ship it. The command still prints the key to your terminal.
 
-| Option          | Default                     | What it sets                                                                        |
-| --------------- | --------------------------- | ----------------------------------------------------------------------------------- |
-| `--org`         | required                    | The org the key belongs to, any org id but `local`                                  |
-| `--id`          | 8 random hexadecimal digits | The key's id, 1 to 32 lowercase letters, digits and hyphens, other than `local`     |
-| `--permissions` | all four                    | Comma-separated, from `org:read`, `org:write`, `playbook:read` and `playbook:write` |
-| `--playbooks`   | `*`                         | Comma-separated playbook ids, or `*` for every playbook                             |
+| Option          | Default                                                       | What it sets                                                                                    |
+| --------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--org`         | required                                                      | The org the key belongs to, any org id but `local`                                              |
+| `--id`          | 8 random hexadecimal digits                                   | The key's id, 1 to 32 lowercase letters, digits and hyphens, other than `local`                 |
+| `--permissions` | `org:read`, `org:write`, `playbook:read` and `playbook:write` | Comma-separated, from those four and `playbook:run`, which runs playbooks without changing them |
+| `--playbooks`   | `*`                                                           | Comma-separated playbook ids, or `*` for every playbook                                         |
 
 No key may use the id `local` or the org `local`. In the facts, `local` is the local developer's id, and the org `local` belongs to local mode.
 

@@ -44,7 +44,6 @@ export { checkedProjection } from './projections/projection-checks.ts';
 export { ProjectionCatchingUp } from './projections/projection-catching-up.ts';
 export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
 export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
-export { type AddressedStream } from './projections/keyed-projection.ts';
 export { type BoundProjectionReader, type ChildRowsProjection } from './projections/keyed-projection.ts';
 export { type DueRowsQuery, type KeptProjection, type KeyedProjection } from './projections/keyed-projection.ts';
 export { type OrgProjectionReader, type ProjectedAddress } from './projections/keyed-projection.ts';
@@ -53,7 +52,7 @@ export { type ProjectedKeyedRow, type ProjectedMessage, type ProjectedOrder } fr
 export { type ProjectedRow, type ProjectedRows, type ProjectedRowsQuery } from './projections/keyed-projection.ts';
 export { type ProjectedStream, type ProjectedValue, type ProjectionAdvancer } from './projections/keyed-projection.ts';
 export { type ProjectionDeclaration, type RowAdvance, type ProjectionReader } from './projections/keyed-projection.ts';
-export { everyDefinitionOf, partitionOfTheRow } from './projections/keyed-projection.ts';
+export { everyDefinitionOf, partitionOfTheRow, type AddressedStream } from './projections/keyed-projection.ts';
 export { type RowPartition, type RowsAddress, type StreamScope } from './projections/keyed-projection.ts';
 export { addressOfTheRow, playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
 export { everyProjectedRow, rowsReadAtOnce } from './projections/every-row.ts';
@@ -208,6 +207,7 @@ export {
   defaultPageLimit,
 } from './reading/paging-fields.ts';
 export { PermissionSchema, allPermissions, permissionFor, type Permission } from './caller/permission.ts';
+export { normalizedPermissions, withIncludedPermissions } from './caller/permission.ts';
 export { permissionRefusalOf } from './authorization/authorization.ts';
 export type { KeptContent, PresentedFact, Presenter } from './reading/presenter.ts';
 export {

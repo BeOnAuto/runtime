@@ -69,13 +69,13 @@ A server is in [local mode](../self-host/security.md#local-mode) when it listens
 
 A client asks for the scopes the protected resource metadata names:
 
-- `org:read`, `org:write`, `playbook:read` and `playbook:write`, the four permissions;
+- `org:read`, `org:write`, `playbook:read` and `playbook:write`, the four permissions a sign-in asks for;
 - `user:org:read`, which grants no permission.
 
 The runtime asks the person, on a page of its own, whether to allow an agent. What a token then allows:
 
-- An access token admits the person to the org `default`, over every playbook, with the permissions among the scopes it holds. Only `org:read`, `org:write`, `playbook:read` and `playbook:write` are permissions. Any other scope grants none, `user:org:read` included.
-- An access token that grants none of the four still admits the person, with no permission. Every operation then refuses them `403` with `insufficient_scope`. The challenge's `scope` names the permissions the operation needs, so a client asks for a token with more.
+- An access token admits the person to the org `default`, over every playbook, with the permissions among the scopes it holds. Only `org:read`, `org:write`, `playbook:read`, `playbook:write` and `playbook:run` are permissions. `playbook:write` includes `playbook:run`, so a sign-in does not ask for it. Any other scope grants none, `user:org:read` included.
+- An access token that grants no permission still admits the person. Every operation then refuses them `403` with `insufficient_scope`. The challenge's `scope` names the permissions the operation needs, so a client asks for a token with more.
 - Every other org refuses the person `403` with `insufficient_scope`, over HTTP and on the MCP endpoints. `/mcp` serves them the org `default`.
 
 API keys cover what sign-in does not: a machine, a pipeline or an agent that does not sign in, and a grant over only some of an org's playbooks, such as reading one playbook.

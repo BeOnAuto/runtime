@@ -119,6 +119,7 @@ export function defineSendRunEvent(runs: Pick<WorkflowHost, 'deliver'>, names: P
     title: 'Send event to workflow run',
     description,
     route: { method: 'POST', path: '/runs/{run_id}/events' },
+    permittedBy: ['playbook:write', 'playbook:run'],
     inputSchema: Schema.Struct({ run_id: RunIdInputField, event: eventSchemaOf(names) }),
     outputSchema: Schema.Struct({
       run_id: Schema.String.annotate({ description: 'The id of the workflow run' }),

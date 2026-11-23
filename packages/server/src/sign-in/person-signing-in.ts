@@ -1,7 +1,7 @@
 import { signInScopes } from '@on.auto/identity';
 import { personIdOf } from '@on.auto/openid-connect';
 import { browserAt, type Browser } from '@on.auto/openid-connect/testing';
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, normalizedPermissions } from '@on.auto/operations';
 
 import { providerOverHttps } from './issuer-over-https.ts';
 import {
@@ -77,7 +77,12 @@ export async function personSigningIn(): Promise<PersonSigningIn> {
     agentTokenAt: async (origin, who) => {
       const browser = browserAt(origin, publicUrl);
       const clientId = await registered(browser);
-      const consent = await signedInAs({ provider }, browser, { clientId, scope: allPermissions.join(' ') }, who);
+      const consent = await signedInAs(
+        { provider },
+        browser,
+        { clientId, scope: normalizedPermissions(allPermissions).join(' ') },
+        who,
+      );
       return exchanged(browser, await allowed(browser, locationOf(consent)), { clientId });
     },
   };

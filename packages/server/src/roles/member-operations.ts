@@ -75,7 +75,8 @@ function defineSetMemberRole(kept: MembersKept) {
   return defineHttpOperation('org', 'command', {
     name: 'set_member_role',
     title: 'Set member role',
-    description: 'Gives a member of the org a role, admin, editor or viewer, never leaving the org without an admin.',
+    description:
+      'Gives a member of the org a role, admin, editor, operator or viewer, never leaving the org without an admin.',
     route: { method: 'PUT', path: '/members/{member}/role' },
     body: { kind: 'json' },
     inputSchema: Schema.Struct({ member: MemberField, role: RoleField }),

@@ -96,6 +96,27 @@ const howPeopleJoin: readonly RecordedRoleAssignmentEvent[] = [
   },
 ];
 
+const anOperator = { type: 'built_in', id: 'operator' } as const;
+
+const theOperatorRole: readonly RecordedRoleAssignmentEvent[] = [
+  {
+    type: 'role_assigned',
+    data: { principal: priya, role: anOperator, scope: acme, source: 'manual' },
+    context: acted,
+  },
+  {
+    type: 'enrolment_set',
+    data: {
+      enrolment: 'join_without_invitation',
+      previous_enrolment: 'join_without_invitation',
+      role: anOperator,
+      previous_role: { type: 'built_in', id: 'viewer' },
+      scope: acme,
+    },
+    context: acted,
+  },
+];
+
 const decoded = Schema.decodeUnknownResult(RoleAssignmentEventSchema);
 
 type Changed = Readonly<Record<string, unknown>>;
@@ -112,6 +133,7 @@ function readWith(data: Changed): boolean {
 
 const read: readonly Changed[] = [
   {},
+  { role: anOperator },
   { scope: { type: 'playbook', id: 'month-end' } },
   { source: 'invitation' },
   { source: 'enrolment' },
@@ -286,7 +308,12 @@ describe('the facts of role assignments', () => {
   recordedFactsBehaviour({
     schema: RoleAssignmentEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.57.0': baseline, '0.65.0': firstAdmin, '0.69.0': [...invitations, ...howPeopleJoin] },
+    releases: {
+      '0.57.0': baseline,
+      '0.65.0': firstAdmin,
+      '0.69.0': [...invitations, ...howPeopleJoin],
+      '0.73.0': theOperatorRole,
+    },
   });
 });
 
@@ -335,7 +362,8 @@ describe('what a fact of how people join holds', () => {
       joiningReadWith('enrolment_set', {}),
       joiningReadWith('enrolment_set', { enrolment: 'invitation', previous_enrolment: 'join_without_invitation' }),
       joiningReadWith('enrolment_set', { role: { type: 'built_in', id: 'viewer' }, previous_role: anEditor }),
-    ]).toEqual([true, true, true]);
+      joiningReadWith('enrolment_set', { role: anOperator, previous_role: anOperator }),
+    ]).toEqual([true, true, true, true]);
     expect([
       joiningReadWith('enrolment_set', { enrolment: 'automatic_invitation' }),
       joiningReadWith('enrolment_set', { previous_enrolment: undefined }),
@@ -370,6 +398,7 @@ describe('the identity service’s role keys, both ways', () => {
     expect(builtInRoleIds.map((role) => [role, identityServiceKeyOfRole[role]])).toEqual([
       ['admin', 'org:admin'],
       ['editor', 'org:member'],
+      ['operator', 'org:member'],
       ['viewer', 'org:member'],
     ]);
     expect([...roleOfIdentityServiceKey.keys()].map((key) => identityServiceKeyOfRole[roleOfKey(key)])).toEqual([

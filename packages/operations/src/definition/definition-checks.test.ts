@@ -271,3 +271,27 @@ describe('the permissions that let a caller call an operation', () => {
     ).toThrow('The operation probe is permitted by no permission');
   });
 });
+
+describe('a permission another includes, among those that let a caller call an operation', () => {
+  it('must be declared beside the one that includes it, so a credential that holds that one is never refused', () => {
+    const post = { method: 'POST', path: '/probe' } as const;
+    const running = defineCommand('playbook', {
+      ...probe,
+      route: post,
+      inputSchema: Empty,
+      outputSchema: Empty,
+      permittedBy: ['playbook:write', 'playbook:run'],
+    });
+
+    expect(running.registration.permissions).toEqual(['playbook:write', 'playbook:run']);
+    expect(() =>
+      defineCommand('playbook', {
+        ...probe,
+        route: post,
+        inputSchema: Empty,
+        outputSchema: Empty,
+        permittedBy: ['playbook:read', 'playbook:run'],
+      }),
+    ).toThrow('The operation probe is permitted by playbook:run and not by playbook:write');
+  });
+});

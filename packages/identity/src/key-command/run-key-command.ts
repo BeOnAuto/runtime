@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, normalizedPermissions } from '@on.auto/operations';
 import { Result, Schema } from 'effect';
 
 import { KeyGrantSchema, createApiKey, type KeyGrant } from '../keys/api-key.ts';
@@ -58,7 +58,7 @@ function grantFrom(args: readonly string[]): KeyGrant | string {
   const decoded = decodeGrant({
     id: options.id ?? randomBytes(4).toString('hex'),
     ...(options.org === undefined ? {} : { org: options.org }),
-    permissions: options.permissions?.split(',') ?? allPermissions,
+    permissions: options.permissions?.split(',') ?? normalizedPermissions(allPermissions),
     playbooks: playbooksFrom(options.playbooks),
   });
   return Result.isSuccess(decoded) ? decoded.success : describeIssues(failureOf(decoded.failure.issue), asOption);

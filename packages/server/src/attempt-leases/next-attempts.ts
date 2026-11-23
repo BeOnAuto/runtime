@@ -44,6 +44,7 @@ export function defineNextAttempt(capabilities: readonly Capability[]) {
     description:
       'Makes the next attempt of a started run whose attempt before it died, from its facts, or answers the run as it stands.',
     route: { method: 'POST', path: '/runs/{run_id}/next-attempt' },
+    permittedBy: ['playbook:write', 'playbook:run'],
     inputSchema: Schema.Struct({ type: Schema.String, run_id: RunIdInputField }),
     outputSchema: RunDetailSchema,
     reasons,
@@ -66,6 +67,7 @@ export function defineRefusedAttempt(capabilities: readonly Capability[]) {
     description:
       'Ends a started run whose attempt before it died with the refusal its next attempt met, or answers the run as it stands.',
     route: { method: 'POST', path: '/runs/{run_id}/refused-attempt' },
+    permittedBy: ['playbook:write', 'playbook:run'],
     inputSchema: Schema.Struct({ type: Schema.String, run_id: RunIdInputField, detail: Schema.String }),
     outputSchema: RunDetailSchema,
     reasons,

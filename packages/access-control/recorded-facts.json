@@ -5,5 +5,7 @@
   "src/assignments/0.69.0/enrolment_set.json": "3d820f114875b5be4974897ce377940fe3503b40e5f89b698f047964ad505044",
   "src/assignments/0.69.0/invitation_accepted.json": "dfd4d70dd414beced99347c3f6581559a0b18158057871ad97e75abca90bb852",
   "src/assignments/0.69.0/invitation_revoked.json": "bc8b749cb43d1aa1e970c2b281762c10a75dacd035d585d562159c44e508bd0d",
-  "src/assignments/0.69.0/member_invited.json": "5c7ee9e44c2ed8f31fb878df63b8bea965d48bb3c04ad420315b0797129ebf00"
+  "src/assignments/0.69.0/member_invited.json": "5c7ee9e44c2ed8f31fb878df63b8bea965d48bb3c04ad420315b0797129ebf00",
+  "src/assignments/0.73.0/enrolment_set.json": "7340b662726d440d500422b113c48d69d75fd1a9fd0c2bb01742a795fff59774",
+  "src/assignments/0.73.0/role_assigned.json": "3347296a6f437993124c386ac32360e26c345df234a5df449e609f3486b8b30e"
 }

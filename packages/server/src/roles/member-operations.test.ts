@@ -102,6 +102,8 @@ function inServedOrder(...groups: readonly (readonly string[])[]): readonly stri
   return groups.flat().toSorted((one, other) => servedOrder.indexOf(one) - servedOrder.indexOf(other));
 }
 
+const atTheirServer = (role: string) => `${role}, in Studio at their company’s server, holding every permission`;
+
 const allowedAndRefused = [
   ['Admin, in Studio', inServedOrder(listing, inviting, changing), [], []],
   ['Admin, through their connected agent', inServedOrder(listing, inviting), [], changing],
@@ -112,6 +114,13 @@ const allowedAndRefused = [
   ['Editor, asking @Auto in Slack', inServedOrder(listing, inviting), changing, []],
   ['Editor, in a run they started', inServedOrder(listing, inviting), [], []],
   ['Editor, through an agent they approved to read', listing, changing, []],
+  [atTheirServer('Editor'), inServedOrder(listing, inviting), changing, []],
+  ['Operator, in Studio', listing, inServedOrder(inviting, changing), []],
+  ['Operator, through their connected agent', listing, inServedOrder(inviting, changing), []],
+  ['Operator, asking @Auto in Slack', listing, inServedOrder(inviting, changing), []],
+  ['Operator, in a run they started', inServedOrder(listing, inviting), [], []],
+  ['Operator, through an agent they approved to read', listing, inServedOrder(inviting, changing), []],
+  [atTheirServer('Operator'), listing, inServedOrder(inviting, changing), []],
   ['Viewer, in Studio', listing, inServedOrder(inviting, changing), []],
   ['Viewer, through their connected agent', listing, inServedOrder(inviting, changing), []],
   ['Viewer, asking @Auto in Slack', listing, inServedOrder(inviting, changing), []],
@@ -120,6 +129,7 @@ const allowedAndRefused = [
   ['An Editor of another org, in Studio', [], inServedOrder(listing, inviting, changing), []],
   ['An API key', inServedOrder(listing, inviting), [], changing],
   ['An API key that reads', listing, [], changing],
+  ['An API key that runs', listing, [], changing],
   ['Playbook alpha, in a run a trigger or a schedule started', [], [], []],
   ['The local developer', inServedOrder(listing, inviting), [], changing],
 ];

@@ -26,6 +26,7 @@ Each API key belongs to one org and has permissions for a set of playbooks:
 | `org:write`      | Create, update and retire playbooks, add, reconnect and remove connections, set which playbooks may use one, and, for a person whose role lets them, give or take away a role                                                              |
 | `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                                                                        |
 | `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                                                             |
+| `playbook:run`   | Run a function or workflow, cancel a run, send or publish an event and answer a request. `playbook:write` includes it                                                                                                                      |
 
 Each route table below names the permission a route needs.
 
@@ -246,19 +247,19 @@ Content-Type: application/json
 
 These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation            | Method and route                             | Permission       | Input                                               |
-| -------------------- | -------------------------------------------- | ---------------- | --------------------------------------------------- |
-| `create_definition`  | `POST /definitions/reasoning`                | `playbook:write` | `name`, `source`, `diagram`, optional `overview`    |
-| `list_definitions`   | `GET /definitions/reasoning`                 | `playbook:read`  | Optional `include_retired`                          |
-| `get_definition`     | `GET /definitions/reasoning/{name}`          | `playbook:read`  | Name in path; optional `render` and `sample_output` |
-| `update_definition`  | `PUT /definitions/reasoning/{name}`          | `playbook:write` | `source`, `diagram`, optional `overview`            |
-| `pause_definition`   | `POST /definitions/reasoning/{name}/pause`   | `playbook:write` | Optional `reason`                                   |
-| `resume_definition`  | `POST /definitions/reasoning/{name}/resume`  | `playbook:write` | Name in path                                        |
-| `retire_definition`  | `POST /definitions/reasoning/{name}/retire`  | `playbook:write` | Name in path                                        |
-| `restore_definition` | `POST /definitions/reasoning/{name}/restore` | `playbook:write` | Name in path                                        |
-| `run_definition`     | `POST /definitions/reasoning/{name}/run`     | `playbook:write` | Optional `input`, optional UUID `run_id`            |
-| `render_page`        | `POST /definitions/reasoning/{name}/render`  | `playbook:read`  | Optional `sample_output` or `run_id`                |
-| `get_run`            | `GET /runs/{run_id}`                         | `playbook:read`  | Run id in path                                      |
+| Operation            | Method and route                             | Permission                         | Input                                               |
+| -------------------- | -------------------------------------------- | ---------------------------------- | --------------------------------------------------- |
+| `create_definition`  | `POST /definitions/reasoning`                | `playbook:write`                   | `name`, `source`, `diagram`, optional `overview`    |
+| `list_definitions`   | `GET /definitions/reasoning`                 | `playbook:read`                    | Optional `include_retired`                          |
+| `get_definition`     | `GET /definitions/reasoning/{name}`          | `playbook:read`                    | Name in path; optional `render` and `sample_output` |
+| `update_definition`  | `PUT /definitions/reasoning/{name}`          | `playbook:write`                   | `source`, `diagram`, optional `overview`            |
+| `pause_definition`   | `POST /definitions/reasoning/{name}/pause`   | `playbook:write`                   | Optional `reason`                                   |
+| `resume_definition`  | `POST /definitions/reasoning/{name}/resume`  | `playbook:write`                   | Name in path                                        |
+| `retire_definition`  | `POST /definitions/reasoning/{name}/retire`  | `playbook:write`                   | Name in path                                        |
+| `restore_definition` | `POST /definitions/reasoning/{name}/restore` | `playbook:write`                   | Name in path                                        |
+| `run_definition`     | `POST /definitions/reasoning/{name}/run`     | `playbook:write` or `playbook:run` | Optional `input`, optional UUID `run_id`            |
+| `render_page`        | `POST /definitions/reasoning/{name}/render`  | `playbook:read`                    | Optional `sample_output` or `run_id`                |
+| `get_run`            | `GET /runs/{run_id}`                         | `playbook:read`                    | Run id in path                                      |
 
 The `source` is a [reasoning function document](reasoning-format.md). These rules apply to the definitions of every type:
 
@@ -340,11 +341,11 @@ A run responds with `200`, `status: started` and its `run_id`. It then waits unt
 
 The requests of a playbook have two routes of their own, and a third where goals are kept, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation            | Method and route                          | Permission       | Input                                                                                       |
-| -------------------- | ----------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------- |
-| `list_interactions`  | `GET /interactions`                       | `playbook:read`  | Optional `to`, `type`, `function`, `limit`, `cursor` and, where goals are kept, `dismissed` |
-| `answer_interaction` | `POST /runs/{run_id}/answer`              | `playbook:write` | Run id in path; `answer` and an optional `claimed_for`                                      |
-| `dismiss_goal_thing` | `PUT /goals/{goal}/things/{id}/dismissed` | `playbook:write` | Goal and thing id in path; an optional `dismissed`, `false` to restore the thing            |
+| Operation            | Method and route                          | Permission                         | Input                                                                                       |
+| -------------------- | ----------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
+| `list_interactions`  | `GET /interactions`                       | `playbook:read`                    | Optional `to`, `type`, `function`, `limit`, `cursor` and, where goals are kept, `dismissed` |
+| `answer_interaction` | `POST /runs/{run_id}/answer`              | `playbook:write` or `playbook:run` | Run id in path; `answer` and an optional `claimed_for`                                      |
+| `dismiss_goal_thing` | `PUT /goals/{goal}/things/{id}/dismissed` | `playbook:write`                   | Goal and thing id in path; an optional `dismissed`, `false` to restore the thing            |
 
 ### Listing open requests
 
@@ -492,21 +493,21 @@ The assets of a playbook have an operation of their own, relative to `/v1/orgs/{
 
 These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation            | Method and route                                     | Permission       | Input                                                                  |
-| -------------------- | ---------------------------------------------------- | ---------------- | ---------------------------------------------------------------------- |
-| `create_definition`  | `POST /definitions/workflow`                         | `playbook:write` | `name`, `source`, optional `overview`                                  |
-| `list_definitions`   | `GET /definitions/workflow`                          | `playbook:read`  | Optional `include_retired`                                             |
-| `get_definition`     | `GET /definitions/workflow/{name}`                   | `playbook:read`  | Name in path; optional `render` and `sample_output`                    |
-| `update_definition`  | `PUT /definitions/workflow/{name}`                   | `playbook:write` | `source`, optional `overview`                                          |
-| `pause_definition`   | `POST /definitions/workflow/{name}/pause`            | `playbook:write` | Optional `reason`                                                      |
-| `resume_definition`  | `POST /definitions/workflow/{name}/resume`           | `playbook:write` | Name in path                                                           |
-| `retire_definition`  | `POST /definitions/workflow/{name}/retire`           | `playbook:write` | Name in path                                                           |
-| `run_definition`     | `POST /definitions/workflow/{name}/run`              | `playbook:write` | Optional `input`, optional UUID `run_id`                               |
-| `render_page`        | `POST /definitions/workflow/{name}/render`           | `playbook:read`  | Optional `sample_output` or `run_id`                                   |
-| `get_run`            | `GET /runs/{run_id}`                                 | `playbook:read`  | Run id in path                                                         |
-| `cancel_run`         | `POST /runs/{run_id}/cancel`                         | `playbook:write` | Optional `reason`                                                      |
-| `send_run_event`     | `POST /runs/{run_id}/events`                         | `playbook:write` | `event` with `type`, and optional `id`, `source`, `subject` and `data` |
-| `list_queued_starts` | `GET /definitions/workflow/{workflow}/queued-starts` | `playbook:read`  | Name in path; optional `limit` and `cursor`                            |
+| Operation            | Method and route                                     | Permission                         | Input                                                                  |
+| -------------------- | ---------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| `create_definition`  | `POST /definitions/workflow`                         | `playbook:write`                   | `name`, `source`, optional `overview`                                  |
+| `list_definitions`   | `GET /definitions/workflow`                          | `playbook:read`                    | Optional `include_retired`                                             |
+| `get_definition`     | `GET /definitions/workflow/{name}`                   | `playbook:read`                    | Name in path; optional `render` and `sample_output`                    |
+| `update_definition`  | `PUT /definitions/workflow/{name}`                   | `playbook:write`                   | `source`, optional `overview`                                          |
+| `pause_definition`   | `POST /definitions/workflow/{name}/pause`            | `playbook:write`                   | Optional `reason`                                                      |
+| `resume_definition`  | `POST /definitions/workflow/{name}/resume`           | `playbook:write`                   | Name in path                                                           |
+| `retire_definition`  | `POST /definitions/workflow/{name}/retire`           | `playbook:write`                   | Name in path                                                           |
+| `run_definition`     | `POST /definitions/workflow/{name}/run`              | `playbook:write` or `playbook:run` | Optional `input`, optional UUID `run_id`                               |
+| `render_page`        | `POST /definitions/workflow/{name}/render`           | `playbook:read`                    | Optional `sample_output` or `run_id`                                   |
+| `get_run`            | `GET /runs/{run_id}`                                 | `playbook:read`                    | Run id in path                                                         |
+| `cancel_run`         | `POST /runs/{run_id}/cancel`                         | `playbook:write` or `playbook:run` | Optional `reason`                                                      |
+| `send_run_event`     | `POST /runs/{run_id}/events`                         | `playbook:write` or `playbook:run` | `event` with `type`, and optional `id`, `source`, `subject` and `data` |
+| `list_queued_starts` | `GET /definitions/workflow/{workflow}/queued-starts` | `playbook:read`                    | Name in path; optional `limit` and `cursor`                            |
 
 ### A saved workflow
 
@@ -583,7 +584,7 @@ A run accepts an event with a given `id` only once, so a request can be retried 
 
 ### Cancelling a run
 
-`cancel_run` needs `playbook:write`. It cancels:
+`cancel_run` needs `playbook:write` or `playbook:run`. It cancels:
 
 - a workflow run that is still `started`;
 - the run of a reasoning function that is still `started`, whether its client is there or gone;
@@ -725,9 +726,9 @@ A run that has ended is never performed again in this way; [Retrying under a run
 
 `publish_event` records an event in a playbook, such as a month closed in a ledger or a deal won in a CRM.
 
-| Operation       | Method and route                                  | Permission       | Input   |
-| --------------- | ------------------------------------------------- | ---------------- | ------- |
-| `publish_event` | `POST /v1/orgs/{org}/playbooks/{playbook}/events` | `playbook:write` | `event` |
+| Operation       | Method and route                                  | Permission                         | Input   |
+| --------------- | ------------------------------------------------- | ---------------------------------- | ------- |
+| `publish_event` | `POST /v1/orgs/{org}/playbooks/{playbook}/events` | `playbook:write` or `playbook:run` | `event` |
 
 The body contains `event`, a [CloudEvents 1.0](https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md) event:
 
@@ -1569,7 +1570,7 @@ A request with several faults is refused for the first, the fields in the order 
 
 ## Roles
 
-A person of the org holds a role there: `admin`, who manages the members; `editor`, who builds, runs and changes playbooks; or `viewer`, who views and comments. The runtime records each role given and taken away as a fact, `role_assigned` and `role_unassigned`, on the org's own stream of its role assignments, and keeps who holds what as they are recorded. A signed-in person may do what their role allows, within the permissions of their credential, and a change of role holds from their next call ([The roles](../self-host/security.md#the-roles)). A key and the local developer hold no role, and may do what their credential grants, as [Requests and access](#requests-and-access) sets out.
+A person of the org holds a role there: `admin`, who manages the members; `editor`, who builds, runs and changes playbooks; `operator`, who runs playbooks and answers requests; or `viewer`, who views and comments. The runtime records each role given and taken away as a fact, `role_assigned` and `role_unassigned`, on the org's own stream of its role assignments, and keeps who holds what as they are recorded. A signed-in person may do what their role allows, within the permissions of their credential, and a change of role holds from their next call ([The roles](../self-host/security.md#the-roles)). A key and the local developer hold no role, and may do what their credential grants, as [Requests and access](#requests-and-access) sets out.
 
 | Operation               | Method and route                           | Permission                    | Input                                 |
 | ----------------------- | ------------------------------------------ | ----------------------------- | ------------------------------------- |
@@ -1583,7 +1584,7 @@ A role assignment holds ids alone:
 | Field         | What it holds                                                                                                                                                                                                                                                                  |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `principal`   | Who holds the role: `type`, `person`, and `id`, the person's id in Auto                                                                                                                                                                                                        |
-| `role`        | `type`, `built_in`, a role every release ships, and `id`, `admin`, `editor` or `viewer`                                                                                                                                                                                        |
+| `role`        | `type`, `built_in`, a role every release ships, and `id`, `admin`, `editor`, `operator` or `viewer`                                                                                                                                                                            |
 | `scope`       | Where it holds: `type`, `org`, and `id`, the org's id                                                                                                                                                                                                                          |
 | `source`      | How it was given: `manual`, by a person; `invitation`; `enrolment`, by joining without an invitation; `import`, from the roles people held when roles were first kept; `command`, by the runtime's command; `identity_service`; or `bootstrap`, to the first person to sign in |
 | `assigned_at` | When it was given, in ISO 8601                                                                                                                                                                                                                                                 |
@@ -1596,14 +1597,14 @@ A role assignment holds ids alone:
 - The org always keeps an admin: a change that would leave it without one is refused, even when two are asked at the same moment.
 - `assign_role` gives a role only to a person of the org.
 
-| Case                                                                                                     | Response                        |
-| -------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| A `role` that is not `admin`, `editor` or `viewer`, or a `person` that is empty or longer than 256 bytes | `invalid_input`                 |
-| A `cursor` that is no `next_cursor` of `list_role_assignments`                                           | `invalid_input` at `/cursor`    |
-| A caller who is not a person signed in to Studio, such as a key or an agent                              | `forbidden`                     |
-| A person whose role does not let them give roles, or a role beyond their own                             | `forbidden`                     |
-| An `assign_role` for someone who is not a person of the org                                              | `not_found`                     |
-| A change that would leave the org without an admin                                                       | `conflict` of kind `unworkable` |
+| Case                                                                                                                 | Response                        |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| A `role` that is not `admin`, `editor`, `operator` or `viewer`, or a `person` that is empty or longer than 256 bytes | `invalid_input`                 |
+| A `cursor` that is no `next_cursor` of `list_role_assignments`                                                       | `invalid_input` at `/cursor`    |
+| A caller who is not a person signed in to Studio, such as a key or an agent                                          | `forbidden`                     |
+| A person whose role does not let them give roles, or a role beyond their own                                         | `forbidden`                     |
+| An `assign_role` for someone who is not a person of the org                                                          | `not_found`                     |
+| A change that would leave the org without an admin                                                                   | `conflict` of kind `unworkable` |
 
 ```http
 PUT /v1/orgs/acme/role-assignments/user_7kLm2/viewer
@@ -1622,17 +1623,17 @@ Authorization: Bearer <token>
 
 Where the runtime signs people in ([Let people sign in](../self-host/security.md#let-people-sign-in)), it serves the members of its org, everyone who holds a role there, with the name and address their sign-in gave, the invitations to join it, and how people join it.
 
-| Operation           | Method and route                                | Permission  | Input                                                                                                        |
-| ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------ |
-| `list_members`      | `GET /members`                                  | `org:read`  | None                                                                                                         |
-| `invite_member`     | `POST /members/invitations`                     | `org:write` | `email_address`, and an optional `role`, `editor` or `viewer`                                                |
-| `invite_admin`      | `POST /members/admin-invitations`               | `org:write` | `email_address`                                                                                              |
-| `resend_invitation` | `POST /members/invitations/{invitation}/resend` | `org:write` | The invitation's id, in path                                                                                 |
-| `revoke_invitation` | `DELETE /members/invitations/{invitation}`      | `org:write` | The invitation's id, in path                                                                                 |
-| `set_member_role`   | `PUT /members/{member}/role`                    | `org:write` | The member's id, in path, and `role`, in the body                                                            |
-| `remove_member`     | `DELETE /members/{member}`                      | `org:write` | The member's id, in path                                                                                     |
-| `get_enrolment`     | `GET /enrolment`                                | `org:read`  | None                                                                                                         |
-| `set_enrolment`     | `PUT /enrolment`                                | `org:write` | `enrolment`, `invitation` or `join_without_invitation`, and an optional `default_role`, `editor` or `viewer` |
+| Operation           | Method and route                                | Permission  | Input                                                                                                                    |
+| ------------------- | ----------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `list_members`      | `GET /members`                                  | `org:read`  | None                                                                                                                     |
+| `invite_member`     | `POST /members/invitations`                     | `org:write` | `email_address`, and an optional `role`, `editor`, `operator` or `viewer`                                                |
+| `invite_admin`      | `POST /members/admin-invitations`               | `org:write` | `email_address`                                                                                                          |
+| `resend_invitation` | `POST /members/invitations/{invitation}/resend` | `org:write` | The invitation's id, in path                                                                                             |
+| `revoke_invitation` | `DELETE /members/invitations/{invitation}`      | `org:write` | The invitation's id, in path                                                                                             |
+| `set_member_role`   | `PUT /members/{member}/role`                    | `org:write` | The member's id, in path, and `role`, in the body                                                                        |
+| `remove_member`     | `DELETE /members/{member}`                      | `org:write` | The member's id, in path                                                                                                 |
+| `get_enrolment`     | `GET /enrolment`                                | `org:read`  | None                                                                                                                     |
+| `set_enrolment`     | `PUT /enrolment`                                | `org:write` | `enrolment`, `invitation` or `join_without_invitation`, and an optional `default_role`, `editor`, `operator` or `viewer` |
 
 A member holds:
 
@@ -1641,7 +1642,7 @@ A member holds:
 | `id`         | The person's id in Auto                                                                               |
 | `name`       | Their name, as their last sign-in gave it, or `null`                                                  |
 | `identifier` | Their email address, as their last sign-in gave it, or `null`                                         |
-| `role`       | `admin`, `editor` or `viewer`                                                                         |
+| `role`       | `admin`, `editor`, `operator` or `viewer`                                                             |
 | `joined_at`  | When they first signed in, or, for someone given a role before they ever signed in, when it was given |
 
 An invitation holds:
@@ -1650,7 +1651,7 @@ An invitation holds:
 | --------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `id`            | The invitation's id                                                                                                |
 | `email_address` | The address it was made for, as it was typed                                                                       |
-| `role`          | `admin`, `editor` or `viewer`, the role of whoever accepts it                                                      |
+| `role`          | `admin`, `editor`, `operator` or `viewer`, the role of whoever accepts it                                          |
 | `status`        | `pending`, or `revoked` in the answer of `revoke_invitation`                                                       |
 | `invited_at`    | When it was made                                                                                                   |
 | `expires_at`    | When it ends, 30 days after it was made                                                                            |
@@ -1665,7 +1666,7 @@ An invitation holds:
 - `set_member_role` and `remove_member` also revoke the invitations pending to the address the runtime holds for the member, in any letter case.
 - Only an admin signed in to Studio invites an admin, resends or revokes an invitation, gives a role or removes a member, and the org always keeps an admin, as with `assign_role`.
 - `get_enrolment` answers `enrolment`, how people join the org, and `default_role`, the role a person gets when they join without an invitation. With `join_without_invitation`, a person who signs in and holds no role joins with the default role. With `invitation`, that person needs an invitation, and signing in without one shows a page that says so. Either way, the first person to sign in becomes the admin. A person who brings an invitation joins with its role, and a person an admin removed needs a new invitation. Until an admin changes them, `enrolment` is `join_without_invitation` and `default_role` is `viewer`.
-- `set_enrolment` sets `enrolment` and, when it is given, `default_role`; without it, the default role stays as it is. The change holds for people who join after it, and members keep their role. It answers both as they now are. Only an admin signed in to Studio changes them. The default role is `editor` or `viewer`, never `admin`.
+- `set_enrolment` sets `enrolment` and, when it is given, `default_role`; without it, the default role stays as it is. The change holds for people who join after it, and members keep their role. It answers both as they now are. Only an admin signed in to Studio changes them. The default role is `editor`, `operator` or `viewer`, never `admin`.
 
 | Case                                                                                                                                                                                                               | Response                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
@@ -1674,7 +1675,7 @@ An invitation holds:
 | An `invite_member` from a caller who is not a person, such as a key                                                                                                                                                | `forbidden`                     |
 | Any other change from a caller who is not a person signed in to Studio, such as a key or an agent                                                                                                                  | `forbidden`                     |
 | A person whose role does not allow the change, such as a viewer who invites anyone, or an editor who invites an admin, resends or revokes an invitation, gives a role, removes a member or changes how people join | `forbidden`                     |
-| A `default_role` other than `editor` or `viewer`, or an `enrolment` other than `invitation` or `join_without_invitation`                                                                                           | `invalid_input`                 |
+| A `default_role` other than `editor`, `operator` or `viewer`, or an `enrolment` other than `invitation` or `join_without_invitation`                                                                               | `invalid_input`                 |
 | A `resend_invitation` or a `revoke_invitation` for an invitation that is not pending                                                                                                                               | `not_found`                     |
 | A `set_member_role` or a `remove_member` for someone who holds no role, such as a person removed already                                                                                                           | `not_found`                     |
 | A change that would leave the org without an admin                                                                                                                                                                 | `conflict` of kind `unworkable` |

@@ -1,6 +1,6 @@
 import type { Permission } from '@on.auto/operations';
 
-export const builtInRoleIds = ['admin', 'editor', 'viewer'] as const;
+export const builtInRoleIds = ['admin', 'editor', 'operator', 'viewer'] as const;
 
 export type BuiltInRoleId = (typeof builtInRoleIds)[number];
 
@@ -11,15 +11,22 @@ interface BuiltInRole {
 
 export type RoleTable = Readonly<Record<BuiltInRoleId, BuiltInRole>>;
 
-const everyPermission: readonly Permission[] = ['org:read', 'org:write', 'playbook:read', 'playbook:write'];
+const everyPermission: readonly Permission[] = [
+  'org:read',
+  'org:write',
+  'playbook:read',
+  'playbook:write',
+  'playbook:run',
+];
 
 export const builtInRoles: RoleTable = {
   admin: { permits: everyPermission, assignsRoles: true },
   editor: { permits: everyPermission, assignsRoles: false },
+  operator: { permits: ['org:read', 'playbook:read', 'playbook:run'], assignsRoles: false },
   viewer: { permits: ['org:read', 'playbook:read'], assignsRoles: false },
 };
 
-export const defaultRoleIds = ['editor', 'viewer'] as const satisfies readonly BuiltInRoleId[];
+export const defaultRoleIds = ['editor', 'operator', 'viewer'] as const satisfies readonly BuiltInRoleId[];
 
 export type DefaultRoleId = (typeof defaultRoleIds)[number];
 

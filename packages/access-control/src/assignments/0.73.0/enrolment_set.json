@@ -1,0 +1,23 @@
+{
+  "type": "enrolment_set",
+  "data": {
+    "enrolment": "join_without_invitation",
+    "previous_enrolment": "join_without_invitation",
+    "role": {
+      "type": "built_in",
+      "id": "operator"
+    },
+    "previous_role": {
+      "type": "built_in",
+      "id": "viewer"
+    },
+    "scope": {
+      "type": "org",
+      "id": "acme"
+    }
+  },
+  "context": {
+    "at": "2026-11-14T15:20:00.000Z",
+    "by": "person:user_2ada"
+  }
+}

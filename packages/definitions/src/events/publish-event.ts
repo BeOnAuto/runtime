@@ -77,6 +77,7 @@ export function definePublishEvent({ refusingThePlaybooksOwnAttributes }: Playbo
     title: 'Publish event',
     description,
     route: { method: 'POST', path: '/events' },
+    permittedBy: ['playbook:write', 'playbook:run'],
     inputSchema: Schema.Struct({ event: EventToPublishSchema.check(refusingThePlaybooksOwnAttributes) }),
     outputSchema: PublishedSchema,
     reasons: ['invalid_input', 'conflict'],

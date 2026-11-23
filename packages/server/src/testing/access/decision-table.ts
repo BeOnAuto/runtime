@@ -2,6 +2,7 @@ import type { RoleAssignments } from '@on.auto/access-control';
 import {
   allPermissions,
   enforcedDecisionOf,
+  normalizedPermissions,
   type AccessContext,
   type AccessRequest,
   type ArrivedVia,
@@ -28,7 +29,11 @@ interface CallerKind {
 
 const reading: readonly Permission[] = ['org:read', 'playbook:read'];
 
-type RoleOfAPerson = 'Admin' | 'Editor' | 'Viewer';
+const running: readonly Permission[] = ['org:read', 'playbook:read', 'playbook:run'];
+
+const whatASignInGrants = normalizedPermissions(allPermissions);
+
+type RoleOfAPerson = 'Admin' | 'Editor' | 'Operator' | 'Viewer';
 
 function personKinds(role: RoleOfAPerson): readonly CallerKind[] {
   const principal: PrincipalReference = { type: 'person', id: role.toLowerCase() };
@@ -49,6 +54,25 @@ const callerKinds: readonly CallerKind[] = [
     via: 'agent',
     permissions: reading,
   },
+  {
+    caller: 'Editor, in Studio at their company’s server, holding every permission',
+    principal: { type: 'person', id: 'editor' },
+    via: 'studio',
+    permissions: allPermissions,
+  },
+  ...personKinds('Operator'),
+  {
+    caller: 'Operator, through an agent they approved to read',
+    principal: { type: 'person', id: 'operator' },
+    via: 'agent',
+    permissions: reading,
+  },
+  {
+    caller: 'Operator, in Studio at their company’s server, holding every permission',
+    principal: { type: 'person', id: 'operator' },
+    via: 'studio',
+    permissions: allPermissions,
+  },
   ...personKinds('Viewer'),
   { caller: 'A person with no role, in Studio', principal: { type: 'person', id: 'nobody' }, via: 'studio' },
   {
@@ -59,6 +83,7 @@ const callerKinds: readonly CallerKind[] = [
   },
   { caller: 'An API key', principal: { type: 'key', id: 'ci-key' }, via: 'key' },
   { caller: 'An API key that reads', principal: { type: 'key', id: 'reader' }, via: 'key', permissions: reading },
+  { caller: 'An API key that runs', principal: { type: 'key', id: 'runner' }, via: 'key', permissions: running },
   {
     caller: 'Playbook alpha, in a run a trigger or a schedule started',
     principal: { type: 'playbook', id: 'alpha' },
@@ -66,12 +91,18 @@ const callerKinds: readonly CallerKind[] = [
     permissions: ['playbook:read', 'playbook:write'],
     playbooks: ['alpha'],
   },
-  { caller: 'The local developer', principal: { type: 'local_developer', id: 'local' }, via: 'local' },
+  {
+    caller: 'The local developer',
+    principal: { type: 'local_developer', id: 'local' },
+    via: 'local',
+    permissions: allPermissions,
+  },
 ];
 
 const heldRoles: readonly (readonly [string, string, string])[] = [
   ['admin', 'admin', 'acme'],
   ['editor', 'editor', 'acme'],
+  ['operator', 'operator', 'acme'],
   ['viewer', 'viewer', 'acme'],
   ['editor-of-globex', 'editor', 'globex'],
 ];
@@ -117,7 +148,7 @@ function requestOf(kind: CallerKind, operation: ServedDeclaration, unsaid: Unsai
       via: kind.via,
       granted: {
         org: kind.org ?? 'acme',
-        permissions: kind.permissions ?? allPermissions,
+        permissions: kind.permissions ?? whatASignInGrants,
         playbooks: kind.playbooks ?? '*',
       },
       operation: {

@@ -1,4 +1,4 @@
-import { catalogPathOf, takesNoBody, type RouteRegistration } from '@on.auto/operations';
+import { catalogPathOf, normalizedPermissions, takesNoBody, type RouteRegistration } from '@on.auto/operations';
 
 import { selfContainedSchemaOf } from '../tools/tool-schema.ts';
 import {
@@ -87,7 +87,9 @@ function successOf(registration: RouteRegistration, operationId: string): OpenAp
 
 function securityOf({ permissions }: RouteRegistration, signsPeopleIn: boolean): readonly OpenApiObject[] {
   const byKey = permissions.map((permission) => ({ bearer: [permission] }));
-  const byToken = signsPeopleIn ? permissions.map((permission) => ({ openIdConnect: [permission] })) : [];
+  const byToken = signsPeopleIn
+    ? normalizedPermissions(permissions).map((permission) => ({ openIdConnect: [permission] }))
+    : [];
   return [...byKey, ...byToken];
 }
 

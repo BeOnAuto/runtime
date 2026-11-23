@@ -57,9 +57,9 @@ function thingsOf({ scope, targetsPlaybook }: TestOperation): readonly Thing[] {
   return targetsPlaybook ? [org, alpha, beta] : [org];
 }
 
-type RoleOfAPerson = 'admin' | 'editor' | 'viewer' | 'no role';
+type RoleOfAPerson = 'admin' | 'editor' | 'operator' | 'viewer' | 'no role';
 
-const roles: readonly RoleOfAPerson[] = ['admin', 'editor', 'viewer', 'no role'];
+const roles: readonly RoleOfAPerson[] = ['admin', 'editor', 'operator', 'viewer', 'no role'];
 
 function personKinds(role: RoleOfAPerson): readonly CallerKind[] {
   const principal: PrincipalReference = { type: 'person', id: role };
@@ -102,6 +102,7 @@ const callerKinds: readonly CallerKind[] = [
 const rolesOfTheTable = rolesHeld({
   admin: [builtIn('admin', { type: 'org', id: 'acme' })],
   editor: [builtIn('editor', { type: 'org', id: 'acme' })],
+  operator: [builtIn('operator', { type: 'org', id: 'acme' })],
   viewer: [builtIn('viewer', { type: 'org', id: 'acme' })],
   'editor-of-globex': [builtIn('editor', { type: 'org', id: 'globex' })],
 });
@@ -152,6 +153,7 @@ const everythingButWhatManagesOrEnrols = [
   'set_connection_playbooks on org, alpha, beta',
   'get_definition on alpha, beta, d-02',
   'run_definition on alpha, beta, d-02',
+  'update_definition on alpha, beta, d-02',
   'make_comment on alpha, beta, d-02',
 ];
 
@@ -178,6 +180,15 @@ const reads = [
   'make_comment on alpha, beta, d-02',
 ];
 
+const runs = [
+  'list_connections on org',
+  'list_playbooks on org',
+  'search_in_org on org, alpha, beta',
+  'get_definition on alpha, beta, d-02',
+  'run_definition on alpha, beta, d-02',
+  'make_comment on alpha, beta, d-02',
+];
+
 const pinned = [
   { caller: 'Admin, in Studio', allowed: everythingAnAdminInStudioDoes },
   { caller: 'Admin, through an agent', allowed: everything },
@@ -189,6 +200,11 @@ const pinned = [
   { caller: 'Editor, through an agent approved to read', allowed: reads },
   { caller: 'Editor, asking @Auto in a conversation', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'Editor, in a run they started', allowed: everythingButWhatOnlyAnAdminDoes },
+  { caller: 'Operator, in Studio', allowed: [...runs, joining] },
+  { caller: 'Operator, through an agent', allowed: runs },
+  { caller: 'Operator, through an agent approved to read', allowed: reads },
+  { caller: 'Operator, asking @Auto in a conversation', allowed: runs },
+  { caller: 'Operator, in a run they started', allowed: everythingButWhatOnlyAnAdminDoes },
   { caller: 'Viewer, in Studio', allowed: [...reads, joining] },
   { caller: 'Viewer, through an agent', allowed: reads },
   { caller: 'Viewer, through an agent approved to read', allowed: reads },
@@ -216,6 +232,7 @@ const pinned = [
       'list_playbooks on org',
       'get_definition on alpha, d-02',
       'run_definition on alpha, d-02',
+      'update_definition on alpha, d-02',
       'make_comment on alpha, d-02',
     ],
   },

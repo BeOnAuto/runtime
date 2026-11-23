@@ -121,9 +121,9 @@ const endpointsServedSchemasWith = [
 ] as const;
 
 const endpointsOfTheShippedServerSigningPeopleIn: readonly Endpoint[] = [
-  { path: '/mcp', tools: 47, bytes: 77_423, mostBytes: mostListingBytes['own org'] },
-  { path: '/directory', tools: 45, bytes: 74_986, mostBytes: mostListingBytes.directory },
-  { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 28_986, mostBytes: mostListingBytes.org },
+  { path: '/mcp', tools: 47, bytes: 77_498, mostBytes: mostListingBytes['own org'] },
+  { path: '/directory', tools: 45, bytes: 75_061, mostBytes: mostListingBytes.directory },
+  { path: `/orgs/${defaultOrg}/mcp`, tools: 20, bytes: 29_061, mostBytes: mostListingBytes.org },
   { path: `/orgs/${defaultOrg}/playbooks/alpha/mcp`, tools: 32, bytes: 51_542, mostBytes: mostListingBytes.playbook },
 ];
 

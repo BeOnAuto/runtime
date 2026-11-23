@@ -2,6 +2,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  allPermissions,
   Caller,
   InAConversation,
   PlaybookContext,
@@ -241,7 +242,7 @@ describe('an operation that asks whether its caller may call another', () => {
 });
 
 function allowedWithEverythingGranted({ context }: AccessRequest): AccessDecision {
-  return context.granted.permissions.length === 4 ? allowedByTheTest : deniedByTheTest;
+  return context.granted.permissions.length === allPermissions.length ? allowedByTheTest : deniedByTheTest;
 }
 
 function allowedInStudio({ context }: AccessRequest): AccessDecision {

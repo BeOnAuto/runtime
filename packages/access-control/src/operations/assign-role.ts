@@ -51,7 +51,7 @@ export const assignRole = defineHttpOperation('org', 'command', {
   name: 'assign_role',
   title: 'Assign role',
   description: [
-    'Gives a person of the org a role, admin, editor or viewer, in place of the role they held, and answers the roles they hold after it.',
+    'Gives a person of the org a role, admin, editor, operator or viewer, in place of the role they held, and answers the roles they hold after it.',
     'A person signed in to Studio whose role lets them give roles gives it, never a role beyond their own, and never leaving the org without an admin.',
   ].join(' '),
   route: { method: 'PUT', path: '/role-assignments/{person}/{role}' },

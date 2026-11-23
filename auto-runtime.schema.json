@@ -40,7 +40,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["org:read", "org:write", "playbook:read", "playbook:write"]
+              "enum": ["org:read", "org:write", "playbook:read", "playbook:write", "playbook:run"]
             }
           },
           "playbooks": {

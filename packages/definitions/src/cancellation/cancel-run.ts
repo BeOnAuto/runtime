@@ -49,6 +49,7 @@ export function defineCancelRun(capabilities: readonly Capability[]) {
     title: 'Cancel run',
     description,
     route: { method: 'POST', path: '/runs/{run_id}/cancel' },
+    permittedBy: ['playbook:write', 'playbook:run'],
     irreversible: true,
     repeatable: true,
     inputSchema: Schema.Struct({ run_id: RunIdInputField, reason: Schema.optionalKey(ReasonField) }),

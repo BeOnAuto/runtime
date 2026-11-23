@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  allPermissions,
   roleRefusalDetail,
   tokenTypeRefusalDetail,
   type AccessDecision,
@@ -32,7 +33,7 @@ function deniedThenAllowed(): PolicyDecisionPoint {
 }
 
 function grantedEverything({ context: { granted } }: AccessRequest): boolean {
-  return granted.permissions.length === 4 && granted.playbooks === '*';
+  return granted.permissions.length === allPermissions.length && granted.playbooks === '*';
 }
 
 function deniedUnlessGrantedEverything(request: AccessRequest): AccessDecision {
@@ -89,7 +90,7 @@ describe('a dispatcher the policy decision point decides', () => {
     expect(streams).toEqual([]);
     expect(asking.asked().map(({ context: { granted } }) => granted)).toEqual([
       { org: 'acme', permissions: ['org:read', 'playbook:read'], playbooks: '*' },
-      { org: 'acme', permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'], playbooks: '*' },
+      { org: 'acme', permissions: allPermissions, playbooks: '*' },
     ]);
   });
 });
@@ -181,9 +182,9 @@ describe('a call no grant would let through, refused for what it came through or
     expect(outcome).toEqual(refusedForTheTokenType);
     expect(streams).toEqual([]);
     expect(asking.asked().map(({ context }) => [context.via, context.granted.permissions.length])).toEqual([
-      ['agent', 4],
-      ['agent', 4],
-      ['studio', 4],
+      ['agent', allPermissions.length],
+      ['agent', allPermissions.length],
+      ['studio', allPermissions.length],
     ]);
   });
 

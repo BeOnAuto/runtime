@@ -2,7 +2,6 @@ import {
   allPermissions,
   type Decider,
   type Permission,
-  permissionFor,
   type ProjectionReader,
   type ResourceReference,
   streamPrefixOfOrg,
@@ -29,6 +28,7 @@ import {
   rolesHeld,
   runDefinition,
   type TestOperation,
+  updateDefinition,
 } from '../testing/access-testing.ts';
 import {
   builtInRoleIds,
@@ -74,7 +74,11 @@ const declaringEach: Readonly<Record<Permission, Declaring>> = {
   'org:read': { operation: listConnections, resource: acme },
   'org:write': { operation: createPlaybook, resource: acme },
   'playbook:read': { operation: getDefinition, resource: alpha },
-  'playbook:write': { operation: runDefinition, resource: alpha },
+  'playbook:write': { operation: updateDefinition, resource: alpha },
+  'playbook:run': {
+    operation: { ...runDefinition, name: 'run_alone', permissions: ['playbook:run'] },
+    resource: alpha,
+  },
 };
 
 describe('the built-in roles the decider reads', () => {
@@ -121,15 +125,18 @@ describe('the built-in roles the decider reads', () => {
   it('let an admin alone give a role, and an admin give any of them', () => {
     expect(
       builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayAssign(builtInRoles, held, asked))),
-    ).toEqual([true, true, true, false, false, false, false, false, false]);
+    ).toEqual([true, true, true, true, ...Array.from({ length: 12 }, () => false)]);
   });
 });
 
 describe('the roles that invite', () => {
-  it('let an admin invite to any of them, an editor invite an editor or a viewer, and a viewer invite nobody', () => {
-    expect(
-      builtInRoleIds.flatMap((held) => builtInRoleIds.map((asked) => mayInvite(builtInRoles, held, asked))),
-    ).toEqual([true, true, true, false, true, true, false, false, false]);
+  it('let an admin invite to any of them, an editor invite an editor, an operator or a viewer, and an operator or a viewer invite nobody', () => {
+    expect(builtInRoleIds.map((held) => builtInRoleIds.map((asked) => mayInvite(builtInRoles, held, asked)))).toEqual([
+      [true, true, true, true],
+      [false, true, true, true],
+      [false, false, false, false],
+      [false, false, false, false],
+    ]);
   });
 });
 
@@ -149,23 +156,13 @@ describe('the roles a default role may be', () => {
   });
 });
 
-const whatAChangePermits: ReadonlySet<Permission> = new Set([
-  permissionFor('command', 'org'),
-  permissionFor('command', 'playbook'),
-]);
-
 describe('a role that may start a run', () => {
-  it('permits every permission a credential can hold, since a run acts on its starter’s credential, which no role cuts, as long as it runs', () => {
-    const startingRuns = builtInRoleIds.filter((role) =>
-      builtInRoles[role].permits.some((permission) => whatAChangePermits.has(permission)),
-    );
-
+  it('is one that permits a permission running a definition declares: an admin, an editor and an operator, each of whose runs acts on the credential it started with, which no role cuts', () => {
     expect(
-      startingRuns.filter(
-        (role) => !allPermissions.every((permission) => builtInRoles[role].permits.includes(permission)),
+      builtInRoleIds.filter((role) =>
+        builtInRoles[role].permits.some((permission) => runDefinition.permissions.includes(permission)),
       ),
-    ).toEqual([]);
-    expect(startingRuns).toEqual(['admin', 'editor']);
+    ).toEqual(['admin', 'editor', 'operator']);
   });
 });
 

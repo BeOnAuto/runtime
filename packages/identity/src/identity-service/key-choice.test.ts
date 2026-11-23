@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from 'node:crypto';
 
-import { allPermissions, type CallingClient } from '@on.auto/operations';
+import { allPermissions, normalizedPermissions, type CallingClient } from '@on.auto/operations';
 import { SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
 
@@ -56,7 +56,7 @@ describe('the client an access token was issued to', () => {
       id: 'person:ada',
       name: 'Ada Lovelace',
       org: 'acme',
-      permissions: allPermissions,
+      permissions: normalizedPermissions(allPermissions),
       playbooks: '*',
     });
     expect(person?.own).not.toHaveProperty('client');

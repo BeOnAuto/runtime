@@ -3987,7 +3987,7 @@
                               },
                               "id": {
                                 "type": "string",
-                                "description": "admin, editor or viewer"
+                                "description": "admin, editor, operator or viewer"
                               }
                             },
                             "required": [
@@ -4124,7 +4124,7 @@
       "put": {
         "operationId": "assign_role",
         "summary": "Assign role",
-        "description": "Gives a person of the org a role, admin, editor or viewer, in place of the role they held, and answers the roles they hold after it. A person signed in to Studio whose role lets them give roles gives it, never a role beyond their own, and never leaving the org without an admin.",
+        "description": "Gives a person of the org a role, admin, editor, operator or viewer, in place of the role they held, and answers the roles they hold after it. A person signed in to Studio whose role lets them give roles gives it, never a role beyond their own, and never leaving the org without an admin.",
         "tags": [
           "role-assignments"
         ],
@@ -4151,9 +4151,10 @@
               "enum": [
                 "admin",
                 "editor",
+                "operator",
                 "viewer"
               ],
-              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; or viewer, who views and comments"
+              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; operator, who runs playbooks and answers requests; or viewer, who views and comments"
             }
           }
         ],
@@ -4226,7 +4227,7 @@
                           },
                           "id": {
                             "type": "string",
-                            "description": "admin, editor or viewer"
+                            "description": "admin, editor, operator or viewer"
                           }
                         },
                         "required": [
@@ -4321,9 +4322,10 @@
               "enum": [
                 "admin",
                 "editor",
+                "operator",
                 "viewer"
               ],
-              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; or viewer, who views and comments"
+              "description": "admin, who manages the members; editor, who builds, runs and changes playbooks; operator, who runs playbooks and answers requests; or viewer, who views and comments"
             }
           }
         ],
@@ -4396,7 +4398,7 @@
                           },
                           "id": {
                             "type": "string",
-                            "description": "admin, editor or viewer"
+                            "description": "admin, editor, operator or viewer"
                           }
                         },
                         "required": [
@@ -4493,10 +4495,11 @@
                           "org:read",
                           "org:write",
                           "playbook:read",
-                          "playbook:write"
+                          "playbook:write",
+                          "playbook:run"
                         ]
                       },
-                      "description": "The permissions the caller may use in the org, of org:read, org:write, playbook:read and playbook:write"
+                      "description": "The permissions the caller may use in the org, of org:read, org:write, playbook:read, playbook:write and playbook:run"
                     }
                   },
                   "required": [
@@ -27633,6 +27636,11 @@
             "bearer": [
               "playbook:write"
             ]
+          },
+          {
+            "bearer": [
+              "playbook:run"
+            ]
           }
         ]
       }
@@ -28977,6 +28985,11 @@
           {
             "bearer": [
               "playbook:write"
+            ]
+          },
+          {
+            "bearer": [
+              "playbook:run"
             ]
           }
         ]
@@ -31884,6 +31897,11 @@
           {
             "bearer": [
               "playbook:write"
+            ]
+          },
+          {
+            "bearer": [
+              "playbook:run"
             ]
           }
         ]
@@ -37439,6 +37457,11 @@
             "bearer": [
               "playbook:write"
             ]
+          },
+          {
+            "bearer": [
+              "playbook:run"
+            ]
           }
         ]
       }
@@ -38644,6 +38667,11 @@
           {
             "bearer": [
               "playbook:write"
+            ]
+          },
+          {
+            "bearer": [
+              "playbook:run"
             ]
           }
         ]

@@ -18,7 +18,7 @@ import { policiesById, preparedPolicies, type PreparePolicies } from './prepared
 
 const texts = { schema: '', policies: '' };
 
-const builtInRoles = ['admin', 'editor', 'viewer'];
+const builtInRoles = ['admin', 'editor', 'operator', 'viewer'];
 
 let cedar: Cedar;
 
@@ -122,6 +122,7 @@ describe('the built-in policies', () => {
     expect(Object.keys(policiesById(cedar, texts.policies)).toSorted()).toEqual(
       [
         'viewer',
+        'operator',
         'editor',
         'admin',
         'key',
@@ -179,7 +180,7 @@ describe('policies made ready for the engine', () => {
     expect([again.schemaName, again.policySetId, again.policies]).toEqual([
       prepared.schemaName,
       prepared.policySetId,
-      13,
+      14,
     ]);
     expect(other.schemaName).toBe(prepared.schemaName);
     expect(other.policySetId).not.toBe(prepared.policySetId);

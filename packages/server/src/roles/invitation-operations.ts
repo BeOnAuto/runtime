@@ -54,6 +54,7 @@ export const noPerson = 'An org’s members are managed by a person signed in to
 
 const INVITED_AS: Readonly<Record<(typeof invitedRoles)[number], string>> = {
   editor: 'an editor',
+  operator: 'an operator',
   viewer: 'a viewer',
 };
 
@@ -106,7 +107,7 @@ function defineInviteMember(kept: MembersKept) {
     name: 'invite_member',
     title: 'Invite member',
     description: [
-      'Invites a person to the org as an editor or a viewer.',
+      'Invites a person to the org as an editor, an operator or a viewer.',
       'It answers the invitation’s link, to give to the person who asked.',
       'Everything else with members is done by an admin in Studio: inviting an admin, resending or revoking an invitation, changing a role and removing a member.',
     ].join(' '),

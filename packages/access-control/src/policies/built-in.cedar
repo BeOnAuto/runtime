@@ -5,17 +5,36 @@ permit (
   resource
 );
 
+@id("operator")
+permit (
+  principal in Role::"operator",
+  action in [Action::"org:read", Action::"playbook:read", Action::"playbook:run"],
+  resource
+);
+
 @id("editor")
 permit (
   principal in Role::"editor",
-  action in [Action::"org:read", Action::"org:write", Action::"playbook:read", Action::"playbook:write"],
+  action in [
+    Action::"org:read",
+    Action::"org:write",
+    Action::"playbook:read",
+    Action::"playbook:write",
+    Action::"playbook:run"
+  ],
   resource
 );
 
 @id("admin")
 permit (
   principal in Role::"admin",
-  action in [Action::"org:read", Action::"org:write", Action::"playbook:read", Action::"playbook:write"],
+  action in [
+    Action::"org:read",
+    Action::"org:write",
+    Action::"playbook:read",
+    Action::"playbook:write",
+    Action::"playbook:run"
+  ],
   resource
 );
 

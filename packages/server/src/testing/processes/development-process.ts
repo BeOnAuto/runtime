@@ -1,14 +1,5 @@
 import { once } from 'node:events';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  watch,
-  writeFileSync,
-  type FSWatcher,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,6 +68,31 @@ function writeServerEntry({ serverEntry }: DevelopmentFiles, source = `import '$
   writeFileSync(serverEntry, source);
 }
 
+interface Watched {
+  readonly close: () => void;
+}
+
+type WatchOfAFile = (path: string, onChange: () => void) => Watched;
+
+function isGone(failure: unknown): boolean {
+  return failure instanceof Error && 'code' in failure && failure.code === 'ENOENT';
+}
+
+export function watchedUnlessGone(
+  path: string,
+  onChange: () => void,
+  watchOfAFile: WatchOfAFile = watch,
+): Watched | undefined {
+  try {
+    return watchOfAFile(path, onChange);
+  } catch (failure) {
+    if (isGone(failure)) {
+      return undefined;
+    }
+    throw failure;
+  }
+}
+
 /**
  * Tells the waiting tests of what the processes of pnpm dev write in its folder: a file made or removed (the restart
  * mark, the pids) by a watch of the folder, and each write to the ledger by a watch of its log, made again each time
@@ -84,10 +100,10 @@ function writeServerEntry({ serverEntry }: DevelopmentFiles, source = `import '$
  */
 function watchedWhileItRuns(files: DevelopmentFiles): { readonly close: () => void } {
   const log = `${files.ledgerFile}-wal`;
-  const watching: { log: FSWatcher | undefined } = { log: undefined };
+  const watching: { log: Watched | undefined } = { log: undefined };
   const logWatched = (): void => {
     watching.log?.close();
-    watching.log = existsSync(log) ? watch(log, somethingHappened) : undefined;
+    watching.log = watchedUnlessGone(log, somethingHappened);
   };
   const folder = watch(files.directory, { recursive: true }, (_, name) => {
     if (name === basename(log)) {

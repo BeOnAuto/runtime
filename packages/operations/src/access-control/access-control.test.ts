@@ -71,7 +71,7 @@ const undecided = {
 const withAnError: AccessDecision = { decision: 'allow', determiningPolicies: [], errors: ['the engine did not load'] };
 
 function liftedWithAnError({ context: { granted } }: AccessRequest): AccessDecision {
-  return granted.permissions.length === 4 ? withAnError : deniedByTheTest;
+  return granted.permissions.length === ada.permissions.length ? withAnError : deniedByTheTest;
 }
 
 const undecidingPoints: readonly PolicyDecisionPoint[] = [
@@ -244,7 +244,7 @@ describe('whether a caller may call operations, where the decision point cannot 
 });
 
 const readingUndecided = decidingEach(({ context: { granted } }) =>
-  Effect.succeed(granted.permissions.length === 4 ? allowedByTheTest : withAnError),
+  Effect.succeed(granted.permissions.length === ada.permissions.length ? allowedByTheTest : withAnError),
 );
 
 type Refused = Pick<Unavailable, 'kind' | 'retry_after'>;

@@ -45,7 +45,7 @@ export interface HeldAssignments {
 
 export const noneHeld: HeldAssignments = {
   byPrincipal: HashMap.empty(),
-  holders: { admin: 0, editor: 0, viewer: 0 },
+  holders: { admin: 0, editor: 0, operator: 0, viewer: 0 },
   lastEndedBy: HashMap.empty(),
   invitations: HashMap.empty(),
   joiningSet: undefined,

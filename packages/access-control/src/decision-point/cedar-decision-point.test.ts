@@ -17,6 +17,7 @@ import {
   requestOf,
   rolesHeld,
   runDefinition,
+  updateDefinition,
 } from '../testing/access-testing.ts';
 import {
   cedarDecisionPoint,
@@ -39,6 +40,7 @@ const notDeclared = { ...getDefinition, name: 'not_declared' };
 const people = rolesHeld({
   admin: [builtIn('admin', acme)],
   editor: [builtIn('editor', acme)],
+  operator: [builtIn('operator', acme)],
   viewer: [builtIn('viewer', acme)],
 });
 
@@ -62,7 +64,7 @@ function misplacedEngine(): Promise<WebAssembly.Module> {
 const saidOnceLoaded = {
   message: loadedMessage,
   level: 'INFO',
-  annotations: { engine: 'Cedar 4.14.0', policies: 13, operations: declaredOperations.length },
+  annotations: { engine: 'Cedar 4.14.0', policies: 14, operations: declaredOperations.length },
 };
 
 async function decidedAs(id: string, operation: typeof getDefinition): Promise<string> {
@@ -73,22 +75,19 @@ async function decidedAs(id: string, operation: typeof getDefinition): Promise<s
 }
 
 describe('the policy decision point', () => {
-  it('decides by the built-in roles: an Admin and an Editor read and change, a Viewer only reads, and a person with no role does nothing', async () => {
+  it('decides by the built-in roles: an Admin and an Editor read, run and change, an Operator reads and runs, a Viewer only reads, and a person with no role does nothing', async () => {
     const asked = await Promise.all(
-      ['admin', 'editor', 'viewer', 'nobody'].flatMap((id) =>
-        [getDefinition, runDefinition].map((operation) => decidedAs(id, operation)),
+      ['admin', 'editor', 'operator', 'viewer', 'nobody'].map((id) =>
+        Promise.all([getDefinition, runDefinition, updateDefinition].map((operation) => decidedAs(id, operation))),
       ),
     );
 
     expect(asked).toEqual([
-      'allow by admin',
-      'allow by admin',
-      'allow by editor',
-      'allow by editor',
-      'allow by viewer',
-      'deny by ',
-      'deny by ',
-      'deny by ',
+      ['allow by admin', 'allow by admin', 'allow by admin'],
+      ['allow by editor', 'allow by editor', 'allow by editor'],
+      ['allow by operator', 'allow by operator', 'deny by '],
+      ['allow by viewer', 'deny by ', 'deny by '],
+      ['deny by ', 'deny by ', 'deny by '],
     ]);
   });
 
@@ -113,7 +112,7 @@ describe('the policy decision point', () => {
   });
 });
 
-const everyRoleAsksEveryOperation = ['admin', 'editor', 'viewer', 'nobody'].flatMap((id) =>
+const everyRoleAsksEveryOperation = ['admin', 'editor', 'operator', 'viewer', 'nobody'].flatMap((id) =>
   declaredOperations.map((operation) =>
     requestOf({
       principal: { type: 'person', id },
@@ -236,7 +235,7 @@ describe('a batch the policy decision point is asked', () => {
     const together = await Effect.runPromise(decisionPoint.decideBatch(askedTogether));
 
     expect(together.map((each) => inAnyOrder(each))).toEqual(alone.map((each) => inAnyOrder(each)));
-    expect([readAlone, counted.reads() - readAlone]).toEqual([askedTogether.length, 6]);
+    expect([readAlone, counted.reads() - readAlone]).toEqual([askedTogether.length, 7]);
     expect(together.at(-1)).toEqual({ decision: 'deny', determiningPolicies: [], errors: [unreadRoles] });
     expect(new Set(together.map(({ decision }) => decision))).toEqual(new Set(['allow', 'deny']));
   });

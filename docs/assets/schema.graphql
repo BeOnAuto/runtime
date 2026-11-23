@@ -4859,7 +4859,7 @@ type ListRoleAssignmentsAnswerRoleAssignmentsRole {
   """built_in, a role every release of Auto ships"""
   type: String!
 
-  """admin, editor or viewer"""
+  """admin, editor, operator or viewer"""
   id: String!
 }
 
@@ -4874,7 +4874,7 @@ type ListRoleAssignmentsAnswerRoleAssignmentsScope {
 
 type GetCallerAnswer {
   """
-  The permissions the caller may use in the org, of org:read, org:write, playbook:read and playbook:write
+  The permissions the caller may use in the org, of org:read, org:write, playbook:read, playbook:write and playbook:run
   """
   permissions: [String!]!
 }

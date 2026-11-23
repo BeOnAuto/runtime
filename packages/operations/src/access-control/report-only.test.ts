@@ -2,7 +2,13 @@ import { Effect, Fiber, Layer, Logger } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { type AccessDecision, type AccessRequest, makeDispatcher, type PolicyDecisionPoint } from '../index.ts';
+import {
+  allPermissions,
+  type AccessDecision,
+  type AccessRequest,
+  makeDispatcher,
+  type PolicyDecisionPoint,
+} from '../index.ts';
 import { capturedLogs } from '../testing/captured-logs.ts';
 import { allowedByTheTest, deniedByTheTest, recordingDecisionPoint } from '../testing/decision-points.ts';
 import { harness } from '../testing/harness.ts';
@@ -85,7 +91,7 @@ function orgOf({ resource }: AccessRequest): string {
 }
 
 function asTheCheckDecides(request: AccessRequest): AccessDecision {
-  const everyPermission = request.context.granted.permissions.length === 4;
+  const everyPermission = request.context.granted.permissions.length === allPermissions.length;
   const inItsOrg = orgOf(request) === request.context.granted.org;
   return request.principal.type === 'person' && inItsOrg && everyPermission ? allowedByTheTest : deniedByTheTest;
 }

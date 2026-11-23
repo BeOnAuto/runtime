@@ -1,4 +1,4 @@
-import { playbookCallerOf } from '@on.auto/operations';
+import { allPermissions, playbookCallerOf } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -173,7 +173,7 @@ describe('a caller read again by its id, as the server would take it now', () =>
         id: 'local',
         name: 'ada',
         org: 'acme',
-        permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'],
+        permissions: allPermissions,
         playbooks: '*',
       },
       undefined,

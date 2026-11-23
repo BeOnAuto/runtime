@@ -1,7 +1,7 @@
 import { Array as Arr, SchemaAST, type Schema } from 'effect';
 
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
-import { permissionFor, type Permission } from '../caller/permission.ts';
+import { permissionFor, permissionIncluding, type Permission } from '../caller/permission.ts';
 import {
   fieldOf,
   handlerMembersOf,
@@ -126,10 +126,22 @@ function requireNothingOfTheScopeAskedIn(
   }
 }
 
+function requireEachWithTheOneIncludingIt(name: string, permittedBy: readonly Permission[]): void {
+  for (const permission of permittedBy) {
+    const including = permissionIncluding(permission);
+    if (including !== undefined && !permittedBy.includes(including)) {
+      throw new Error(
+        `The operation ${name} is permitted by ${permission} and not by ${including}, which includes it, so a credential that holds ${including} would be refused it`,
+      );
+    }
+  }
+}
+
 function permissionsOf(name: string, permittedBy: readonly Permission[]): readonly Permission[] {
   if (permittedBy.length === 0) {
     throw new Error(`The operation ${name} is permitted by no permission`);
   }
+  requireEachWithTheOneIncludingIt(name, permittedBy);
   return permittedBy;
 }
 

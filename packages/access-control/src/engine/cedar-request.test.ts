@@ -1,4 +1,4 @@
-import type { PrincipalReference, ResourceReference } from '@on.auto/operations';
+import { allPermissions, type PrincipalReference, type ResourceReference } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import type { RoleAssignment } from '../roles/role-assignments.ts';
@@ -33,7 +33,7 @@ const readingTheOrg = {
   via: 'studio',
   granted: {
     org: { __entity: { type: 'Org', id: 'acme' } },
-    permissions: ['org:read', 'org:write', 'playbook:read', 'playbook:write'].map((id) => ({
+    permissions: allPermissions.map((id) => ({
       __entity: { type: 'Action', id },
     })),
     playbooks: [],

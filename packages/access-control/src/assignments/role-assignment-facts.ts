@@ -37,6 +37,7 @@ export const roleOfIdentityServiceKey: ReadonlyMap<string, BuiltInRoleId> = new 
 export const identityServiceKeyOfRole: Readonly<Record<BuiltInRoleId, string>> = {
   admin: 'org:admin',
   editor: 'org:member',
+  operator: 'org:member',
   viewer: 'org:member',
 };
 

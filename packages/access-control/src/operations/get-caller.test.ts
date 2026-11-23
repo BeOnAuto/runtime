@@ -33,6 +33,10 @@ const holding = (role: string, scope: RoleAssignment['scope'] = acme) =>
 
 const reading: readonly Permission[] = ['org:read', 'playbook:read'];
 
+const running: readonly Permission[] = ['org:read', 'playbook:read', 'playbook:run'];
+
+const theFourASignInAsksFor: readonly Permission[] = ['org:read', 'org:write', 'playbook:read', 'playbook:write'];
+
 describe('get_caller', () => {
   it('is a query of the org at GET /caller, over HTTP alone, for a credential that may read the org or a playbook', () => {
     expect(getCaller.registration).toMatchObject({
@@ -50,8 +54,9 @@ describe('get_caller', () => {
     expect([
       await answeredTo(ada, holding('admin')),
       await answeredTo(ada, holding('editor')),
+      await answeredTo(ada, holding('operator')),
       await answeredTo(ada, holding('viewer')),
-    ]).toEqual([allPermissions, allPermissions, reading]);
+    ]).toEqual([allPermissions, allPermissions, running, reading]);
   });
 
   it('answers no more than the credential holds, however much the role permits, in the order of the permissions', async () => {
@@ -80,5 +85,17 @@ describe('get_caller', () => {
 
   it('answers by the credential alone where no decision point reads the roles of the call', async () => {
     expect(await answeredTo(ada)).toEqual(allPermissions);
+  });
+});
+
+describe('get_caller, for a credential that holds the permission to change playbooks', () => {
+  it('answers it the permission to run them too, which the first includes', async () => {
+    const signedInWithTheFour = { ...adasAgent, permissions: theFourASignInAsksFor } satisfies CallerIdentity;
+
+    expect([
+      await answeredTo(signedInWithTheFour, holding('editor')),
+      await answeredTo(signedInWithTheFour, holding('operator')),
+      await answeredTo(signedInWithTheFour, holding('viewer')),
+    ]).toEqual([allPermissions, running, reading]);
   });
 });

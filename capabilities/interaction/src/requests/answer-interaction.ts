@@ -137,6 +137,7 @@ export const answerInteraction = defineCommand('playbook', {
   title: 'Answer a request',
   description,
   route: { method: 'POST', path: '/runs/{run_id}/answer' },
+  permittedBy: ['playbook:write', 'playbook:run'],
   irreversible: true,
   repeatable: true,
   inputSchema: Schema.Struct({

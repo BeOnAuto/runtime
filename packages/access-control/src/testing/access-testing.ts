@@ -66,7 +66,13 @@ const setConnectionPlaybooks = declared('org', 'command', 'set_connection_playbo
 
 export const getDefinition = declared('playbook', 'query', 'get_definition', { permissions: ['playbook:read'] });
 
-export const runDefinition = declared('playbook', 'command', 'run_definition', { permissions: ['playbook:write'] });
+export const runDefinition = declared('playbook', 'command', 'run_definition', {
+  permissions: ['playbook:write', 'playbook:run'],
+});
+
+export const updateDefinition = declared('playbook', 'command', 'update_definition', {
+  permissions: ['playbook:write'],
+});
 
 const makeComment = declared('playbook', 'command', 'make_comment', { permissions: ['playbook:read'] });
 
@@ -90,6 +96,7 @@ export const declaredOperations: readonly TestOperation[] = [
   setConnectionPlaybooks,
   getDefinition,
   runDefinition,
+  updateDefinition,
   makeComment,
   assignARole,
   joinTheOrg,
