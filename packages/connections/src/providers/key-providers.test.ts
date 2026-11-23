@@ -47,3 +47,16 @@ describe('a provider whose way is a way of consent, as the page lists it', () =>
     expect(undeclared).not.toHaveProperty('refresh_token_expires_in');
   });
 });
+
+describe('a provider whose way states what a connection made through it cannot do, as the page lists it', () => {
+  it('gives that sentence where its entry states it, and none where its entry states none', async () => {
+    const [client] = ledgers.credentials;
+    const limitation = 'It can’t read the ledgers of another company.';
+    const [declared] = await waysListedOf({ ...ledgers, credentials: [{ ...client, limitation }] });
+    const [undeclared] = await waysListedOf(ledgers);
+
+    expect(declared).toMatchObject({ kind: 'client_credentials', limitation });
+    expect(undeclared).toMatchObject({ kind: 'client_credentials' });
+    expect(undeclared).not.toHaveProperty('limitation');
+  });
+});

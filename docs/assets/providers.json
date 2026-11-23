@@ -350,7 +350,7 @@
     {
       "name": "atlassian",
       "title": "Atlassian",
-      "description": "Search and read Jira work items and Confluence pages, and create, update and comment on them, through Atlassian's MCP server, as the person who connects and with their permissions.",
+      "description": "Search and read Jira work items and Confluence pages, and create, update and comment on them, through Atlassian's MCP server, as the person or the service account that connects and with its permissions.",
       "website": "https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/",
       "server": {
         "type": "mcp",
@@ -406,6 +406,12 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "secret",
+          "description": "API token",
+          "key_page": "https://admin.atlassian.com",
+          "instructions": "In [Atlassian Administration](https://admin.atlassian.com), an organization admin turns on **API token** for the Atlassian MCP server, creates a service account, and creates an API token for it with the scopes for Jira and Confluence. Paste that token on this connection's page. Atlassian lets a token last a year at most."
         }
       ],
       "placeholders": [],
@@ -1515,7 +1521,7 @@
     {
       "name": "onedrive",
       "title": "OneDrive, SharePoint and Excel",
-      "description": "List and search OneDrive, read file details, list folders, read Excel worksheets, ranges and tables, add worksheets and table rows, and list a SharePoint site's drives, as the person who connects, through Microsoft Graph. It fetches no file's bytes, but answers may carry a link that downloads one.",
+      "description": "Search drives, list folders, read file details and list a SharePoint site's drives through Microsoft Graph. Signed in as an account, also read Excel worksheets, ranges and tables and add worksheets and table rows. It fetches no file's bytes, but answers may carry a link that downloads one.",
       "website": "https://learn.microsoft.com/en-us/graph/auth-v2-user",
       "server": {
         "type": "openapi",
@@ -1543,6 +1549,16 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "client_credentials",
+          "description": "The ID and secret of an app your company registers with Microsoft.",
+          "scopes": [
+            {
+              "scope": "https://graph.microsoft.com/.default",
+              "says": "Act with the Microsoft Graph application permissions an administrator granted to the app."
+            }
+          ]
         }
       ],
       "placeholders": [],
@@ -2007,7 +2023,7 @@
     {
       "name": "stripe",
       "title": "Stripe",
-      "description": "Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who connects and for no connected account. Stripe asks that user to confirm certain writes, such as refunds and outbound payments, and a write they approve is asked again.",
+      "description": "Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who signs in or with an agent API key of the account. Stripe holds certain writes, such as refunds and payouts, until a person confirms or approves them.",
       "website": "https://docs.stripe.com/mcp",
       "server": {
         "type": "mcp",
@@ -2027,6 +2043,12 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "secret",
+          "description": "API key",
+          "key_page": "https://dashboard.stripe.com/apikeys",
+          "instructions": "On Stripe's [API keys page](https://dashboard.stripe.com/apikeys), select **Create restricted key** and, when Stripe asks what the key is for, select **Authorizing agent access to your account**. Give the key only the permissions your playbooks need, create it and copy it. Stripe shows it once. Paste it on this connection's page."
         }
       ],
       "placeholders": [],

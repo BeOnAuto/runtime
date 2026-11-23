@@ -57,6 +57,12 @@ describe('a way of consent through a gateway', () => {
     ]).toEqual([[], [], []]);
   });
 
+  it('refuses a sentence of what a connection made through it cannot do, as it refuses every field outside its list', () => {
+    expect(problemsOfTheWay({ ...throughAGateway, limitation: 'It can’t read a private channel.' })).toEqual([
+      ['/credentials/0/limitation', `Expected no limitation: ${takenThroughAGateway}`],
+    ]);
+  });
+
   it('requires the security scheme the key is sent under, and refuses another place to send it', () => {
     const { in: _in, name: _name, ...unplaced } = throughAGateway;
 
@@ -170,7 +176,7 @@ describe('the gateway of a way of another kind', () => {
       key_page: 'https://messages.example.com/settings',
     };
     const secretTakes =
-      'a secret way takes in, name, instructions, key_page, key_page_title, steps, scheme, example, pattern, app_credentials, test, permissions, account_types, placeholders, and base_url';
+      'a secret way takes in, name, instructions, key_page, key_page_title, steps, scheme, example, pattern, app_credentials, test, permissions, account_types, limitation, placeholders, and base_url';
 
     expect(problemsOfTheWay({ ...aKey, gateway, permissions: 'application' })).toEqual([
       ['/credentials/0/gateway', `Expected no gateway: ${secretTakes}`],

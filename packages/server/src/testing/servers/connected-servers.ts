@@ -25,6 +25,19 @@ export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders
   .filter(({ entry }) => operatorVariablesOf(entry).length === 0)
   .map(({ entry }) => offeredOf(entry));
 
+const issuersOfConsent = shippedProviders.flatMap(({ entry }) =>
+  entry.credentials.flatMap(({ kind, issuer }) => (kind === 'authorization' && issuer !== undefined ? [issuer] : [])),
+);
+
+export const registeredAtTheIssuers = {
+  CONNECTIONS: JSON.stringify({
+    registered_clients: [
+      { issuers: issuersOfConsent, client_id: 'auto-runtime', client_secret: '${REGISTERED_CLIENT_SECRET}' },
+    ],
+  }),
+  REGISTERED_CLIENT_SECRET: 'the secret of the client registered at every issuer',
+};
+
 const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);
 
 export function answerFieldsOf(body: unknown): readonly string[] {

@@ -3,7 +3,7 @@ import { addressGivenWholeIn, hostAlternativesOf, operatorVariablesIn, type Prov
 import { Option, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
+import { registeredAtTheIssuers, shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { variablesTheRuntimeReads } from './variables-the-runtime-reads.ts';
@@ -35,19 +35,6 @@ function consentOf(provider: Provider) {
   const { kind, issuer, scope, clients } = wayOf(provider, 'authorization');
   return { kind, issuer, scope, clients };
 }
-
-const issuersOfConsent = shippedProviders.flatMap(({ entry }) =>
-  entry.credentials.flatMap(({ kind, issuer }) => (kind === 'authorization' && issuer !== undefined ? [issuer] : [])),
-);
-
-const registeredAtTheIssuers = {
-  CONNECTIONS: JSON.stringify({
-    registered_clients: [
-      { issuers: issuersOfConsent, client_id: 'auto-runtime', client_secret: '${REGISTERED_CLIENT_SECRET}' },
-    ],
-  }),
-  REGISTERED_CLIENT_SECRET: 'the secret of the client registered at every issuer',
-};
 
 const SearchedSchema = Schema.Struct({ providers: Schema.Array(Schema.Struct({ name: Schema.String })) });
 const WaysListedSchema = Schema.Struct({
@@ -156,7 +143,7 @@ const waysWithoutAClient = {
   'amazon-ads': [underTheOrgsOAuthClientAlone],
   'amazon-ads-mcp': [underTheOrgsOAuthClientAlone],
   'apollo-graphos-agent-services': ['secret offered'],
-  atlassian: ['authorization offered'],
+  atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
   github: ['secret offered', underTheOrgsOAuthClientAlone],
   gmail: [underTheOrgsOAuthClientAlone, 'jwt_bearer offered'],
@@ -165,12 +152,13 @@ const waysWithoutAClient = {
   linear: ['authorization offered'],
   linkedin: [underTheOrgsOAuthClientAlone],
   notion: ['authorization offered'],
+  onedrive: [underTheOrgsOAuthClientAlone, 'client_credentials offered'],
   outlook: [underTheOrgsOAuthClientAlone, 'client_credentials offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: [underTheOrgsOAuthClientAlone],
   'slack-bot': ['secret offered'],
-  stripe: ['authorization offered'],
+  stripe: ['authorization offered', 'secret offered'],
   x: [underTheOrgsOAuthClientAlone],
   zoom: [underTheOrgsOAuthClientAlone],
 };
@@ -181,7 +169,7 @@ const waysWithAClient = {
   'amazon-ads': ['authorization offered'],
   'amazon-ads-mcp': ['authorization offered'],
   'apollo-graphos-agent-services': ['secret offered'],
-  atlassian: ['authorization offered'],
+  atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
   github: ['authorization offered', 'secret offered'],
   gmail: ['authorization offered', 'jwt_bearer offered'],
@@ -190,12 +178,13 @@ const waysWithAClient = {
   linear: ['authorization offered'],
   linkedin: ['authorization offered'],
   notion: ['authorization offered'],
+  onedrive: ['authorization offered', 'client_credentials offered'],
   outlook: ['authorization offered', 'client_credentials offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
   slack: ['authorization offered'],
   'slack-bot': ['secret offered'],
-  stripe: ['authorization offered'],
+  stripe: ['authorization offered', 'secret offered'],
   x: [underTheOrgsOAuthClientAlone],
   zoom: ['authorization offered'],
 };

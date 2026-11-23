@@ -1,9 +1,18 @@
+import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { hostAlternativesOf, isPinnableTemplate, pinnedTemplateShape } from '../index.ts';
-import { problemsOf } from '../testing/entry-problems.ts';
+import { problemsOf, refusedAt } from '../testing/entry-problems.ts';
 import { ledgers, providerOf, regions, tracker } from '../testing/fixture-providers.ts';
-import { agentServerAddress, agents, asARegisteredClient } from '../testing/own-app-providers.ts';
+import {
+  agentServerAddress,
+  agents,
+  asARegisteredClient,
+  asAServiceAccount,
+  mail,
+  signingInToMail,
+} from '../testing/own-app-providers.ts';
+import { limitationSchemaOf, mostLimitationCharacters } from './credential-ways.ts';
 
 const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['revoked'] };
 
@@ -21,6 +30,47 @@ describe('the one sentence of an entry', () => {
       problemsOf({ ...tracker, summary: '' }).map(([path]) => path),
       problemsOf({ ...tracker, summary: 'a'.repeat(121) }).map(([path]) => path),
     ]).toEqual([['/summary'], ['/summary']]);
+  });
+});
+
+describe('the sentence of what a way cannot do', () => {
+  it.each([
+    [2, 'a', true],
+    [2, 'ab', true],
+    [2, '', false],
+    [2, 'abc', false],
+  ])('is taken in at most %i characters, as %j: %s', (most, limitation, taken) => {
+    expect(Result.isSuccess(Schema.decodeUnknownResult(limitationSchemaOf(most))(limitation))).toBe(taken);
+  });
+
+  it('is taken of 1 to 160 characters, as the runtime ships, on a way of each kind that sends a credential', () => {
+    const [aKey] = tracker.credentials;
+    const [aClient] = ledgers.credentials;
+    const said = { limitation: 'a' };
+
+    expect(mostLimitationCharacters).toBe(160);
+    expect([
+      problemsOf({ ...tracker, credentials: [{ ...aKey, limitation: 'a'.repeat(160) }] }),
+      problemsOf({ ...ledgers, credentials: [{ ...aClient, ...said }] }),
+      problemsOf({
+        ...mail,
+        credentials: [
+          { ...signingInToMail, ...said },
+          { ...asAServiceAccount, ...said },
+        ],
+      }),
+    ]).toEqual([[], [], []]);
+  });
+
+  it('is refused empty, past 160 characters and on a way that sends no credential', () => {
+    const [aKey, noCredential] = tracker.credentials;
+    const onNoCredential = problemsOf({ ...tracker, credentials: [aKey, { ...noCredential, limitation: 'a' }] });
+
+    expect([
+      refusedAt({ limitation: '' }),
+      refusedAt({ limitation: 'a'.repeat(161) }),
+      onNoCredential.map(([path]) => path),
+    ]).toEqual([['/credentials/0/limitation'], ['/credentials/0/limitation'], ['/credentials/1/limitation']]);
   });
 });
 

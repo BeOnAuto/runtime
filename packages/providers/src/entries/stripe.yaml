@@ -1,6 +1,6 @@
 name: stripe
 title: Stripe
-description: Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who connects and for no connected account. Stripe asks that user to confirm certain writes, such as refunds and outbound payments, and a write they approve is asked again.
+description: Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who signs in or with an agent API key of the account. Stripe holds certain writes, such as refunds and payouts, until a person confirms or approves them.
 summary: Lets your playbooks read and change your Stripe data, including moving money.
 website: https://docs.stripe.com/mcp
 type: mcp
@@ -16,3 +16,29 @@ credentials:
     clients: [registered, dynamic]
     refresh_token_expires_in: 1209600
     description: Sign in to Stripe and allow access to the accounts and sandboxes you choose.
+  - kind: secret
+    permissions: application
+    in: header
+    name: Authorization
+    scheme: Bearer
+    description: API key
+    instructions: >-
+      On Stripe's [API keys page](https://dashboard.stripe.com/apikeys), select **Create restricted key** and, when
+      Stripe asks what the key is for, select **Authorizing agent access to your account**. Give the key only the
+      permissions your playbooks need, create it and copy it. Stripe shows it once. Paste it on this connection's page.
+    key_page: https://dashboard.stripe.com/apikeys
+    key_page_title: Open Stripe's API keys page
+    steps:
+      key_page:
+        title: Create an agent API key at Stripe
+        instructions: |-
+          - Select **Create restricted key**.
+          - When Stripe asks what the key is for, select **Authorizing agent access to your account**.
+          - Enter a **Key name**.
+          - For each resource your playbooks use, select **Read** or **Write**. Leave the others at **None**.
+          - Select **Create key** and complete the verification Stripe sends you.
+          - Copy the key. Stripe shows it once.
+      key:
+        title: Paste the key here
+        instructions: Paste the key you copied from Stripe.
+    limitation: It can't complete sensitive actions, such as refunds and payouts, until a reviewer approves them in Stripe.

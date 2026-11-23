@@ -98,6 +98,7 @@ export const entryProse: readonly string[] = [
   'page_title',
   'client_id_title',
   'example',
+  'limitation',
 ];
 
 export type ProviderEntry = typeof ProviderEntryFieldsSchema.Type;

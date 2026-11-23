@@ -43,48 +43,49 @@ const slackKeyPage = new URL(waysOfAKey.find(([provider]) => provider === 'slack
 
 const slackManifest: unknown = JSON.parse(slackKeyPage.searchParams.get('manifest_json') ?? '');
 
+const shownOfEachKey = [
+  ['apollo-graphos-agent-services', 'API key', 'https://constellation.apollographql.com', '/', undefined, undefined],
+  ['atlassian', 'API token', 'https://admin.atlassian.com', '/', undefined, undefined],
+  ['buffer', 'Buffer API key', 'https://publish.buffer.com', '/settings/api', undefined, undefined],
+  [
+    'github',
+    'GitHub fine-grained personal access token',
+    'https://github.com',
+    '/settings/personal-access-tokens/new',
+    'github_pat_…',
+    '^github_pat_.+$',
+  ],
+  ['profound', 'Profound API key', 'https://platform.tryprofound.com', '/', undefined, undefined],
+  ['slack-bot', 'Slack bot token', 'https://api.slack.com', '/apps', 'xoxb-…', '^xoxb-.+$'],
+  ['stripe', 'API key', 'https://dashboard.stripe.com', '/apikeys', undefined, undefined],
+];
+
 describe('the ways of a key of the shipped providers', () => {
   it('each name the key, the page where it is made and, where the vendor documents its start, the format of a key', () => {
-    expect(waysOfAKey.map((each) => shownOf(each))).toEqual([
-      [
-        'apollo-graphos-agent-services',
-        'API key',
-        'https://constellation.apollographql.com',
-        '/',
-        undefined,
-        undefined,
-      ],
-      ['buffer', 'Buffer API key', 'https://publish.buffer.com', '/settings/api', undefined, undefined],
-      [
-        'github',
-        'GitHub fine-grained personal access token',
-        'https://github.com',
-        '/settings/personal-access-tokens/new',
-        'github_pat_…',
-        '^github_pat_.+$',
-      ],
-      ['profound', 'Profound API key', 'https://platform.tryprofound.com', '/', undefined, undefined],
-      ['slack-bot', 'Slack bot token', 'https://api.slack.com', '/apps', 'xoxb-…', '^xoxb-.+$'],
-    ]);
+    expect(waysOfAKey.map((each) => shownOf(each))).toEqual(shownOfEachKey);
   });
 
   it('link their key page in their instructions, except one that makes an app, and name the start of a key a pattern holds it to', () => {
     expect(waysOfAKey.map((each) => linkedIn(each))).toEqual([
       ['apollo-graphos-agent-services', true, true],
+      ['atlassian', true, true],
       ['buffer', true, true],
       ['github', true, true],
       ['profound', true, true],
       ['slack-bot', false, true],
+      ['stripe', true, true],
     ]);
   });
 
   it('test the key with a tool where the vendor offers one, and take app credentials only where an entry opens a socket', () => {
     expect(waysOfAKey.map((each) => furtherOf(each))).toEqual([
       ['apollo-graphos-agent-services', undefined, []],
+      ['atlassian', undefined, []],
       ['buffer', undefined, []],
       ['github', undefined, []],
       ['profound', undefined, []],
       ['slack-bot', 'auth_test', [['app_level_token', 'Slack app-level token', undefined, 'xapp-…', '^xapp-.+$']]],
+      ['stripe', undefined, []],
     ]);
   });
 });
@@ -97,6 +98,35 @@ describe('the way of a key of Buffer', () => {
       'https://publish.buffer.com/settings/api',
       false,
       ['service', 'personal'],
+    ]);
+  });
+});
+
+function stepsShownOf(provider: string) {
+  const [, way] = Option.getOrThrow(Option.fromNullishOr(waysOfAKey.find(([named]) => named === provider)));
+  const { key_page: keyPage, key_page_title: keyPageTitle, steps } = way;
+  return [
+    provider,
+    keyPage,
+    keyPageTitle === undefined,
+    steps?.key_page === undefined,
+    steps?.pages?.map(({ page }) => page),
+    steps?.key === undefined,
+  ];
+}
+
+describe('the ways of a key of Atlassian and Stripe', () => {
+  it('decode with the page where the key is made, the label of the button that opens it, and the steps of the page', () => {
+    expect(['atlassian', 'stripe'].map((provider) => stepsShownOf(provider))).toEqual([
+      [
+        'atlassian',
+        'https://admin.atlassian.com',
+        false,
+        false,
+        ['https://admin.atlassian.com', 'https://admin.atlassian.com'],
+        false,
+      ],
+      ['stripe', 'https://dashboard.stripe.com/apikeys', false, false, undefined, false],
     ]);
   });
 });

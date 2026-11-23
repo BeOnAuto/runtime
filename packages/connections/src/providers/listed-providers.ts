@@ -128,6 +128,12 @@ export const ListedWaySchema = Schema.Struct({
         'For authorization, how long the provider keeps a refresh token, in seconds, after which the person signs in again, where the entry states it; left out otherwise. Auto enforces nothing from it.',
     }),
   ),
+  limitation: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'What a connection made this way cannot do, in one sentence a person reads under this way where they connect the provider, where the entry states it; left out otherwise',
+    }),
+  ),
   app_credentials: Schema.optionalKey(
     Schema.Array(
       Schema.Struct({

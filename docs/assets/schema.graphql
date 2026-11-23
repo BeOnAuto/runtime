@@ -6197,6 +6197,11 @@ type ProviderCredentials {
   refresh_token_expires_in: Float
 
   """
+  What a connection made this way cannot do, in one sentence a person reads under this way where they connect the provider, where the entry states it; left out otherwise
+  """
+  limitation: String
+
+  """
   For secret, the app credentials a person may give beside the key, such as an app-level token, each optional to them, where this runtime can use them; left out where it takes none
   """
   app_credentials: [ProviderCredentialsAppCredentials!]

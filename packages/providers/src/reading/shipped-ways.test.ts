@@ -42,7 +42,7 @@ const hostsOfTheWays = [
     ],
   ],
   [[['{mcp_address}']]],
-  [[['mcp.atlassian.com', 'auth.atlassian.com']]],
+  [[['mcp.atlassian.com', 'auth.atlassian.com']], [['mcp.atlassian.com']]],
   [[['mcp.buffer.com']]],
   [[['dfareporting.googleapis.com', google]]],
   [[['displayvideo.googleapis.com', google]]],
@@ -63,13 +63,13 @@ const hostsOfTheWays = [
   [[['partner.api.bingads.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['mcp.notion.com', 'mcp.notion.com']]],
-  [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],
+  [[['graph.microsoft.com', microsoft, microsoft, microsoft]], [['graph.microsoft.com', microsoft]]],
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]], [['graph.microsoft.com', microsoft]]],
   [[['mcp.posthog.com', 'oauth.posthog.com']]],
   [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
   [[['searchads360.googleapis.com', google]]],
   [[['slack.com']]],
-  [[['mcp.stripe.com', 'access.stripe.com']]],
+  [[['mcp.stripe.com', 'access.stripe.com']], [['mcp.stripe.com']]],
   [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],
   [[['api.x.com', 'api.x.com', 'x.com', 'api.x.com', 'api.x.com']]],
   [[['youtube.googleapis.com', google]]],
@@ -260,5 +260,26 @@ describe('the ways of the shipped apps that let a company add a separate user', 
     expect(takingASeparateUser.map((name) => accountsTakenBy(name))).toEqual(
       takingASeparateUser.map(() => [[['service', 'personal'], 'personal']]),
     );
+  });
+});
+
+const connectingAsTheCompany = ['atlassian', 'onedrive', 'stripe'];
+
+function waysAfterTheSignInOf(name: string) {
+  const { entry } = Result.getOrThrow(providerNamed(shipped, name));
+  const [first, ...later] = entry.credentials;
+  return [
+    first?.kind,
+    later.map((way) => [way.kind, permissionsOf(way), accountTypesOf(way), way.limitation !== undefined]),
+  ];
+}
+
+describe('the ways of the shipped apps that connect as the company, after the sign-in', () => {
+  it('come after the sign-in way, each acting as the app or as a service account alone, and each stating what it cannot do', () => {
+    expect(connectingAsTheCompany.map((name) => waysAfterTheSignInOf(name))).toEqual([
+      ['authorization', [['secret', 'delegated', ['service'], true]]],
+      ['authorization', [['client_credentials', 'application', [], true]]],
+      ['authorization', [['secret', 'application', [], true]]],
+    ]);
   });
 });

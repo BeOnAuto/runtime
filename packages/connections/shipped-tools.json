@@ -201,6 +201,20 @@
     "drives.drive.items.driveItem.workbook.worksheets.add": "e973526168352194a8cd8218949c9d6e704d43e40704b5d66d30d3ae682b29a4",
     "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add": "50d220c3f80020f312db10ad5be4045e01e878026891d08e6e3747d90d16776e"
   },
+  "onedrive, client_credentials": {
+    "me.GetDrive": "4e11d7157efc2126c01bc0c789390df3b6baa755151621705d0844c27c20e822",
+    "drives.drive.search": "d77689a3e7d383ab9d145365d350f94f718efa1b900ee6cb7f0a5382304ee062",
+    "drives.items.ListChildren": "93656fa8ea850d7d6d98178a26a2432d83b9534bd566e156c9c4d9c33f221e0d",
+    "drives.GetItems": "83b127a8fbee64f52f3e8439e93560aceee4c3e1066d5ea672a76d74d9edf5a2",
+    "drives.items.workbook.ListWorksheets": "f06d05c585d9947b77e763484c6952f366b7f261b76e863acbfa4b02134566d3",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.range-b0fa": "36f657bc09ffaa9995b8fd5ed15da184be86a575ca9b6a0191c0eb4344795a40",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.usedRange-5ff6": "a7b3d20ad1190ddbe9d84c325f99693197dc8f3cdcf507982bea8df3403aeea1",
+    "drives.items.workbook.ListTables": "ac2c2db9d6888f3753b533ca4d42efdc7cc39aa5dd2ec1154676446d9679a785",
+    "drives.items.workbook.tables.ListRows": "77e32499af462602cc779c323c57d235cf82f7f882a7a93473b5c7e31da98506",
+    "sites.ListDrives": "9a2330c7e2b61b791ca830c89d2e6f7eae713f89217e798a06e887bbb9acd466",
+    "drives.drive.items.driveItem.workbook.worksheets.add": "e973526168352194a8cd8218949c9d6e704d43e40704b5d66d30d3ae682b29a4",
+    "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add": "50d220c3f80020f312db10ad5be4045e01e878026891d08e6e3747d90d16776e"
+  },
   "outlook, authorization": {
     "me.ListMessages": "63c0122dd648419fbb759721b3ac8c721ce6754afc5cdf0413a67c2a7f0e252b",
     "me.CreateMessages": "1355a6a151763e659705987cdab7e527c4c8107c05a8d61027ddf9d5bd0c7919",

@@ -2291,6 +2291,12 @@
                       "maxLength": 40,
                       "description": "For client_credentials and authorization, the label of the field a person gives the client's id in, as the service names it, in at most 40 characters"
                     },
+                    "limitation": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160,
+                      "description": "What a connection made this way cannot do, in one sentence of at most 160 characters, which a person reads under this way where they connect the app."
+                    },
                     "description": {
                       "type": "string",
                       "minLength": 1

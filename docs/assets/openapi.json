@@ -18518,6 +18518,10 @@
                                 "exclusiveMinimum": 0,
                                 "description": "For authorization, how long the provider keeps a refresh token, in seconds, after which the person signs in again, where the entry states it; left out otherwise. Auto enforces nothing from it."
                               },
+                              "limitation": {
+                                "type": "string",
+                                "description": "What a connection made this way cannot do, in one sentence a person reads under this way where they connect the provider, where the entry states it; left out otherwise"
+                              },
                               "app_credentials": {
                                 "type": "array",
                                 "items": {

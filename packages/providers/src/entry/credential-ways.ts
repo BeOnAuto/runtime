@@ -12,6 +12,14 @@ import { clientIdTitleField, ownValueFields } from './way-values.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
+export const mostLimitationCharacters = 160;
+
+export function limitationSchemaOf(mostCharacters: number) {
+  return Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostCharacters)).annotate({
+    description: `What a connection made this way cannot do, in one sentence of at most ${String(mostCharacters)} characters, which a person reads under this way where they connect the app.`,
+  });
+}
+
 export const wayFields = {
   in: Schema.Literals(['header', 'query', 'security']),
   name: NamedSchema,
@@ -83,6 +91,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   ...assertionFields,
   ...keyWayFields,
   client_id_title: clientIdTitleField,
+  limitation: Schema.optionalKey(limitationSchemaOf(mostLimitationCharacters)),
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -123,6 +132,7 @@ const everyField: readonly Field[] = [
   'steps',
   'app_credentials',
   'test',
+  'limitation',
 ];
 
 const ownValues: readonly Field[] = ['placeholders', 'base_url'];
@@ -140,17 +150,18 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'test',
       'permissions',
       'account_types',
+      'limitation',
       ...ownValues,
     ],
   },
   client_credentials: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'key_page', 'key_page_title', 'client_id_title', 'steps', ...ownValues],
+    optional: ['scope', 'says', 'key_page', 'key_page_title', 'client_id_title', 'steps', 'limitation', ...ownValues],
   },
   none: { required: [], optional: [] },
   jwt_bearer: {
     required: ['issuer', 'subject', 'key_file'],
-    optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps', ...ownValues],
+    optional: ['scope', 'says', 'key_page', 'key_page_title', 'steps', 'limitation', ...ownValues],
   },
   authorization: {
     required: ['issuer'],
@@ -172,6 +183,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'client_id_title',
       'steps',
       'refresh_token_expires_in',
+      'limitation',
       ...ownValues,
     ],
   },
