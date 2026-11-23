@@ -57,6 +57,26 @@ describe('the starts of the workflows whose trigger an event matches', () => {
   });
 });
 
+describe('the starts of two workflows that check two lists through one connection', () => {
+  it('start each workflow only for the events of its own type, whose items hold the same id value', async () => {
+    const { database, delivered, starts } = await starting();
+    const source = '/connections/tracker';
+    await subscribed(database, 'close', { type: 'post.made', source });
+    await subscribed(database, 'other', { type: 'post.seen', source });
+    const listed = (type: string) =>
+      followedRecordOf(
+        { id: 'p-1' },
+        { event: { specversion: '1.0', id: `${type}/p-1`, source, type, time: at, data: { id: 'p-1' } } },
+      );
+
+    await delivered(listed('post.made'));
+    const startedByTheFirst = starts().map(({ workflow }) => workflow);
+    await delivered(listed('post.seen'));
+
+    expect([startedByTheFirst, starts().map(({ workflow }) => workflow)]).toEqual([['close'], ['close', 'other']]);
+  });
+});
+
 describe('the filter of an event trigger that goes past a bound', () => {
   it('does not match an event on which it does more than its work, is said once a version as a failing filter is, and is evaluated on the next event', async () => {
     const { database, delivered, starts, said, evaluated } = await starting();

@@ -25,8 +25,10 @@ export function arrivalOf(event: ReportedEvent, topic?: string): ConnectionArriv
 }
 
 export function servedWithTopics(...topics: readonly string[]): ServedConnection {
-  return { topicsOf: () => Effect.succeed(topics) };
+  return { topicsOf: () => Effect.succeed(topics), declaresEventTypes: true };
 }
+
+export const servedListingNoEvents: ServedConnection = { ...servedWithTopics(), declaresEventTypes: false };
 
 export function servedActingAs(user: string, ...topics: readonly string[]): ServedConnection {
   return { ...servedWithTopics(...topics), user };

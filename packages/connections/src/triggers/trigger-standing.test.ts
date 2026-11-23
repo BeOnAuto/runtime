@@ -207,8 +207,8 @@ describe('how a trigger of an app Auto checks stands', () => {
   );
 });
 
-function standingOf(recorded: Subscribed) {
-  return triggerStandingOf({ ...listeningThroughASubscription, hearing: heard(checking), subscribed: recorded });
+function standingOf(kept: Subscribed, its: Pick<TriggerRecords, 'tool'> = {}) {
+  return triggerStandingOf({ ...listeningThroughASubscription, hearing: heard(checking), subscribed: kept, ...its });
 }
 
 describe('how a trigger of an app Auto checks stands once a check is made, by whether its check fails now', () => {
@@ -251,4 +251,49 @@ describe('how a trigger of an app Auto checks stands once a check is made, by wh
       expect(standingOf(recorded)).toEqual({ listening: false, kind, detail: inWords, needsReconnecting: needs });
     },
   );
+});
+
+function readFailing(because: RecordedFailure['because'], kind: RecordedFailure['kind'] = 'tool_error'): Subscribed {
+  return subscribed({
+    ...madeByChecking,
+    failed: { kind, because, attempted: generation },
+    positions: { failures: 1 },
+  });
+}
+
+describe('how a trigger that names a tool of its connection to check stands', () => {
+  it.each([
+    ['an answer that could not be read', readFailing('unreadable'), 'request_failed'],
+    ['an answer too large to read', readFailing('too_large'), 'request_failed'],
+    ['a tool the connection no longer offers', readFailing('tool_not_listed'), 'request_failed'],
+    ['a tool no longer marked as one that only reads', readFailing('tool_not_read_only'), 'request_failed'],
+    ['arguments the tool refused', readFailing('arguments_refused'), 'request_failed'],
+    ['an error the tool answered', readFailing('tool_error'), 'request_failed'],
+    ['the most lists one connection checks', readFailing('not_sent', 'not_sent'), 'too_many_places'],
+  ] as const)(
+    'is not listening for %s, with the kind any other trigger has, in words of its own, and asks for no reconnect',
+    (_case, recorded, kind) => {
+      const ofItsRead = standingOf(recorded, { tool: 'list_cards' });
+
+      const namingTheTool: unknown = expect.stringContaining('list_cards');
+      expect(ofItsRead).toEqual({ listening: false, kind, detail: namingTheTool, needsReconnecting: false });
+    },
+  );
+
+  it.each([
+    ['a key the service refused', readFailing('key_refused', 'connection_broken'), 'connection_broken'],
+    ['access the account lacks', readFailing('scope_lacking', 'scope_lacking'), 'access_lacking'],
+    ['a tool the account may not call', readFailing('tool_not_allowed', 'scope_lacking'), 'access_lacking'],
+  ] as const)('asks for a reconnect where its read failed for %s', (_case, recorded, kind) => {
+    const ofItsRead = standingOf(recorded, { tool: 'list_cards' });
+
+    const inWords: unknown = expect.any(String);
+    expect(ofItsRead).toEqual({ listening: false, kind, detail: inWords, needsReconnecting: true });
+  });
+
+  it('is setting up while its first check is under way, as any trigger of an app Auto checks', () => {
+    const records = { ...listeningThroughASubscription, hearing: heard(checking), subscribed: subscribed() };
+
+    expect(triggerStandingOf({ ...records, tool: 'list_cards' })).toEqual(triggerStandingOf(records));
+  });
 });

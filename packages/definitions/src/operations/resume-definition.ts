@@ -1,14 +1,14 @@
-import { defineCommand } from '@on.auto/operations';
+import { defineCommand, PlaybookReader } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
-import { definitionWordsFor, startsInWords } from '../plain-language/definition-words.ts';
-import { hasTriggers } from '../registry/definition-triggers.ts';
+import { definitionWordsFor, resumedInWords } from '../plain-language/definition-words.ts';
+import { anotherReadRefused } from '../read-model-reads/listened-connections.ts';
 import { definitionSchemaOf } from '../registry/definition.ts';
 import { DefinitionNameField } from './definition-fields.ts';
 import { answeredWithItsStanding } from './definition-reading.ts';
-import { recordInRegistry } from './registry-access.ts';
+import { loadDefinition, recordInRegistry } from './registry-access.ts';
 
 const description = [
   'Resumes a paused function or workflow and returns it, so that it can be run again.',
@@ -16,7 +16,12 @@ const description = [
   '`type` and `name` say which definition; resuming one that is not paused changes nothing.',
 ].join(' ');
 
-const triggersAgain = ', and its triggers start runs again from now, not for what came while it was paused';
+const anotherReadRefusedOnResume = Effect.fnUntraced(function* (type: string, name: string) {
+  const held = yield* loadDefinition(type, name);
+  if (held?.status === 'paused') {
+    yield* anotherReadRefused(yield* PlaybookReader, [held]);
+  }
+});
 
 export function defineResumeDefinition(capabilities: readonly Capability[], goals = false) {
   const known = knownCapabilities(capabilities);
@@ -33,14 +38,14 @@ export function defineResumeDefinition(capabilities: readonly Capability[], goal
       reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
+        yield* anotherReadRefusedOnResume(type, name);
         const resumed = yield* recordInRegistry(capability, { type: 'resume', name, blanksRefused: goals });
         return yield* answeredWithItsStanding(capability, known.types, resumed, { change: 'resumed', goals });
       }),
       plainLanguage: {
         task: `resume a ${words.kinds}`,
         attempt: ({ type, name }) => `resume ${words.named(type, name)}`,
-        outcome: (definition) =>
-          `Resumed ${words.named(definition.type, definition.name)}. It can be run again${hasTriggers(definition) ? triggersAgain : ''}.${startsInWords(definition)}`,
+        outcome: (definition) => resumedInWords(words, definition),
       },
     }),
   );

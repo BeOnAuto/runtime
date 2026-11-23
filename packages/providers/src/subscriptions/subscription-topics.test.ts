@@ -60,7 +60,7 @@ describe('the requests the loop asks', () => {
     expect(reads.count).toBe(0);
   });
 
-  it('name the topic of each request waiting through a connection whose destination is arranged, where it renders', async () => {
+  it('name the topic of each request waiting through a connection whose destination is arranged, where it renders, with that destination', async () => {
     const reads = { count: 0 };
     const arranged = new Map(byRequest.map((each) => ['tracker', each]));
 
@@ -70,7 +70,7 @@ describe('the requests the loop asks', () => {
           reads.count += 1;
         })({ ...alpha, arranged }),
       ),
-    ).toEqual([{ connection: 'tracker', topic: 'site' }]);
+    ).toEqual([{ connection: 'tracker', topic: 'site', destination: arranged.get('tracker') }]);
     expect(reads.count).toBe(1);
   });
 });

@@ -124,7 +124,7 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
         ({ arranged: through }) =>
           Effect.sync(() => {
             arranged.push(...through.keys());
-            return connections.map(({ connection }) => ({ connection, topic: theRepository }));
+            return askedAt(through, theRepository);
           }),
       ],
     })(alpha),
@@ -141,6 +141,9 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
     })),
   };
 }
+
+const askedAt = (at: ReadonlyMap<string, EventDestination>, topic: string) =>
+  [...at].map(([connection, destination]: readonly [string, EventDestination]) => ({ connection, topic, destination }));
 
 describe('the entries the runtime ships', () => {
   it('declare one destination arranged by a call for each subscription, GitHub’s', async () => {
@@ -172,7 +175,7 @@ function roundOfTheTracker(ledger: ReturnType<typeof aLedger>, asked: (connectio
           for (const connection of arranged.keys()) {
             asked(connection);
           }
-          return [{ connection: 'tracker', topic: 'site' }];
+          return askedAt(arranged, 'site');
         }),
     ],
   });
@@ -220,7 +223,7 @@ describe('a topic whose values would change the address its entry writes', () =>
     const round = subscriptionLoopOf({
       ...subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving)),
       connectionsOf: () => Effect.succeed([theTracker]),
-      askers: [() => Effect.succeed([{ connection: 'tracker', topic: '../../user' }])],
+      askers: [({ arranged }) => Effect.succeed(askedAt(arranged, '../../user'))],
     });
     await Effect.runPromise(round(alpha));
 

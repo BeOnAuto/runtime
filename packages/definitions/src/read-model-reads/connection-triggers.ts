@@ -12,6 +12,7 @@ import { Array as Arr, Effect, Option, Schema } from 'effect';
 import { definitionRows } from '../read-model/definition-rows.ts';
 import { runnableTriggersOf } from '../registry/definition-changes.ts';
 import { TriggerSchema, type EventTrigger, type Trigger, type TriggerFilter } from '../registry/definition-triggers.ts';
+import type { TriggerRead } from '../registry/trigger-reads.ts';
 import type { ReadModelRefused } from './read-model-refused.ts';
 import { everyRowOf, saveOfTheRow, type ReadModelReader } from './read-model-rows.ts';
 
@@ -19,6 +20,7 @@ interface ConnectionTrigger {
   readonly connection: string;
   readonly type: string;
   readonly subject?: string;
+  readonly read?: TriggerRead;
 }
 
 const typeWithTriggers = 'workflow';
@@ -53,13 +55,20 @@ const triggersOfTheRow = Schema.decodeUnknownOption(
   Schema.Struct({ triggers: Schema.fromJsonString(Schema.Array(TriggerSchema)) }),
 );
 
-function connectionTriggerOf({ type, attributes }: TriggerFilter): readonly ConnectionTrigger[] {
+function connectionTriggerOf({ type, attributes, read }: TriggerFilter): readonly ConnectionTrigger[] {
   const { source, subject } = attributes;
   if (typeof source !== 'string' || !source.startsWith(connectionSourcePrefix)) {
     return [];
   }
   const connection = source.slice(connectionSourcePrefix.length);
-  return [typeof subject === 'string' ? { connection, type, subject } : { connection, type }];
+  return [
+    {
+      connection,
+      type,
+      ...(typeof subject === 'string' ? { subject } : {}),
+      ...(read === undefined ? {} : { read }),
+    },
+  ];
 }
 
 function connectionTriggersIn({ row }: ProjectedKeyedRow): readonly ConnectionTrigger[] {

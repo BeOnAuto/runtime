@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import type { KnownCapabilities } from '../capability/known-capabilities.ts';
 import { closedSetRefused } from './closed-set.ts';
-import { connectionsRefused, takenRefused, type ConnectionAccess } from './move-destination.ts';
+import { anotherReadRefusedIn, connectionsRefused, takenRefused, type ConnectionAccess } from './move-destination.ts';
 import {
   goalRulesRefused,
   goalsNamed,
@@ -55,6 +55,7 @@ function refusalsOf(
     yield* runsInProgressRefused(started, members);
     yield* takenRefused(reader, address.playbook, members);
     yield* goalsTakenRefused(admitted, goals);
+    yield* anotherReadRefusedIn(reader, address.playbook, members);
     yield* force ? Effect.void : connectionsRefused(connections, address, members);
   });
 }

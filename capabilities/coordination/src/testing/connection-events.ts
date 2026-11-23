@@ -5,7 +5,7 @@ import type {
   ConnectionReporting,
   StandingAsked,
   TriggerStanding,
-} from '../triggers/connection-triggers.ts';
+} from '../triggers/connection-ports.ts';
 
 export interface AskedConnections extends ConnectionEvents {
   readonly asked: () => readonly string[];

@@ -5,6 +5,7 @@ import { Effect, Option } from 'effect';
 import { refusedToAnswerFor } from '../operations/unread-texts.ts';
 import { textRead } from '../payloads/kept-texts.ts';
 import { serversNamedBy } from '../portable/portable-export.ts';
+import { anotherReadRefused } from '../read-model-reads/listened-connections.ts';
 import type { EventTrigger, TriggerFilter } from '../registry/definition-triggers.ts';
 import type { Member } from './move-members.ts';
 import { connectionNotAccessibleWords, takenWords, type Named } from './move-words.ts';
@@ -29,6 +30,14 @@ export function takenRefused(
             ),
       ),
     { discard: true },
+  );
+}
+
+export function anotherReadRefusedIn(to: PlaybookReader['Service'], playbook: string, members: readonly Member[]) {
+  return anotherReadRefused(
+    to,
+    members.map(({ stored }) => stored).filter(({ status }) => status === 'active'),
+    playbook,
   );
 }
 

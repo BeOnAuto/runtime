@@ -3,7 +3,8 @@ import { stringFormats } from '@on.auto/json-schema';
 import { isBoundedPart } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { listedEventOf, valueIn } from '../events/arrival-readings.ts';
+import { listedEventOf, valueIn, type ArrivalEvent } from '../events/arrival-readings.ts';
+import { placesTheMark } from '../events/event-calls.ts';
 import { failedBecause } from '../subscriptions/subscription-failed.ts';
 import type { SubscriptionKey } from '../subscriptions/subscription-ports.ts';
 import type { Polled } from '../subscriptions/subscription-records.ts';
@@ -47,6 +48,7 @@ function cursorOfAnItem({ read, events = [] }: Polled, item: Schema.Json): strin
 export interface Listed {
   readonly item: Schema.Json;
   readonly cursor: string;
+  readonly event?: ArrivalEvent;
 }
 
 export interface Page {
@@ -59,6 +61,8 @@ export type Paged = { readonly page: Page } | { readonly failure: CallFailure };
 
 const isAList = Schema.is(Schema.Array(Schema.Json));
 
+const isAnItem = Schema.is(Schema.Record(Schema.String, Schema.Json));
+
 export const unreadable: CallFailure = failedBecause('unreadable');
 
 export const pastWhatARoundReads: CallFailure = failedBecause('too_large');
@@ -67,9 +71,43 @@ export const notTakenInJustNow: CallFailure = failedBecause('failing');
 
 type MaybeListed = Pick<Listed, 'item'> & { readonly cursor: string | undefined };
 
-function listedIn(destination: Polled, list: readonly Schema.Json[]): readonly Listed[] | undefined {
+function listedThrough(destination: Polled, list: readonly Schema.Json[]): readonly Listed[] | undefined {
   const listed: readonly MaybeListed[] = list.map((item) => ({ item, cursor: cursorOfAnItem(destination, item) }));
   return listed.every((each: MaybeListed): each is Listed => each.cursor !== undefined) ? listed : undefined;
+}
+
+function eventAsListed(destination: Polled, item: Schema.Json): ArrivalEvent | undefined {
+  const event = listedEventOf(destination, item);
+  return event !== undefined && isAnItem(item) ? { ...event, data: item } : undefined;
+}
+
+function isOrdered(destination: Polled, listed: readonly Listed[]): boolean {
+  return placesTheMark(destination.read) || listed.every(({ cursor }) => orderOf(cursor) !== undefined);
+}
+
+interface MaybeEvented extends Pick<Listed, 'item' | 'cursor'> {
+  readonly event: ArrivalEvent | undefined;
+}
+
+interface Evented extends Listed {
+  readonly event: ArrivalEvent;
+}
+
+function listedAsWritten(destination: Polled, list: readonly Schema.Json[]): readonly Listed[] | undefined {
+  const listed = listedThrough(destination, list);
+  if (listed === undefined || !isOrdered(destination, listed)) {
+    return undefined;
+  }
+  const withEvents: readonly MaybeEvented[] = listed.map(({ item, cursor }) => ({
+    item,
+    cursor,
+    event: eventAsListed(destination, item),
+  }));
+  return withEvents.every((each: MaybeEvented): each is Evented => each.event !== undefined) ? withEvents : undefined;
+}
+
+function listedIn(destination: Polled, list: readonly Schema.Json[]): readonly Listed[] | undefined {
+  return destination.writtenInATrigger === true ? listedAsWritten(destination, list) : listedThrough(destination, list);
 }
 
 function nextIn(document: Schema.Json | undefined, pointer: string | undefined): string | undefined {
@@ -122,7 +160,7 @@ export function takenIn(round: Round, { key, destination }: Reading, listed: rea
     const through: Listed[] = [];
     const taken: Listed[] = [];
     for (const each of listed) {
-      const event = listedEventOf(destination, each.item);
+      const event = each.event ?? listedEventOf(destination, each.item);
       const arrival = { playbook: round.playbook, connection: key.connection, topic: key.topic };
       const answer = event === undefined ? 'not_taken' : yield* round.ports.takeIn({ ...arrival, event });
       if (answer === 'held') {

@@ -1,4 +1,6 @@
+import type { TriggerFilter } from '@on.auto/definitions';
 import type { ChosenFilter, SavedEventTrigger } from '@on.auto/definitions/connection-triggers';
+import { readTopicOf } from '@on.auto/definitions/trigger-reads';
 import {
   connectionMarks,
   filterMayTake,
@@ -33,9 +35,18 @@ function withoutThe(marks: readonly string[], event: JsonObject): JsonObject {
 
 const automaticMark: readonly string[] = ['automatic'];
 
-export function namingTheConnection(type: string, event: JsonObject): ChosenFilter {
-  const asked = withoutThe(connectionMarks, event);
-  return (filter) => filter.type === type && filterMayTake(filter.attributes, asked);
+export type HeardAs = { readonly kind: 'declared' } | { readonly kind: 'read'; readonly topic: string };
+
+function isHeardAs({ type, read }: TriggerFilter, heard: HeardAs): boolean {
+  if (heard.kind === 'declared') {
+    return read === undefined;
+  }
+  return read !== undefined && readTopicOf(type, read) === heard.topic;
+}
+
+export function namingTheConnection(type: string, event: JsonObject, heard: HeardAs): ChosenFilter {
+  const withoutMarks = withoutThe(connectionMarks, event);
+  return (filter) => filter.type === type && filterMayTake(filter.attributes, withoutMarks) && isHeardAs(filter, heard);
 }
 
 function mayStillMatch(verdict: FilterVerdict): boolean {

@@ -51,7 +51,10 @@ describe('the first check of a place', () => {
     checked.app.posted(aPost('p-1', 1));
     await roundAt(checked.ports, dueAfter(startedAt));
 
-    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual([timeOf(1), ['p-1/2026-10-07T09%3A01%3A00.000Z']]);
+    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual([
+      timeOf(1),
+      ['com.example.chat.post/p-1/2026-10-07T09%3A01%3A00.000Z'],
+    ]);
   });
 });
 

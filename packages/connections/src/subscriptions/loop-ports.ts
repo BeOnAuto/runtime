@@ -16,6 +16,7 @@ import type { SecretKeeping } from '../operations/connection-services.ts';
 import type { ConnectionCommandData } from '../registry/connection-commands.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDeciderOf } from '../registry/registry-decider.ts';
 import { loopConnectionsOf } from './loop-connections.ts';
+import { readsAskerOf } from './loop-reads.ts';
 import { subscriptionRecordsOf, type SubscriptionLedger } from './subscription-records.ts';
 import { subscriptionSecretsOf } from './subscription-secrets.ts';
 
@@ -88,7 +89,11 @@ export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): Subscript
     callbackOf: callbackOf(parts),
     connectionsOf: loopConnectionsOf({ registry, providers }),
     receives: receivesOf(parts),
-    askers: [requestsAskerOf(waitingIn), triggersAsker],
+    askers: [
+      requestsAskerOf(waitingIn),
+      triggersAsker,
+      ...(parts.takeIn === undefined ? [] : [readsAskerOf({ registry, providers }, triggersIn)]),
+    ],
     triggersAsker,
     records: subscriptionRecordsOf(ledger),
     secrets: subscriptionSecretsOf(secrets),

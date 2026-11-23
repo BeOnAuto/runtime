@@ -1,4 +1,4 @@
-import { definitionsReadModel, type StrippedForms } from '@on.auto/definitions';
+import { definitionsReadModel, type StrippedForms, type TriggerFilter as SavedFilter } from '@on.auto/definitions';
 import { decidedIn } from '@on.auto/definitions/testing';
 import { Ledger, PlaybookRegistry, type Decided, type Decider } from '@on.auto/operations';
 import { PlaybookEventSchema, ledgerPlaybookRegistry, playbookRows, playbooksStreamOfOrg } from '@on.auto/playbooks';
@@ -20,6 +20,7 @@ import { triggersActivated, triggersPaused } from '../triggers/trigger-rows.ts';
 
 export interface WorkflowsSaved {
   readonly saved: (name: string, ...filters: readonly TriggerFilter[]) => Promise<void>;
+  readonly savedReading: (name: string, filter: TriggerFilter, read: NonNullable<SavedFilter['read']>) => Promise<void>;
   readonly savedStripped: (
     name: string,
     stripped: StrippedForms,
@@ -50,8 +51,15 @@ function workflowsSavedIn(ledger: Ledger['Service']): WorkflowsSaved {
       definition_id: definitionIdNamed(name),
       ...by,
     });
+  const savedReading: WorkflowsSaved['savedReading'] = (name, filter, read) => {
+    const reading = { reference: '/schedule/on/any/0', type: filter.type, attributes: filter, read };
+    const triggers = [{ kind: 'event', reference: '/schedule/on', filters: [reading] } as const];
+    const content = { source: `schedule: ${JSON.stringify({ on: filter, read })}`, triggers };
+    return decided({ type: 'create', name, content, created_by: admin, definition_id: definitionIdNamed(name), ...by });
+  };
   return {
     saved: (name, ...filters) => savedStripped(name, {}, ...filters),
+    savedReading,
     savedStripped,
     edited: (name, ...filters) => decided({ type: 'update', name, content: contentOf(filters), ...by }),
     paused: (name) => decided({ type: 'pause', name, paused_by: admin, ...by }),

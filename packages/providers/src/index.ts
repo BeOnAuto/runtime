@@ -112,6 +112,7 @@ export {
   type Subscribable,
 } from './subscriptions/subscription-records.ts';
 export { pollingIntervalSecondsOf } from './checks/check-pace.ts';
+export { readOfATrigger } from './checks/trigger-reads.ts';
 export {
   SubscriptionCallFailed,
   SubscriptionFailedBecauseSchema,
@@ -120,6 +121,7 @@ export {
   type SubscriptionFailureKind,
 } from './subscriptions/subscription-failed.ts';
 export type {
+  AskedSubscription,
   Asker,
   Asking,
   Generation,

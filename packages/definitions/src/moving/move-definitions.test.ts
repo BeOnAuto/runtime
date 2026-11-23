@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { definitionNamesOf, unbounded } from '../identity/definition-names.ts';
 import { acmeAdmin, acmeAlphaKeeper } from '../testing/callers.ts';
 import { harness } from '../testing/harness.ts';
-import { recordOfTheRefusal } from '../testing/move-refusals.ts';
+import { recordOfTheRefusal, takenWhileWritten } from '../testing/move-refusals.ts';
 import { holderOfTheRun, playbookItStartedIn, ranWeekly } from '../testing/moved-runs.ts';
 import {
   answerOf,
@@ -13,6 +13,7 @@ import {
   heldIn,
   inAlpha,
   moveDefinitions,
+  movedBesideACheckInBeta,
   moving,
   operations,
   toAlpha,
@@ -33,22 +34,6 @@ function mostOf(type: string): number {
 }
 
 const oneGreetingAPlaybook = definitionNamesOf(['echo', 'workflow'], mostOf);
-
-const movedInTheAppend = {
-  stream: 'definition/acme/id-of-greet/definitions/echo',
-  type: 'definition_moved',
-  data: {},
-  id: 'moved-greet',
-  position: 3,
-  context: { at: '2026-11-19T09:00:00.000Z', by: 'acme-admin' },
-};
-
-function takenWhileWritten(status: string) {
-  const inBeta = { playbookKey: 'playbook/acme/beta/', definitionType: 'echo', name: 'greet', hasTriggers: false };
-  return definitionNamesOf(['echo']).takenBy({ ...inBeta, status: 'active' }, { ...inBeta, status }, [
-    movedInTheAppend,
-  ]);
-}
 
 function detailOf(outcome: object): string {
   return String(Reflect.get(outcome, 'detail'));
@@ -294,5 +279,18 @@ describe('move_definitions refusing connections, and its words', () => {
       moveDefinitions.registration.plainLanguage?.attempt(asked),
       moveDefinitions.registration.plainLanguage?.outcome({ definitions: [] }, asked),
     ]).toEqual([expect.stringMatching(/“weekly”.*“greet”.*beta/u), expect.stringMatching(/“weekly”.*“greet”.*beta/u)]);
+  });
+});
+
+describe('move_definitions of a workflow whose trigger names a read', () => {
+  it.each([
+    ['another read under its type, even forced', 'list_cancelled', 'alpha', { status: 'rejected', reason: 'conflict' }],
+    ['the read the other playbook checks under its type', 'list_bookings', 'beta', { status: 'succeeded' }],
+  ] as const)('refuses or moves it for %s', async (_case, tool, place, outcome) => {
+    const { moved, held } = await movedBesideACheckInBeta(tool);
+
+    expect(moved).toMatchObject(outcome);
+    expect(detailOf(moved).includes('beta')).toBe(outcome.status === 'rejected');
+    expect(held).toContain(`${place} workflow weekly`);
   });
 });

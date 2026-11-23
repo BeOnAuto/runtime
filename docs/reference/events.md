@@ -73,7 +73,24 @@ A filter names the events it takes. Every value except `data` is written out, ne
 | `data`              | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else                                                     |
 
 - An event is taken when it matches any of the filters, and once only, however many it matches.
-- `source` may be a connection's, from `list_connections`, to start from what that connection reports.
+- `source` may be a connection's, from `list_connections`, to start from what that connection reports. Each event it lists has a `speed`. Where it is `polling`, Auto checks the app on a timer and the workflow starts for what is new, so tell the person the pace before they agree, such as "Your tracker is checked about every minute", and that it starts for what happens from now on.
+- An event that says something is created or updated arrives again each time the thing changes. With a condition on `data`, the workflow starts each time a thing that meets the condition is created or changed, so say that to the person where it matters, such as a post that would go out twice.
+- Where a connected connection lists no events, a filter can have `read` beside its `with`. `read` names one of the connection's tools for Auto to check and says how to read its answer.
+  - `tool` must be one that `list_connection_tools` marks as `reads`.
+  - `with` holds the tool's arguments. Write `{{ since }}` where the tool takes the point to list from, and `{{ page_token }}` where it takes the token of the next page.
+  - `list` is a JSON Pointer to the list in what the tool answers.
+  - `order` is `oldest_first` or `newest_first`, as the tool lists.
+  - `cursor` is a JSON Pointer, within an item, to the value the next check passes as `since`. Where the tool takes no point to list from and lists the newest first, `cursor` points at when the item was created or changed, a time or a number.
+  - `next_page_token` is a JSON Pointer to the token of the next page, where the tool lists in pages.
+  - `start` is the value of `since` for the first check, such as `{{ now }}`.
+  - `id` is a list of JSON Pointers, within an item, that together tell one item from another.
+  - `time` is a JSON Pointer to when the item's event happened, where the item has one.
+
+  The filter's `type` is a name of your own for what happens, in lowercase words joined by dots, such as `booking.created` or `invoice.received`. Two triggers that check different lists through one connection need different types. The event's `data` is the item as the tool lists it.
+
+- Before you write `read`, call the tool once with `query_connection` and look at what it answers. Choose the tool that lists the thing the person named. If no tool of the connection can list what is new, say so to the person and offer a set time each day instead. Never put the workflow on a clock of a minute to imitate this.
+- A workflow started this way does not start for what was already there when it was saved. After a broken connection is reconnected, it starts for what happened in between. Tell the person that, and the pace of the checks, which `get_definition` shows under `standing` once the workflow is saved.
+- A workflow started this way starts again when it changes the thing it watches. Do not have it change what it reads, or tell the person it will start again.
 - A filter that names an attribute the event does not have does not match it. A run no reaction started carries no `depth`, and a run no call started no `calldepth`, so a filter for such runs leaves the attribute out.
 - A filter that names `depth`, `calldepth` or `definitionversion` as 0 is refused when its definition is saved.
 - An expression holds unless it returns `false` or `null`.

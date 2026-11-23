@@ -27,6 +27,7 @@ export function isArranging(destination: Destination): destination is Arranging 
 export type Polled = Destination & {
   readonly type: 'polling';
   readonly read: NonNullable<Destination['read']>;
+  readonly writtenInATrigger?: true;
 };
 
 export function isPolled(destination: Destination): destination is Polled {

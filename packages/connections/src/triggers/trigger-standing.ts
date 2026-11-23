@@ -4,6 +4,7 @@ import {
   type Generation,
   type RecordedFailure,
   type RecordedSubscription,
+  type SubscriptionFailedBecause,
   type SubscriptionFailureKind,
 } from '@on.auto/providers';
 
@@ -42,6 +43,7 @@ export interface TriggerRecords {
   readonly hearing: Hearing;
   readonly actorDeclared: boolean;
   readonly subscribed: Subscribed | undefined;
+  readonly tool?: string;
 }
 
 type TriggerStood =
@@ -96,6 +98,40 @@ const checkedWords: Readonly<Record<CheckedKind, (named: Named) => string>> = {
     `The app refused Auto's check of ${place}, or its answer could not be read. Check that the subject names a place that exists, written as the connection's list says, and save the workflow again. If it is right, ask the person to reconnect ${connection}.`,
 };
 
+type ReadKind = Extract<NotListeningKind, 'request_failed' | 'too_many_places'>;
+
+interface ReadNamed extends Named {
+  readonly tool: string;
+  readonly because: SubscriptionFailedBecause | undefined;
+}
+
+const queryItWords =
+  'Call the tool yourself with `query_connection` to see its answer, correct `read` in the trigger, and save the workflow again.';
+
+const nameAnotherWords = '`list_connection_tools` lists its tools: name another in `read` and save the workflow again.';
+
+const unreadWords: ReadonlyMap<SubscriptionFailedBecause | undefined, string> = new Map([
+  [
+    'unreadable',
+    `its answer is not in the shape \`read\` describes. \`list\` must point at a list, and each item must have a value at \`cursor\` and at each pointer of \`id\`. Where the tool is not given \`{{ since }}\`, the values at \`cursor\` must be times or numbers. ${queryItWords}`,
+  ],
+  [
+    'too_large',
+    'the answer is too large to read. Give the tool an argument that makes it list fewer, in `with`, and save the workflow again.',
+  ],
+  ['tool_not_listed', `the connection no longer offers this tool. ${nameAnotherWords}`],
+  ['tool_not_read_only', `the tool is no longer marked as one that only reads. ${nameAnotherWords}`],
+]);
+
+const toolErrorWords = `the tool answered with an error. ${queryItWords}`;
+
+const readWords: Readonly<Record<ReadKind, (named: ReadNamed) => string>> = {
+  request_failed: ({ tool, because }) =>
+    `Auto could not read what ${tool} answered: ${unreadWords.get(because) ?? toolErrorWords}`,
+  too_many_places: ({ connection, tool }) =>
+    `${connection} already checks as many lists as one connection can for this playbook, so Auto does not check what ${tool} lists. Remove a trigger that checks ${connection}, or give this trigger the same \`read\` as one of the others.`,
+};
+
 function isChecked({ hearing }: Pick<TriggerRecords, 'hearing'>): boolean {
   return hearing.kind === 'heard' && hearing.destination.type === 'polling';
 }
@@ -104,8 +140,15 @@ function isCheckedKind(kind: NotListeningKind): kind is CheckedKind {
   return Object.hasOwn(checkedWords, kind);
 }
 
+function isReadKind(kind: NotListeningKind): kind is ReadKind {
+  return Object.hasOwn(readWords, kind);
+}
+
 function wordsOf(kind: NotListeningKind, records: TriggerRecords): string {
   const named = namedIn(records);
+  if (records.tool !== undefined && isReadKind(kind)) {
+    return readWords[kind]({ ...named, tool: records.tool, because: records.subscribed?.recorded?.failed?.because });
+  }
   return isChecked(records) && isCheckedKind(kind) ? checkedWords[kind](named) : notListeningWords[kind](named);
 }
 
@@ -115,6 +158,10 @@ const mendedByReconnecting: ReadonlySet<NotListeningKind> = new Set([
   'access_lacking',
   'request_failed',
 ]);
+
+function isMendedByReconnecting(kind: NotListeningKind, { tool }: Pick<TriggerRecords, 'tool'>): boolean {
+  return mendedByReconnecting.has(kind) && (tool === undefined || !isReadKind(kind));
+}
 
 const keptUntilReconnected: Readonly<
   Record<Exclude<SubscriptionFailureKind, 'unreachable' | 'not_sent'>, NotListeningKind>
@@ -200,6 +247,6 @@ export function triggerStandingOf(records: TriggerRecords): TriggerStood {
         listening: false,
         kind,
         detail: wordsOf(kind, records),
-        needsReconnecting: mendedByReconnecting.has(kind),
+        needsReconnecting: isMendedByReconnecting(kind, records),
       };
 }

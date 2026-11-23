@@ -88,8 +88,19 @@ export function changing<Value>(...values: readonly Value[]): Changing<Value> {
   };
 }
 
-function askerOf(asked: Changing<SubscriptionKey>): Asker {
-  return () => Effect.sync(asked.now);
+export interface AskedKey extends SubscriptionKey {
+  readonly destination?: Destination;
+}
+
+function askerOf(asked: Changing<AskedKey>): Asker {
+  return ({ arranged }) =>
+    Effect.sync(() =>
+      asked
+        .now()
+        .flatMap(({ connection, topic, destination = arranged.get(connection) }) =>
+          destination === undefined ? [] : [{ connection, topic, destination }],
+        ),
+    );
 }
 
 export interface Runtime {
@@ -125,18 +136,15 @@ export interface Loop {
   readonly records: FakeRecords;
   readonly secrets: FakeSecrets;
   readonly connections: Changing<LoopConnection>;
-  readonly askers: readonly Changing<SubscriptionKey>[];
-  readonly triggered: Changing<SubscriptionKey>;
+  readonly askers: readonly Changing<AskedKey>[];
+  readonly triggered: Changing<AskedKey>;
   readonly identified: () => readonly Identified[];
   readonly identifies: (identified: Identified) => void;
   readonly placesNamed: () => readonly PlaceNamed[];
   readonly namesPlace: (named: PlaceNamed) => void;
 }
 
-export function loopOver(
-  connections: readonly LoopConnection[],
-  ...asked: readonly (readonly SubscriptionKey[])[]
-): Loop {
+export function loopOver(connections: readonly LoopConnection[], ...asked: readonly (readonly AskedKey[])[]): Loop {
   const held = changing(...connections);
   const identified: Identified[] = [];
   const named: PlaceNamed[] = [];

@@ -6444,7 +6444,7 @@
       "get": {
         "operationId": "list_connections",
         "summary": "List connections",
-        "description": "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`.",
+        "description": "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`. A connected connection that lists no events can still start a workflow from what one of its tools lists; the events guide shows how, under Filters.",
         "tags": [
           "connections"
         ],
@@ -20895,6 +20895,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -21581,6 +21638,63 @@
                                         "attributes": {
                                           "type": "object",
                                           "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                        },
+                                        "read": {
+                                          "type": "object",
+                                          "properties": {
+                                            "tool": {
+                                              "type": "string",
+                                              "description": "The connection's tool that Auto calls to list the items"
+                                            },
+                                            "with": {
+                                              "type": "object",
+                                              "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                            },
+                                            "list": {
+                                              "type": "string",
+                                              "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                            },
+                                            "order": {
+                                              "type": "string",
+                                              "enum": [
+                                                "oldest_first",
+                                                "newest_first"
+                                              ],
+                                              "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                            },
+                                            "cursor": {
+                                              "type": "string",
+                                              "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                            },
+                                            "next_page_token": {
+                                              "type": "string",
+                                              "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                            },
+                                            "start": {
+                                              "type": "string",
+                                              "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                            },
+                                            "id": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "minItems": 1,
+                                              "description": "JSON Pointers into an item whose values together tell one item from another"
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "description": "Where an item says when it happened, as a JSON Pointer"
+                                            }
+                                          },
+                                          "required": [
+                                            "tool",
+                                            "list",
+                                            "order",
+                                            "id"
+                                          ],
+                                          "additionalProperties": false,
+                                          "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                         }
                                       },
                                       "required": [
@@ -22003,6 +22117,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -22683,6 +22854,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -23403,6 +23631,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -24167,6 +24452,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -24815,6 +25157,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -25463,6 +25862,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -26111,6 +26567,63 @@
                                     "attributes": {
                                       "type": "object",
                                       "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    },
+                                    "read": {
+                                      "type": "object",
+                                      "properties": {
+                                        "tool": {
+                                          "type": "string",
+                                          "description": "The connection's tool that Auto calls to list the items"
+                                        },
+                                        "with": {
+                                          "type": "object",
+                                          "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                        },
+                                        "list": {
+                                          "type": "string",
+                                          "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "order": {
+                                          "type": "string",
+                                          "enum": [
+                                            "oldest_first",
+                                            "newest_first"
+                                          ],
+                                          "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                        },
+                                        "cursor": {
+                                          "type": "string",
+                                          "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                        },
+                                        "next_page_token": {
+                                          "type": "string",
+                                          "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                        },
+                                        "start": {
+                                          "type": "string",
+                                          "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                        },
+                                        "id": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "minItems": 1,
+                                          "description": "JSON Pointers into an item whose values together tell one item from another"
+                                        },
+                                        "time": {
+                                          "type": "string",
+                                          "description": "Where an item says when it happened, as a JSON Pointer"
+                                        }
+                                      },
+                                      "required": [
+                                        "tool",
+                                        "list",
+                                        "order",
+                                        "id"
+                                      ],
+                                      "additionalProperties": false,
+                                      "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                     }
                                   },
                                   "required": [
@@ -30224,6 +30737,63 @@
                                         "attributes": {
                                           "type": "object",
                                           "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                        },
+                                        "read": {
+                                          "type": "object",
+                                          "properties": {
+                                            "tool": {
+                                              "type": "string",
+                                              "description": "The connection's tool that Auto calls to list the items"
+                                            },
+                                            "with": {
+                                              "type": "object",
+                                              "description": "The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page"
+                                            },
+                                            "list": {
+                                              "type": "string",
+                                              "description": "Where the list of items is in the tool's answer, as a JSON Pointer"
+                                            },
+                                            "order": {
+                                              "type": "string",
+                                              "enum": [
+                                                "oldest_first",
+                                                "newest_first"
+                                              ],
+                                              "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                                            },
+                                            "cursor": {
+                                              "type": "string",
+                                              "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer"
+                                            },
+                                            "next_page_token": {
+                                              "type": "string",
+                                              "description": "Where the token of the next page is in the tool's answer, as a JSON Pointer"
+                                            },
+                                            "start": {
+                                              "type": "string",
+                                              "description": "The value of `since` for the first check, such as `{{ now }}`"
+                                            },
+                                            "id": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "minItems": 1,
+                                              "description": "JSON Pointers into an item whose values together tell one item from another"
+                                            },
+                                            "time": {
+                                              "type": "string",
+                                              "description": "Where an item says when it happened, as a JSON Pointer"
+                                            }
+                                          },
+                                          "required": [
+                                            "tool",
+                                            "list",
+                                            "order",
+                                            "id"
+                                          ],
+                                          "additionalProperties": false,
+                                          "description": "For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed"
                                         }
                                       },
                                       "required": [

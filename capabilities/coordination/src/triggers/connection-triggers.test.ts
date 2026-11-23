@@ -3,17 +3,12 @@ import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeWorkflowAdapter } from '../capability/workflow.ts';
-import type { ReadWorkflow } from '../document/workflow-document.ts';
 import { connectionsReporting } from '../testing/connection-events.ts';
 import { testExpressionCheck } from '../testing/expression-checks.ts';
 import { noneQueued } from '../testing/playbook.ts';
 import { testPlaybookNames } from '../testing/test-sandbox.ts';
-import {
-  connectionRejectionsOf,
-  connectionTriggersChecked,
-  type ConnectionReporting,
-  type Hearing,
-} from './connection-triggers.ts';
+import type { ConnectionReporting, Hearing } from './connection-ports.ts';
+import { connectionRejectionsOf, connectionTriggersChecked } from './connection-triggers.ts';
 
 const place = { org: 'acme', playbook: 'alpha', name: 'on-items' };
 
@@ -52,6 +47,8 @@ const tracker: ConnectionReporting = {
   status: 'connected',
   types: [added, closed, removed, renamed, posted],
   hearing: (type, subject) => Effect.succeed(hearingOf(type, subject)),
+  reading: () => Effect.die('a read was asked'),
+  tools: Effect.die('the tools were listed'),
   listenedBy: [],
 };
 
@@ -71,13 +68,27 @@ const reporting = {
   mended: { ...tracker, status: 'broken' },
   waiting: { ...tracker, status: 'pending' },
   silent: { ...tracker, types: [] },
+  checked: {
+    ...tracker,
+    reading: () => Effect.succeed({ kind: 'heard' }),
+    listenedBy: [
+      {
+        workflow: 'on-reads',
+        type: added.type,
+        read: { tool: 'list_items', list: '', order: 'oldest_first', id: ['/id'] },
+      },
+    ],
+  },
 } satisfies Readonly<Record<string, ConnectionReporting>>;
 
 function filter(source: string, type: string, subject?: string): JsonObject {
   return { with: { type, source, ...(subject === undefined ? {} : { subject }) } };
 }
 
-function workflowOn(filters: readonly JsonObject[], steps: readonly JsonObject[] = []): ReadWorkflow {
+function workflowOn(
+  filters: readonly JsonObject[],
+  steps: readonly JsonObject[] = [],
+): Parameters<typeof connectionRejectionsOf>[1] {
   return {
     document: { schedule: { on: { any: [...filters] } }, do: [...steps] },
     locate: () => ({ line: 7, column: 9 }),
@@ -129,6 +140,12 @@ describe('a trigger that names a connection, checked when its workflow is saved'
   });
 });
 
+describe('a trigger with no read under a type another workflow checks a read under, through the same connection', () => {
+  it('is refused at its type', async () => {
+    expect(await refusedAt([filter('/connections/checked', added.type)])).toEqual(['/schedule/on/any/0/with/type']);
+  });
+});
+
 describe('the refusals of a trigger that names a connection', () => {
   it.each([
     [
@@ -170,9 +187,8 @@ describe('a trigger the connection can start', () => {
     const refused = await Effect.runPromise(Effect.flip(checked(nowhere, place)));
     const accepted = await Effect.runPromiseExit(checked(workflowOn([]), place));
 
-    expect(refused.issues.map(({ detail }) => detail)).toEqual([
-      expect.stringMatching(/^Line 7, column 9: at \/schedule\/on\/any\/0\/with\/source: /u),
-    ]);
+    const onItsLine: unknown = expect.stringMatching(/^Line 7, column 9: at \/schedule\/on\/any\/0\/with\/source: /u);
+    expect(refused).toMatchObject({ issues: [{ detail: onItsLine }] });
     expect(Exit.isSuccess(accepted)).toBe(true);
   });
 });

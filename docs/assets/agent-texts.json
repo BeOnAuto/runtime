@@ -1557,7 +1557,7 @@
       ]
     },
     {
-      "sha256": "279fb9f89060e20a37b2416f44a94527fbeb439d4c522987fc1c49af984aa6d5",
+      "sha256": "6531c5fb05cd9b48145fb28e2f79cc3b8648955221223a79a83fc4007281031b",
       "tier": 1,
       "received": [
         {
@@ -1570,7 +1570,7 @@
         }
       ],
       "lines": [
-        "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`."
+        "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`. A connected connection that lists no events can still start a workflow from what one of its tools lists; the events guide shows how, under Filters."
       ]
     },
     {
@@ -4608,7 +4608,7 @@
       ]
     },
     {
-      "sha256": "9ef05c1357446c05eb535f5182ad7f10156ea5c1b615989d594851037f14c34d",
+      "sha256": "2cdb3e518199f4a2d97a7ba0f24d5dbb75c567c276901ad66c5c84bdc525f14d",
       "tier": 3,
       "received": [
         {
@@ -4627,7 +4627,7 @@
         "",
         "A workflow can start on its own: at set times, in UTC or in a time zone it names, every so often, or whenever an event of a given type is published to the playbook. Read the workflow guide and the triggers guide with get_guide before you write one.",
         "",
-        "1. Ask the person which workflow to run and when, such as every weekday at 9:00 their time, or whenever the month's books are closed. Find the workflow with list_definitions, `type` workflow, or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.",
+        "1. Ask the person which workflow to run and when, such as every weekday at 9:00 their time, or whenever the month's books are closed. Find the workflow with list_definitions, `type` workflow, or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says. When the person wants it to start because something happened in an app they connected, do not use a clock: start it from the connection, as the events guide shows under Filters.",
         "2. Give the workflow a `schedule` as the triggers guide says, with one trigger or up to three, each kept on its own: `cron` with five fields, minute, hour, day of month, month and day of week, read in UTC or in the time zone `time_zone` names beside it; `every` with a duration of at least a minute; and `on` with the type of the events that start it. A run its schedule starts runs as the playbook itself, with its due time, or a list of the event, as its input, and its history says which trigger started it.",
         "3. When the times are the person's own, such as 9:00 their time, put `time_zone` beside `cron` with the IANA name of their time zone, such as `America/New_York` or `Europe/London`, and write the five fields in their time: the runs then stay at their hour when the clocks change for daylight saving. Leave it out only for times meant in UTC. `every` takes no time zone.",
         "4. A run on a clock is given its due time alone, so it finds what is new from that: what came since the time before, such as in the 30 minutes before `schedule.due` for `every: PT30M`. A time skipped while the run before still ran, or one whose run failed, is not run again, so give the workflow an input of its own too, such as `since` and `until`, with which the person runs it by hand for a stretch it missed, and let `input.from` take either: `'${ $data.schedule === undefined ? $data : ({ since: new Date(Date.parse($data.schedule.due) - 1800000).toISOString(), until: $data.schedule.due }) }'`. In a time zone, the stretch between two daily times is 23 or 25 hours on the nights the clocks change.",
@@ -9333,7 +9333,7 @@
       ]
     },
     {
-      "sha256": "32aa4a6ea345f718725287dcf2b4a9107a975cab7b954575428b9406d0d842e0",
+      "sha256": "a4cd580ac9a993f6ca71411911d52f88eb4211ef4c09b8ee99d80fd58a20de63",
       "tier": 3,
       "received": [
         {
@@ -9416,7 +9416,24 @@
         "| `data` | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else |",
         "",
         "- An event is taken when it matches any of the filters, and once only, however many it matches.",
-        "- `source` may be a connection's, from `list_connections`, to start from what that connection reports.",
+        "- `source` may be a connection's, from `list_connections`, to start from what that connection reports. Each event it lists has a `speed`. Where it is `polling`, Auto checks the app on a timer and the workflow starts for what is new, so tell the person the pace before they agree, such as \"Your tracker is checked about every minute\", and that it starts for what happens from now on.",
+        "- An event that says something is created or updated arrives again each time the thing changes. With a condition on `data`, the workflow starts each time a thing that meets the condition is created or changed, so say that to the person where it matters, such as a post that would go out twice.",
+        "- Where a connected connection lists no events, a filter can have `read` beside its `with`. `read` names one of the connection's tools for Auto to check and says how to read its answer.",
+        "  - `tool` must be one that `list_connection_tools` marks as `reads`.",
+        "  - `with` holds the tool's arguments. Write `{{ since }}` where the tool takes the point to list from, and `{{ page_token }}` where it takes the token of the next page.",
+        "  - `list` is a JSON Pointer to the list in what the tool answers.",
+        "  - `order` is `oldest_first` or `newest_first`, as the tool lists.",
+        "  - `cursor` is a JSON Pointer, within an item, to the value the next check passes as `since`. Where the tool takes no point to list from and lists the newest first, `cursor` points at when the item was created or changed, a time or a number.",
+        "  - `next_page_token` is a JSON Pointer to the token of the next page, where the tool lists in pages.",
+        "  - `start` is the value of `since` for the first check, such as `{{ now }}`.",
+        "  - `id` is a list of JSON Pointers, within an item, that together tell one item from another.",
+        "  - `time` is a JSON Pointer to when the item's event happened, where the item has one.",
+        "",
+        "  The filter's `type` is a name of your own for what happens, in lowercase words joined by dots, such as `booking.created` or `invoice.received`. Two triggers that check different lists through one connection need different types. The event's `data` is the item as the tool lists it.",
+        "",
+        "- Before you write `read`, call the tool once with `query_connection` and look at what it answers. Choose the tool that lists the thing the person named. If no tool of the connection can list what is new, say so to the person and offer a set time each day instead. Never put the workflow on a clock of a minute to imitate this.",
+        "- A workflow started this way does not start for what was already there when it was saved. After a broken connection is reconnected, it starts for what happened in between. Tell the person that, and the pace of the checks, which `get_definition` shows under `standing` once the workflow is saved.",
+        "- A workflow started this way starts again when it changes the thing it watches. Do not have it change what it reads, or tell the person it will start again.",
         "- A filter that names an attribute the event does not have does not match it. A run no reaction started carries no `depth`, and a run no call started no `calldepth`, so a filter for such runs leaves the attribute out.",
         "- A filter that names `depth`, `calldepth` or `definitionversion` as 0 is refused when its definition is saved.",
         "- An expression holds unless it returns `false` or `null`.",
@@ -10570,7 +10587,7 @@
       ]
     },
     {
-      "sha256": "643e1419fd75898cd6251b4834768b9c65fca2cbb74e25cc17471a291c0d3ca5",
+      "sha256": "389e073890bc4e548ffb13878838172dd157b4a73075081c1f98c7319f239555",
       "tier": 3,
       "received": [
         {
@@ -10588,7 +10605,7 @@
         "",
         "A workflow can start on its own: at set times, in UTC or in a time zone it names, every so often, or whenever an event of a given type is published to the playbook. Read the workflow guide and the triggers guide with get_guide before you write one.",
         "",
-        "1. Ask the person which workflow to run and when, such as every weekday at 9:00 their time, or whenever the month's books are closed. Find the workflow with list_definitions, `type` workflow, or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.",
+        "1. Ask the person which workflow to run and when, such as every weekday at 9:00 their time, or whenever the month's books are closed. Find the workflow with list_definitions, `type` workflow, or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says. When the person wants it to start because something happened in an app they connected, do not use a clock: start it from the connection, as the events guide shows under Filters.",
         "2. Give the workflow a `schedule` as the triggers guide says, with one trigger or up to three, each kept on its own: `cron` with five fields, minute, hour, day of month, month and day of week, read in UTC or in the time zone `time_zone` names beside it; `every` with a duration of at least a minute; and `on` with the type of the events that start it. A run its schedule starts runs as the playbook itself, with its due time, or a list of the event, as its input, and its history says which trigger started it.",
         "3. When the times are the person's own, such as 9:00 their time, put `time_zone` beside `cron` with the IANA name of their time zone, such as `America/New_York` or `Europe/London`, and write the five fields in their time: the runs then stay at their hour when the clocks change for daylight saving. Leave it out only for times meant in UTC. `every` takes no time zone.",
         "4. A run on a clock is given its due time alone, so it finds what is new from that: what came since the time before, such as in the 30 minutes before `schedule.due` for `every: PT30M`. A time skipped while the run before still ran, or one whose run failed, is not run again, so give the workflow an input of its own too, such as `since` and `until`, with which the person runs it by hand for a stretch it missed, and let `input.from` take either: `'${ $data.schedule === undefined ? $data : ({ since: new Date(Date.parse($data.schedule.due) - 1800000).toISOString(), until: $data.schedule.due }) }'`. In a time zone, the stretch between two daily times is 23 or 25 hours on the nights the clocks change.",

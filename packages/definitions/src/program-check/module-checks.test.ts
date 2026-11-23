@@ -265,6 +265,7 @@ describe('the compiler', () => {
       'template.ts',
       'testing/index.ts',
       'tool-blocks/index.ts',
+      'registry/trigger-reads.ts',
       'checking/value-checks.ts',
     ]);
     expect(entries.filter((entry) => entry !== checkHandler).flatMap((entry) => compilersReachedFrom(entry))).toEqual(

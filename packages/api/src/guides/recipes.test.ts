@@ -61,7 +61,7 @@ describe('the schedule recipe', () => {
     const withoutPages = await recipeCarrying('schedule', 'workflow');
 
     expect(withPages?.text).toContain(
-      'or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.\n2. ',
+      'or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.',
     );
     expect(withPages?.text).toContain('and get_run for one run, whose headline says what it did.\n9. ');
     expect(withoutPages?.text).toContain('and get_run for one run.\n9. ');

@@ -8,6 +8,7 @@ import {
   loopConnectionOf,
   type LoopConnectionsParts,
 } from '../subscriptions/loop-connections.ts';
+import { declaresEventTypes } from '../subscriptions/loop-reads.ts';
 import { arrangedPerSubscription } from '../subscriptions/subscription-deliveries.ts';
 
 interface ConnectionPlace extends PlaybookAddress {
@@ -21,6 +22,7 @@ interface ReportedPlace {
 
 interface ServedConnection {
   readonly topicsOf: (event: ReportedPlace) => Effect.Effect<readonly string[]>;
+  readonly declaresEventTypes: boolean;
   readonly user?: string;
 }
 
@@ -40,8 +42,11 @@ function placedIn(destinations: readonly EventDestination[]): readonly EventDest
 
 function servedAs(providers: ProviderList, kept: KeptConnection): ServedConnection {
   const { destinations } = loopConnectionOf(providers, kept);
-  const topicsOf = topicsIn(placedIn(destinations));
-  return kept.identified === undefined ? { topicsOf } : { topicsOf, user: kept.identified.id };
+  const served = {
+    topicsOf: topicsIn(placedIn(destinations)),
+    declaresEventTypes: declaresEventTypes(providers, kept.connection),
+  };
+  return kept.identified === undefined ? served : { ...served, user: kept.identified.id };
 }
 
 function isConnectedAs({ connection }: KeptConnection, name: string): boolean {

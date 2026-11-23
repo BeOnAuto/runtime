@@ -193,6 +193,7 @@ export {
 } from './bounds/call-bounds.ts';
 export { mostRequestBytesAmong } from './access/run-ways.ts';
 export { secretsOf, type Secrets } from './bounds/secrets.ts';
+export { canonicalJson } from './bounds/text-bytes.ts';
 export {
   ServerEntrySchema,
   ToolServersSchema,

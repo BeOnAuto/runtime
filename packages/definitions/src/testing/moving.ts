@@ -8,7 +8,7 @@ import { acmeAdmin } from './callers.ts';
 import { echo } from './capabilities/echo.ts';
 import { flow } from './capabilities/flow.ts';
 import { definitionOperationsFor } from './definition-operations.ts';
-import { toPlaybook, type Harness } from './harness.ts';
+import { harness, toPlaybook, type Harness } from './harness.ts';
 
 export const movingCapabilities = [echo, asking, flow];
 
@@ -72,4 +72,18 @@ export function heldIn(definitions: Definitions): readonly string[] {
 export function answerOf(outcome: object): Readonly<Record<string, unknown>> {
   const output: unknown = Reflect.get(outcome, 'output');
   return Object.fromEntries(Object.entries(new Object(output)));
+}
+
+function checkingBookings(tool: string) {
+  const read = { tool, list: '/b', order: 'oldest_first', id: ['/id'] };
+  return { on: [{ type: 'booking.created', source: '/connections/crm', read }] };
+}
+
+export async function movedBesideACheckInBeta(tool: string) {
+  const definitions = harness(undefined, undefined, { stage: 'off', folds: ['workflow'] });
+  const onBookings = { ...weekly, name: 'on-bookings', source: JSON.stringify(checkingBookings('list_bookings')) };
+  await definitions.call(operations.createDefinition, toBeta(acmeAdmin, onBookings));
+  await inAlpha(definitions, callsGreet(checkingBookings(tool)));
+  const moved = await moving(definitions, { definitions: [weekly, greet], force: true });
+  return { moved, held: heldIn(definitions) };
 }

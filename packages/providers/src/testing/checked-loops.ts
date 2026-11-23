@@ -8,6 +8,7 @@ import {
   checkedDestinations,
   checkedNewestFirst,
   checkedOldestFirst,
+  checkedPost,
   type ListingAnswering,
   type ListingApp,
   type Post,
@@ -33,6 +34,10 @@ export function timeOf(minutes: number): string {
 
 export function aPost(id: string, minutes: number): Post {
   return { id, room: 'lobby', at: timeOf(minutes), words: `post ${id}` };
+}
+
+export function listedIdOf({ id, at }: Post): string {
+  return [checkedPost.type, id, at].map((part) => encodeURIComponent(part)).join('/');
 }
 
 export function polledOf(written: object): Polled {

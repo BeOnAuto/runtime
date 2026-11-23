@@ -16,7 +16,13 @@ import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import { filterMatchingOf, type MatchFilters } from '../filtering/filter-matching.ts';
-import { judgementOf, namingTheConnection, type JudgedTrigger, type Judging } from './trigger-judgements.ts';
+import {
+  judgementOf,
+  namingTheConnection,
+  type JudgedTrigger,
+  type HeardAs,
+  type Judging,
+} from './trigger-judgements.ts';
 import {
   beforeAnyTrigger,
   notTakenReasons,
@@ -34,6 +40,7 @@ export interface ConnectionArrival {
 
 export interface ServedConnection {
   readonly topicsOf: (event: Pick<ReportedEvent, 'type' | 'subject'>) => Effect.Effect<readonly string[]>;
+  readonly declaresEventTypes: boolean;
   readonly user?: string;
 }
 
@@ -104,9 +111,13 @@ function outcomesOfTheTriggers(
 }
 
 function isOutOfItsTopic(served: ServedConnection, { event, topic }: ConnectionArrival): Effect.Effect<boolean> {
-  return topic === undefined
+  return topic === undefined || !served.declaresEventTypes
     ? Effect.succeed(false)
     : Effect.map(served.topicsOf(event), (topics) => !topics.includes(topic));
+}
+
+function heardAs(served: ServedConnection, { topic }: ConnectionArrival): HeardAs {
+  return served.declaresEventTypes ? { kind: 'declared' } : { kind: 'read', topic: topic ?? '' };
 }
 
 function isItsOwn({ actor }: ReportedEvent, { user }: ServedConnection): boolean | undefined {
@@ -145,7 +156,7 @@ export function intakeMatching(parts: MatchingParts): TakeIn {
         return yield* notTaken([beforeAnyTrigger('invalid_event')]);
       }
       const { event: judged } = publication;
-      const naming = namingTheConnection(judged.type, judged);
+      const naming = namingTheConnection(judged.type, judged, heardAs(served, arrival));
       const triggers = judgedIn(playbook, yield* savedTriggers(playbook, naming));
       const judging = { match, naming, event: judged, now, ownUntold: own === undefined };
       const outcomes = yield* outcomesOfTheTriggers(judging, triggers);

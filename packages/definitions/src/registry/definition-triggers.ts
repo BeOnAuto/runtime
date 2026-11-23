@@ -1,6 +1,8 @@
 import { ContextReference } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { TriggerReadSchema } from './trigger-reads.ts';
+
 const referenceWords = 'Where the document names it, as a JSON pointer, which no later version renumbers';
 
 const ReferenceField = Schema.String.annotate({ description: referenceWords });
@@ -13,6 +15,7 @@ const TriggerFilterSchema = Schema.Struct({
   attributes: Schema.JsonObject.annotate({
     description: 'What an event must have to match, as written: its type, and its source, subject and data when named',
   }),
+  read: Schema.optionalKey(TriggerReadSchema),
 });
 
 export const EventTriggerSchema = Schema.Struct({

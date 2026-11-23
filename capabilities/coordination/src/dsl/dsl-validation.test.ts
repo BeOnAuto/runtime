@@ -209,6 +209,22 @@ describe('the source of an event filter', () => {
   });
 });
 
+describe('the read a trigger names for Auto to check', () => {
+  it('is the runtime’s own key, which the DSL is not asked about, in one filter or in a list of them', async () => {
+    const read = '{ tool: list_bookings, list: /bookings, order: oldest_first, id: [/id] }';
+    const filterWithARead = `{ with: { type: booking.created, source: /connections/bookings }, read: ${read} }`;
+    const one = workflow(`schedule:\n  on:\n    one: ${filterWithARead}\ndo: []`);
+    const any = workflow(`schedule:\n  on:\n    any: [${filterWithARead}, 'not a filter']\ndo: []`);
+    const timed = workflow('schedule:\n  every: PT1M\ndo: []');
+    const stray = workflow(`schedule:\n  on:\n    one: { with: { type: closed }, bogus: 1 }\ndo: []`);
+
+    expect(await connected(one)).toEqual([]);
+    expect(pointersOf(await connected(any))).toEqual(new Set(['/schedule/on/any/1']));
+    expect(await connected(timed)).toEqual([]);
+    expect(pointersOf(await connected(stray))).toEqual(new Set(['/schedule/on/one']));
+  });
+});
+
 function expectedCircularity(document: { readonly [key: string]: Json }): string {
   try {
     JSON.stringify(document);

@@ -1,7 +1,8 @@
 import type { EventTrigger, StandingRequest, Trigger } from '@on.auto/definitions';
 import { Effect, type Schema } from 'effect';
 
-import { listeningOf, type ConnectionEvents, type Listening } from './connection-triggers.ts';
+import type { ConnectionEvents, Listening } from './connection-ports.ts';
+import { listeningOf } from './connection-triggers.ts';
 
 function filtersNamingAConnection(triggers: readonly Trigger[]): readonly Listening[] {
   return triggers
@@ -15,8 +16,14 @@ function standingOfEach(
   { org, playbook, status }: StandingRequest,
   listening: Listening,
 ): Effect.Effect<Schema.JsonObject> {
-  const { reference, connection, type, subject } = listening;
-  const asked = { connection, type, paused: status === 'paused', ...(subject === undefined ? {} : { subject }) };
+  const { reference, connection, type, subject, read } = listening;
+  const asked = {
+    connection,
+    type,
+    paused: status === 'paused',
+    ...(subject === undefined ? {} : { subject }),
+    ...(read === undefined ? {} : { read }),
+  };
   return Effect.map(events.standingOf({ org, playbook }, asked), (standing) => ({
     reference,
     connection,

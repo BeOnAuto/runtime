@@ -2,6 +2,7 @@ import { Effect, Schema } from 'effect';
 
 import { defineCapability } from '../../capability/capability.ts';
 import type { Trigger } from '../../registry/definition-triggers.ts';
+import { TriggerReadSchema } from '../../registry/trigger-reads.ts';
 import type { DefinitionsNamed } from '../../used-by/definitions-named.ts';
 import { echoDeclaration } from './echo.ts';
 
@@ -14,6 +15,7 @@ const Filters = Schema.Array(
     type: Schema.String,
     source: Schema.optionalKey(Schema.String),
     subject: Schema.optionalKey(Schema.String),
+    read: Schema.optionalKey(TriggerReadSchema),
   }),
 );
 
@@ -36,7 +38,12 @@ function subjectsAt(key: string, filters: readonly Filter[]) {
 }
 
 function triggersOf({ on = [] }: ReturnType<typeof namedIn>): readonly Trigger[] {
-  const filters = on.map(({ type, ...attributes }, index) => ({ reference: `/on/${index}`, type, attributes }));
+  const filters = on.map(({ type, read, ...attributes }, index) => ({
+    reference: `/on/${index}`,
+    type,
+    attributes,
+    ...(read === undefined ? {} : { read }),
+  }));
   return filters.length === 0 ? [] : [{ kind: 'event', reference: '/on', filters }];
 }
 

@@ -8,6 +8,7 @@ import { decided, type Step, type Wanted } from './subscription-decisions.ts';
 import type { SubscriptionCallFailed } from './subscription-failed.ts';
 import { identitiesReadWith } from './subscription-identities.ts';
 import type {
+  AskedSubscription,
   Asking,
   LoopConnection,
   Reconciled,
@@ -44,15 +45,12 @@ function arrangedOf(
   );
 }
 
-function wantedIn(
-  ports: SubscriptionLoopPorts,
-  arranged: ReadonlyMap<string, Subscribable>,
-  asked: readonly SubscriptionKey[],
-): readonly Wanted[] {
-  return asked.flatMap(({ connection, topic }) => {
-    const destination = arranged.get(connection);
-    return destination !== undefined && ports.records.holds(topic) ? [{ connection, topic, destination }] : [];
-  });
+function wantedIn(ports: SubscriptionLoopPorts, asked: readonly AskedSubscription[]): readonly Wanted[] {
+  return asked.flatMap(({ connection, topic, destination }) =>
+    isSubscribable(destination) && ports.receives(destination.type) && ports.records.holds(topic)
+      ? [{ connection, topic, destination }]
+      : [],
+  );
 }
 
 function owingThrough(connections: readonly LoopConnection[], wanted: readonly Wanted[]): readonly LoopConnection[] {
@@ -138,7 +136,7 @@ export function subscriptionLoopOf(
       const asked = yield* Effect.forEach(ports.askers, (asker) => asker(asking));
       const recorded = yield* ports.records.read(playbook);
       const byName = new Map(connections.map((each) => [each.connection, each]));
-      const wanted = wantedIn(ports, asking.arranged, asked.flat());
+      const wanted = wantedIn(ports, asked.flat());
       const { steps, nextDueAt } = decided({
         now,
         mostPerConnection: ports.mostPerConnection,

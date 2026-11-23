@@ -292,5 +292,6 @@ export function arrivalReadingOf(destination: Destination, arrival: Arrival): Ar
 }
 
 export function listedEventOf({ events }: Pick<Destination, 'events'>, item: Schema.Json): ArrivalEvent | undefined {
-  return eventIn({ transport: 'message', payload: item }, events, holdsOrListsEveryItem);
+  const event = eventIn({ transport: 'message', payload: item }, events, holdsOrListsEveryItem);
+  return event === undefined ? undefined : { ...event, id: `${encodeURIComponent(event.type)}/${event.id}` };
 }

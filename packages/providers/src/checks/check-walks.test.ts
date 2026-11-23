@@ -79,8 +79,8 @@ describe('a check that finds something new', () => {
 
     expect(checked.loop.intake.arrivals().map(({ event, topic, connection }) => [event.id, topic, connection])).toEqual(
       [
-        ['p-1/2026-10-07T09%3A00%3A15.000Z', 'lobby', 'tracker'],
-        ['p-2/2026-10-07T09%3A00%3A30.000Z', 'lobby', 'tracker'],
+        ['com.example.chat.post/p-1/2026-10-07T09%3A00%3A15.000Z', 'lobby', 'tracker'],
+        ['com.example.chat.post/p-2/2026-10-07T09%3A00%3A30.000Z', 'lobby', 'tracker'],
       ],
     );
     expect([checked.loop.records.facts().slice(1), counted.advances()]).toEqual([
@@ -123,7 +123,7 @@ describe('an item a check reads again', () => {
 
     expect([checked.loop.intake.arrivals().length, checked.loop.intake.events()]).toEqual([
       2,
-      ['p-1/2026-10-07T09%3A00%3A30.000Z'],
+      ['com.example.chat.post/p-1/2026-10-07T09%3A00%3A30.000Z'],
     ]);
   });
 
@@ -141,7 +141,7 @@ describe('an item a check reads again', () => {
     checked.app.posted(aPost('p-1', 0.5));
     await roundAt(checked.ports, firstDue);
 
-    expect(checked.loop.intake.events()).toEqual(['p-1/2026-10-07T09%3A00%3A30.000Z']);
+    expect(checked.loop.intake.events()).toEqual(['com.example.chat.post/p-1/2026-10-07T09%3A00%3A30.000Z']);
   });
 
   it('moves nothing and records nothing where another check moved the mark meanwhile', async () => {
@@ -263,7 +263,7 @@ describe('a check whose read fails', () => {
     expect([failing, checked.loop.records.rows()[0]?.positions?.failures]).toEqual([1, 0]);
     expect([read.nextDueAt, checked.loop.intake.events()]).toEqual([
       dueAfter(Number(failed.nextDueAt), startingNow),
-      ['p-1/2026-10-07T09%3A00%3A30.000Z'],
+      ['com.example.chat.post/p-1/2026-10-07T09%3A00%3A30.000Z'],
     ]);
   });
 });

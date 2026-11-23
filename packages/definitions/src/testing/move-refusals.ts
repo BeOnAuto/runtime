@@ -2,6 +2,7 @@ import { PlaybookAdmission, PlaybookContext, PlaybookReader, playbookLedgerOf } 
 import { Context, Effect } from 'effect';
 
 import { knownCapabilities } from '../capability/known-capabilities.ts';
+import { definitionNamesOf } from '../identity/definition-names.ts';
 import { checkedMove, type MoveAsked } from '../moving/move-checks.ts';
 import { goalCapabilities } from './moving-goals.ts';
 import { connections, started, type Definitions } from './moving.ts';
@@ -27,4 +28,20 @@ export async function recordOfTheRefusal(definitions: Definitions, asked: Omit<M
   );
   const record: unknown = Reflect.get(new Object(refusal), 'record');
   return record;
+}
+
+const movedInTheAppend = {
+  stream: 'definition/acme/id-of-greet/definitions/echo',
+  type: 'definition_moved',
+  data: {},
+  id: 'moved-greet',
+  position: 3,
+  context: { at: '2026-11-19T09:00:00.000Z', by: 'acme-admin' },
+};
+
+export function takenWhileWritten(status: string) {
+  const inBeta = { playbookKey: 'playbook/acme/beta/', definitionType: 'echo', name: 'greet', hasTriggers: false };
+  return definitionNamesOf(['echo']).takenBy({ ...inBeta, status: 'active' }, { ...inBeta, status }, [
+    movedInTheAppend,
+  ]);
 }

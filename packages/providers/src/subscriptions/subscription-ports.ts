@@ -214,7 +214,11 @@ export interface Asking extends PlaybookAddress {
   readonly arranged: ReadonlyMap<string, Destination>;
 }
 
-export type Asker = (asking: Asking) => Effect.Effect<readonly SubscriptionKey[]>;
+export interface AskedSubscription extends SubscriptionKey {
+  readonly destination: Destination;
+}
+
+export type Asker = (asking: Asking) => Effect.Effect<readonly AskedSubscription[]>;
 
 export interface IdentifiedConnection {
   readonly id: string;

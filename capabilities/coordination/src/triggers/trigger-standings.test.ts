@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { connectionsReporting } from '../testing/connection-events.ts';
 import { workflowPlaybook, type WorkflowPlaybook } from '../testing/workflow-playbook.ts';
-import type { ConnectionReporting, StandingAsked, TriggerStanding } from './connection-triggers.ts';
+import type { ConnectionReporting, StandingAsked, TriggerStanding } from './connection-ports.ts';
 import { triggersStandingOf } from './trigger-standings.ts';
 
 const opened = 'com.example.ticket.opened';
@@ -16,6 +16,8 @@ const ofTheTracker = (reference: string, attributes: Readonly<Record<string, str
   attributes: { type: opened, ...attributes },
 });
 
+const listingBookings = { tool: 'list_bookings', list: '/bookings', order: 'oldest_first', id: ['/id'] } as const;
+
 const listening: readonly Trigger[] = [
   {
     kind: 'event',
@@ -24,6 +26,7 @@ const listening: readonly Trigger[] = [
       ofTheTracker('/schedule/on/any/0', { source: '/connections/tracker', subject: 'board-7' }),
       ofTheTracker('/schedule/on/any/1', { source: '/connections/notes' }),
       ofTheTracker('/schedule/on/any/2', { source: '/ledger/eu' }),
+      { ...ofTheTracker('/schedule/on/any/3', { source: '/connections/bookings' }), read: listingBookings },
     ],
   },
   { kind: 'every', reference: '/schedule/every', milliseconds: 60_000 },
@@ -71,6 +74,8 @@ const tracker: ConnectionReporting = {
   status: 'connected',
   types: [{ type: opened, title: 'A ticket is opened' }],
   hearing: () => Effect.succeed({ kind: 'heard' }),
+  reading: () => Effect.succeed({ kind: 'heard' }),
+  tools: Effect.succeed({ kind: 'listed', tools: [] }),
   listenedBy: [],
 };
 
@@ -110,18 +115,23 @@ describe('how a workflow’s triggers that start from a connection stand', () =>
 
     const stood = await Effect.runPromise(triggersStandingOf(events)(request));
 
-    expect(stood).toEqual([listeningOnTheTracker, goneFromTheNotes]);
-    expect(stood?.map((entry) => 'subject_name' in entry)).toEqual([true, false]);
+    expect(stood).toEqual([
+      listeningOnTheTracker,
+      goneFromTheNotes,
+      { ...goneFromTheNotes, reference: '/schedule/on/any/3', connection: 'bookings' },
+    ]);
+    expect(stood?.map((entry) => 'subject_name' in entry)).toEqual([true, false, false]);
     expect(asked).toEqual([
       { connection: 'tracker', type: opened, subject: 'board-7', paused: false },
       { connection: 'notes', type: opened, paused: false },
+      { connection: 'bookings', type: opened, read: listingBookings, paused: false },
     ]);
   });
 
   it('reads as listening where the port says so', async () => {
     const stood = await Effect.runPromise(triggersStandingOf(connectionsReporting({ tracker }))(request));
 
-    expect(stood?.map(({ listening: heard }) => heard)).toEqual([true, true]);
+    expect(stood?.map(({ listening: heard }) => heard)).toEqual([true, true, true]);
   });
 
   it('asks as paused for a paused workflow, and is left out for a retired one, one with no such filter or none at all', async () => {
@@ -140,12 +150,12 @@ describe('how a workflow’s triggers that start from a connection stand', () =>
 
     const paused = { kind: 'workflow_paused', detail: 'paused' };
     expect(stood.map((each) => each?.map(({ not_listening_because: because }) => because))).toEqual([
-      [paused, paused],
+      [paused, paused, paused],
       undefined,
       undefined,
       undefined,
     ]);
-    expect(asked.map(({ paused: asPaused }) => asPaused)).toEqual([true, true]);
+    expect(asked.map(({ paused: asPaused }) => asPaused)).toEqual([true, true, true]);
   });
 });
 

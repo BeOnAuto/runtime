@@ -5,7 +5,7 @@ import {
   type HeardEvent,
   type RegisterRoutes,
 } from '@on.auto/api';
-import { deliveryDestinationOf, deliverySecretsOf } from '@on.auto/connections';
+import { checksWokenOf, deliveryDestinationOf, deliverySecretsOf } from '@on.auto/connections';
 import { connectionWake, type ConnectionWake } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
@@ -44,14 +44,18 @@ function deliveryLogged({ address, outcome, status, bytes }: HeardEvent): Effect
 }
 
 export function wokenBy(wake: ConnectionWake): (event: ArrivedEvent) => Effect.Effect<void> {
-  return ({ address: { org, connection }, reading }) => {
+  return ({ address: { org, playbook, connection }, reading }) => {
     const woken = reading.wake;
     if (woken === undefined) {
       return Effect.void;
     }
     const place = woken.conversation === undefined ? {} : { conversation: woken.conversation };
-    return Effect.flatMap(Clock.currentTimeMillis, (now) => wake({ org, connection, ...place }, now));
+    return Effect.flatMap(Clock.currentTimeMillis, (now) => wake({ org, playbook, connection, ...place }, now));
   };
+}
+
+export function wokenTogether(...wakes: readonly ConnectionWake[]): ConnectionWake {
+  return (woken, now) => Effect.forEach(wakes, (wake) => wake(woken, now), { discard: true });
 }
 
 function undecidedBecause(cause: Cause.Cause<{ readonly _tag: string }>): IntakeDecision {
@@ -91,7 +95,7 @@ export function eventsServedBy(
   const ledger = runtimeLedger(runtime);
   const destinationOf = deliveryDestinationOf({ registry: ledger, providers });
   const secretsOf = deliverySecretsOf({ ledger, secrets });
-  const handedOn = handedOnBy(connectionWake({ ledger }), takeIn);
+  const handedOn = handedOnBy(wokenTogether(connectionWake({ ledger }), checksWokenOf(ledger)), takeIn);
   return deliveredEventRoutes({
     destination: async (address) => destinationUnlessStopped(await runtime.run(destinationOf(address))),
     secrets: async (address, provenBy) => secretsUnlessStopped(await runtime.run(secretsOf(address, provenBy))),

@@ -21,6 +21,7 @@ import { requestRowFrom } from '../requests/request-rows.ts';
 
 export interface WokenConnection {
   readonly org: string;
+  readonly playbook?: string;
   readonly connection: string;
   readonly conversation?: string;
 }

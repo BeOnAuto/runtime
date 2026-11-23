@@ -1,20 +1,23 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { checkedPost } from '../testing/checked-apps.ts';
+import { aListingApp, checkedPost } from '../testing/checked-apps.ts';
 import {
   anHour,
   aPost,
   checking,
   dueAfter,
+  listedIdOf,
   newestStartingNow,
   sinceIn,
   startingNow,
   timeOf,
   type Checked,
 } from '../testing/checked-loops.ts';
-import { alpha, roundAt, startedAt } from '../testing/subscription-loops.ts';
+import { alpha, loopOver, portsOf, roundAt, startedAt } from '../testing/subscription-loops.ts';
 import { answeredWith, failedAs } from '../testing/subscription-services.ts';
+import { checkDueAt } from './check-pace.ts';
+import { polledOfATrigger } from './trigger-reads.ts';
 
 const posts = [aPost('p-1', 0.1), aPost('p-2', 0.2), aPost('p-3', 0.3), aPost('p-4', 0.4), aPost('p-5', 0.5)];
 
@@ -79,13 +82,12 @@ describe('a long list, newest first', () => {
     });
     checked.app.posted(aPost('p-0', -1));
     await roundAt(checked.ports, startedAt);
-    checked.app.posted(aPost('p-1', 0.1), aPost('p-2', 0.2), aPost('p-3', 0.3));
+    const [first, second, third] = [aPost('p-1', 0.1), aPost('p-2', 0.2), aPost('p-3', 0.3)] as const;
+    checked.app.posted(first, second, third);
     await roundAt(checked.ports, dueAfter(startedAt, newestStartingNow));
+    const walked = [second, third, first].map((post) => listedIdOf(post));
 
-    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual([
-      timeOf(0.3),
-      ['p-2/2026-10-07T09%3A00%3A12.000Z', 'p-3/2026-10-07T09%3A00%3A18.000Z', 'p-1/2026-10-07T09%3A00%3A06.000Z'],
-    ]);
+    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual([timeOf(0.3), walked]);
   });
 
   it('is walked from the newest page again where the token it kept cannot be read', async () => {
@@ -181,7 +183,7 @@ describe('the cursor of an item, where the entry names none', () => {
     checked.app.answers(answeredWith({ posts: [{ seq: 8, room: 'lobby' }] }), answeredWith({ posts: [] }));
     await roundAt(checked.ports, dueAfter(startedAt, written));
 
-    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual(['8', ['8']]);
+    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual(['8', ['com.example.chat.post/8']]);
   });
 
   it('is another item’s id, telling a new one by being another, where the tool takes no point to read from', async () => {
@@ -192,6 +194,40 @@ describe('the cursor of an item, where the entry names none', () => {
     checked.app.posted(aPost('p-1', 0.5));
     await roundAt(checked.ports, dueAfter(startedAt, written));
 
-    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual(['p-1', ['p-1']]);
+    expect([sinceIn(checked), checked.loop.intake.events()]).toEqual(['p-1', ['com.example.chat.post/p-1']]);
+  });
+});
+
+describe('the event of an item a check lists', () => {
+  it('carries its type before its id, so one item listed under two types is two events, and read again is the same one', async () => {
+    const read = {
+      tool: 'list_posts',
+      with: { room: 'lobby', after: '{{ since }}', page: '{{ page_token }}' },
+      list: '/posts',
+      order: 'oldest_first',
+      cursor: '/at',
+      start: '{{ now }}',
+      id: ['/id'],
+    } as const;
+    const keys = ['post.made', 'post.seen'].map((type) => ({
+      connection: 'tracker',
+      topic: type,
+      destination: polledOfATrigger(type, read),
+    }));
+    const tracker = { id: 'id-of-tracker', connection: 'tracker', connected: timeOf(-60), destinations: [] };
+    const app = aListingApp({ order: 'oldest_first' });
+    const loop = loopOver([tracker], keys);
+    const ports = portsOf(loop, { receives: ['polling'], through: app.through });
+    const at = checkDueAt({ now: startedAt, playbook: alpha }, polledOfATrigger('post.made', read), null);
+    await roundAt(ports, startedAt);
+    app.posted(aPost('p-1', 0.1));
+    loop.intake.answers('held');
+    await roundAt(ports, at);
+    await roundAt(ports, at + anHour);
+
+    expect([loop.intake.arrivals().length, loop.intake.events().toSorted()]).toEqual([
+      3,
+      ['post.made/p-1', 'post.seen/p-1'],
+    ]);
   });
 });

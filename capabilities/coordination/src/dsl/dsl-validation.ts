@@ -67,8 +67,30 @@ function withoutKeyIn(document: JsonObject, [part, key]: readonly [string, strin
     : { ...document, [part]: Object.fromEntries(entriesOf(holder).filter(([name]: JsonEntry) => name !== key)) };
 }
 
+function withoutReadIn(filter: Json): Json {
+  return isObject(filter) ? Object.fromEntries(entriesOf(filter).filter(([key]: JsonEntry) => key !== 'read')) : filter;
+}
+
+function onWithoutReads(on: JsonObject): JsonObject {
+  const one = field(on, 'one');
+  const any = field(on, 'any');
+  return {
+    ...on,
+    ...(one === undefined ? {} : { one: withoutReadIn(one) }),
+    ...(isList(any) ? { any: any.map((filter: Json) => withoutReadIn(filter)) } : {}),
+  };
+}
+
+function withoutTriggerReads(document: JsonObject): JsonObject {
+  const schedule = objectField(document, 'schedule');
+  const on = schedule === undefined ? undefined : objectField(schedule, 'on');
+  return schedule === undefined || on === undefined
+    ? document
+    : { ...document, schedule: { ...schedule, on: onWithoutReads(on) } };
+}
+
 function withoutRuntimeKeys(document: JsonObject): JsonObject {
-  return runtimeKeys.reduce((kept, place) => withoutKeyIn(kept, place), document);
+  return withoutTriggerReads(runtimeKeys.reduce((kept, place) => withoutKeyIn(kept, place), document));
 }
 
 function read(document: JsonObject): Reading {

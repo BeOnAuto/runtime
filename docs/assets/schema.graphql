@@ -166,7 +166,7 @@ type Query {
   ): ListConnectionToolsAnswer
 
   """
-  Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`.
+  Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added. Each also lists, under `event_types`, the events it reports once it is connected. To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`. A connected connection that lists no events can still start a workflow from what one of its tools lists; the events guide shows how, under Filters.
   """
   list_connections(
     """Whether to list removed connections as well; false when left out"""
@@ -1170,6 +1170,51 @@ type ListedDefinitionTriggersEventFilters {
   What an event must have to match, as written: its type, and its source, subject and data when named
   """
   attributes: JSON!
+
+  """
+  For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed
+  """
+  read: ListedDefinitionTriggersEventFiltersRead
+}
+
+"""
+For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed
+"""
+type ListedDefinitionTriggersEventFiltersRead {
+  """The connection's tool that Auto calls to list the items"""
+  tool: String!
+
+  """
+  The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page
+  """
+  with: JSON
+
+  """Where the list of items is in the tool's answer, as a JSON Pointer"""
+  list: String!
+
+  """The order the tool lists items in: `oldest_first` or `newest_first`"""
+  order: String!
+
+  """
+  Where in an item the value is that the next check passes as `since`, as a JSON Pointer
+  """
+  cursor: String
+
+  """
+  Where the token of the next page is in the tool's answer, as a JSON Pointer
+  """
+  next_page_token: String
+
+  """The value of `since` for the first check, such as `{{ now }}`"""
+  start: String
+
+  """
+  JSON Pointers into an item whose values together tell one item from another
+  """
+  id: [String!]!
+
+  """Where an item says when it happened, as a JSON Pointer"""
+  time: String
 }
 
 type ListedDefinitionTriggersCron {
@@ -1441,6 +1486,51 @@ type DefinitionTriggersEventFilters {
   What an event must have to match, as written: its type, and its source, subject and data when named
   """
   attributes: JSON!
+
+  """
+  For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed
+  """
+  read: DefinitionTriggersEventFiltersRead
+}
+
+"""
+For a connection that lists no events: the tool Auto checks on a timer, and how it reads what the tool lists. Each item it has not seen is an event, whose data is the item as listed
+"""
+type DefinitionTriggersEventFiltersRead {
+  """The connection's tool that Auto calls to list the items"""
+  tool: String!
+
+  """
+  The tool's arguments. `{{ since }}` is where the last check got to, and `{{ page_token }}` is the token of the next page
+  """
+  with: JSON
+
+  """Where the list of items is in the tool's answer, as a JSON Pointer"""
+  list: String!
+
+  """The order the tool lists items in: `oldest_first` or `newest_first`"""
+  order: String!
+
+  """
+  Where in an item the value is that the next check passes as `since`, as a JSON Pointer
+  """
+  cursor: String
+
+  """
+  Where the token of the next page is in the tool's answer, as a JSON Pointer
+  """
+  next_page_token: String
+
+  """The value of `since` for the first check, such as `{{ now }}`"""
+  start: String
+
+  """
+  JSON Pointers into an item whose values together tell one item from another
+  """
+  id: [String!]!
+
+  """Where an item says when it happened, as a JSON Pointer"""
+  time: String
 }
 
 type DefinitionTriggersCron {

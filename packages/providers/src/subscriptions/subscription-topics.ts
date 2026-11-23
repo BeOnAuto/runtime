@@ -1,10 +1,11 @@
 import { parsedTemplate, renderClock } from '@on.auto/definitions/template';
 import { renderedText, toolBlockEngine } from '@on.auto/definitions/tool-blocks';
+import type { TriggerRead } from '@on.auto/definitions/trigger-reads';
 import { mostReferenceBytes, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
-import type { Asker, SubscriptionKey } from './subscription-ports.ts';
+import type { AskedSubscription, Asker } from './subscription-ports.ts';
 
 export interface PlaceOfARequest {
   readonly with: Readonly<Record<string, Schema.Json>>;
@@ -19,6 +20,7 @@ export interface ConnectionTrigger {
   readonly connection: string;
   readonly type: string;
   readonly subject?: string;
+  readonly read?: TriggerRead;
 }
 
 const firstLine = 1;
@@ -58,24 +60,28 @@ interface Through {
 
 type TopicsOf<Asked> = (destination: Destination, asked: Asked) => Effect.Effect<readonly (string | undefined)[]>;
 
-function keysOf(connection: string, topics: readonly (string | undefined)[]): readonly SubscriptionKey[] {
-  return topics.flatMap((topic) => (topic === undefined ? [] : [{ connection, topic }]));
+function keysOf(
+  connection: string,
+  destination: Destination,
+  topics: readonly (string | undefined)[],
+): readonly AskedSubscription[] {
+  return topics.flatMap((topic) => (topic === undefined ? [] : [{ connection, topic, destination }]));
 }
 
 function keysAskedBy<Asked extends Through>(
   asking: Effect.Effect<readonly Asked[]>,
   arranged: ReadonlyMap<string, Destination>,
   topicsOf: TopicsOf<Asked>,
-): Effect.Effect<readonly SubscriptionKey[]> {
+): Effect.Effect<readonly AskedSubscription[]> {
   return Effect.flatMap(asking, (asked) =>
     Effect.map(
       Effect.forEach(asked, (each) => {
         const destination = arranged.get(each.connection);
         return destination === undefined
           ? Effect.succeed([])
-          : Effect.map(topicsOf(destination, each), (topics) => keysOf(each.connection, topics));
+          : Effect.map(topicsOf(destination, each), (topics) => keysOf(each.connection, destination, topics));
       }),
-      (keys: readonly (readonly SubscriptionKey[])[]) => keys.flat(),
+      (keys: readonly (readonly AskedSubscription[])[]) => keys.flat(),
     ),
   );
 }

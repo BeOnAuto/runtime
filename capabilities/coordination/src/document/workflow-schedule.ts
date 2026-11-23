@@ -1,4 +1,5 @@
 import type { Trigger, TriggerFilter } from '@on.auto/definitions';
+import { TriggerReadSchema } from '@on.auto/definitions/trigger-reads';
 import {
   field,
   forbidden,
@@ -14,6 +15,8 @@ import {
 } from '@on.auto/workflow-engine';
 import { cronRejectionOf, isKnownTimeZone } from '@on.auto/workflow-host';
 import { Schema } from 'effect';
+
+import { filterWithoutRead, readWrittenIn } from '../triggers/trigger-reads.ts';
 
 type Kind = 'on' | 'cron' | 'every';
 
@@ -54,6 +57,8 @@ const timeZoneWithoutCron =
 
 const sameAttributes = Schema.toEquivalence(Schema.JsonObject);
 
+const sameRead = Schema.toEquivalence(Schema.UndefinedOr(TriggerReadSchema));
+
 interface PlacedFilter {
   readonly filter: Json;
   readonly place: string;
@@ -64,8 +69,8 @@ function isKind(key: string): key is Kind {
 }
 
 function filterRejections(filter: Json, pointer: string): readonly Rejection[] {
-  const reading = literalFilterOf(filter, pointer);
-  return 'rejections' in reading ? reading.rejections : [];
+  const reading = literalFilterOf(filterWithoutRead(filter), pointer);
+  return [...('rejections' in reading ? reading.rejections : []), ...readWrittenIn(filter, pointer).rejections];
 }
 
 function filtersOf(on: JsonObject): readonly PlacedFilter[] {
@@ -79,17 +84,22 @@ function filtersOf(on: JsonObject): readonly PlacedFilter[] {
 
 function triggerFiltersOf(on: JsonObject, pointer: string): readonly TriggerFilter[] {
   return filtersOf(on).flatMap(({ filter, place }): readonly TriggerFilter[] => {
-    const reading = literalFilterOf(filter, `${pointer}${place}`);
+    const reading = literalFilterOf(filterWithoutRead(filter), `${pointer}${place}`);
     if ('rejections' in reading) {
       return [];
     }
     const { reference, type, attributes } = reading.filter;
-    return [{ reference, type, attributes }];
+    const { read } = readWrittenIn(filter, reference);
+    return [{ reference, type, attributes, ...(read === undefined ? {} : { read }) }];
   });
 }
 
 function isSameFilter(first: TriggerFilter, second: TriggerFilter): boolean {
-  return first.type === second.type && sameAttributes(first.attributes, second.attributes);
+  return (
+    first.type === second.type &&
+    sameAttributes(first.attributes, second.attributes) &&
+    sameRead(first.read, second.read)
+  );
 }
 
 function repeatedRejections(filters: readonly TriggerFilter[]): readonly Rejection[] {

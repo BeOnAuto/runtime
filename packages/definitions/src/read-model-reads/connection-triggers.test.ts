@@ -37,6 +37,23 @@ const listening: readonly Trigger[] = [
   { kind: 'cron', reference: '/schedule/cron', expression: '0 9 * * 1' },
 ];
 
+const listingBookings = { tool: 'list_bookings', list: '/bookings', order: 'oldest_first', id: ['/id'] } as const;
+
+const readingBookings: readonly Trigger[] = [
+  {
+    kind: 'event',
+    reference: '/schedule/on',
+    filters: [
+      {
+        reference: '/schedule/on/one',
+        type: 'booking.created',
+        attributes: { type: 'booking.created', source: '/connections/bookings' },
+        read: listingBookings,
+      },
+    ],
+  },
+];
+
 const fromTheTracker: readonly Trigger[] = [
   {
     kind: 'event',
@@ -76,6 +93,15 @@ describe('the triggers of a playbook that name a connection', () => {
     expect(await triggersIn(ledger)).toEqual([
       { connection: 'tracker', type: posted, subject: 'site' },
       { connection: 'chat', type: posted },
+    ]);
+  });
+
+  it('carry the read a filter names', async () => {
+    const ledger = aLedger();
+    await created(ledger, 'bookings', readingBookings);
+
+    expect(await triggersIn(ledger)).toEqual([
+      { connection: 'bookings', type: 'booking.created', read: listingBookings },
     ]);
   });
 

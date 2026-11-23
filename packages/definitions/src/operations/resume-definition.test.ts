@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin, adaOfAcme } from '../testing/callers.ts';
+import { flow } from '../testing/capabilities/flow.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook, type Harness } from '../testing/harness.ts';
@@ -142,6 +143,68 @@ describe('the plain language of pause_definition and resume_definition', () => {
     expect(attempts).toEqual([
       ['pause the probe “plain”', 'pause a probe'],
       ['resume the probe “plain”', 'resume a probe'],
+    ]);
+  });
+});
+
+const workflows = definitionOperationsFor([flow]);
+
+const listingBookings = {
+  tool: 'list_bookings',
+  with: { after: '{{ since }}' },
+  list: '/bookings',
+  order: 'oldest_first',
+  id: ['/id'],
+};
+
+const listingCancelled = { ...listingBookings, tool: 'list_cancelled_bookings' };
+
+function checking(name: string, read: object, type = 'booking.created') {
+  const source = JSON.stringify({ on: [{ type, source: '/connections/bookings', read }] });
+  return { type: 'workflow', name, source };
+}
+
+async function besideOnBookings(): Promise<Harness> {
+  const definitions = harness(undefined, undefined, { stage: 'off', folds: ['workflow'] });
+  await definitions.call(workflows.createDefinition, toAlpha(acmeAdmin, checking('on-bookings', listingBookings)));
+  return definitions;
+}
+
+async function pausedIn({ call }: Harness, written: Readonly<ReturnType<typeof checking>>): Promise<void> {
+  await call(workflows.createDefinition, toAlpha(acmeAdmin, written));
+  await call(workflows.pauseDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: written.name }), later);
+}
+
+const onCancelled = { type: 'workflow', name: 'on-cancelled' };
+
+describe('resume_definition of a workflow whose trigger names a read', () => {
+  it('is refused while another active workflow checks another read under its type through the connection, after a restore too', async () => {
+    const definitions = await besideOnBookings();
+    await pausedIn(definitions, checking('on-cancelled', listingCancelled));
+    const { call } = definitions;
+    const refused = await call(workflows.resumeDefinition, toAlpha(acmeAdmin, onCancelled), muchLater);
+    await call(workflows.retireDefinition, toAlpha(acmeAdmin, onCancelled), muchLater);
+    await call(workflows.restoreDefinition, toAlpha(acmeAdmin, onCancelled), muchLater);
+    const refusedAfterARestore = await call(workflows.resumeDefinition, toAlpha(acmeAdmin, onCancelled), muchLater);
+
+    expect([refused, refusedAfterARestore]).toEqual([
+      { status: 'rejected', reason: 'conflict', detail: someWords },
+      { status: 'rejected', reason: 'conflict', detail: someWords },
+    ]);
+  });
+
+  it('resumes one that checks the same read under the same type, or another read under a type of its own', async () => {
+    const definitions = await besideOnBookings();
+    await pausedIn(definitions, checking('on-the-same', listingBookings));
+    await pausedIn(definitions, checking('on-cancelled', listingCancelled, 'booking.cancelled'));
+    const { call } = definitions;
+
+    expect([
+      await call(workflows.resumeDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'on-the-same' }), muchLater),
+      await call(workflows.resumeDefinition, toAlpha(acmeAdmin, onCancelled), muchLater),
+    ]).toMatchObject([
+      { status: 'succeeded', output: { status: 'active' } },
+      { status: 'succeeded', output: { status: 'active' } },
     ]);
   });
 });

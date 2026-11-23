@@ -93,16 +93,17 @@ export interface Naming {
   readonly placeName?: object;
   readonly after?: readonly Recorded[];
   readonly destinations?: readonly object[];
+  readonly listServers?: Parameters<typeof connectionEventsOver>[0]['listServers'];
 }
 
 export async function boardsReportingTo(
   received: EventsReceived,
-  { placeName, after = [], destinations }: Naming = {},
+  { placeName, after = [], destinations, listServers }: Naming = {},
 ): Promise<BoardsReporting> {
   const subscriptions = keptLedger(eventSubscriptions).service;
   const registry = await registryOf(['2026-11-22T07:00:00.000Z', added], [connectedAt, connected], ...after);
   const providers = Effect.succeed(boardsReading(placeName, destinations));
-  const parts = { registry, providers, subscriptions, received };
+  const parts = { registry, providers, subscriptions, received, ...(listServers === undefined ? {} : { listServers }) };
   return { subscriptions, events: connectionEventsOver(parts, () => Effect.succeed(listened)) };
 }
 

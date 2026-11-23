@@ -241,8 +241,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [5725, 3825, 3564],
-      [5134, 3010, 3564],
+      [5725, 3825, 3742],
+      [5134, 3010, 3742],
     ]);
   });
 });

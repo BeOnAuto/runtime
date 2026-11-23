@@ -63,6 +63,7 @@ export {
   type DueLedger,
   type ListeningParts,
 } from './subscriptions/subscription-schedule.ts';
+export { checksWokenOf } from './subscriptions/woken-checks.ts';
 export {
   connectionChangesRelayed,
   loopConnectionFacts,
@@ -70,10 +71,7 @@ export {
 } from './subscriptions/connection-changes.ts';
 export { subscriptionLayoutSteps } from './subscriptions/subscription-layout.ts';
 export { servedConnectionOf } from './triggers/connection-events.ts';
-export {
-  connectionEventsOver,
-  type ConnectionEventsParts,
-  type ConnectionsReporting,
-} from './triggers/connection-reporting.ts';
+export { connectionEventsOver, type ConnectionsReporting } from './triggers/connection-reporting.ts';
+export type { ConnectionEventsParts } from './triggers/connection-serving.ts';
 export type { EventsReceived } from './triggers/connection-hearing.ts';
 export { connectionRows, connectionRowsLayoutSteps, connectionRowsName } from './registry/connection-rows.ts';

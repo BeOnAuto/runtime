@@ -280,3 +280,7 @@ export function placesTheSecret(call: Call): boolean {
 export function placesTheSubject({ with: written = {} }: Pick<Call, 'with'>): boolean {
   return textsIn(written, '').some(({ text }) => readsTheSubject(text));
 }
+
+export function placesTheMark({ with: written = {} }: Pick<Call, 'with'>): boolean {
+  return textsIn(written, '').some(({ text }) => readsTheName(text, 'since'));
+}

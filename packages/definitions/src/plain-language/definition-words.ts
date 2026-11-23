@@ -13,7 +13,7 @@ import { Option, Schema } from 'effect';
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';
 import { writtenInOf } from '../page/page-lines.ts';
 import { carriesAPage } from '../page/page-yaml.ts';
-import type { EventTrigger, Trigger, TriggerFilter } from '../registry/definition-triggers.ts';
+import { hasTriggers, type EventTrigger, type Trigger, type TriggerFilter } from '../registry/definition-triggers.ts';
 import { isPlaybookFunctionType, type Definition, type ListedDefinition } from '../registry/definition.ts';
 import { nameInWords } from './in-words.ts';
 
@@ -152,6 +152,16 @@ export function startsInWords({ standing, triggers = [] }: Pick<Definition, 'sta
     return [` It starts each time this happens in ${connection}: ${event}.${asksForItsOwn ? '' : notForItsOwn}`];
   });
   return `${each.join('')}${whereToSeeItStand}`;
+}
+
+const triggersAgain = ', and its triggers start runs again from now, not for what came while it was paused';
+
+export function resumedInWords(
+  words: DefinitionWords,
+  definition: Pick<Definition, 'type' | 'name' | 'standing' | 'triggers'>,
+): string {
+  const again = hasTriggers(definition) ? triggersAgain : '';
+  return `Resumed ${words.named(definition.type, definition.name)}. It can be run again${again}.${startsInWords(definition)}`;
 }
 
 function namesOf(definitions: readonly ListedDefinition[]): string {

@@ -23,6 +23,7 @@
     "./template": "./src/template.ts",
     "./testing": "./src/testing/index.ts",
     "./tool-blocks": "./src/tool-blocks/index.ts",
+    "./trigger-reads": "./src/registry/trigger-reads.ts",
     "./value-checks": "./src/checking/value-checks.ts"
   },
   "scripts": {

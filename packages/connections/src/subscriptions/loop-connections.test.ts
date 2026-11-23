@@ -254,7 +254,7 @@ describe('the ports of the loop', () => {
 
     expect(named).toEqual(['tracker', 'notes']);
     expect(await Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, arranged })))).toEqual([
-      [{ connection: 'tracker', topic: 'site' }],
+      [{ connection: 'tracker', topic: 'site', destination: arranged.get('tracker') }],
       [],
     ]);
     expect(read).toEqual(['requests of alpha', 'triggers of alpha']);

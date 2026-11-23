@@ -142,7 +142,7 @@ describe('the account the connection an event is taken in through acts as', () =
     await recordedIn(registry, ['2026-11-21T08:00:00.000Z', [connected]]);
 
     const topicsOf: unknown = expect.anything();
-    const served = { topicsOf };
+    const served = { topicsOf, declaresEventTypes: true };
     expect([before, recorded, await actingAs()]).toStrictEqual([served, { ...served, user: 'h-7' }, served]);
   });
 });
@@ -186,5 +186,26 @@ describe('the connection an item a check lists is taken in through', () => {
     );
 
     expect(await Effect.runPromise(topics)).toEqual([['board/board-7'], []]);
+  });
+});
+
+describe('the connection an item a check listed is taken in through', () => {
+  it('says whether its entry declares event types: one added by hand declares none', async () => {
+    const registry = await registryOf([
+      '2026-11-20T08:00:00.000Z',
+      [
+        addedFact('connection-1', 'tracker', 'tracker'),
+        addedFact('connection-2', 'notes', null),
+        ...recordedWhile.connected,
+        connectedFact('connection-2'),
+      ],
+    ]);
+    const servedOf = servedConnectionOf({ registry, providers: reporting });
+
+    const declares = await Effect.runPromise(
+      Effect.forEach(['tracker', 'notes'], (connection) => servedOf({ ...alpha, connection })),
+    );
+
+    expect(declares.map((served) => served?.declaresEventTypes)).toEqual([true, false]);
   });
 });

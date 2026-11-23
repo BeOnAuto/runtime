@@ -134,13 +134,13 @@ describe('an item a check lists, read as the event it is', () => {
     ]).toEqual([
       {
         type: checkedPost.type,
-        id: 'p-1/2026-10-07T09%3A00%3A00.000Z',
+        id: 'com.example.chat.post/p-1/2026-10-07T09%3A00%3A00.000Z',
         time: post.at,
         subject: 'lobby',
         data: { words: 'hello' },
       },
       undefined,
-      expect.objectContaining({ id: 'p-1/2026-10-07T09%3A00%3A00.000Z' }),
+      expect.objectContaining({ id: 'com.example.chat.post/p-1/2026-10-07T09%3A00%3A00.000Z' }),
     ]);
   });
 

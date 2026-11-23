@@ -4,7 +4,8 @@ import { Effect } from 'effect';
 
 import { checkedExpressions, checkedWithoutGoals, type ExpressionCheck } from '../document/expression-check.ts';
 import type { ReadWorkflow } from '../document/workflow-document.ts';
-import { connectionTriggersChecked, type ConnectionEvents } from '../triggers/connection-triggers.ts';
+import type { ConnectionEvents } from '../triggers/connection-ports.ts';
+import { connectionTriggersChecked } from '../triggers/connection-triggers.ts';
 
 export interface SaveChecks {
   readonly check: ExpressionCheck;

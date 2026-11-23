@@ -7,7 +7,7 @@ import { Effect } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { handedOnBy, wokenBy } from './served-events.ts';
+import { handedOnBy, wokenBy, wokenTogether } from './served-events.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
 
@@ -154,5 +154,23 @@ describe('a proven delivery that carries an event the intake cannot decide on', 
     );
 
     expect(answers).toEqual([{ undecided: 'conflict' }, { undecided: 'defect' }, { undecided: 'interrupted' }]);
+  });
+});
+
+describe('the wakes of one delivery', () => {
+  it('are each asked in turn with the playbook the delivery reached', async () => {
+    const woken: unknown[] = [];
+    const noted: ConnectionWake = (each, now) => Effect.sync(() => woken.push([each, now]));
+    const arrived = arrivedReading({ wake: { conversation: theChannel } });
+
+    await Effect.runPromise(
+      TestClock.setTime(1000).pipe(
+        Effect.andThen(wokenBy(wokenTogether(noted, noted))(arrived)),
+        Effect.provide(TestClock.layer()),
+      ),
+    );
+
+    const asked = [{ org: 'acme', playbook: 'alpha', connection: 'chat', conversation: theChannel }, 1000];
+    expect(woken).toEqual([asked, asked]);
   });
 });

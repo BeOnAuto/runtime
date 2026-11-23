@@ -19,6 +19,7 @@ export function defineListConnections(reading: Reading, managing: Runnable<'org'
       'Use it to see which tool servers people added, and whether the person approved one add_connection added.',
       'Each also lists, under `event_types`, the events it reports once it is connected.',
       "To start a workflow when one happens, write a trigger whose filter has the connection's `source` and the event's `type`.",
+      'A connected connection that lists no events can still start a workflow from what one of its tools lists; the events guide shows how, under Filters.',
     ].join(' '),
     route: { method: 'GET', path: '/connections' },
     inputSchema: Schema.Struct({
