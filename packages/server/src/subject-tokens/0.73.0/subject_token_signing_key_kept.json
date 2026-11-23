@@ -1,0 +1,10 @@
+{
+  "type": "subject_token_signing_key_kept",
+  "data": {
+    "secret_id": "019ab1d4-6f2a-7c3e-8b5d-4e9f0a1c2d3e"
+  },
+  "context": {
+    "at": "2026-11-23T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

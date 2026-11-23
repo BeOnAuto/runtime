@@ -35,10 +35,11 @@ describe('a runtime on its own loopback address', () => {
   it('signs no one in without PUBLIC_URL, serves no metadata and takes a request as the local developer', async () => {
     const server = await startedOn(await aPortNothingListensOn(), {});
     const metadata = await fetch(`http://127.0.0.1:${server.port}/.well-known/oauth-protected-resource`);
+    const issuerKeys = await fetch(`http://127.0.0.1:${server.port}/oidc/.well-known/jwks.json`);
     const playbooks = await fetch(`http://127.0.0.1:${server.port}/v1/orgs/local/playbooks`);
 
     expect(server.signIn).toBeUndefined();
-    expect([metadata.status, playbooks.status]).toEqual([404, 200]);
+    expect([metadata.status, issuerKeys.status, playbooks.status]).toEqual([404, 404, 200]);
   });
 });
 
@@ -114,5 +115,32 @@ describe('a runtime signing people in at its default identity provider, as it is
     expect([first.status, another.status, userInfoReads()]).toEqual([303, 403, 1]);
     expect(await signing.peopleKept()).toEqual([expect.objectContaining({ name: 'Ada Lovelace' })]);
     expect([refreshTokensIssued().length, tokensRevoked()]).toEqual([2, refreshTokensIssued()]);
+  });
+});
+
+describe('a runtime with PUBLIC_URL, as the issuer of the subject tokens it exchanges at other services', () => {
+  it('answers its metadata and its key set under /oidc to a page of any origin, with the one key it made at its first start and reads again after a restart', async () => {
+    const signing = await signingIn({ byDefault: true });
+    const fromElsewhere = { headers: { origin: 'https://elsewhere.example.test' } };
+
+    const metadataAnswer = await signing.at('/oidc/.well-known/openid-configuration', fromElsewhere);
+    const keySetAnswer = await signing.at('/oidc/.well-known/jwks.json', fromElsewhere);
+    const [metadata, keySet] = [await fieldsOf(metadataAnswer), await fieldsOf(keySetAnswer)];
+    await signing.restarted();
+    const keySetAgain = await fieldsOf(await signing.at('/oidc/.well-known/jwks.json'));
+
+    expect(
+      [metadataAnswer, keySetAnswer].map(({ status, headers }) => [status, headers.get('access-control-allow-origin')]),
+    ).toEqual([
+      [200, '*'],
+      [200, '*'],
+    ]);
+    expect(metadata).toMatchObject({
+      issuer: `${publicUrl}/oidc`,
+      jwks_uri: `${publicUrl}/oidc/.well-known/jwks.json`,
+    });
+    expect(keySet['keys']).toEqual([expect.objectContaining({ kty: 'RSA', alg: 'RS256', use: 'sig' })]);
+    expect(keySetAgain).toEqual(keySet);
+    expect(await signing.factsKept('subject_token_signing_key_kept', 'secret_id')).toHaveLength(1);
   });
 });

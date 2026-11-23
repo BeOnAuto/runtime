@@ -3,9 +3,12 @@ import { storesAndConnectionsOf } from '../connections/served-connections.ts';
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { memberOperationsOver } from '../roles/member-operations.ts';
 import type { Settings } from '../settings/settings.ts';
+import { subjectTokensOpenedIn } from '../subject-tokens/served-subject-tokens.ts';
 import { signInOpened } from './ledger-store.ts';
 
-type Opening = Parameters<typeof signInOpened>[0] & Parameters<typeof storesAndConnectionsOf>[0];
+type Opening = Parameters<typeof signInOpened>[0] &
+  Parameters<typeof storesAndConnectionsOf>[0] &
+  Parameters<typeof subjectTokensOpenedIn>[0];
 
 interface OpenedWith {
   readonly settings: Settings;
@@ -24,10 +27,12 @@ export async function signInAndStoresOpened(
   const publicUrl = settings.signIn?.publicUrl;
   const chat = await chatAtStartOpened({ publicUrl, signIn, secrets: opened.stores.secrets, linkCodeKey }, settings);
   const links = chat === undefined ? {} : { accountLinks: chat.links };
+  const subjectTokens = await subjectTokensOpenedIn(runtime, settings.publicUrl, opened.stores.secrets);
   return {
     opened,
     signIn: { ...signIn, signInClientRegistrations, signingSecrets: opened.stores.secrets, linkCodeKey, ...links },
     members: chat === undefined ? [] : memberOperationsOver(signIn, chat.publicUrl, chat.links),
     chat,
+    subjectTokens,
   };
 }

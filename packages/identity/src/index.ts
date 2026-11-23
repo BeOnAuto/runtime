@@ -81,3 +81,25 @@ export {
   type IssuerKeySet,
   type IssuerKeySource,
 } from './identity-service/issuer-keys.ts';
+export {
+  issuerMetadataOf,
+  issuerMetadataPath,
+  jwkSetOf,
+  jwkSetPath,
+  mostPublishedKeys,
+  publicJwkOf,
+  type EcSigningKey,
+  type IssuerMetadata,
+  type IssuerSigningKey,
+  type JwkSet,
+  type PublicJwk,
+  type RsaSigningKey,
+  type SubjectTokenAlgorithm,
+} from './subject-tokens/issuer-documents.ts';
+export {
+  SubjectReserved,
+  subjectTokensSignedWith,
+  subjectTokenSeconds,
+  type SubjectTokenAsked,
+  type SubjectTokens,
+} from './subject-tokens/subject-tokens.ts';

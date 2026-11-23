@@ -5,5 +5,6 @@
   "src/secrets/0.72.0/own_key_kept.json": "780a4e399d0c4b9217855a6f6398e6520dbdc9f8a4acbb1838d5771642ef7cd4",
   "src/sign-in/0.66.0/required_claim_set.json": "f08b5c3bb4bae44be32553a3b11749a9cc8bfeec877fb3890396c0ec4d16dbdf",
   "src/sign-in/0.66.0/setup_reopened.json": "ad575659fb542e83cc145de00af576bd2972bae49cefb9ffa0d806650abe43b3",
-  "src/sign-in/0.66.0/sign_in_client_registered.json": "54e985400c25feee93968f330aad49dc69ce7d2feb61db2a229ac1f21f9d220f"
+  "src/sign-in/0.66.0/sign_in_client_registered.json": "54e985400c25feee93968f330aad49dc69ce7d2feb61db2a229ac1f21f9d220f",
+  "src/subject-tokens/0.73.0/subject_token_signing_key_kept.json": "e2a977afcca51214616a951943ef349570f900e4cb2e2aa9bc5915916d96da67"
 }

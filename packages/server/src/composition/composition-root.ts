@@ -132,7 +132,7 @@ function servedWith(serving: Serving): Serve {
   const { wiring, settings, shippedFiles, made, holding } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, signIn: signingIn } = settings;
-    const { opened, signIn, members, chat } = await signInAndStoresOpened(runtime, serving, ownOrigin);
+    const { opened, signIn, members, chat, subjectTokens } = await signInAndStoresOpened(runtime, serving, ownOrigin);
     const { stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } = opened;
     const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
     const chatWired = chatWiringOf(chat, runtime, registry);
@@ -170,7 +170,7 @@ function servedWith(serving: Serving): Serve {
     const served = stores.withSecretsClosed(registry.processes.withDocumentsClosed(answering));
     const closing = await withHeldRequestsEndedFirst(
       runtime,
-      license.withALastReport({ ...served, routes: [...served.routes, clientMetadata] }),
+      license.withALastReport({ ...served, routes: [...served.routes, clientMetadata, subjectTokens.routes] }),
     );
     const names = chat === undefined ? {} : { namesFromTheService: chat.names };
     return { ...withLiveAttemptsClosedFirst(runtime, closing), licenseNotice: license.notice, ...signIn, ...names };
