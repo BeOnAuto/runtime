@@ -269,7 +269,8 @@ credentials:
         title: Create the app in Slack
         instructions: >-
           Slack opens in a new tab with the app already filled in. Leave everything as it is, choose your workspace, then
-          select **Next** and **Create**.
+          select **Next** and **Create**. If Slack asks you to sign in, sign in, then select **Create your Slack app**
+          again.
       key:
         title: Install the app and copy its token
         instructions: >-
