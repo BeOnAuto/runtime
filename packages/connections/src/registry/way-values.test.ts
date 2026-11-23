@@ -209,3 +209,16 @@ describe('the credential of a way that signs an assertion, as a fact records it'
     expect(outcomes).toEqual([true, true, false, false, false]);
   });
 });
+
+describe('the credential of a way of client credentials, as a fact records it', () => {
+  it('holds the parameters its token request carries where its way names them, and a credential of another kind given by hand holds none', () => {
+    const ofTheAccount = { grant_type: 'account_credentials', account_id: '0a1b2c3d' };
+    const outcomes = [
+      { ...asTheApp, parameters: ofTheAccount },
+      asTheApp,
+      { kind: 'secret', name: 'Authorization', in: 'header', parameters: ofTheAccount },
+    ].map((credential: Readonly<Record<string, unknown>>) => Result.isSuccess(decodedFact(chosenWith(credential))));
+
+    expect(outcomes).toEqual([true, true, false]);
+  });
+});

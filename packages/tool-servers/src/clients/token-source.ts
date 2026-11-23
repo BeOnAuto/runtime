@@ -91,17 +91,31 @@ function resourceCheckedAndLeftOut(serverUrl: Readonly<URL> | string, resource?:
   });
 }
 
-function audienceOf(preparedByTheCredentials: CredentialsProvider['prepareTokenRequest'], audience?: string) {
-  return audience === undefined
+type Prepared = CredentialsProvider['prepareTokenRequest'];
+
+function withTheParameters(prepared: Prepared, parameters: Readonly<Record<string, string>>): Prepared {
+  return (scope?: string) => {
+    const request = prepared(scope);
+    for (const [name, value] of Object.entries(parameters)) {
+      request.set(name, value);
+    }
+    return request;
+  };
+}
+
+function preparedOf(prepared: Prepared, { parameters, audience }: MintingAuth) {
+  return parameters === undefined && audience === undefined
     ? {}
     : {
-        validateResourceURL: resourceCheckedAndLeftOut,
-        prepareTokenRequest: (scope?: string) => {
-          const parameters = preparedByTheCredentials(scope);
-          parameters.set('audience', audience);
-          return parameters;
-        },
+        prepareTokenRequest: withTheParameters(prepared, {
+          ...parameters,
+          ...(audience === undefined ? {} : { audience }),
+        }),
       };
+}
+
+function audienceOf(audience?: string) {
+  return audience === undefined ? {} : { validateResourceURL: resourceCheckedAndLeftOut };
 }
 
 function providerOf(settings: MintingAuth, discovery: Discovery): OAuthClientProvider {
@@ -110,7 +124,8 @@ function providerOf(settings: MintingAuth, discovery: Discovery): OAuthClientPro
   return Object.assign(
     provider,
     discoveryOf(settings, discovery),
-    audienceOf(preparedByTheCredentials, settings.audience),
+    audienceOf(settings.audience),
+    preparedOf(preparedByTheCredentials, settings),
   );
 }
 

@@ -211,6 +211,7 @@ export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } fr
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';
 export { secretOrKeyExpected } from './settings/remote-checks.ts';
+export { parametersTheRuntimeSets, setInEveryTokenRequestWords } from './settings/token-parameters.ts';
 export type {
   AuthSettings,
   ConsentAuth,

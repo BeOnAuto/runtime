@@ -15,6 +15,7 @@ import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
 
 import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
+import { literal, literalText, literalValues, pathValuesWritten } from './literal-values.ts';
 
 export interface GivenValue {
   readonly value: Redacted.Redacted;
@@ -60,24 +61,6 @@ function referenceTo(variable: string): string {
 const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 const asEntry = Schema.decodeUnknownSync(ConnectionEntrySchema);
-
-function literalText(text: string): string {
-  return text.replaceAll('$', () => '$$');
-}
-
-function literal(value: Schema.Json): Schema.Json {
-  if (typeof value === 'string') {
-    return literalText(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item: Schema.Json) => literal(item));
-  }
-  return typeof value === 'object' && value !== null
-    ? Object.fromEntries(
-        Object.entries(value).map(([key, item]: readonly [string, Schema.Json]) => [key, literal(item)]),
-      )
-    : value;
-}
 
 const placedIn: Readonly<Record<Placement, (entry: ConnectionEntry, name: string, written: string) => Fields>> = {
   header: ({ headers }, name, written) => ({ headers: { ...headers, [name]: written } }),
@@ -144,12 +127,14 @@ function placedClientCredentials(
       ? { client_secret: reference }
       : { private_key: reference, algorithm: literalText(algorithm) };
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
+  const parameters = credential.parameters === undefined ? {} : { parameters: literalValues(credential.parameters) };
   const issuer = literalText(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
   const clientId = Option.getOrThrow(Option.fromNullishOr(credential.client_id));
   const auth = {
     issuer,
     client_id: literalText(clientId),
     ...scope,
+    ...parameters,
     ...secret,
     ...grantOf(credential),
     ...discoveryOf(credentialled),
@@ -224,6 +209,7 @@ export interface Providing {
   readonly marks?: ServerEntryFields['marks'];
   readonly failure_codes?: ServerEntryFields['failure_codes'];
   readonly ending_codes?: readonly string[] | undefined;
+  readonly path_values?: Readonly<Record<string, string>>;
   readonly gateway?: WayGateway;
   readonly handles_money?: true;
   readonly renders?: string;
@@ -282,6 +268,7 @@ export function readPlaced(
     {
       ...written,
       ...document.written,
+      ...pathValuesWritten(providing?.path_values),
       ...marksOf(providing?.marks),
       ...failureCodesOf(providing?.failure_codes),
       ...moneyOf(providing),

@@ -78,7 +78,10 @@ export async function describedApi(
     headers: new Set([...settings.headers.keys()].map((name) => name.toLowerCase())),
   };
   const derived = Result.flatMap(decodedDocument(read.success), (decoded) =>
-    Result.map(derivedTools(decoded, presented), (tools) => ({ document: decoded.document, tools })),
+    Result.map(derivedTools(decoded, presented, settings.path_values), (tools) => ({
+      document: decoded.document,
+      tools,
+    })),
   );
   if (Result.isFailure(derived)) {
     return Result.fail(refusedFor(documentProblems(settings.name, derived.failure)));

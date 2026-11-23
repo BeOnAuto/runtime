@@ -2,6 +2,7 @@ import type { Issue } from '@on.auto/operations';
 import { alternatives } from '@on.auto/phrasing';
 import {
   additionOfProvider,
+  isTheWayAsked,
   providerNamed,
   type ProviderAddition,
   type ProviderEntry,
@@ -21,6 +22,7 @@ import { Result } from 'effect';
 import { credentialIssuesOf } from '../entries/credential-checks.ts';
 import { givenFieldsOf, wordsOfTheSettings } from '../entries/given-values.ts';
 import type { Credential } from '../registry/credential.ts';
+import { pathValuesWritten } from '../serving/literal-values.ts';
 import { placedReference, type NamedReference, type Placing } from '../serving/placed-credentials.ts';
 
 interface Credentialled {
@@ -112,10 +114,13 @@ function resolvedOf(
 ) {
   const { type, provider } = addition;
   const placing = placedReference({ type, provider, entry: addition.entry, credential }, reference);
+  const acting = { kind: credential.kind, permissions: addition.permissions };
+  const way = entry.credentials.find((offered) => isTheWayAsked(offered, acting));
   const resolved: ProviderResolved = {
     provider: entry.name,
     written: {
       ...placing.written,
+      ...pathValuesWritten(way?.path_values),
       ...marksOf(entry.marks),
       ...failureCodesOf(entry.failure_codes),
       ...(entry.handles_money === true ? { handles_money: true } : {}),

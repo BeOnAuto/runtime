@@ -24,7 +24,14 @@ import {
   type OperationBody,
   type Placed,
 } from './api-parameters.ts';
-import { keepsItsSegments } from './api-requests.ts';
+import {
+  argumentsOf,
+  noPathValues,
+  pathProblemsOf,
+  pathValueProblemsOf,
+  writtenPathOf,
+  type PathValues,
+} from './document-paths.ts';
 import { documentBounds } from './document-reading.ts';
 import { bytesOf, componentsOf, inputSchemaOf, oversizedBecause, type Components } from './input-schemas.ts';
 import {
@@ -68,6 +75,7 @@ export interface DerivedTools {
 interface Located {
   readonly method: Method;
   readonly path: string;
+  readonly written: string;
   readonly item: Placed<PathItem>;
   readonly operation: Placed<Operation>;
 }
@@ -86,6 +94,7 @@ type Deriving<A> = Result.Result<A, readonly DocumentProblem[]>;
 interface Context {
   readonly components: Components;
   readonly presented: Presented;
+  readonly pathValues: PathValues;
 }
 
 interface Sent extends Pick<ApiOperation, 'credentials' | 'answers'> {
@@ -96,12 +105,6 @@ interface Sent extends Pick<ApiOperation, 'credentials' | 'answers'> {
 const outsideToolNames = /[^A-Za-z0-9_.-]/gu;
 
 const mostToolNameCharacters = 128;
-
-const notBelowTheBase =
-  'Expected a path that begins with /, since a path written otherwise joins the host or the port of base_url and a call would go elsewhere';
-
-const leavesItself =
-  'A path a call cannot keep as written: a . or .. segment, or a ? or #, would move the call out of it';
 
 function derivedName(method: Method, path: string): string {
   const segments = path
@@ -159,7 +162,7 @@ function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent)
     operation: {
       tool,
       method: located.method,
-      path: located.path,
+      path: located.written,
       inputs: inputsOf(parameters),
       body: operationBodyOf(body),
       credentials,
@@ -173,8 +176,11 @@ function leftOut(located: Located, reason: LeftOutReason): Derived {
   return { kind: 'left_out', leftOut: { operation: namedOperation(located), ...reason } };
 }
 
-function derivedAt(read: ReadDocument, { components, presented }: Context, located: Located): Deriving<Derived> {
-  const parameters = parametersOf(read.document, located.item, located.operation);
+function derivedAt(read: ReadDocument, context: Context, located: Located): Deriving<Derived> {
+  const { components, presented, pathValues } = context;
+  const parameters = Result.map(parametersOf(read.document, located.item, located.operation), (each) =>
+    argumentsOf(each, pathValues),
+  );
   const body = bodyOf(read, located.operation);
   if (Result.isFailure(parameters) || Result.isFailure(body)) {
     return Result.fail([
@@ -209,7 +215,7 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
   });
 }
 
-function locatedIn(document: ApiDocument): readonly Located[] {
+function locatedIn(document: ApiDocument, pathValues: PathValues): readonly Located[] {
   return Object.entries(document.paths ?? {}).flatMap(([path, item]: readonly [string, PathItem]) => {
     const pointer = `/paths/${JsonPointer.escapeToken(path)}`;
     return methods.flatMap((method) => {
@@ -220,6 +226,7 @@ function locatedIn(document: ApiDocument): readonly Located[] {
             {
               method,
               path,
+              written: writtenPathOf(path, pathValues),
               item: { value: item, pointer },
               operation: { value: operation, pointer: `${pointer}/${method}` },
             },
@@ -268,18 +275,12 @@ function toolsOf(derived: readonly Derived[], unsentMethods: readonly LeftOutOpe
       });
 }
 
-function pathProblemsOf(document: ApiDocument): readonly DocumentProblem[] {
-  return Object.keys(document.paths ?? {}).flatMap((path) => {
-    const pointer = `/paths/${JsonPointer.escapeToken(path)}`;
-    if (!path.startsWith('/')) {
-      return [{ pointer, detail: notBelowTheBase }];
-    }
-    return keepsItsSegments(path) && !/[?#]/u.test(path) ? [] : [{ pointer, detail: leavesItself }];
-  });
-}
-
-export function derivedTools(read: ReadDocument, presented: Presented): Deriving<DerivedTools> {
-  const located = locatedIn(read.document);
+export function derivedTools(
+  read: ReadDocument,
+  presented: Presented,
+  pathValues: PathValues = noPathValues,
+): Deriving<DerivedTools> {
+  const located = locatedIn(read.document, pathValues);
   if (located.length > documentBounds.operations) {
     return Result.fail([
       {
@@ -288,12 +289,12 @@ export function derivedTools(read: ReadDocument, presented: Presented): Deriving
       },
     ]);
   }
-  const misplaced = pathProblemsOf(read.document);
+  const misplaced = [...pathProblemsOf(read.document), ...pathValueProblemsOf(read.document, pathValues)];
   if (misplaced.length > 0) {
     return Result.fail(misplaced);
   }
   return Result.flatMap(componentsOf(read), (components) => {
-    const derived = collected(located, (each) => derivedAt(read, { components, presented }, each));
+    const derived = collected(located, (each) => derivedAt(read, { components, presented, pathValues }, each));
     return Result.flatMap(derived, (each) => toolsOf(each, unsentMethodsOf(read.document)));
   });
 }

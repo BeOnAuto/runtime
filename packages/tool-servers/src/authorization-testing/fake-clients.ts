@@ -6,8 +6,14 @@ import { Option, Schema } from 'effect';
 import { inProcessFetch } from '../testing/in-process.ts';
 import { json } from './authorization-answers.ts';
 
+export interface ExtensionGrant {
+  readonly type: string;
+  readonly parameters: Readonly<Record<string, string>>;
+}
+
 export interface ClientRegistration {
   readonly clientId: string;
+  readonly extensionGrant?: ExtensionGrant;
   readonly clientSecret?: string | undefined;
   readonly publicKey?: string;
   readonly expiresInSeconds: number | null;

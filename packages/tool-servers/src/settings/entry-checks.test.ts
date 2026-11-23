@@ -135,6 +135,29 @@ describe('the grant of an auth block', () => {
   });
 });
 
+const ofTheAccount = { grant_type: 'account_credentials', account_id: 'acme-1' };
+
+describe('the parameters of an auth block', () => {
+  it('are read beside client credentials, and refused beside jwt_bearer and where they name a parameter the runtime sets itself', () => {
+    const aSecret = { client_secret: '${GRAPH_CLIENT_SECRET}' };
+    const { servers } = settingsOf({
+      zoom: { ...graph, auth: { ...issuedToARobot, ...aSecret, parameters: ofTheAccount } },
+    });
+
+    expect(servers.map((server) => authOf(server)?.parameters)).toEqual([ofTheAccount]);
+    expect(
+      problemsOf({
+        signed: { ...graph, auth: { ...issuedToARobot, ...itsKey, grant: 'jwt_bearer', parameters: ofTheAccount } },
+        set: { ...graph, auth: { ...issuedToARobot, ...aSecret, parameters: { scope: 'all', resource: 'x' } } },
+      }),
+    ).toEqual([
+      'TOOL_SERVERS/signed/auth/parameters',
+      'TOOL_SERVERS/set/auth/parameters/scope',
+      'TOOL_SERVERS/set/auth/parameters/resource',
+    ]);
+  });
+});
+
 describe('the playbooks a server serves', () => {
   it('serves every playbook of its org, or the playbooks it names', () => {
     const [everyPlaybook, somePlaybooks] = settingsOf({ graph, crm: { ...graph, playbooks: ['sales'] } }).servers;

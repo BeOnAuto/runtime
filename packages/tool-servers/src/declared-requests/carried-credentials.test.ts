@@ -47,6 +47,7 @@ const api: DescribedApiSettings = {
   headers: new Map(),
   query_params: redactedValuesOf({ api_key: 'ledgers-key-in-the-query-0b7f' }),
   security: new Map(),
+  path_values: new Map(),
   auth: signedIn,
   failure_codes: null,
   api: { baseUrl: 'https://api.ledgers.example.com/v1', operations: [] },

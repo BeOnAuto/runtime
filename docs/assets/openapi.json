@@ -5902,7 +5902,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -6677,7 +6677,7 @@
                               "additionalProperties": {
                                 "type": "string"
                               },
-                              "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                              "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                             },
                             "authorization_endpoint": {
                               "type": "string",
@@ -7543,7 +7543,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -8405,7 +8405,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -9157,7 +9157,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -9915,7 +9915,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -10682,7 +10682,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -11441,7 +11441,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -12196,7 +12196,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -13255,7 +13255,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -14271,7 +14271,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -15074,7 +15074,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -15888,7 +15888,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -16704,7 +16704,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -17673,7 +17673,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
                         },
                         "authorization_endpoint": {
                           "type": "string",

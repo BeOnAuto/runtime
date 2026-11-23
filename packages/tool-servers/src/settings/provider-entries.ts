@@ -70,6 +70,7 @@ const fieldsOfTheServer = [
   'base_url',
   'query_params',
   'security',
+  'path_values',
   'request_id',
 ] as const satisfies readonly (keyof ServerEntryFields)[];
 

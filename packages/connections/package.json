@@ -10,6 +10,7 @@
   },
   "scripts": {
     "measure:loads": "node measure/measure-loads.ts",
+    "shipped-credentials": "node shipped-credentials.ts",
     "shipped-tools": "node shipped-tools.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",
     "typecheck": "tsc",

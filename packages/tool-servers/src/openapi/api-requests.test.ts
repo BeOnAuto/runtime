@@ -1,6 +1,7 @@
-import { Redacted, Result } from 'effect';
+import { Option, Redacted, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { keyPresented, meetingsOfAUser, toolsOf } from '../api-testing/derived-documents.ts';
 import { apiRequestOf, isUnderBase, type ApiEndpoint } from './api-requests.ts';
 import type { ApiOperation } from './api-tools.ts';
 
@@ -252,5 +253,18 @@ describe('the arguments a call of an HTTP API cannot send', () => {
       anyText,
       'The arguments give no body, which this operation needs',
     ]);
+  });
+});
+
+describe('a call of an operation whose path parameter the entry gives a value', () => {
+  const [given] = toolsOf(meetingsOfAUser, keyPresented, new Map([['userId', 'me']])).operations;
+
+  it('sends the value in the path, and refuses the parameter as an argument, so no call can change it', () => {
+    const operation = Option.getOrThrow(Option.fromNullishOr(given));
+
+    expect(Result.getOrThrow(apiRequestOf(operation, { type: 'live' }, endpoint)).url).toBe(
+      'https://graph.example.com/v1/users/me/meetings?type=live&tenant=acme',
+    );
+    expect(Result.isFailure(apiRequestOf(operation, { userId: 'ada@acme.example.com' }, endpoint))).toBe(true);
   });
 });

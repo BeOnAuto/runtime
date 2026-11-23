@@ -15,6 +15,7 @@ import {
   type ConnectionServerSettings,
   type ConnectionUnready,
   readToolServerSettings,
+  type ServerSettings,
 } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -175,6 +176,40 @@ describe('the failure codes of a provider', () => {
     expect([await settingsOf(h, id, coding), await settingsOf(h, id, fixtureProviders)]).toMatchObject([
       { provider: 'regions', failure_codes: failureCodes },
       { provider: 'regions', failure_codes: null },
+    ]);
+  });
+});
+
+const ofEachCampaign = { campaign: 'all' };
+
+const [regionsKey] = regions.credentials;
+
+const givingItsPath = providersOf({ ...regions, credentials: [{ ...regionsKey, path_values: ofEachCampaign }] });
+
+function pathValuesOf(settings: ServerSettings | ConnectionServerSettings | ConnectionUnready) {
+  return 'type' in settings && settings.type === 'openapi' ? Object.fromEntries(settings.path_values) : undefined;
+}
+
+describe('the path values of a provider’s way', () => {
+  it('are those its way gives, for a server named in the settings and for a connection added by it alike, and none where it gives none', async () => {
+    const settings = {
+      TOOL_SERVERS: JSON.stringify({ campaigns: { ...regionsAdded, credential: '${REGIONS_KEY}', org: 'acme' } }),
+      REGIONS_KEY: 'regions-key-5d1e',
+    };
+    const read = (providers: ProviderList) =>
+      Effect.runSync(
+        readToolServerSettings(settings, { modelProviders: [], providers: makeProviderResolver(providers) }),
+      ).servers;
+    const h = harness();
+    const { id, token } = await added(h, { ...regionsAdded, credential: { kind: 'secret' } });
+    await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: 'regions-key-5d1e' });
+    const served = [await settingsOf(h, id, givingItsPath), await settingsOf(h, id, fixtureProviders)];
+
+    expect([...read(givingItsPath), ...read(fixtureProviders), ...served].map((each) => pathValuesOf(each))).toEqual([
+      ofEachCampaign,
+      {},
+      ofEachCampaign,
+      {},
     ]);
   });
 });

@@ -5417,7 +5417,7 @@ type ListedConnectionCredential {
   subject: String
 
   """
-  For authorization, the parameters its authorization request carries beside the standard ones
+  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
   """
   parameters: JSON
 
@@ -5900,7 +5900,7 @@ type LinkedConnectionCredential {
   subject: String
 
   """
-  For authorization, the parameters its authorization request carries beside the standard ones
+  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
   """
   parameters: JSON
 

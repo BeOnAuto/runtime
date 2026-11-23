@@ -113,7 +113,7 @@ describe('the fields that say how a key is made', () => {
     ).toEqual([
       [
         '/credentials/0/instructions',
-        'Expected no instructions: a client_credentials way takes issuer, scope, says, key_page, key_page_title, client_id_title, steps, limitation, placeholders, and base_url',
+        'Expected no instructions: a client_credentials way takes issuer, scope, says, parameters, key_page, key_page_title, client_id_title, steps, limitation, placeholders, base_url, and path_values',
       ],
     ]);
   });

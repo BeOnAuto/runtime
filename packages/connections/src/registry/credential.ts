@@ -81,7 +81,8 @@ export const CredentialFieldsSchema = Schema.Struct({
   ),
   parameters: Schema.optionalKey(
     wayFields.parameters.annotate({
-      description: 'For authorization, the parameters its authorization request carries beside the standard ones',
+      description:
+        'For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials',
     }),
   ),
   authorization_endpoint: Schema.optionalKey(
@@ -162,13 +163,14 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
 interface TakenFields {
   readonly required: readonly Field[];
   readonly optional: readonly Field[];
+  readonly recorded?: readonly Field[];
 }
 
 const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   none: { required: [], optional: [] },
   reference: { required: ['variable', 'name', 'in'], optional: ['scheme'] },
   secret: { required: ['name', 'in'], optional: ['scheme', ...keyFieldNames] },
-  client_credentials: { required: ['issuer'], optional: ['client_id', 'scope'] },
+  client_credentials: { required: ['issuer'], optional: ['client_id', 'scope'], recorded: ['parameters'] },
   authorization: {
     required: ['issuer'],
     optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
@@ -201,14 +203,14 @@ function fieldsTakenInWords({ required, optional }: TakenFields): string {
 
 function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   const taken = fieldsTakenBy(credential);
-  const { required, optional } = taken;
+  const { required, optional, recorded = [] } = taken;
   const named = isThroughAGateway(credential) ? credentialThroughAGateway : credentialOfKind(credential.kind);
   return everyFieldButTheScheme.flatMap((field): readonly FieldIssue[] => {
     const given = credential[field] !== undefined;
     if (!given && required.includes(field)) {
       return [{ path: [field], issue: `Expected ${field}, which ${named} takes` }];
     }
-    return given && !required.includes(field) && !optional.includes(field)
+    return given && !required.includes(field) && !optional.includes(field) && !recorded.includes(field)
       ? [{ path: [field], issue: `Expected no ${field}: ${named} takes ${fieldsTakenInWords(taken)}` }]
       : [];
   });

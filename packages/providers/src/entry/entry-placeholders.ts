@@ -44,7 +44,7 @@ const unusedByTheProvider =
   'Expected the placeholder in the address, a header or a query value of the provider, since nothing else takes it';
 
 const unusedByTheWay =
-  "Expected the placeholder in this way's addresses, its base_url or its subject, since nothing else takes it";
+  "Expected the placeholder in this way's addresses, its base_url, its subject or its parameters, since nothing else takes it";
 
 const namedAsTheProviders =
   "Expected a name no placeholder of the provider has, since a way's placeholder is asked beside the provider's";
@@ -110,7 +110,7 @@ function namesOf({ placeholders }: Scope, clientIdPlaced: boolean): Names {
 }
 
 function holdsClientIdWords(field: TemplatedField, names: Names): string {
-  return field.holds === 'value' && names.clientIdPlaced ? '' : clientIdElsewhere;
+  return field.holds === 'value' && field.way === undefined && names.clientIdPlaced ? '' : clientIdElsewhere;
 }
 
 function undeclaredIssueOf(field: TemplatedField, name: string, ofWays: ReadonlySet<string>): string {

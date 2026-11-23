@@ -50,6 +50,12 @@ const AuthSchema = Schema.Struct({
         'With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in. Left out, the token is asked for the client itself',
     }),
   ),
+  parameters: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description:
+        'Parameters sent with each token request beside the ones Auto sets itself, by name. A grant_type among them is sent in place of client_credentials, for an authorization server that names a grant of its own. Not taken with grant jwt_bearer',
+    }),
+  ),
 }).annotate({
   description:
     "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, or from the issuer's where discovery is issuer; an openapi server's from the issuer's. With grant jwt_bearer, Auto asks for a token for the account subject names, or for the client itself where subject is left out",
@@ -109,6 +115,12 @@ const openApiFields = {
   security: Schema.optionalKey(
     Schema.Record(Schema.String, Schema.String).annotate({
       description: `The credential of each security scheme of an HTTP API's document the entry gives, by the scheme's name, placed as the scheme says: an apiKey in its header or query parameter, a bearer as Authorization: Bearer, a basic as user:password; an oauth2 or openIdConnect scheme takes the auth block instead; each value is a reference such as \${BILLING_API_KEY} or ada:\${BILLING_PASSWORD}, a secret, and one written out is refused`,
+    }),
+  ),
+  path_values: Schema.optionalKey(
+    Schema.Record(Schema.String, Schema.String).annotate({
+      description:
+        "The value sent for a path parameter of an HTTP API's document in every call, by the parameter's name. No tool offers the parameter as an argument, so no call can change it",
     }),
   ),
   failure_codes: Schema.optionalKey(FailureCodesSchema),

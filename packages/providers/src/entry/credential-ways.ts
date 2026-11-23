@@ -1,5 +1,10 @@
 import { alternatives, articled, listed } from '@on.auto/phrasing';
-import { WayClientSourceSchema, WayPkceSchema } from '@on.auto/tool-servers';
+import {
+  parametersTheRuntimeSets,
+  setInEveryTokenRequestWords,
+  WayClientSourceSchema,
+  WayPkceSchema,
+} from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
@@ -8,7 +13,7 @@ import { assertionFields } from './assertion-ways.ts';
 import { consentEndpoints, consentIssuesOf } from './consent-fields.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
-import { clientIdTitleField, ownValueFields } from './way-values.ts';
+import { clientIdTitleField, ownValueFields, pathValueIssuesOf } from './way-values.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
@@ -63,7 +68,12 @@ const CredentialWayFieldsSchema = Schema.Struct({
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
   scope: Schema.optionalKey(wayFields.scope),
-  parameters: Schema.optionalKey(wayFields.parameters),
+  parameters: Schema.optionalKey(
+    wayFields.parameters.annotate({
+      description:
+        "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials. Each value may hold this way's placeholders",
+    }),
+  ),
   authorization_endpoint: Schema.optionalKey(wayFields.authorization_endpoint),
   token_endpoint: Schema.optionalKey(wayFields.token_endpoint),
   revocation_endpoint: Schema.optionalKey(wayFields.revocation_endpoint),
@@ -124,6 +134,7 @@ const everyField: readonly Field[] = [
   'refresh_token_expires_in',
   'placeholders',
   'base_url',
+  'path_values',
   'subject',
   'key_file',
   ...keyFieldNames,
@@ -135,7 +146,7 @@ const everyField: readonly Field[] = [
   'limitation',
 ];
 
-const ownValues: readonly Field[] = ['placeholders', 'base_url'];
+const ownValues: readonly Field[] = ['placeholders', 'base_url', 'path_values'];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   secret: {
@@ -156,7 +167,17 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   },
   client_credentials: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'key_page', 'key_page_title', 'client_id_title', 'steps', 'limitation', ...ownValues],
+    optional: [
+      'scope',
+      'says',
+      'parameters',
+      'key_page',
+      'key_page_title',
+      'client_id_title',
+      'steps',
+      'limitation',
+      ...ownValues,
+    ],
   },
   none: { required: [], optional: [] },
   jwt_bearer: {
@@ -240,9 +261,20 @@ function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialW
       ];
 }
 
+function tokenParameterIssuesOf({ kind, parameters = {} }: CredentialWayFields): readonly WayIssue[] {
+  return kind === 'client_credentials'
+    ? parametersTheRuntimeSets(parameters).map((name) => ({
+        path: ['parameters', name],
+        issue: setInEveryTokenRequestWords(name),
+      }))
+    : [];
+}
+
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
   const issues = [
     ...presenceIssuesOf(way),
+    ...tokenParameterIssuesOf(way),
+    ...pathValueIssuesOf(way),
     ...wordsIssuesOf(way.scope, way.says),
     ...keyWayIssuesOf(way),
     ...accountTypeIssuesOf(way),

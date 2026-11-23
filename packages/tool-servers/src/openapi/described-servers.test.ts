@@ -83,6 +83,17 @@ describe('the operations of an openapi server that need a header', () => {
   });
 });
 
+describe('the path values of an openapi server', () => {
+  it('are refused at start where no path of its document holds the parameter, as a problem of its paths', async () => {
+    const byName = new Map([['documents/notes.yaml', shippedDocumentOf(new TextEncoder().encode(notes))]]);
+    const entry = { document: 'documents/notes.yaml', org: 'acme', path_values: { userId: 'me' } };
+
+    const refusal = await refusalOf({ graph: entry }, { documents: { kind: 'shipped', byName } });
+
+    expect(refusal).toContain('TOOL_SERVERS: /graph/document: At /paths of the document:');
+  });
+});
+
 describe('the document of an openapi server a provider ships', () => {
   it('is the text the providers read, described as a file is, and nothing is read from the directory of the server', async () => {
     const graph = new TextEncoder().encode(documentWithServer('https://graph.example.com/v1'));

@@ -153,3 +153,59 @@ describe('the labels a way and a placeholder give a person', () => {
     expect(withTheApp(atMost)).toEqual([]);
   });
 });
+
+const ofTheAccount = { grant_type: 'account_credentials', account_id: '{tenant}' };
+
+const parameterRefusals: readonly (readonly [string, Readonly<Record<string, string>>, string])[] = [
+  ['a placeholder no way declares', { account_id: '{account}' }, 'account_id'],
+  [
+    '{client_id}, which the serving places only in a value of the provider',
+    { account_id: '{client_id}' },
+    'account_id',
+  ],
+  ['a parameter the runtime sets in a token request', { scope: 'all' }, 'scope'],
+  ['a value that looks like a credential', { key: 'sk-live-0123456789abcdefghij' }, 'key'],
+];
+
+describe('the parameters of a way of client credentials', () => {
+  it('hold its own placeholders, which a placeholder held there alone is taken for', () => {
+    const { tenant: _tenant, ...elsewhere } = asTheCompanysApp.placeholders;
+    const onlyThere = { issuer: 'https://login.mail.example.com/common', parameters: ofTheAccount };
+
+    expect(withTheApp({ parameters: ofTheAccount })).toEqual([]);
+    expect(withTheApp({ ...onlyThere, placeholders: { ...elsewhere, tenant } })).toEqual([]);
+  });
+
+  it('are refused on another way where they hold a placeholder of this one, which only this way asks', () => {
+    const signingInForTheAccount = { ...signingInToMail, parameters: { account_id: '{tenant}' } };
+
+    expect(pathsOf(problemsOf({ ...mail, credentials: [signingInForTheAccount, asTheCompanysApp] }))).toEqual([
+      '/credentials/0/parameters/account_id',
+    ]);
+  });
+
+  it.each(parameterRefusals)('are refused where they hold %s', (_case, parameters, path) => {
+    expect(pathsOf(withTheApp({ parameters }))).toContain(`/credentials/1/parameters/${path}`);
+  });
+});
+
+const pathValueRefusals: readonly (readonly [string, string])[] = [
+  ['a placeholder, since the value is read from the entry when a connection is served', '{mailbox}'],
+  ['a reference to a value of whoever runs the runtime', '${MAIL_USER}'],
+  ['a value that looks like a credential', 'sk-live-0123456789abcdefghij'],
+];
+
+describe('the path values of a way', () => {
+  it('are taken on a way of an openapi provider, and refused on a way of an mcp provider', () => {
+    const { document: _document, base_url: _address, ...server } = mail;
+    const mcp = { ...server, type: 'mcp', url: 'https://mcp.mail.example.com/mcp' };
+    const signingInAsMe = { ...signingInToMail, path_values: { userId: 'me' } };
+
+    expect(problemsOf({ ...mail, credentials: [signingInAsMe, asTheCompanysApp] })).toEqual([]);
+    expect(pathsOf(problemsOf({ ...mcp, credentials: [signingInAsMe] }))).toEqual(['/credentials/0/path_values']);
+  });
+
+  it.each(pathValueRefusals)('are refused where a value holds %s', (_case, value) => {
+    expect(pathsOf(withTheApp({ path_values: { userId: value } }))).toContain('/credentials/1/path_values/userId');
+  });
+});

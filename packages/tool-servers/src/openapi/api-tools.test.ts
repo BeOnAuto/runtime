@@ -1,7 +1,14 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { documentOf, problemsOf, toolNamed, toolsOf } from '../api-testing/derived-documents.ts';
+import {
+  documentOf,
+  keyPresented,
+  meetingsOfAUser,
+  problemsOf,
+  toolNamed,
+  toolsOf,
+} from '../api-testing/derived-documents.ts';
 import { fakeApiDocument } from '../testing/index.ts';
 
 describe('the tools of an HTTP API', () => {
@@ -261,5 +268,25 @@ describe('the parameters and the bodies an HTTP API keeps among its components',
       { type: 'object', properties: { limit: { type: 'integer' } }, required: ['limit'], additionalProperties: false },
       { type: 'object', properties: { limit: {}, body: { type: 'string' } }, additionalProperties: false },
     ]);
+  });
+});
+
+describe('a path parameter whose value the entry gives', () => {
+  it('is no argument of the tool, which keeps its name, and stands written in the path of the operation', () => {
+    const offered = toolsOf(meetingsOfAUser).operations;
+    const given = toolsOf(meetingsOfAUser, keyPresented, new Map([['userId', 'ada@acme.example.com']])).operations;
+
+    expect([offered, given]).toMatchObject([
+      [
+        {
+          tool: { name: 'listMeetings' },
+          path: '/users/{userId}/meetings',
+          inputs: [{ name: 'userId' }, { name: 'type' }],
+        },
+      ],
+      [{ tool: { name: 'listMeetings' }, path: '/users/ada%40acme.example.com/meetings', inputs: [{ name: 'type' }] }],
+    ]);
+    expect(given).toMatchObject([{ tool: { inputSchema: { properties: { type: { type: 'string' } } } } }]);
+    expect(given).not.toHaveProperty('0.tool.inputSchema.properties.userId');
   });
 });

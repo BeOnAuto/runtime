@@ -1,7 +1,7 @@
 import { jwtBearerGrant } from '../assertions/signed-assertions.ts';
 import { json } from './authorization-answers.ts';
 import { assertionsGranted } from './fake-assertions.ts';
-import { fakeClients, type ClientRegistration, type FakeClients } from './fake-clients.ts';
+import { fakeClients, type ClientRegistration, type ExtensionGrant, type FakeClients } from './fake-clients.ts';
 import { fakeGrants, fakeTokens, type TokenRequest } from './fake-grants.ts';
 
 export interface FakeAuthorization {
@@ -130,6 +130,19 @@ function documentRoutesOf(origin: string, registration: ClientRegistration): rea
   ];
 }
 
+function extensionGranted({ parameters }: ExtensionGrant, granted: Granted): Granted {
+  return (asked) =>
+    Object.entries(parameters).every(([name, value]: readonly [string, string]) => asked.form.get(name) === value)
+      ? granted(asked)
+      : json({ error: 'invalid_request' }, 400);
+}
+
+function grantOfTheClient({ extensionGrant }: ClientRegistration, granted: Granted): readonly [string, Granted] {
+  return extensionGrant === undefined
+    ? ['client_credentials', granted]
+    : [extensionGrant.type, extensionGranted(extensionGrant, granted)];
+}
+
 async function asClient(clients: FakeClients, asking: Asking, granted: Granted): Promise<Response> {
   const { request, form, requested } = asking;
   const client = await clients.authenticated(request, form);
@@ -147,7 +160,7 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
   const asserted = assertionsGranted(registration, `${endpointsOriginOf(origin, registration)}/token`, tokens);
   let requested = 0;
   const grantsByType: ReadonlyMap<string, Granted> = new Map([
-    ['client_credentials', grants.clientCredentials],
+    grantOfTheClient(registration, grants.clientCredentials),
     ['authorization_code', grants.exchange],
     ['refresh_token', grants.refresh],
   ]);

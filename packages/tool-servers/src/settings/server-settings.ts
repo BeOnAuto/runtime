@@ -24,6 +24,7 @@ export interface AuthSettings {
   readonly audience?: string;
   readonly grant?: AuthGrant;
   readonly subject?: string;
+  readonly parameters?: Readonly<Record<string, string>>;
   readonly credential: AuthCredential;
 }
 
@@ -88,6 +89,7 @@ export interface OpenApiServerSettings extends ServedBy {
   readonly headers: ReadonlyMap<string, Redacted.Redacted>;
   readonly query_params: ReadonlyMap<string, Redacted.Redacted>;
   readonly security: ReadonlyMap<string, Redacted.Redacted>;
+  readonly path_values: ReadonlyMap<string, string>;
   readonly auth: AuthSettings | null;
   readonly failure_codes: FailureCodes | null;
 }

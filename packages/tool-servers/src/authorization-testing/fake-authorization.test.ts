@@ -71,6 +71,40 @@ function servedTakingPublicClientsAlone(changes: Partial<ClientRegistration>): F
   return fake;
 }
 
+const grantingItsOwn = fakeMcpAnswers({
+  client: {
+    clientId: 'auto-runtime',
+    clientSecret,
+    expiresInSeconds: 3600,
+    extensionGrant: { type: 'account_credentials', parameters: { account_id: 'acme-1' } },
+  },
+}).handlerAt(origin);
+
+const ownGrants: readonly (readonly [string, Readonly<Record<string, string>>, number])[] = [
+  [
+    'its grant with the value of each parameter it names',
+    { grant_type: 'account_credentials', account_id: 'acme-1' },
+    200,
+  ],
+  ['its grant with another value', { grant_type: 'account_credentials', account_id: 'acme-2' }, 400],
+  ['its grant without the parameters it names', { grant_type: 'account_credentials' }, 400],
+  ['the grant of client credentials, which it does not take', { grant_type: 'client_credentials' }, 400],
+];
+
+describe('the token endpoint of a fake that names a grant of its own in place of client credentials', () => {
+  it.each(ownGrants)('gives a token for %s, and refuses the others', async (_case, form, status) => {
+    const answer = await grantingItsOwn(
+      new Request(`${origin}/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', ...asTheClient },
+        body: new URLSearchParams(form),
+      }),
+    );
+
+    expect(answer.status).toBe(status);
+  });
+});
+
 describe('a fake whose token endpoint takes public clients alone', () => {
   it('lists none alone, takes a public client by its id, and refuses a client with a secret however it sends it, and one it does not know', async () => {
     const open = servedTakingPublicClientsAlone({});

@@ -3,6 +3,7 @@ import { Redacted, Result, type Schema } from 'effect';
 import type { ServedTool } from '../bounds/tool-results.ts';
 import { decodedDocument, type DocumentProblem } from '../openapi/api-document.ts';
 import { derivedTools, type DerivedTools } from '../openapi/api-tools.ts';
+import { noPathValues, type PathValues } from '../openapi/document-paths.ts';
 import type { Presented } from '../openapi/security-schemes.ts';
 
 export const keyPresented: Presented = {
@@ -20,8 +21,21 @@ export function documentOf(paths: DocumentFields, more: DocumentFields = {}): Do
   return { openapi: '3.1.0', info: { title: 'Notes', version: '1' }, paths, ...more };
 }
 
-export function toolsOf(document: DocumentFields, presented: Presented = keyPresented): DerivedTools {
-  return Result.getOrThrow(Result.flatMap(decodedDocument(document), (read) => derivedTools(read, presented)));
+export const meetingsOfAUser = documentOf({
+  '/users/{userId}/meetings': {
+    parameters: [{ name: 'userId', in: 'path', required: true, schema: { type: 'string' } }],
+    get: { operationId: 'listMeetings', parameters: [{ name: 'type', in: 'query', schema: { type: 'string' } }] },
+  },
+});
+
+export function toolsOf(
+  document: DocumentFields,
+  presented: Presented = keyPresented,
+  pathValues: PathValues = noPathValues,
+): DerivedTools {
+  return Result.getOrThrow(
+    Result.flatMap(decodedDocument(document), (read) => derivedTools(read, presented, pathValues)),
+  );
 }
 
 export function problemsOf(document: DocumentFields): readonly DocumentProblem[] {

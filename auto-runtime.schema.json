@@ -229,6 +229,13 @@
                 "type": "string",
                 "minLength": 1,
                 "description": "With grant jwt_bearer, the account the token is asked for, such as the mailbox a service account works in. Left out, the token is asked for the client itself"
+              },
+              "parameters": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Parameters sent with each token request beside the ones Auto sets itself, by name. A grant_type among them is sent in place of client_credentials, for an authorization server that names a grant of its own. Not taken with grant jwt_bearer"
               }
             },
             "required": ["issuer", "client_id"],
@@ -274,6 +281,13 @@
               "type": "string"
             },
             "description": "The credential of each security scheme of an HTTP API's document the entry gives, by the scheme's name, placed as the scheme says: an apiKey in its header or query parameter, a bearer as Authorization: Bearer, a basic as user:password; an oauth2 or openIdConnect scheme takes the auth block instead; each value is a reference such as ${BILLING_API_KEY} or ada:${BILLING_PASSWORD}, a secret, and one written out is refused"
+          },
+          "path_values": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The value sent for a path parameter of an HTTP API's document in every call, by the parameter's name. No tool offers the parameter as an argument, so no call can change it"
           },
           "failure_codes": {
             "type": "object",
@@ -1880,7 +1894,8 @@
                       "type": "object",
                       "additionalProperties": {
                         "type": "string"
-                      }
+                      },
+                      "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials. Each value may hold this way's placeholders"
                     },
                     "authorization_endpoint": {
                       "type": "string"
@@ -2079,6 +2094,18 @@
                     "base_url": {
                       "type": "string",
                       "description": "For openapi, the https URL the calls of a connection made this way go to, in place of the provider's base_url and of the server its document names, each {name} in it a placeholder"
+                    },
+                    "path_values": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "For openapi, the value sent for a path parameter of the document, by the parameter's name, in every call of a connection made this way. No tool of such a connection offers the parameter as an argument, so no call can change it; a connection made another way offers it"
                     },
                     "subject": {
                       "type": "string",

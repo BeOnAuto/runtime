@@ -189,6 +189,41 @@ describe('an openapi server refused for what it sends', () => {
   });
 });
 
+function pathValuesOf(server: ServerSettings | undefined): Readonly<Record<string, string>> {
+  return server?.type === 'openapi' ? Object.fromEntries(server.path_values) : {};
+}
+
+function pointersOf(servers: unknown): readonly string[] {
+  return problemsOf(servers).map((problem) => problem.slice(0, problem.indexOf(': ')));
+}
+
+describe('the path values of an openapi server', () => {
+  it('are read by the name of each parameter, and are none where it gives none', () => {
+    const [given, none] = serversOf({ billing: { ...billing, path_values: { userId: 'me' } }, plain: billing });
+
+    expect([pathValuesOf(given), pathValuesOf(none)]).toEqual([{ userId: 'me' }, {}]);
+  });
+
+  it('are refused where a value is empty, or would take a call out of its path, or a name is empty, or a value holds a reference, or the server is not an openapi server', () => {
+    const mcp = { url: 'https://billing.example.com/mcp', org: 'acme' };
+
+    expect(
+      pointersOf({
+        billing: { ...billing, path_values: { empty: '', here: '.', up: '..', '': 'me' } },
+        referenced: { ...billing, path_values: { key: '${BILLING_API_KEY}' } },
+        mcp: { ...mcp, path_values: { userId: 'me' } },
+      }),
+    ).toEqual([
+      '/billing/path_values/empty',
+      '/billing/path_values/here',
+      '/billing/path_values/up',
+      '/billing/path_values/',
+      '/referenced/path_values/key',
+      '/mcp/path_values',
+    ]);
+  });
+});
+
 describe('the security of an openapi server', () => {
   it('reads each credential by the name of its scheme, the whole value a secret as well as its reference, each once', () => {
     const [server] = serversOf({

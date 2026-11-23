@@ -112,6 +112,12 @@ function keyFieldsOf(way: CredentialWay): Partial<Record<KeyFieldName, string>> 
   );
 }
 
+function placedEach(written: Placed, values: Values): Placed {
+  return Object.fromEntries(
+    Object.entries(written).map(([name, text]: readonly [string, string]) => [name, placedText(text, values)]),
+  );
+}
+
 function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthClient | undefined): ProviderCredential {
   const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
@@ -123,7 +129,7 @@ function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthC
     ...keyFieldsOf(way),
     ...placedAddressesOf(way, values),
     ...(scope === undefined ? {} : { scope }),
-    ...(parameters === undefined ? {} : { parameters }),
+    ...(parameters === undefined ? {} : { parameters: placedEach(parameters, values) }),
     ...(pkce === undefined ? {} : { pkce }),
     ...(clients === undefined ? {} : { clients }),
     ...(way.subject === undefined ? {} : { subject: placedText(way.subject, values) }),

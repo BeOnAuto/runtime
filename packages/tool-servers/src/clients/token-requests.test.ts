@@ -60,6 +60,29 @@ describe('the audience of a token request', () => {
   });
 });
 
+describe('the grant of a token request', () => {
+  it('is client_credentials where the auth block names no parameters, and the grant and parameters it names where it does', async () => {
+    const standard = served();
+    const ownGrant = { type: 'account_credentials', parameters: { account_id: 'acme-1' } };
+    const extended = served({ extensionGrant: ownGrant });
+    const asking = askingFetch();
+    const parameters = { grant_type: 'account_credentials', account_id: 'acme-1' };
+
+    await sourceOf(standard, secretAuth(standard), asking.fetch).source.token();
+    const { source, clock } = sourceOf(extended, secretAuth(extended, { parameters }), asking.fetch);
+    const token = await source.token();
+    clock.now += 3_540_001;
+    await source.token();
+
+    expect(token).toMatch(/^token-1-/u);
+    expect(asking.bodies().map((body) => [body['grant_type'], body['account_id']])).toEqual([
+      ['client_credentials', undefined],
+      ['account_credentials', 'acme-1'],
+      ['account_credentials', 'acme-1'],
+    ]);
+  });
+});
+
 describe('the audience of every token request a source makes', () => {
   it('is sent beside the client assertion a private key signs', async () => {
     const { publicKey, privateKey } = rsaKeys();

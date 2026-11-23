@@ -14,6 +14,7 @@ import {
 import { headersTheRuntimeSets, type RemoteServerType } from './reserved-headers.ts';
 import type { ServerEntryFields } from './server-entries.ts';
 import type { AuthSettings, MintingCredential } from './server-settings.ts';
+import { parametersTheRuntimeSets, setInEveryTokenRequestWords } from './token-parameters.ts';
 
 type Auth = NonNullable<ServerEntryFields['auth']>;
 
@@ -64,7 +65,27 @@ function checkedGrant(name: string, { grant, subject, private_key, client_secret
   return accepted(subject === undefined ? { grant } : { grant, subject });
 }
 
-function authSettingsOf(auth: Auth, granted: Granted, credential: MintingCredential): AuthSettings {
+type Parameters = Pick<AuthSettings, 'parameters'>;
+
+const parametersOfAnAssertion =
+  'Expected no parameters beside grant jwt_bearer, whose token request carries the signed JWT alone';
+
+function checkedParameters(name: string, { grant, parameters }: Auth): Checked<Parameters> {
+  if (parameters === undefined) {
+    return accepted({});
+  }
+  if (grant === 'jwt_bearer') {
+    return refused(name, ['auth', 'parameters'], parametersOfAnAssertion);
+  }
+  const problems = problemsOf(
+    ...parametersTheRuntimeSets(parameters).map((parameter) =>
+      refused(name, ['auth', 'parameters', parameter], setInEveryTokenRequestWords(parameter)),
+    ),
+  );
+  return problems.length === 0 ? accepted({ parameters }) : rejected(problems);
+}
+
+function authSettingsOf(auth: Auth, granted: Granted & Parameters, credential: MintingCredential): AuthSettings {
   return {
     issuer: auth.issuer,
     client_id: auth.client_id,
@@ -86,8 +107,9 @@ export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFie
     : accepted(auth);
   const credential = checkedCredential(name, auth);
   const granted = checkedGrant(name, auth);
-  const problems = problemsOf(issuer, alone, credential, granted);
-  return credential.ok && granted.ok && problems.length === 0
-    ? accepted(authSettingsOf(auth, granted.value, credential.value))
+  const parameters = checkedParameters(name, auth);
+  const problems = problemsOf(issuer, alone, credential, granted, parameters);
+  return credential.ok && granted.ok && parameters.ok && problems.length === 0
+    ? accepted(authSettingsOf(auth, { ...granted.value, ...parameters.value }, credential.value))
     : rejected(problems);
 }

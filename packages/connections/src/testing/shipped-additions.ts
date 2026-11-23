@@ -15,12 +15,13 @@ import {
   describedToolServers,
   isConnectionServerSettings,
   type AuthSettings,
-  type ServerSettings,
+  type ConnectionServerSettings,
 } from '@on.auto/tool-servers';
 import { Effect, Function, Option, Redacted, Result } from 'effect';
 
 import { apiOf } from '../entries/described-entries.ts';
-import { readAddition, type AdditionInput } from '../entries/entry-checks.ts';
+import { readAddition, type AdditionInput, type EntryChecking } from '../entries/entry-checks.ts';
+import { providingOf } from '../providers/provider-providing.ts';
 import { placesNoValue } from '../registry/credential.ts';
 
 type Given = Readonly<Record<string, string>>;
@@ -84,11 +85,17 @@ function withTheClientId(addition: ProviderAddition): AdditionInput {
     : addition;
 }
 
-export function settingsOf(addition: ProviderAddition): ServerSettings {
+function checkingOf({ provider, credential, permissions }: ProviderAddition): EntryChecking {
+  const services = { providers: shipped, providerValues: new Map<string, Redacted.Redacted>() };
+  const acting = { ...credential, permissions };
+  return { ...checking, providing: providingOf({ provider, credential: acting }, services) };
+}
+
+export function settingsOf(addition: ProviderAddition): ConnectionServerSettings {
   const { kind } = addition.credential;
   const read = readAddition(
     withTheClientId(addition),
-    checking,
+    checkingOf(addition),
     placesNoValue(addition.credential) ? undefined : standIn,
   );
   const settings = Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(read), isConnectionServerSettings));
@@ -97,6 +104,19 @@ export function settingsOf(addition: ProviderAddition): ServerSettings {
 
 function digestOf(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item: unknown) => canonical(item));
+  }
+  return typeof value === 'object' && value !== null
+    ? Object.fromEntries(
+        Object.entries(value)
+          .toSorted(([one]: readonly [string, unknown], [other]: readonly [string, unknown]) => (one < other ? -1 : 1))
+          .map(([key, item]: readonly [string, unknown]) => [key, canonical(item)]),
+      )
+    : value;
 }
 
 function keyOf({ name, credential }: ProviderAddition): string {
@@ -134,5 +154,21 @@ export async function shippedToolsText(): Promise<string> {
     described.map(async (addition): Promise<readonly [string, Digests]> => [keyOf(addition), await toolsOf(addition)]),
   );
   const sorted = derived.toSorted(([one], [other]) => (one < other ? -1 : 1));
+  return `${JSON.stringify(Object.fromEntries(sorted), null, 2)}\n`;
+}
+
+export const shippedCredentialsFile = new URL('../../shipped-credentials.json', import.meta.url);
+
+function wayKeyOf({ name, credential, permissions, placeholders }: ProviderAddition): string {
+  return [name, credential.kind, permissions, new URLSearchParams(placeholders).toString()].filter(Boolean).join(', ');
+}
+
+function requestsOf(addition: ProviderAddition): string {
+  return digestOf(canonical({ credential: addition.credential, auth: settingsOf(addition).auth }));
+}
+
+export function shippedCredentialsText(): string {
+  const digests = additions.map((addition): readonly [string, string] => [wayKeyOf(addition), requestsOf(addition)]);
+  const sorted = digests.toSorted(([one], [other]) => (one < other ? -1 : 1));
   return `${JSON.stringify(Object.fromEntries(sorted), null, 2)}\n`;
 }

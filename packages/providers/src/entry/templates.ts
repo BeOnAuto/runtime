@@ -12,6 +12,7 @@ export interface TemplatedField {
 export interface WayParts extends WayAddresses {
   readonly base_url?: string;
   readonly subject?: string;
+  readonly parameters?: Readonly<Record<string, string>>;
 }
 
 interface ServerPart {
@@ -44,10 +45,19 @@ function markerOf(position: number): string {
 
 const wayFieldsHoldingAnAddress = [...wayAddresses, 'base_url'] as const;
 
-function subjectOf({ subject }: WayParts, index: number): readonly TemplatedField[] {
-  return subject === undefined
-    ? []
-    : [{ path: ['credentials', String(index), 'subject'], text: subject, holds: 'value', way: index }];
+function valuesOf({ subject, parameters = {} }: WayParts, index: number): readonly TemplatedField[] {
+  const at = ['credentials', String(index)];
+  return [
+    ...(subject === undefined
+      ? []
+      : [{ path: [...at, 'subject'], text: subject, holds: 'value' as const, way: index }]),
+    ...Object.entries(parameters).map(([name, text]: readonly [string, string]): TemplatedField => ({
+      path: [...at, 'parameters', name],
+      text,
+      holds: 'value',
+      way: index,
+    })),
+  ];
 }
 
 function wayFieldsOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
@@ -58,7 +68,7 @@ function wayFieldsOf({ credentials = [] }: ServerPart): readonly TemplatedField[
         ? []
         : [{ path: ['credentials', String(index), field], text, holds: 'address', way: index }];
     }),
-    ...subjectOf(way, index),
+    ...valuesOf(way, index),
   ]);
 }
 

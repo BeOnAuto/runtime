@@ -41,6 +41,21 @@ describe('a way that asks values of its own', () => {
     });
   });
 
+  it('carries them in the parameters of its token request, where another way of the provider carries none', () => {
+    const ofTheAccount = { grant_type: 'account_credentials', account_id: '{tenant}' };
+    const provider = providerOf({
+      ...mail,
+      credentials: [signingInToMail, { ...asTheCompanysApp, parameters: ofTheAccount }],
+    });
+    const madeBy = (given: GivenToProvider) => Result.getOrThrow(additionOfProvider(provider.entry, given)).credential;
+
+    expect(madeBy({ kind: 'client_credentials', placeholders: theCompanysValues }).parameters).toEqual({
+      grant_type: 'account_credentials',
+      account_id: '0a1b2c3d',
+    });
+    expect(madeBy({})).not.toHaveProperty('parameters');
+  });
+
   it('reaches the hosts of its own base_url and issuer, where another way reaches the provider’s', () => {
     const mailboxHost = { description: 'The host of the mailbox', pattern: '^[a-z]{1,8}$', example: 'eu' };
     const elsewhere = {

@@ -2,6 +2,7 @@ import { isAbsolute, normalize, resolve, sep } from 'node:path';
 
 import { withoutTrailingSlashes } from '@on.auto/config';
 
+import { keepsItsSegments } from '../openapi/api-requests.ts';
 import { failureCodeIssuesOf, type FailureCodes } from '../openapi/failure-codes.ts';
 import {
   accepted,
@@ -19,7 +20,7 @@ import type { ApiDocumentSource, DocumentsPlace, OpenApiServerSettings, ShippedD
 
 export type ApiTransport = Pick<
   OpenApiServerSettings,
-  'type' | 'document' | 'base_url' | 'headers' | 'query_params' | 'security' | 'auth' | 'failure_codes'
+  'type' | 'document' | 'base_url' | 'headers' | 'query_params' | 'security' | 'path_values' | 'auth' | 'failure_codes'
 >;
 
 const documentShape = `${pinnedUrlShape}, or a path relative to the directory of the configuration file that stays inside it`;
@@ -97,6 +98,27 @@ function checkedSecurity(
   return problems.length === 0 ? accepted(redactedValuesOf(security)) : rejected(problems);
 }
 
+const leavesItsPath = 'Expected a value that keeps the call in its path: not empty, and not . or ..';
+
+function isKeptInItsPath(value: string): boolean {
+  return value !== '' && keepsItsSegments(encodeURIComponent(value));
+}
+
+function checkedPathValues(
+  name: string,
+  pathValues: Readonly<Record<string, string>>,
+): Checked<OpenApiServerSettings['path_values']> {
+  const problems = problemsOf(
+    ...Object.entries(pathValues).map(([parameter, value]: readonly [string, string]) => {
+      if (parameter === '') {
+        return refused(name, ['path_values', parameter], 'Expected the name of a path parameter');
+      }
+      return isKeptInItsPath(value) ? accepted(value) : refused(name, ['path_values', parameter], leavesItsPath);
+    }),
+  );
+  return problems.length === 0 ? accepted(new Map(Object.entries(pathValues))) : rejected(problems);
+}
+
 function checkedFailureCodes(name: string, failureCodes: FailureCodes | undefined): Checked<FailureCodes | null> {
   const problems = problemsOf(
     ...failureCodeIssuesOf(failureCodes).map(({ path, detail }) =>
@@ -106,15 +128,21 @@ function checkedFailureCodes(name: string, failureCodes: FailureCodes | undefine
   return problems.length === 0 ? accepted(failureCodes ?? null) : rejected(problems);
 }
 
-type Sent = Pick<OpenApiServerSettings, 'headers' | 'query_params' | 'security'>;
+type Sent = Pick<OpenApiServerSettings, 'headers' | 'query_params' | 'security' | 'path_values'>;
 
 function checkedSent(name: string, fields: ServerEntryFields): Checked<Sent> {
   const headers = checkedHeaders(name, fields.headers ?? {}, 'openapi');
   const query = checkedQuery(name, fields.query_params ?? {});
   const security = checkedSecurity(name, fields.security ?? {});
-  return headers.ok && query.ok && security.ok
-    ? accepted({ headers: headers.value, query_params: query.value, security: security.value })
-    : rejected(problemsOf(headers, query, security));
+  const pathValues = checkedPathValues(name, fields.path_values ?? {});
+  return headers.ok && query.ok && security.ok && pathValues.ok
+    ? accepted({
+        headers: headers.value,
+        query_params: query.value,
+        security: security.value,
+        path_values: pathValues.value,
+      })
+    : rejected(problemsOf(headers, query, security, pathValues));
 }
 
 export function apiTransport(

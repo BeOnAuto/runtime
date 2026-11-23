@@ -18,7 +18,7 @@ interface Written {
 }
 
 interface WrittenWay extends WayParts {
-  readonly parameters?: Readonly<Record<string, string>>;
+  readonly path_values?: Readonly<Record<string, string>>;
   readonly placeholders?: Readonly<Record<string, Placeholder>>;
 }
 
@@ -78,6 +78,7 @@ function serverPartOf({
     credentials: credentials.map((way) =>
       definedOf({
         parameters: way.parameters,
+        path_values: way.path_values,
         ...Object.fromEntries(wayAddresses.map((field) => [field, way[field]])),
         base_url: way.base_url,
         subject: way.subject,

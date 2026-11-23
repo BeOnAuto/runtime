@@ -132,13 +132,21 @@ function typeIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   ];
 }
 
-const baseUrlOfAnMcpWay =
-  "Expected no base_url: an mcp provider's calls go to its url, and a way's base_url is where the calls of an openapi provider go";
+const ofAnMcpWay = {
+  base_url:
+    "Expected no base_url: an mcp provider's calls go to its url, and a way's base_url is where the calls of an openapi provider go",
+  path_values:
+    "Expected no path_values: an mcp provider has no document, and a way's path_values fill the paths of an openapi provider's document",
+} as const;
 
-function wayBaseUrlIssuesOf({ type: typed, credentials }: ProviderEntry): readonly EntryIssue[] {
+const fieldsOfAnOpenApiWay = ['base_url', 'path_values'] as const;
+
+function openApiWayIssuesOf({ type: typed, credentials }: ProviderEntry): readonly EntryIssue[] {
   return typed === 'mcp'
-    ? credentials.flatMap(({ base_url: baseUrl }, index) =>
-        baseUrl === undefined ? [] : [{ path: ['credentials', index, 'base_url'], issue: baseUrlOfAnMcpWay }],
+    ? credentials.flatMap((way, index) =>
+        fieldsOfAnOpenApiWay
+          .filter((field) => way[field] !== undefined)
+          .map((field) => ({ path: ['credentials', index, field], issue: ofAnMcpWay[field] })),
       )
     : [];
 }
@@ -174,7 +182,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...aliasIssuesOf(entry),
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
-    ...wayBaseUrlIssuesOf(entry),
+    ...openApiWayIssuesOf(entry),
     ...repeatedWayIssuesOf(entry.credentials),
     ...testIssuesOf(entry),
     ...markedIssuesOf(entry),

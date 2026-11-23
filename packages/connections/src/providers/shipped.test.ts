@@ -15,6 +15,8 @@ import {
   clientId,
   settingsOf,
   shipped,
+  shippedCredentialsFile,
+  shippedCredentialsText,
   shippedToolsFile,
   shippedToolsText,
 } from '../testing/shipped-additions.ts';
@@ -65,6 +67,12 @@ describe('the tools every shipped document offers, by the way of each provider',
       ['outlook', 1],
       ['youtube-analytics', 1],
     ]);
+  });
+});
+
+describe('the requests of every way of every shipped provider, by each example of its values', () => {
+  it('are committed as the credential it records and the auth its server is read with, each way by their digest, so a change to how a shipped way asks for a token or a consent shows in its diff; pnpm --filter @on.auto/connections shipped-credentials writes them again', () => {
+    expect(readFileSync(shippedCredentialsFile, 'utf8')).toBe(shippedCredentialsText());
   });
 });
 
