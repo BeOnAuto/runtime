@@ -11,7 +11,12 @@ export interface AskedConnections extends ConnectionEvents {
   readonly asked: () => readonly string[];
 }
 
-const listening: TriggerStanding = { listening: true, notListeningBecause: null, needsReconnecting: false };
+const listening: TriggerStanding = {
+  speed: 'instant',
+  listening: true,
+  notListeningBecause: null,
+  needsReconnecting: false,
+};
 
 export function connectionsReporting(
   reportings: Readonly<Record<string, ConnectionReporting>>,

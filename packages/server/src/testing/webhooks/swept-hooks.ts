@@ -71,3 +71,23 @@ export async function settledByAReplyRead(server: SteppedServer, path: string): 
     );
   return ended.body;
 }
+
+/** The first check of the rooms service's `list_posts`, which a round makes on the server's next sweeps. */
+export async function firstCheckSwept(server: SteppedServer, rooms: FakeMcpServer): Promise<void> {
+  await whenSwept(
+    server,
+    () => rooms.received().filter(({ tool }) => tool === 'list_posts').length,
+    (count) => count > 0,
+  );
+}
+
+/** The runs a check starts, once one is: the server's clock is stepped a minute at a time, three minutes at most. */
+export function runsStartedByChecks(server: SteppedServer, playbook: string): Promise<number> {
+  return ownClockOf(server)
+    .steppedEvery(60_000)
+    .until(
+      () => runsStartedIn(server, playbook),
+      (started) => started > 0,
+      { atMost: 3 },
+    );
+}

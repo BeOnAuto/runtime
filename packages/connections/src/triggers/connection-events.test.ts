@@ -146,3 +146,45 @@ describe('the account the connection an event is taken in through acts as', () =
     expect([before, recorded, await actingAs()]).toStrictEqual([served, { ...served, user: 'h-7' }, served]);
   });
 });
+
+const checkedFirst = providersOf({
+  ...tracker,
+  events: {
+    types: [{ type: opened, title: 'A ticket is opened', subject: { title: 'Board', required: true }, data: {} }],
+    destinations: [
+      {
+        type: 'polling',
+        read: { tool: 'list_tickets', with: { board: '{{ topic }}' }, list: '/tickets', order: 'oldest_first' },
+        events: [
+          {
+            type: opened,
+            when: {},
+            id: ['$message.payload#/id'],
+            subject: '$message.payload#/board',
+            topic: 'board/{{ subject }}',
+          },
+        ],
+      },
+    ],
+  },
+});
+
+describe('the connection an item a check lists is taken in through', () => {
+  it('gives the topic the check renders for an event of a type and subject', async () => {
+    const connected = {
+      type: 'connection_connected',
+      data: { connection: 'connection-1', connected_by: ada },
+    } as const;
+    const registry = await registryOf([
+      '2026-11-20T08:00:00.000Z',
+      [addedFact('connection-1', 'tracker', 'tracker'), connected],
+    ]);
+    const served = servedConnectionOf({ registry, providers: checkedFirst })({ ...alpha, connection: 'tracker' });
+    const asked = [{ type: opened, subject: 'board-7' }, { type: opened }];
+    const topics = Effect.flatMap(Effect.flatMap(served, Effect.fromNullishOr), (each) =>
+      Effect.forEach(asked, each.topicsOf),
+    );
+
+    expect(await Effect.runPromise(topics)).toEqual([['board/board-7'], []]);
+  });
+});

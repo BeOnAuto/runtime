@@ -16,11 +16,13 @@ const connectedAt = '2026-11-22T08:00:00.000Z';
 
 const ada = { id: 'person:ada', name: 'Ada' };
 
-function boardsReading(placeName?: object) {
+const heardAsShipped: readonly object[] = [bySubscriptionOfWhoMoved, overTheBoardsSocket];
+
+function boardsReading(placeName?: object, destinations = heardAsShipped) {
   const named =
     placeName === undefined ? placedCard : { ...placedCard, subject: { ...placedCard.subject, name: placeName } };
   return providersOf({
-    ...boardsEntryOf([bySubscriptionOfWhoMoved, overTheBoardsSocket], boardsIdentity, [named, archived]),
+    ...boardsEntryOf(destinations, boardsIdentity, [named, archived]),
     replaces: ['old-boards'],
   });
 }
@@ -90,15 +92,17 @@ export function connectedAgain(connection: string) {
 export interface Naming {
   readonly placeName?: object;
   readonly after?: readonly Recorded[];
+  readonly destinations?: readonly object[];
 }
 
 export async function boardsReportingTo(
   received: EventsReceived,
-  { placeName, after = [] }: Naming = {},
+  { placeName, after = [], destinations }: Naming = {},
 ): Promise<BoardsReporting> {
   const subscriptions = keptLedger(eventSubscriptions).service;
   const registry = await registryOf(['2026-11-22T07:00:00.000Z', added], [connectedAt, connected], ...after);
-  const parts = { registry, providers: Effect.succeed(boardsReading(placeName)), subscriptions, received };
+  const providers = Effect.succeed(boardsReading(placeName, destinations));
+  const parts = { registry, providers, subscriptions, received };
   return { subscriptions, events: connectionEventsOver(parts, () => Effect.succeed(listened)) };
 }
 

@@ -1,5 +1,5 @@
 import type { PlaybookAddress } from '@on.auto/operations';
-import { triggerTopicsOf, type EventDestination, type ProviderList } from '@on.auto/providers';
+import { isPolled, triggerTopicsOf, type EventDestination, type ProviderList } from '@on.auto/providers';
 import { Effect } from 'effect';
 
 import type { KeptConnection } from '../registry/registry.ts';
@@ -24,18 +24,23 @@ interface ServedConnection {
   readonly user?: string;
 }
 
-function topicsIn(destination: EventDestination | undefined): ServedConnection['topicsOf'] {
+function topicsIn(destinations: readonly EventDestination[]): ServedConnection['topicsOf'] {
   return (event) =>
-    destination === undefined
-      ? Effect.succeed([])
-      : Effect.map(triggerTopicsOf(destination, event), (topics) =>
-          topics.filter((topic): topic is string => topic !== undefined),
-        );
+    Effect.map(
+      Effect.forEach(destinations, (destination) => triggerTopicsOf(destination, event)),
+      (topics: readonly (readonly (string | undefined)[])[]) =>
+        topics.flat().filter((topic): topic is string => topic !== undefined),
+    );
+}
+
+function placedIn(destinations: readonly EventDestination[]): readonly EventDestination[] {
+  const arranged = arrangedPerSubscription(destinations);
+  return [...(arranged === undefined ? [] : [arranged]), ...destinations.filter((each) => isPolled(each))];
 }
 
 function servedAs(providers: ProviderList, kept: KeptConnection): ServedConnection {
   const { destinations } = loopConnectionOf(providers, kept);
-  const topicsOf = topicsIn(arrangedPerSubscription(destinations));
+  const topicsOf = topicsIn(placedIn(destinations));
   return kept.identified === undefined ? { topicsOf } : { topicsOf, user: kept.identified.id };
 }
 

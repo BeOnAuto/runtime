@@ -40,6 +40,28 @@ const archivedOverHttp = {
 
 export const byTheApp = { ...ofTheApp, events: [mappedOverHttp, archivedOverHttp] };
 
+export const byChecking = {
+  type: 'polling',
+  read: {
+    tool: 'list_cards',
+    with: { board: '{{ topic }}', after: '{{ since }}' },
+    list: '/cards',
+    order: 'oldest_first',
+    cursor: '/moved_at',
+  },
+  read_limit: { quota: 30, window_seconds: 3600 },
+  events: [
+    {
+      type: cardMoved.type,
+      when: {},
+      id: ['$message.payload#/board', '$message.payload#/serial'],
+      subject: '$message.payload#/board',
+      data: { column: '$message.payload#/column' },
+      topic: '{{ subject }}',
+    },
+  ],
+};
+
 export const boardsIdentity = { tool: 'whoami', identified: { id: '/self/uid' } };
 
 export function boardsEntryOf(

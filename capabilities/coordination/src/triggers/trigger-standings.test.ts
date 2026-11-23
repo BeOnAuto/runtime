@@ -43,6 +43,7 @@ function standingOf({ connection, paused }: StandingAsked): TriggerStanding {
   if (paused) {
     return {
       event: 'A ticket is opened',
+      speed: 'instant',
       listening: false,
       notListeningBecause: { kind: 'workflow_paused', detail: 'paused' },
       needsReconnecting: false,
@@ -52,11 +53,14 @@ function standingOf({ connection, paused }: StandingAsked): TriggerStanding {
     ? {
         event: 'A ticket is opened',
         subjectName: '#triage',
+        speed: 'polling',
+        pollingIntervalSeconds: 60,
         listening: true,
         notListeningBecause: null,
         needsReconnecting: false,
       }
     : {
+        speed: 'instant',
         listening: false,
         notListeningBecause: { kind: 'connection_gone', detail: 'gone' },
         needsReconnecting: false,
@@ -84,7 +88,8 @@ const listeningOnTheTracker = {
   connection: 'tracker',
   event: 'A ticket is opened',
   subject_name: '#triage',
-  speed: 'instant',
+  speed: 'polling',
+  polling_interval_seconds: 60,
   listening: true,
   not_listening_because: null,
   needs_reconnecting: false,
@@ -153,7 +158,8 @@ const tracking = {
 
 const standingOfOne = {
   ...tracking,
-  speed: 'instant',
+  speed: 'polling',
+  polling_interval_seconds: 60,
   listening: true,
   not_listening_because: null,
   needs_reconnecting: false,

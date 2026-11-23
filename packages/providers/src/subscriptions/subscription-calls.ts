@@ -1,6 +1,6 @@
 import { renderClock } from '@on.auto/definitions/template';
 import { renderedArguments } from '@on.auto/definitions/tool-blocks';
-import type { ConnectionRequest } from '@on.auto/tool-servers';
+import type { CalledOnce, ConnectionRequest } from '@on.auto/tool-servers';
 import { Clock, Effect, Redacted, Result, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
@@ -10,6 +10,7 @@ import { answeredIn, identifiedIn, placeNameIn, renewedIn, requestedIn, subscrib
 import { failedBecause, type SubscriptionCallFailed } from './subscription-failed.ts';
 import type {
   HeldSubscription,
+  ReadDone,
   Receiving,
   Subscribed,
   Subscribing,
@@ -78,18 +79,54 @@ function answeredThrough(
     : Effect.flatMap(through.requestOnce(request), requestedIn);
 }
 
+function inputOf(through: ThroughTheConnection, sending: Sending): Effect.Effect<Variables | undefined> {
+  return Effect.map(renderClock, (clock) => {
+    const mostBytes = through.mostRequestBytesTo(sending.place.connection);
+    const rendered = renderedArguments(writtenOf(sending.call), sending.variables, clock, mostBytes);
+    return Result.isSuccess(rendered) ? rendered.success.input : undefined;
+  });
+}
+
 function sentThrough(
   through: ThroughTheConnection,
   sending: Sending,
 ): Effect.Effect<Schema.Json | undefined, SubscriptionCallFailed> {
-  return Effect.gen(function* () {
-    const clock = yield* renderClock;
-    const mostBytes = through.mostRequestBytesTo(sending.place.connection);
-    const rendered = renderedArguments(writtenOf(sending.call), sending.variables, clock, mostBytes);
-    if (Result.isFailure(rendered)) {
-      return yield* failedBecause('not_sent');
+  return Effect.flatMap(inputOf(through, sending), (input) =>
+    input === undefined ? Effect.fail(failedBecause('not_sent')) : answeredThrough(through, sending, input),
+  );
+}
+
+function readDoneOf(
+  answered: Effect.Effect<Schema.Json | undefined, SubscriptionCallFailed>,
+  retryAfterMs: number | null,
+): Effect.Effect<ReadDone> {
+  return Effect.match(answered, {
+    onFailure: ({ kind, because }: Pick<SubscriptionCallFailed, 'kind' | 'because'>): ReadDone => ({
+      outcome: 'failed',
+      failure: { kind, because },
+      retryAfterMs,
+    }),
+    onSuccess: (document): ReadDone => ({ outcome: 'answered', document, retryAfterMs }),
+  });
+}
+
+function retryAfterIn(called: CalledOnce): number | null {
+  return called.kind === 'answered' ? called.retryAfterMs : null;
+}
+
+function readThrough(through: ThroughTheConnection, sending: Sending): Effect.Effect<ReadDone> {
+  return Effect.flatMap(inputOf(through, sending), (input) => {
+    if (input === undefined) {
+      return readDoneOf(Effect.fail(failedBecause('not_sent')), null);
     }
-    return yield* answeredThrough(through, sending, rendered.success.input);
+    const { place, call } = sending;
+    if (call.tool === undefined) {
+      return readDoneOf(answeredThrough(through, sending, input), null);
+    }
+    const { org, playbook, connection: server } = place;
+    const reference = { server, tool: call.tool };
+    const asked = { org, playbook, reference, input, meta: {}, recordContent: false, requiredMark: 'reads' } as const;
+    return Effect.flatMap(through.callOnce(asked), (called) => readDoneOf(answeredIn(called), retryAfterIn(called)));
   });
 }
 
@@ -158,7 +195,9 @@ export function subscriptionCallsOf(
   return {
     subscribe: (asked) => {
       const { type } = asked.destination;
-      return type === 'websocket' ? Effect.fail(failedBecause('not_sent')) : subscribedOver(ports, type, asked);
+      return type === 'websocket' || type === 'polling'
+        ? Effect.fail(failedBecause('not_sent'))
+        : subscribedOver(ports, type, asked);
     },
     renew: ({ destination, place, topic, subscription }) => {
       const call = destination.renew;
@@ -187,5 +226,13 @@ export function subscriptionCallsOf(
         placeNameIn(document, name.named, mostNameCharacters),
       );
     },
+    read: ({ read, place, topic, since, pageToken }) =>
+      readThrough(ports, {
+        place,
+        call: read,
+        variables: { topic, since, page_token: pageToken },
+        topic: { written: undefined, rendered: topic },
+        requiredMark: 'reads',
+      }),
   };
 }

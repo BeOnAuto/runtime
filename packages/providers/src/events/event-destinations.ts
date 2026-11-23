@@ -210,10 +210,11 @@ function requestOriginOf(call: Call | undefined): readonly string[] {
 }
 
 export function requestOriginsOf({ events }: { readonly events?: Events | undefined }): readonly string[] {
-  const calls = (events?.destinations ?? []).flatMap(({ subscribe, renew, unsubscribe }) => [
+  const calls = (events?.destinations ?? []).flatMap(({ subscribe, renew, unsubscribe, read }) => [
     subscribe,
     renew,
     unsubscribe,
+    read,
   ]);
   return [...new Set([...calls, events?.identity].flatMap((call) => requestOriginOf(call)))];
 }

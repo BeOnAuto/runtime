@@ -1,0 +1,12 @@
+{
+  "type": "event_subscription_read",
+  "data": {
+    "connection": "chat",
+    "topic": "C0123",
+    "since": "2026-11-18T09:00:00.000Z"
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

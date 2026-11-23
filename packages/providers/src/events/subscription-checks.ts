@@ -1,4 +1,4 @@
-import type { Destination, DestinationIssue } from './destination-fields.ts';
+import { readStartTemplates, readTemplates, type Destination, type DestinationIssue } from './destination-fields.ts';
 import {
   answerIssuesOf,
   callIssuesOf,
@@ -31,6 +31,21 @@ function subscribeIssuesOf({ type, subscribe }: Destination): readonly Placed[] 
   ];
 }
 
+function readIssuesOf({ read }: Destination): readonly Placed[] {
+  if (read === undefined) {
+    return [];
+  }
+  return [
+    ...callIssuesOf('/read', read, readTemplates),
+    ...(read.start === undefined ? [] : textIssues(readStartTemplates, '/read/start', read.start)),
+    ...answerIssuesOf([
+      ['/read/list', read.list],
+      ['/read/cursor', read.cursor],
+      ['/read/next_page_token', read.next_page_token],
+    ]),
+  ];
+}
+
 function callsIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const { topic, renew, unsubscribe } = destination;
   return issuesOf([
@@ -43,6 +58,7 @@ function callsIssuesOf(destination: Destination): readonly DestinationIssue[] {
           ...answerIssuesOf([['/renew/renewed/expires_at', renew.renewed?.expires_at]]),
         ]),
     ...(unsubscribe === undefined ? [] : callIssuesOf('/unsubscribe', unsubscribe, unsubscribeTemplates)),
+    ...readIssuesOf(destination),
   ]);
 }
 

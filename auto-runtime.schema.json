@@ -1063,8 +1063,8 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "enum": ["webhook", "websocket", "queue"],
-                          "description": "How the service sends: webhook, an HTTP request to the runtime's address; websocket, down a socket the runtime opens to the service; queue, into a queue the runtime reads"
+                          "enum": ["webhook", "websocket", "queue", "polling"],
+                          "description": "How the runtime hears: webhook, an HTTP request the service sends to the runtime's address; websocket, down a socket the runtime opens to the service; queue, into a queue the runtime reads; polling, by calling a tool of the service on a timer and taking what is new"
                         },
                         "per": {
                           "type": "string",
@@ -1299,6 +1299,84 @@
                           "additionalProperties": false,
                           "description": "How the service checks the address before it sends, as WebSub verifies intent"
                         },
+                        "read": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "description": "The tool that lists what is new since the last check. It must be a tool that only reads"
+                            },
+                            "with": {
+                              "type": "object",
+                              "description": "The tool's arguments. They can use `since`, `topic` and `page_token`"
+                            },
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                              "description": "Beside url, the method of an HTTPS request that carries the connection's own credential as a bearer token"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Beside method, the https URL of the request, written out up to its host, a Liquid template"
+                            },
+                            "body": {
+                              "type": "object",
+                              "description": "Beside method and url, the JSON body of the request, written as with is"
+                            },
+                            "start": {
+                              "type": "string",
+                              "description": "The value of `since` for the first check. It can use `now`, so that the first check lists nothing older. When it is left out, the first check reads the newest item and starts from there"
+                            },
+                            "list": {
+                              "type": "string",
+                              "description": "Where the list of items is in the answer, as a JSON Pointer"
+                            },
+                            "order": {
+                              "type": "string",
+                              "enum": ["oldest_first", "newest_first"],
+                              "description": "The order the tool lists items in: `oldest_first` or `newest_first`"
+                            },
+                            "cursor": {
+                              "type": "string",
+                              "description": "Where in an item the value is that the next check passes as `since`, as a JSON Pointer. When it is left out, the item's id is used"
+                            },
+                            "next_page_token": {
+                              "type": "string",
+                              "description": "Where in the answer the token for the next page is, as a JSON Pointer, when the tool lists in pages"
+                            }
+                          },
+                          "required": ["list", "order"],
+                          "additionalProperties": false,
+                          "description": "The call that lists what is new, and how to read its answer"
+                        },
+                        "read_limit": {
+                          "type": "object",
+                          "properties": {
+                            "quota": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "description": "The most reads of a conversation the service takes in one window"
+                            },
+                            "window_seconds": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 86400,
+                              "description": "The window, in seconds, from 1 to 86400"
+                            },
+                            "clients": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": ["registered", "auto", "metadata_document", "dynamic", "own", "gateway"]
+                              },
+                              "minItems": 1,
+                              "description": "The client sources whose connections the service limits so, where it limits some apps and not others; left out, every connection"
+                            }
+                          },
+                          "required": ["quota", "window_seconds"],
+                          "additionalProperties": false,
+                          "description": "How often the service lets the replies of a conversation be read, as a rate limit's quota and window: at most quota reads in each window. The runtime reads a conversation no sooner than the window divided by the quota after its last read, on its timer and when the service tells it of a message alike"
+                        },
                         "filter": {
                           "type": "object",
                           "properties": {
@@ -1497,7 +1575,7 @@
                             "description": "One kind of delivery that is an event, and the fields of the delivery that hold the event's ID, time, place and data."
                           },
                           "minItems": 1,
-                          "description": "Which deliveries are events the service reports. A delivery is the event of the first item it matches. Only a provider that ships with the runtime can declare them."
+                          "description": "Which deliveries are events the service reports. A delivery is the event of the first item it matches. On a polling destination, it says which listed items count as events, and an item becomes the event of the first entry it matches. Only a provider that ships with the runtime can declare them."
                         },
                         "chat": {
                           "type": "array",
@@ -1678,7 +1756,7 @@
                           "description": "For websocket, how often the service asks the runtime to send it a heartbeat, in seconds"
                         }
                       },
-                      "required": ["type", "filter"],
+                      "required": ["type"],
                       "additionalProperties": false
                     },
                     "minItems": 1,

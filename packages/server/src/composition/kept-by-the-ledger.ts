@@ -23,7 +23,7 @@ export function keptByTheLedgerWith(
       ...playbookRowsLayoutSteps,
       ...playbookChangeRowsLayoutSteps,
       ...connectionRowsLayoutSteps,
-    ],
+    ].toSorted((left, right) => left.layout - right.layout),
     ...factsKnownWith(declared),
   };
 }

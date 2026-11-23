@@ -54,6 +54,8 @@ export interface StandingAsked {
 export interface TriggerStanding {
   readonly event?: string;
   readonly subjectName?: string;
+  readonly speed: 'instant' | 'polling';
+  readonly pollingIntervalSeconds?: number;
   readonly listening: boolean;
   readonly notListeningBecause: { readonly kind: string; readonly detail: string } | null;
   readonly needsReconnecting: boolean;

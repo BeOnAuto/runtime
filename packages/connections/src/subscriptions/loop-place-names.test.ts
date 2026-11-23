@@ -1,4 +1,4 @@
-import { placeNamesReadOf, type ThroughTheConnection } from '@on.auto/providers';
+import { placeNamesReadOf, type TakeListed, type ThroughTheConnection } from '@on.auto/providers';
 import {
   ofEachSubscription,
   postTypeNamedBy,
@@ -177,5 +177,29 @@ describe('the name of a place a connection reaches, as a round records it', () =
 
     expect(called).toEqual(['room_info {"room":"C1"} reads']);
     expect((await placesNamedIn(registry)).map(({ subject, name }) => [subject, name])).toEqual([['C1', 'support']]);
+  });
+});
+
+describe('the ports of the loop, as to checking an app on a timer', () => {
+  const arrival = {
+    playbook: { org: 'acme', playbook: 'alpha' },
+    connection: 'rooms',
+    event: { type: 'com.example.rooms.post', id: 'p-1', data: {} },
+    topic: 'lobby',
+  };
+
+  it('check only on a runtime given an intake, and take in through it', async () => {
+    const registry = await registryOf(['2026-11-22T08:00:00.000Z', [addedFact('connection-1', 'rooms', 'rooms')]]);
+    const without = subscriptionLoopPortsOf(partsOver(registry, aRoomsService().tools));
+    const taken: unknown[] = [];
+    const takeIn: TakeListed = (each) => Effect.sync(() => taken.push(each)).pipe(Effect.as('taken' as const));
+    const given = subscriptionLoopPortsOf({ ...partsOver(registry, aRoomsService().tools), takeIn });
+
+    expect([without.receives('polling'), given.receives('polling')]).toEqual([false, true]);
+    expect([await Effect.runPromise(without.takeIn(arrival)), await Effect.runPromise(given.takeIn(arrival))]).toEqual([
+      'held',
+      'taken',
+    ]);
+    expect(taken).toEqual([arrival]);
   });
 });

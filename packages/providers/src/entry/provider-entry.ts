@@ -222,7 +222,7 @@ function addedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
       gateway === undefined ? [] : [{ path: ['credentials', index, 'gateway'], issue: gatewayOfAnAddedProvider }],
     ),
     ...(events?.destinations ?? []).flatMap(({ filter }, index) =>
-      filter.reply === undefined
+      filter?.reply === undefined
         ? []
         : [{ path: ['events', 'destinations', index, 'filter', 'reply'], issue: replyOfAnAddedProvider }],
     ),

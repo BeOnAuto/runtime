@@ -81,6 +81,14 @@ export {
   type ToldAs,
 } from './own-calls/conversation-call-events.ts';
 export {
+  cursorOf,
+  limitFloorMsOf,
+  waitBefore,
+  wokenReadAt,
+  type ReadLimit,
+  type ReadOrder,
+} from './paced-reads/read-pace.ts';
+export {
   conversationCallDecider,
   readingFailedOf,
   repliesReadOf,

@@ -13,10 +13,17 @@ import { DateTime, Effect } from 'effect';
 import {
   eventSubscriptionDecider,
   eventSubscriptionIdOf,
+  eventSubscriptionReadDecider,
+  eventSubscriptionReadStreamOf,
   eventSubscriptionStreamOf,
   type EventSubscriptionCommand,
 } from './subscription-facts.ts';
-import { eventSubscriptionsName, positionsAsColumns, recordedSubscriptionOf } from './subscription-rows.ts';
+import {
+  eventSubscriptionsName,
+  markAsColumns,
+  positionsAsColumns,
+  recordedSubscriptionOf,
+} from './subscription-rows.ts';
 
 export interface SubscriptionLedger
   extends StreamWriter, Pick<ProjectionReader, 'readProjectedRows'>, ProjectionAdvancer {}
@@ -96,6 +103,23 @@ function keyOf({ connection, topic }: SubscriptionKey): SubscriptionKey {
   return { connection, topic };
 }
 
+function isMarkedAt(recorded: RecordedSubscription | undefined, since: string): boolean {
+  return recorded?.made?.type === 'polling' && recorded.made.since === since;
+}
+
+function readThroughOf(ledger: SubscriptionLedger): SubscriptionRecords['readThrough'] {
+  return (playbook, key, since) =>
+    Effect.gen(function* () {
+      if (!isMarkedAt(yield* recordedSubscriptionAt(ledger, playbook, key), since)) {
+        return;
+      }
+      const at = DateTime.formatIso(yield* DateTime.now);
+      const command = { key: keyOf(key), since, at };
+      const stream = eventSubscriptionReadStreamOf(playbook, key, since);
+      yield* Effect.orDie(ledger.execute(stream, eventSubscriptionReadDecider, command));
+    });
+}
+
 export function subscriptionRecordsOf(ledger: SubscriptionLedger): SubscriptionRecords {
   return {
     read: readOf(ledger),
@@ -108,6 +132,12 @@ export function subscriptionRecordsOf(ledger: SubscriptionLedger): SubscriptionR
         set: positionsAsColumns(positions),
         when: [stillHeld],
       }),
+    marked: (playbook, key, mark, from) =>
+      ledger.advanceRow(eventSubscriptionsName, playbook, eventSubscriptionIdOf(key), {
+        set: markAsColumns(mark),
+        when: [stillHeld, { column: 'since', equals: from }],
+      }),
+    readThrough: readThroughOf(ledger),
     holds: isBoundedPart,
   };
 }

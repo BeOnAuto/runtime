@@ -40,7 +40,7 @@ const TypingSchema = Schema.Struct({
   ),
 });
 
-const ReadLimitSchema = Schema.Struct({
+export const ReadLimitSchema = Schema.Struct({
   quota: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
     description: 'The most reads of a conversation the service takes in one window',
   }),

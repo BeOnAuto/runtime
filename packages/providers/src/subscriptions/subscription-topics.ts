@@ -23,7 +23,7 @@ export interface ConnectionTrigger {
 
 const firstLine = 1;
 
-function renderedTopic(
+export function renderedPart(
   template: string,
   variables: Readonly<Record<string, Schema.Json>>,
 ): Effect.Effect<string | undefined> {
@@ -39,7 +39,7 @@ function renderedTopic(
 
 export function topicOf(destination: Destination, place: PlaceOfARequest): Effect.Effect<string | undefined> {
   const { topic } = destination;
-  return topic === undefined ? Effect.undefined : renderedTopic(topic, { with: place.with, sent: { ...place.sent } });
+  return topic === undefined ? Effect.undefined : renderedPart(topic, { with: place.with, sent: { ...place.sent } });
 }
 
 export function triggerTopicsOf(
@@ -49,7 +49,7 @@ export function triggerTopicsOf(
   const templates = (destination.events ?? []).flatMap((event) =>
     event.type === type && event.topic !== undefined ? [event.topic] : [],
   );
-  return Effect.forEach(templates, (template) => renderedTopic(template, subject === undefined ? {} : { subject }));
+  return Effect.forEach(templates, (template) => renderedPart(template, subject === undefined ? {} : { subject }));
 }
 
 interface Through {

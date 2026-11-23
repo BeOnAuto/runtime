@@ -1,6 +1,6 @@
 import { Effect, Option, Redacted, Ref } from 'effect';
 
-import type { KeptSecret, MadeSubscription, SubscriptionPlace, SubscriptionSecrets } from './subscription-ports.ts';
+import type { KeptSecret, MadeThroughACall, SubscriptionPlace, SubscriptionSecrets } from './subscription-ports.ts';
 
 export interface SecretToPlace {
   readonly madeSecret: Effect.Effect<Redacted.Redacted>;
@@ -10,7 +10,7 @@ export interface SecretToPlace {
 export function secretToPlace(
   secrets: SubscriptionSecrets,
   place: SubscriptionPlace,
-  held: MadeSubscription | undefined,
+  held: MadeThroughACall | undefined,
 ): Effect.Effect<SecretToPlace> {
   return Effect.gen(function* () {
     const made = yield* Ref.make(Option.none<KeptSecret>());
@@ -31,7 +31,7 @@ export function answeredSecretId(
   secrets: SubscriptionSecrets,
   place: SubscriptionPlace,
   answered: Redacted.Redacted,
-  held: MadeSubscription | undefined,
+  held: MadeThroughACall | undefined,
 ): Effect.Effect<string> {
   return Effect.gen(function* () {
     const heldId = held?.secretId;

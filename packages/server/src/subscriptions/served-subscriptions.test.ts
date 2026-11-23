@@ -134,7 +134,11 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
     arranged,
     sent,
     kept,
-    recorded: recorded.map(({ connection, topic, made }) => ({ connection, topic, id: made?.id })),
+    recorded: recorded.map(({ connection, topic, made }) => ({
+      connection,
+      topic,
+      id: made !== undefined && 'id' in made ? made.id : undefined,
+    })),
   };
 }
 

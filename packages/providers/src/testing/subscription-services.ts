@@ -59,6 +59,12 @@ export function answeredWith(document: Schema.Json): CalledOnce {
   return { ...answering, outcome: 'result', answer: { content: [{ type: 'text', text }] }, answered: answeredFields };
 }
 
+export function answeredAsking(document: Schema.Json, retryAfterMs: number): CalledOnce {
+  const text = JSON.stringify(document);
+  const answer = { content: [{ type: 'text' as const, text }] };
+  return { ...answering, retryAfterMs, outcome: 'result', answer, answered: answeredFields };
+}
+
 export function answeredStructured(document: Schema.Json): CalledOnce {
   return {
     ...answering,
@@ -105,6 +111,11 @@ export function serverFailureAs(because: SentReason, detail = ''): CalledOnce {
 }
 
 export const rateLimited: CalledOnce = serverFailureAs('rate_limited');
+
+export function rateLimitedFor(retryAfterMs: number): CalledOnce {
+  const failed = { ...failedFields, because: 'server_failure' as const, ...limitedFields };
+  return { ...answering, retryAfterMs, outcome: 'server_failure', failed, because: 'rate_limited' };
+}
 
 export function notOfferedAs(because: NotOfferedBecause, detail = ''): CalledOnce {
   return { kind: 'unopened', refused: 'tool_not_offered', because, detail };

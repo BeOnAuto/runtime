@@ -3,13 +3,13 @@ import { quoted } from '@on.auto/phrasing';
 import type { SubscriptionFailureKind } from '@on.auto/providers';
 
 import {
-  EventSubscriptionEventSchema,
   eventSubscriptionsKind,
   eventSubscriptionTypes,
-  type RecordedEventSubscriptionEvent,
+  SubscriptionStreamFactSchema,
+  type RecordedSubscriptionStreamFact,
 } from './subscription-facts.ts';
 
-const subscriptionEventOf = strictRecordedDecoder(EventSubscriptionEventSchema);
+const subscriptionEventOf = strictRecordedDecoder(SubscriptionStreamFactSchema);
 
 const failedWords: Readonly<Record<SubscriptionFailureKind, string>> = {
   connection_broken: 'the connection is not connected',
@@ -23,16 +23,16 @@ function atTheServiceOf(connection: string, topic: string): string {
   return `at the service of the connection ${quoted(connection)} to ${quoted(topic)}`;
 }
 
-function presentedOf(event: RecordedEventSubscriptionEvent): PresentedFact {
+function presentedOf(event: RecordedSubscriptionStreamFact): PresentedFact {
   const { connection, topic } = event.data;
   const key = { connection, topic };
   const where = atTheServiceOf(connection, topic);
   if (event.type === 'event_subscription_made') {
-    return {
-      type: event.type,
-      summary: `The playbook subscribed ${where}, so the service tells it when something changes there.`,
-      data: key,
-    };
+    const summary =
+      event.data.type === 'polling'
+        ? `The playbook began checking ${quoted(topic)} through the connection ${quoted(connection)} on a timer. Workflows start for what is new there from now on.`
+        : `The playbook subscribed ${where}, so the service tells it when something changes there.`;
+    return { type: event.type, summary, data: key };
   }
   if (event.type === 'event_subscription_failed') {
     const { kind, because } = event.data;

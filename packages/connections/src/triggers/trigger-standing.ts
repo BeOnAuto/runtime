@@ -1,4 +1,11 @@
-import { isHeldBy, type Generation, type RecordedSubscription, type SubscriptionFailureKind } from '@on.auto/providers';
+import {
+  holdsARead,
+  isHeldBy,
+  type Generation,
+  type RecordedFailure,
+  type RecordedSubscription,
+  type SubscriptionFailureKind,
+} from '@on.auto/providers';
 
 import { isMadePerApp, type Hearing } from './connection-hearing.ts';
 
@@ -78,6 +85,30 @@ const notListeningWords: Readonly<Record<NotListeningKind, (named: Named) => str
     `${connection} already listens in as many places as one connection can for this playbook, so it does not listen in ${place}. Listen in fewer places, or in places its other workflows already listen in.`,
 };
 
+type CheckedKind = Extract<NotListeningKind, 'connection_broken' | 'setting_up' | 'request_failed'>;
+
+const checkedWords: Readonly<Record<CheckedKind, (named: Named) => string>> = {
+  connection_broken: ({ connection }) =>
+    `The connection ${connection} is broken, so Auto cannot check the app. \`reconnect_connection\` gives a link for the person. Once they have used it, Auto checks again by itself, and the workflow starts for what happened in between.`,
+  setting_up: () =>
+    'Auto is making its first check of the app now. The workflow starts for what happens after that check. Read the workflow again shortly.',
+  request_failed: ({ connection, place }) =>
+    `The app refused Auto's check of ${place}, or its answer could not be read. Check that the subject names a place that exists, written as the connection's list says, and save the workflow again. If it is right, ask the person to reconnect ${connection}.`,
+};
+
+function isChecked({ hearing }: Pick<TriggerRecords, 'hearing'>): boolean {
+  return hearing.kind === 'heard' && hearing.destination.type === 'polling';
+}
+
+function isCheckedKind(kind: NotListeningKind): kind is CheckedKind {
+  return Object.hasOwn(checkedWords, kind);
+}
+
+function wordsOf(kind: NotListeningKind, records: TriggerRecords): string {
+  const named = namedIn(records);
+  return isChecked(records) && isCheckedKind(kind) ? checkedWords[kind](named) : notListeningWords[kind](named);
+}
+
 const mendedByReconnecting: ReadonlySet<NotListeningKind> = new Set([
   'connection_broken',
   'app_credential_needed',
@@ -93,8 +124,17 @@ const keptUntilReconnected: Readonly<
   tool_error: 'request_failed',
 };
 
-function failedKindOf({ recorded, generation }: Subscribed): NotListeningKind | undefined {
-  const failed = recorded?.failed;
+function failureOf({ recorded, generation }: Subscribed): RecordedFailure | undefined {
+  if (recorded?.made?.type !== 'polling') {
+    return recorded?.failed;
+  }
+  const { failed, positions } = recorded;
+  const failingInARow = positions !== undefined && positions.failures > 0;
+  return failingInARow || isHeldBy(failed, generation, holdsARead) ? failed : undefined;
+}
+
+function failedKindOf(subscribed: Subscribed): NotListeningKind | undefined {
+  const failed = failureOf(subscribed);
   if (failed === undefined) {
     return undefined;
   }
@@ -104,7 +144,7 @@ function failedKindOf({ recorded, generation }: Subscribed): NotListeningKind | 
   if (failed.kind === 'not_sent') {
     return 'too_many_places';
   }
-  return isHeldBy(failed, generation) ? keptUntilReconnected[failed.kind] : 'setting_up';
+  return isHeldBy(failed, subscribed.generation) ? keptUntilReconnected[failed.kind] : 'setting_up';
 }
 
 function isMadeAsDeclared({ recorded, generation }: Subscribed): boolean {
@@ -159,7 +199,7 @@ export function triggerStandingOf(records: TriggerRecords): TriggerStood {
     : {
         listening: false,
         kind,
-        detail: notListeningWords[kind](namedIn(records)),
+        detail: wordsOf(kind, records),
         needsReconnecting: mendedByReconnecting.has(kind),
       };
 }

@@ -2,7 +2,7 @@ import { providerFoundBy, type ProviderList } from '@on.auto/providers';
 import { Schema } from 'effect';
 
 import type { Connection } from '../registry/connection.ts';
-import { hearingOf, nothingReceived, type EventsReceived } from '../triggers/connection-hearing.ts';
+import { hearingOf, nothingReceived, speedOf, type EventsReceived } from '../triggers/connection-hearing.ts';
 
 const connectionSourcePrefix = '/connections/';
 
@@ -19,7 +19,16 @@ const ListedEventTypeSchema = Schema.Struct({
   type: Schema.String.annotate({ description: "Write this as the filter's `type`." }),
   title: Schema.String.annotate({ description: 'What happened, in words to say to the person' }),
   subject: Schema.optionalKey(ListedSubjectSchema),
-  speed: Schema.Literal('instant').annotate({ description: '`instant` when the workflow starts as it happens' }),
+  speed: Schema.Literals(['instant', 'polling']).annotate({
+    description:
+      '`instant` when the workflow starts as it happens. `polling` when Auto checks the app on a timer and starts the workflow for what is new since its last check.',
+  }),
+  polling_interval_seconds: Schema.optionalKey(
+    Schema.Int.annotate({
+      description:
+        'How often Auto checks the app, in seconds, when `speed` is `polling`. Say it to the person as a pace, such as about every minute.',
+    }),
+  ),
   data: Schema.JsonObject.annotate({
     description: "The JSON Schema of the event's `data`, for a condition on what happened",
   }),
@@ -59,19 +68,20 @@ function eventTypesOf(
   if (entry === undefined || connection.status !== 'connected') {
     return [];
   }
-  return (entry.events?.types ?? []).flatMap(({ type, title, subject, data }) =>
-    hearingOf(connection, entry, received, type).kind === 'not_heard'
+  return (entry.events?.types ?? []).flatMap(({ type, title, subject, data }) => {
+    const hearing = hearingOf(connection, entry, received, type);
+    return hearing.kind === 'not_heard'
       ? []
       : [
           {
             type,
             title,
             ...(subject === undefined ? {} : { subject: listedSubjectOf(subject) }),
-            speed: 'instant' as const,
+            ...speedOf(hearing),
             data,
           },
-        ],
-  );
+        ];
+  });
 }
 
 export function reportedEventsOf(

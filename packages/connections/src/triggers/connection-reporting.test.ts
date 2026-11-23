@@ -1,6 +1,6 @@
 import { generationOf, isArranging, type EventDestination } from '@on.auto/providers';
 import { cardMoved } from '@on.auto/providers/testing';
-import { Effect } from 'effect';
+import { Effect, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { mostSubscriptionsThroughAConnection } from '../subscriptions/loop-ports.ts';
@@ -112,7 +112,7 @@ async function standingIn(
   { connection, subject, paused = false }: Asked,
 ): Promise<Readonly<Record<string, unknown>>> {
   const asked = { connection, type: cardMoved.type, paused, ...(subject === undefined ? {} : { subject }) };
-  const standing = await at(events.standingOf(alpha, asked));
+  const standing = Struct.omit(await at(events.standingOf(alpha, asked)), ['speed']);
   return { ...standing, notListeningBecause: standing.notListeningBecause?.kind ?? null };
 }
 

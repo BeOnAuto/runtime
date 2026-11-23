@@ -4,16 +4,9 @@ import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
 import { intoAQueue, ofEachSubscription, overASocket } from '../testing/event-destinations.ts';
+import { inMemoryRecords } from '../testing/loop-records.ts';
 import { answeringItsSecret, declaredDestinations } from '../testing/subscription-apps.ts';
-import {
-  alpha,
-  inMemoryRecords,
-  loopOver,
-  portsOf,
-  roundAt,
-  startedAt,
-  type Loop,
-} from '../testing/subscription-loops.ts';
+import { alpha, loopOver, portsOf, roundAt, startedAt, type Loop } from '../testing/subscription-loops.ts';
 import { theQueue } from '../testing/subscription-services.ts';
 import { subscriptionLoopOf } from './subscription-loop.ts';
 

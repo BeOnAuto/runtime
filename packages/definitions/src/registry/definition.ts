@@ -119,8 +119,15 @@ const TriggerStandingSchema = Schema.Struct({
         'The name the app gives the place it listens in, such as "#support", to say to the person. Where it is left out, Auto holds no name: say the place as the filter writes it.',
     }),
   ),
-  speed: Schema.Literal('instant').annotate({ description: '`instant` when it starts as it happens' }),
-  listening: Schema.Boolean.annotate({ description: 'Whether the app is set to tell Auto about this event now' }),
+  speed: Schema.Literals(['instant', 'polling']).annotate({
+    description: '`instant` when it starts as it happens. `polling` when Auto checks the app on a timer.',
+  }),
+  polling_interval_seconds: Schema.optionalKey(
+    Schema.Int.annotate({ description: 'How often Auto checks the app, in seconds, when `speed` is `polling`' }),
+  ),
+  listening: Schema.Boolean.annotate({
+    description: 'Whether Auto hears about this event now, because the app tells it or because Auto checks the app',
+  }),
   not_listening_because: Schema.NullOr(Schema.Struct({ kind: Schema.String, detail: Schema.String })).annotate({
     description:
       'Why it is not, as a kind that stays the same and in words that say what to do; null while it is listening',

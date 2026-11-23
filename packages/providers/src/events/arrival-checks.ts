@@ -43,6 +43,9 @@ const namesNoSubscription =
 
 function filterIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const { filter } = destination;
+  if (filter === undefined) {
+    return [];
+  }
   const place = inEveryPlaceOf(transportOf(destination));
   return [
     ...conditionIssuesOf(['filter', 'when'], filter.when, place),
@@ -55,7 +58,7 @@ function filterIssuesOf(destination: Destination): readonly DestinationIssue[] {
   ];
 }
 
-type DeliveredReply = NonNullable<Destination['filter']['reply']>;
+type DeliveredReply = NonNullable<NonNullable<Destination['filter']>['reply']>;
 
 const placesOfAReply: readonly (keyof DeliveredReply)[] = ['id', 'sender', 'text', 'to', 'time', 'changed'];
 
@@ -84,8 +87,8 @@ const unplaced =
 
 function replyIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const { filter, connection } = destination;
-  const { reply } = filter;
-  if (reply === undefined) {
+  const reply = filter?.reply;
+  if (filter === undefined || reply === undefined) {
     return [];
   }
   const place = replyPlaceOf(destination);
@@ -150,6 +153,11 @@ function eventTopicIssuesOf(destination: Destination, { topic }: DeclaredEvent, 
   }));
 }
 
+function whenIssuesOf(destination: Destination, path: Path, when: Conditions, place: ExpressionPlace) {
+  const listsEveryItem = destination.type === 'polling' && Object.keys(when).length === 0;
+  return listsEveryItem ? [] : conditionIssuesOf(path, when, place);
+}
+
 function mappingIssuesOf(
   destination: Destination,
   declared: DeclaredEvent,
@@ -158,7 +166,7 @@ function mappingIssuesOf(
   const at = ['events', index];
   const place = eventPlaceOf(destination);
   return [
-    ...conditionIssuesOf([...at, 'when'], declared.when, place),
+    ...whenIssuesOf(destination, [...at, 'when'], declared.when, place),
     ...declared.id.flatMap((part, each) => expressionIssuesAt([...at, 'id', each], part, place)),
     ...placesOfAnEvent.flatMap((field) => expressionIssuesAt([...at, field], declared[field], place)),
     ...whereEachApplies.flatMap((field) => whereItAppliesIssuesOf([...at, field], declared[field], place)),
@@ -174,6 +182,10 @@ function isProvenWhole({ type, verify }: Destination): boolean {
   return type === 'websocket' || (verify !== undefined && provesTheBody(verify));
 }
 
+function isReadByTheRuntime(destination: Destination): boolean {
+  return destination.type === 'polling' || isProvenWhole(destination);
+}
+
 function eventIssuesOf(destination: Destination): readonly DestinationIssue[] {
   const { events } = destination;
   if (events === undefined) {
@@ -181,7 +193,7 @@ function eventIssuesOf(destination: Destination): readonly DestinationIssue[] {
   }
   return [
     ...events.flatMap((declared, index) => mappingIssuesOf(destination, declared, index)),
-    ...(isProvenWhole(destination) ? [] : [{ path: ['events'], issue: unprovenEvents }]),
+    ...(isReadByTheRuntime(destination) ? [] : [{ path: ['events'], issue: unprovenEvents }]),
   ];
 }
 

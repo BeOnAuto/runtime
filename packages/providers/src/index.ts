@@ -96,11 +96,17 @@ export {
 } from './subscriptions/subscription-topics.ts';
 export {
   generationOf,
+  holdsARead,
   isArranging,
   isHeldBy,
   isLasting,
+  isPolled,
+  isSubscribable,
   resyncedAfterMs,
+  type Polled,
+  type Subscribable,
 } from './subscriptions/subscription-records.ts';
+export { pollingIntervalSecondsOf } from './checks/check-pace.ts';
 export {
   SubscriptionCallFailed,
   SubscriptionFailedBecauseSchema,
@@ -114,8 +120,12 @@ export type {
   Generation,
   HeldSubscription,
   KeptSecret,
+  ListedArrival,
   LoopConnection,
+  MadeByPolling,
   MadeSubscription,
+  MadeThroughACall,
+  Mark,
   Positions,
   Reconciled,
   RecordedFailure,
@@ -132,6 +142,8 @@ export type {
   SubscriptionRecords,
   SubscriptionSecret,
   SubscriptionSecrets,
+  TakeListed,
+  TakenIn,
   ThroughTheConnection,
   Unsubscribing,
 } from './subscriptions/subscription-ports.ts';

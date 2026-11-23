@@ -7184,9 +7184,14 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when the workflow starts as it happens"
+                                "description": "`instant` when the workflow starts as it happens. `polling` when Auto checks the app on a timer and starts the workflow for what is new since its last check."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`. Say it to the person as a pace, such as about every minute."
                               },
                               "data": {
                                 "type": "object",
@@ -8042,9 +8047,14 @@
                           "speed": {
                             "type": "string",
                             "enum": [
-                              "instant"
+                              "instant",
+                              "polling"
                             ],
-                            "description": "`instant` when the workflow starts as it happens"
+                            "description": "`instant` when the workflow starts as it happens. `polling` when Auto checks the app on a timer and starts the workflow for what is new since its last check."
+                          },
+                          "polling_interval_seconds": {
+                            "type": "integer",
+                            "description": "How often Auto checks the app, in seconds, when `speed` is `polling`. Say it to the person as a pace, such as about every minute."
                           },
                           "data": {
                             "type": "object",
@@ -21073,13 +21083,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -22176,13 +22191,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -22851,13 +22871,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -23566,13 +23591,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -24325,13 +24355,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -24968,13 +25003,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -25611,13 +25651,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -26254,13 +26299,18 @@
                               "speed": {
                                 "type": "string",
                                 "enum": [
-                                  "instant"
+                                  "instant",
+                                  "polling"
                                 ],
-                                "description": "`instant` when it starts as it happens"
+                                "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                              },
+                              "polling_interval_seconds": {
+                                "type": "integer",
+                                "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                               },
                               "listening": {
                                 "type": "boolean",
-                                "description": "Whether the app is set to tell Auto about this event now"
+                                "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                               },
                               "not_listening_because": {
                                 "anyOf": [
@@ -30362,13 +30412,18 @@
                                   "speed": {
                                     "type": "string",
                                     "enum": [
-                                      "instant"
+                                      "instant",
+                                      "polling"
                                     ],
-                                    "description": "`instant` when it starts as it happens"
+                                    "description": "`instant` when it starts as it happens. `polling` when Auto checks the app on a timer."
+                                  },
+                                  "polling_interval_seconds": {
+                                    "type": "integer",
+                                    "description": "How often Auto checks the app, in seconds, when `speed` is `polling`"
                                   },
                                   "listening": {
                                     "type": "boolean",
-                                    "description": "Whether the app is set to tell Auto about this event now"
+                                    "description": "Whether Auto hears about this event now, because the app tells it or because Auto checks the app"
                                   },
                                   "not_listening_because": {
                                     "anyOf": [

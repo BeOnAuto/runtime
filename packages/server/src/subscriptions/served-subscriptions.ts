@@ -17,13 +17,14 @@ import {
   type ProviderList,
   type SubscriptionLoopPorts,
   type SubscriptionPlace,
+  type TakeListed,
   type ThroughTheConnection,
 } from '@on.auto/providers';
 
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import type { Settings } from '../settings/settings.ts';
 import { connectionChangesWakeUpsOf, type ChangesListening, type WakeUpWith } from './connection-changes.ts';
-import { subscriptionRoundsOf, type SubscriptionRounds } from './subscription-rounds.ts';
+import { listedIntakeOf, subscriptionRoundsOf, type SubscriptionRounds } from './subscription-rounds.ts';
 
 type SubscriptionsLedger = SubscriptionLedger &
   DueLedger &
@@ -38,6 +39,7 @@ export interface SubscriptionsServing {
   readonly receivesOverHttp: boolean;
   readonly opensSockets: boolean;
   readonly eventsAddressOf?: (place: SubscriptionPlace) => string;
+  readonly takeIn?: TakeListed;
 }
 
 export function subscriptionLoopPartsOf(serving: SubscriptionsServing): SubscriptionLoopParts {
@@ -85,6 +87,7 @@ export function subscriptionsServedBy(serving: SubscriptionsServing): ServedSubs
 interface TheServersOwn {
   readonly tools: ThroughTheConnection;
   readonly secrets: SubscriptionsServing['secrets'];
+  readonly takeIn?: Parameters<typeof listedIntakeOf>[0];
 }
 
 type ServedReceiving = Pick<Settings, 'providers' | 'receiving'>;
@@ -92,13 +95,14 @@ type ServedReceiving = Pick<Settings, 'providers' | 'receiving'>;
 export function subscriptionsServingOf(
   ledger: SubscriptionsLedger,
   { providers, receiving: { overHttp, webhookUrl } }: ServedReceiving,
-  { tools, secrets }: TheServersOwn,
+  { tools, secrets, takeIn }: TheServersOwn,
 ): SubscriptionsServing {
   const addressed =
     webhookUrl === undefined
       ? {}
       : { eventsAddressOf: (place: SubscriptionPlace) => eventsAddressAt(webhookUrl, place) };
-  return { ledger, tools, secrets, providers, receivesOverHttp: overHttp, opensSockets: true, ...addressed };
+  const taking = takeIn === undefined ? {} : { takeIn: listedIntakeOf(takeIn) };
+  return { ledger, tools, secrets, providers, receivesOverHttp: overHttp, opensSockets: true, ...addressed, ...taking };
 }
 
 export function subscriptionsOfTheServer(

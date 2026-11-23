@@ -1,33 +1,38 @@
 import type { Destination } from '../events/destination-fields.ts';
+import {
+  arrangedAs,
+  heldThroughACallOf,
+  isHeldByPolling,
+  keyIn,
+  throughOf,
+  type ConnectionState,
+  type Held,
+  type HeldByPolling,
+  type HeldThroughACall,
+  type Through,
+} from './held-subscriptions.ts';
 import { failedBecause } from './subscription-failed.ts';
 import type {
-  Generation,
   MadeSubscription,
   Positions,
-  Receiving,
   RecordedFailure,
   RecordedSubscription,
   SubscriptionKey,
 } from './subscription-ports.ts';
 import {
   earliest,
-  generationOf,
-  isArranging,
+  holdsARead,
   isHeldBy,
   isTheSameFailure,
   isWaitingToRetry,
   keyOf,
   lapses,
   type Arranging,
+  type Subscribable,
 } from './subscription-records.ts';
 
-interface ConnectionState {
-  readonly connected?: string;
-  readonly destinations: readonly Destination[];
-}
-
 export interface Wanted extends SubscriptionKey {
-  readonly destination: Arranging;
+  readonly destination: Subscribable;
 }
 
 export interface Situation {
@@ -43,11 +48,6 @@ interface Acting {
   readonly recorded?: RecordedSubscription | undefined;
 }
 
-export interface Through {
-  readonly destination: Arranging;
-  readonly generation: Generation;
-}
-
 type Calling = Acting & Through;
 
 type Holding = Calling & { readonly recorded: RecordedSubscription; readonly made: MadeSubscription };
@@ -56,11 +56,12 @@ export type Renewable = Arranging & { readonly renew: NonNullable<Destination['r
 
 export type Step =
   | (Acting & { readonly act: 'forget' })
-  | (Holding & { readonly act: 'unsubscribe' })
-  | (Holding & { readonly act: 'replace'; readonly from?: Through })
-  | (Holding & { readonly act: 'renew'; readonly destination: Renewable })
-  | (Holding & { readonly act: 'resubscribe'; readonly gone: boolean })
+  | (HeldThroughACall & { readonly act: 'unsubscribe' })
+  | (Holding & { readonly act: 'replace'; readonly from?: HeldThroughACall })
+  | (HeldThroughACall & { readonly act: 'renew'; readonly destination: Renewable })
+  | (HeldThroughACall & { readonly act: 'resubscribe'; readonly gone: boolean })
   | (Calling & { readonly act: 'subscribe' })
+  | (HeldByPolling & { readonly act: 'read' })
   | (Acting & { readonly act: 'refuse'; readonly failure: RecordedFailure });
 
 export interface Decision {
@@ -96,12 +97,9 @@ const actsInOrder: readonly Step['act'][] = [
   'renew',
   'resubscribe',
   'subscribe',
+  'read',
   'refuse',
 ];
-
-function keyIn({ connection, topic }: SubscriptionKey): SubscriptionKey {
-  return { connection, topic };
-}
 
 function hasLapsed(positions: Positions | undefined, now: number): boolean {
   return positions?.lapsesAt !== undefined && positions.lapsesAt <= now;
@@ -112,14 +110,6 @@ function isDue(positions: Positions | undefined, destination: Arranging, now: nu
     return lapses(destination);
   }
   return positions.dueAt !== undefined && positions.dueAt <= now;
-}
-
-function declarationOf(state: ConnectionState | undefined, type: Receiving): Arranging | undefined {
-  return state?.destinations.filter((destination) => isArranging(destination)).find((each) => each.type === type);
-}
-
-function throughOf(state: ConnectionState | undefined, destination: Arranging): Through {
-  return { destination, generation: generationOf(state?.connected, destination) };
 }
 
 function forgotten(row: RecordedSubscription): Judgement {
@@ -139,29 +129,24 @@ function missingJudged(key: SubscriptionKey, row: RecordedSubscription | undefin
 
 function unwantedJudged({ row, made, state, now }: Judging): Judgement {
   const { positions, failed } = row;
-  const declared = declarationOf(state, made.type);
-  if (declared === undefined || hasLapsed(positions, now)) {
+  const held = made.type === 'polling' || hasLapsed(positions, now) ? undefined : heldThroughACallOf(row, made, state);
+  if (held === undefined) {
     return forgotten(row);
   }
-  const through = throughOf(state, declared);
   const lapsesAt = positions?.lapsesAt;
-  if (isHeldBy(failed, through.generation)) {
+  if (isHeldBy(failed, held.generation)) {
     return { slot: 'unwanted', at: lapsesAt, frees: lapsesAt };
   }
   if (isWaitingToRetry(positions, now)) {
     const at = earliest(positions?.dueAt, lapsesAt);
     return { slot: 'unwanted', at, frees: at };
   }
-  return {
-    slot: 'unwanted',
-    frees: now,
-    step: { act: 'unsubscribe', key: keyIn(row), recorded: row, made, ...through },
-  };
+  return { slot: 'unwanted', frees: now, step: { act: 'unsubscribe', ...held } };
 }
 
 function replacedJudged({ row, made, state, now }: Judging, wanted: Through): Judgement {
-  const declared = hasLapsed(row.positions, now) ? undefined : declarationOf(state, made.type);
-  const from = declared === undefined ? undefined : throughOf(state, declared);
+  const from =
+    made.type === 'polling' || hasLapsed(row.positions, now) ? undefined : heldThroughACallOf(row, made, state);
   if (from !== undefined && isHeldBy(row.failed, from.generation)) {
     return { slot: 'wanted' };
   }
@@ -172,29 +157,34 @@ function replacedJudged({ row, made, state, now }: Judging, wanted: Through): Ju
   return { slot: 'wanted', step: from === undefined ? replace : { ...replace, from } };
 }
 
-function dueStepOf(holding: Holding): Step {
+function dueStepOf(holding: HeldThroughACall): Step {
   const { destination } = holding;
   return destination.renew === undefined
     ? { act: 'resubscribe', gone: false, ...holding }
     : { act: 'renew', ...holding, destination: { ...destination, renew: destination.renew } };
 }
 
-function wantedJudged({ row, made, now }: Judging, through: Through): Judgement {
+function readJudged(held: HeldByPolling, { positions }: RecordedSubscription, now: number): Judgement {
+  const dueAt = positions?.dueAt;
+  return dueAt === undefined || dueAt <= now
+    ? { slot: 'wanted', step: { act: 'read', ...held } }
+    : { slot: 'wanted', at: dueAt };
+}
+
+function wantedJudged({ row, now }: Judging, held: Held): Judgement {
   const { positions } = row;
-  const holding = { key: keyIn(row), recorded: row, made, ...through };
-  if (isHeldBy(row.failed, through.generation)) {
+  if (isHeldByPolling(held)) {
+    return isHeldBy(row.failed, held.generation, holdsARead) ? { slot: 'wanted' } : readJudged(held, row, now);
+  }
+  if (isHeldBy(row.failed, held.generation)) {
     return { slot: 'wanted' };
   }
   if (hasLapsed(positions, now)) {
-    return { slot: 'wanted', step: { act: 'resubscribe', gone: true, ...holding } };
+    return { slot: 'wanted', step: { act: 'resubscribe', gone: true, ...held } };
   }
-  return isDue(positions, through.destination, now)
-    ? { slot: 'wanted', step: dueStepOf(holding) }
+  return isDue(positions, held.destination, now)
+    ? { slot: 'wanted', step: dueStepOf(held) }
     : { slot: 'wanted', at: earliest(positions?.dueAt, positions?.lapsesAt) };
-}
-
-function isArrangedAs({ type, declared }: MadeSubscription, { destination, generation }: Through): boolean {
-  return type === destination.type && declared === generation.declared;
 }
 
 function recordedJudged(row: RecordedSubscription, wanted: Wanted | undefined, situation: Situation): Judgement {
@@ -209,7 +199,8 @@ function recordedJudged(row: RecordedSubscription, wanted: Wanted | undefined, s
     return unwantedJudged(judging);
   }
   const through = throughOf(state, wanted.destination);
-  return isArrangedAs(made, through) ? wantedJudged(judging, through) : replacedJudged(judging, through);
+  const held = arrangedAs(row, made, through);
+  return held === undefined ? replacedJudged(judging, through) : wantedJudged(judging, held);
 }
 
 interface Bounded {

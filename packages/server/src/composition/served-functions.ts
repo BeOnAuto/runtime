@@ -44,7 +44,7 @@ async function forecasterServedOn(
 interface WakingParts extends Pick<SocketsServing, 'opens'> {
   readonly projections: Pick<SocketsServing, 'store'>;
   readonly recorded: Pick<SocketsServing, 'delivered'>;
-  readonly subscriptions: Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptions'];
+  readonly subscriptions: ReturnType<Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptionsOver']>;
   readonly tools: Pick<SocketsServing, 'secrets'> & { readonly now?: SocketsServing['now'] };
   readonly computation: Pick<ServedWiring['computation'], 'pool'>;
 }
@@ -68,17 +68,28 @@ function wakeUpsOf(
   return [socketsOfTheServer(runtime, settings, sockets), ...following];
 }
 
+async function projectionsServed(
+  settings: ServedSettings,
+  database: ProjectedDatabase,
+  { projections: wiring, computation, prediction }: Pick<ServedWiring, 'projections' | 'computation' | 'prediction'>,
+  subscriptionsOver: Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptionsOver'],
+) {
+  const { folders } = prediction.provided;
+  const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
+  return { projections, subscriptions: subscriptionsOver(projections.store, computation.pool) };
+}
+
 export async function functionsServedBy(
   runtime: ServingRuntime,
   settings: ServedSettings,
   database: ProjectedDatabase,
   { projections: wiring, computation, prediction, generation: generating, opens, ...tools }: ServedWiring,
 ): Promise<ServedFunctions> {
-  const toolUsers = await toolUsersServedBy(runtime, settings, tools);
-  const { reasoning, lookup, interaction, toolOperations, named, subscriptions, ...listing } = toolUsers;
+  const { reasoning, lookup, interaction, toolOperations, named, subscriptionsOver, ...listing } =
+    await toolUsersServedBy(runtime, settings, tools);
   const generation = await generationServedBy(runtime, settings, generating);
-  const { folders, operations, dueWork } = prediction.provided;
-  const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
+  const served = { projections: wiring, computation, prediction };
+  const { projections, subscriptions } = await projectionsServed(settings, database, served, subscriptionsOver);
   const forecaster = await forecasterServedOn(runtime, prediction, projections.store.database);
   const computing = computation.capabilityHolding(heldForCalls(runtime).assets);
   const toolCapabilities = [reasoning.capability, lookup, interaction.capability];
@@ -87,8 +98,8 @@ export async function functionsServedBy(
   const recorded = interaction.recordedBy(subscriptions.recording(record));
   const lists = await servedWithTheGoalsEngine(
     { ...tools, goals: tools.results, runtime, database: projections.store.database, pool: computation.pool },
-    [...recorded.dueWork, subscriptions.dueWork, ...dueWork, ...generation.dueWork],
-    [...toolOperations.inPlaybook, ...interaction.operations, ...operations],
+    [...recorded.dueWork, subscriptions.dueWork, ...prediction.provided.dueWork, ...generation.dueWork],
+    [...toolOperations.inPlaybook, ...interaction.operations, ...prediction.provided.operations],
   );
   return {
     parts: {

@@ -6,6 +6,7 @@ import {
   type ProviderList,
   type SubscriptionLoopPorts,
   type SubscriptionPlace,
+  type TakeListed,
   type ThroughTheConnection,
   type WaitingRequest,
 } from '@on.auto/providers';
@@ -31,6 +32,7 @@ export interface SubscriptionLoopParts {
   readonly receivesOverHttp: boolean;
   readonly opensSockets?: boolean;
   readonly eventsAddressOf?: (place: SubscriptionPlace) => string;
+  readonly takeIn?: TakeListed;
 }
 
 function callbackOf({ receivesOverHttp, eventsAddressOf }: SubscriptionLoopParts): SubscriptionLoopPorts['callbackOf'] {
@@ -40,9 +42,15 @@ function callbackOf({ receivesOverHttp, eventsAddressOf }: SubscriptionLoopParts
 function receivesOf({
   receivesOverHttp,
   opensSockets = false,
+  takeIn,
 }: SubscriptionLoopParts): SubscriptionLoopPorts['receives'] {
-  return (type) => (type === 'webhook' && receivesOverHttp) || (type === 'websocket' && opensSockets);
+  return (type) =>
+    (type === 'webhook' && receivesOverHttp) ||
+    (type === 'websocket' && opensSockets) ||
+    (type === 'polling' && takeIn !== undefined);
 }
+
+const nothingTakenIn: TakeListed = () => Effect.succeed('held');
 
 type ExecutedByTheRuntime = (org: string, command: ConnectionCommandData) => Effect.Effect<void>;
 
@@ -87,5 +95,6 @@ export function subscriptionLoopPortsOf(parts: SubscriptionLoopParts): Subscript
     identified: identifiedOf(executed),
     placeNamed: placeNamedOf(executed),
     mostPerConnection: mostSubscriptionsThroughAConnection,
+    takeIn: parts.takeIn ?? nothingTakenIn,
   };
 }

@@ -2,7 +2,7 @@ import type { PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
-import { actedOn, type Round } from './subscription-acts.ts';
+import { actedOn } from './subscription-acts.ts';
 import { subscriptionCallsOf } from './subscription-calls.ts';
 import { decided, type Step, type Wanted } from './subscription-decisions.ts';
 import type { SubscriptionCallFailed } from './subscription-failed.ts';
@@ -14,28 +14,28 @@ import type {
   SubscriptionKey,
   SubscriptionLoopPorts,
 } from './subscription-ports.ts';
-import { earliest, isArranging, keyOf, type Arranging } from './subscription-records.ts';
+import { earliest, isSubscribable, keyOf, type Subscribable } from './subscription-records.ts';
 
 function isTakenBy(ports: SubscriptionLoopPorts, place: PlaybookAddress & { readonly connection: string }) {
   return ({ type }: Destination): boolean =>
-    ports.receives(type) && (type === 'websocket' || ports.callbackOf(place, type) !== undefined);
+    ports.receives(type) && (type === 'websocket' || type === 'polling' || ports.callbackOf(place, type) !== undefined);
 }
 
 function arrangedThrough(
   ports: SubscriptionLoopPorts,
   playbook: PlaybookAddress,
   { connection, destinations }: LoopConnection,
-): Arranging | undefined {
+): Subscribable | undefined {
   const takes = isTakenBy(ports, { ...playbook, connection });
   const taken = destinations.find((destination) => takes(destination));
-  return taken !== undefined && isArranging(taken) ? taken : undefined;
+  return taken !== undefined && isSubscribable(taken) ? taken : undefined;
 }
 
 function arrangedOf(
   ports: SubscriptionLoopPorts,
   playbook: PlaybookAddress,
   connections: readonly LoopConnection[],
-): ReadonlyMap<string, Arranging> {
+): ReadonlyMap<string, Subscribable> {
   return new Map(
     connections.flatMap((each) => {
       const arranged = arrangedThrough(ports, playbook, each);
@@ -46,7 +46,7 @@ function arrangedOf(
 
 function wantedIn(
   ports: SubscriptionLoopPorts,
-  arranged: ReadonlyMap<string, Arranging>,
+  arranged: ReadonlyMap<string, Subscribable>,
   asked: readonly SubscriptionKey[],
 ): readonly Wanted[] {
   return asked.flatMap(({ connection, topic }) => {
@@ -100,7 +100,11 @@ interface Acted {
   readonly cutAt?: number;
 }
 
-function actedOnBefore(round: Round, steps: readonly Step[], deadline: number | undefined): Effect.Effect<Acted> {
+function actedOnBefore(
+  round: Parameters<typeof actedOn>[0],
+  steps: readonly Step[],
+  deadline: number | undefined,
+): Effect.Effect<Acted> {
   return Effect.gen(function* () {
     const later: number[] = [];
     for (const step of steps) {

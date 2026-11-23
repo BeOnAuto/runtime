@@ -69,11 +69,11 @@ describe('where a request delivered to a webhook says what it is about', () => {
 });
 
 describe('the filter of a destination', () => {
-  it('is named filter alone, so a destination that names it wake is refused at both places', () => {
-    expect(sentBy({ ...without(ofTheApp, 'filter'), wake: ofTheApp.filter })).toEqual([
-      [`${destination}/wake`, expect.any(String)],
-      [`${destination}/filter`, expect.any(String)],
-    ]);
+  it('is named filter alone, so a destination that names it wake is refused for the name, and one without it for the filter it lacks', () => {
+    expect([
+      sentBy({ ...without(ofTheApp, 'filter'), wake: ofTheApp.filter }),
+      sentBy(without(ofTheApp, 'filter')),
+    ]).toEqual([[[`${destination}/wake`, expect.any(String)]], [[`${destination}/filter`, expect.any(String)]]]);
   });
 });
 

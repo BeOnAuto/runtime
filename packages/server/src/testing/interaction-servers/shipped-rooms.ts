@@ -51,10 +51,45 @@ function reportingPostsOf(namesTheRoom: boolean) {
     : reportingPosts;
 }
 
+/** The posts of a room as the rooms service lists them, through its tool `list_posts`, marked as one that reads. */
+const checkingPosts = {
+  types: [aPostsType],
+  destinations: [
+    {
+      type: 'polling',
+      read: {
+        tool: 'list_posts',
+        with: { room: '{{ topic }}', after: '{{ since }}' },
+        list: '/posts',
+        order: 'oldest_first',
+        cursor: '/at',
+      },
+      events: [
+        {
+          type: postedInARoom,
+          when: {},
+          id: ['$message.payload#/room', '$message.payload#/id'],
+          subject: '$message.payload#/room',
+          data: { text: '$message.payload#/text' },
+          topic: '{{ subject }}',
+        },
+      ],
+    },
+  ],
+};
+
+type Reporting = 'posts' | 'posts named' | 'posts checked';
+
+const reportingOfEach: Readonly<Record<Reporting, object>> = {
+  posts: reportingPostsOf(false),
+  'posts named': reportingPostsOf(true),
+  'posts checked': checkingPosts,
+};
+
 /** The rooms entry shipped beside the runtime's own, since only an entry the runtime ships declares events. */
-function shippedWithRoomsAt(url: string, namesTheRoom: boolean): (files: ShippedFiles) => ShippedFiles {
+function shippedWithRoomsAt(url: string, reporting: Reporting): (files: ShippedFiles) => ShippedFiles {
   const beside = shippedFileIn(entries, 'rooms.yaml').path;
-  const entry = JSON.stringify({ ...entryOf('rooms', url, signedOverTheBody), events: reportingPostsOf(namesTheRoom) });
+  const entry = JSON.stringify({ ...entryOf('rooms', url, signedOverTheBody), events: reportingOfEach[reporting] });
   const isTheEntry = (file: ShippedFile) => file.package === entries.package && file.path === beside;
   const isTheEntries = (folder: ShippedFile) => folder.package === entries.package && folder.path === entries.path;
   return (files) => ({
@@ -111,7 +146,7 @@ export interface ListeningInTheRoom {
 
 interface Listening {
   readonly org: string;
-  readonly namesTheRoom: boolean;
+  readonly reporting: Reporting;
   readonly saved: (served: ListeningInTheRoom, org: string) => Promise<void>;
 }
 
@@ -119,14 +154,14 @@ async function servedListening(
   roomsUrl: string,
   environment: Readonly<Record<string, string>>,
   parts: ServedParts,
-  { org, namesTheRoom, saved }: Listening,
+  { org, reporting, saved }: Listening,
 ): Promise<ListeningInTheRoom> {
   const kept = Promise.withResolvers<Ledger['Service']>();
   const ledgerOver = (ledger: Ledger['Service']) => {
     kept.resolve(ledger);
     return ledger;
   };
-  const shipped = { ...parts, ledgerOver, shippedFilesOver: shippedWithRoomsAt(roomsUrl, namesTheRoom) };
+  const shipped = { ...parts, ledgerOver, shippedFilesOver: shippedWithRoomsAt(roomsUrl, reporting) };
   const server = await servingInteractions(roomsDelivery, { ...connectionsOnLoopback, ...environment }, shipped, org);
   await connectedWith(server, { provider: 'rooms' }, roomsKey, connectionsIn(org));
   const served = { server, ledger: await kept.promise };
@@ -140,8 +175,21 @@ export async function servedListeningInTheRoom(
   parts: ServedParts,
   org: string,
 ): Promise<InteractionServer> {
-  return (await servedListening(roomsUrl, environment, parts, { org, namesTheRoom: false, saved: savedThroughTheApi }))
+  return (await servedListening(roomsUrl, environment, parts, { org, reporting: 'posts', saved: savedThroughTheApi }))
     .server;
+}
+
+/**
+ * A server whose rooms entry lists the posts of a room through `list_posts`, which Auto checks on a timer, as the entry
+ * of an app that sends nothing does, its workflow listening for the posts in the room saved through the API.
+ */
+export async function servedCheckingTheRoom(
+  roomsUrl: string,
+  environment: Readonly<Record<string, string>>,
+  org: string,
+): Promise<InteractionServer> {
+  const checking = { org, reporting: 'posts checked', saved: savedThroughTheApi } as const;
+  return (await servedListening(roomsUrl, environment, {}, checking)).server;
 }
 
 /**
@@ -154,5 +202,5 @@ export function servedNamingTheRoom(
   parts: ServedParts,
   org: string,
 ): Promise<ListeningInTheRoom> {
-  return servedListening(roomsUrl, environment, parts, { org, namesTheRoom: true, saved: savedOnTheLedger });
+  return servedListening(roomsUrl, environment, parts, { org, reporting: 'posts named', saved: savedOnTheLedger });
 }

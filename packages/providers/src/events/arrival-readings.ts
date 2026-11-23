@@ -49,7 +49,7 @@ interface ArrivalConnection {
   readonly user?: string;
 }
 
-interface ArrivalEvent {
+export interface ArrivalEvent {
   readonly type: string;
   readonly id: string;
   readonly time?: string;
@@ -68,7 +68,9 @@ export interface ArrivalReading {
 
 type Conditions = Readonly<Record<string, readonly (string | null)[]>>;
 
-type DeclaredReply = NonNullable<Destination['filter']['reply']>;
+type Filter = NonNullable<Destination['filter']>;
+
+type DeclaredReply = NonNullable<Filter['reply']>;
 
 export function headerIn(headers: Readonly<Record<string, string>>, name: string): string | undefined {
   const named = name.toLowerCase();
@@ -153,7 +155,7 @@ function replyIn(arrival: Arrival, reply: DeclaredReply, account: string | undef
     : { account, id, sender, text, to, ...timeIn(arrival, reply.time) };
 }
 
-function namedIn(arrival: Arrival, filter: Destination['filter']): Omit<ArrivalWake, 'reply'> {
+function namedIn(arrival: Arrival, filter: Filter): Omit<ArrivalWake, 'reply'> {
   const subscription = textIn(arrival, filter.subscription);
   const conversation = textIn(arrival, filter.conversation);
   return {
@@ -162,8 +164,8 @@ function namedIn(arrival: Arrival, filter: Destination['filter']): Omit<ArrivalW
   };
 }
 
-function wakeIn(arrival: Arrival, filter: Destination['filter'], account: string | undefined): ArrivalWake | undefined {
-  if (!holds(arrival, filter.when) || holdsSomething(arrival, filter.automatic)) {
+function wakeIn(arrival: Arrival, filter: Filter | undefined, account: string | undefined): ArrivalWake | undefined {
+  if (filter === undefined || !holds(arrival, filter.when) || holdsSomething(arrival, filter.automatic)) {
     return undefined;
   }
   const named = namedIn(arrival, filter);
@@ -213,9 +215,15 @@ function idIn(arrival: Arrival, parts: readonly string[]): string | undefined {
     : undefined;
 }
 
-function matchedIn(arrival: Arrival, mappings: readonly DeclaredEvent[]): Matched | undefined {
+type Holding = (arrival: Arrival, when: Conditions) => boolean;
+
+function holdsOrListsEveryItem(arrival: Arrival, when: Conditions): boolean {
+  return Object.keys(when).length === 0 || holds(arrival, when);
+}
+
+function matchedIn(arrival: Arrival, mappings: readonly DeclaredEvent[], holding: Holding): Matched | undefined {
   return mappings.flatMap((declared): readonly Matched[] => {
-    const id = holds(arrival, declared.when) ? idIn(arrival, declared.id) : undefined;
+    const id = holding(arrival, declared.when) ? idIn(arrival, declared.id) : undefined;
     return id === undefined ? [] : [{ declared, id }];
   })[0];
 }
@@ -248,8 +256,8 @@ function isItsOwn(arrival: Arrival, own: DeclaredEvent['own']): boolean {
   return account !== undefined && account === textIn(arrival, actingAs);
 }
 
-function eventIn(arrival: Arrival, mappings: Destination['events']): ArrivalEvent | undefined {
-  const matched = matchedIn(arrival, mappings ?? []);
+function eventIn(arrival: Arrival, mappings: Destination['events'], holding: Holding): ArrivalEvent | undefined {
+  const matched = matchedIn(arrival, mappings ?? [], holding);
   if (matched === undefined) {
     return undefined;
   }
@@ -274,11 +282,15 @@ export function arrivalReadingOf(destination: Destination, arrival: Arrival): Ar
   const handshake = handshakeIn(arrival, destination.handshake);
   const connection = connectionIn(arrival, destination.connection);
   const wake = wakeIn(arrival, destination.filter, connection?.account);
-  const event = eventIn(arrival, destination.events);
+  const event = eventIn(arrival, destination.events, holds);
   return {
     ...(handshake === undefined ? {} : { handshake }),
     ...(wake === undefined ? {} : { wake }),
     ...(connection === undefined ? {} : { connection }),
     ...(event === undefined ? {} : { event }),
   };
+}
+
+export function listedEventOf({ events }: Pick<Destination, 'events'>, item: Schema.Json): ArrivalEvent | undefined {
+  return eventIn({ transport: 'message', payload: item }, events, holdsOrListsEveryItem);
 }

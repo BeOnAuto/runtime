@@ -149,6 +149,35 @@ export async function roomsServer(roomInfo: RoomInfo = 'answers'): Promise<FakeM
   return rooms;
 }
 
+/** A post in a room, as the rooms service's `list_posts` lists it, with the time it was posted at. */
+export interface ListedPost {
+  readonly room: string;
+  readonly id: string;
+  readonly text: string;
+  readonly at: string;
+}
+
+const AfterSchema = Schema.Struct({ room: Schema.String, after: Schema.String });
+
+/** The rooms service, listing the posts of a room after a time through `list_posts`, the one tool it offers. */
+export async function listingRoomsServer(posts: readonly ListedPost[]): Promise<FakeMcpServer> {
+  const listPosts: FakeTool = {
+    name: 'list_posts',
+    inputSchema: named(['room', 'after']),
+    annotations: { readOnlyHint: true },
+    answer: (input) => {
+      const asked = Schema.decodeUnknownSync(AfterSchema)(input);
+      const listed = posts
+        .filter(({ room, at }) => room === asked.room && at > asked.after)
+        .map(({ room, id, text, at }) => ({ room, id, text, at }));
+      return { content: [], structuredContent: { posts: listed } };
+    },
+  };
+  const rooms = await serveFakeMcp({ bearer: roomsKey, tools: [listPosts] });
+  onTestFinished(rooms.close);
+  return rooms;
+}
+
 export function receivingAt(
   url: string,
   environment: Readonly<Record<string, string>>,

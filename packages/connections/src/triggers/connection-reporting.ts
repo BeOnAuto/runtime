@@ -1,7 +1,7 @@
 import type { PlaybookAddress, ProjectionReader, StreamReader } from '@on.auto/operations';
 import {
   generationOf,
-  isArranging,
+  isSubscribable,
   providerFoundBy,
   triggerTopicsOf,
   type EventDestination,
@@ -15,7 +15,7 @@ import { replacedOf } from '../replacements/replaced-providers.ts';
 import { connectionsServingOf, loopConnectionOf } from '../subscriptions/loop-connections.ts';
 import { mostSubscriptionsThroughAConnection } from '../subscriptions/loop-ports.ts';
 import { recordedSubscriptionAt } from '../subscriptions/subscription-records.ts';
-import { hearingOf, type EventsReceived, type Hearing } from './connection-hearing.ts';
+import { hearingOf, speedOf, type EventsReceived, type HeardSpeed, type Hearing } from './connection-hearing.ts';
 import { triggerStandingOf, type ConnectionAsRecorded, type Subscribed } from './trigger-standing.ts';
 
 type DeclaredTypes = NonNullable<NonNullable<ProviderEntry['events']>['types']>;
@@ -53,7 +53,11 @@ interface Named {
   readonly subjectName?: string;
 }
 
-interface TriggerStanding extends Named {
+type TriggerStanding = Named & HeardStanding;
+
+interface HeardStanding {
+  readonly speed: HeardSpeed['speed'];
+  readonly pollingIntervalSeconds?: number;
   readonly listening: boolean;
   readonly notListeningBecause: { readonly kind: string; readonly detail: string } | null;
   readonly needsReconnecting: boolean;
@@ -116,7 +120,7 @@ function topicOf(
 }
 
 function heardThrough(destination: EventDestination, type: string, subject: string | undefined) {
-  if (!isArranging(destination)) {
+  if (!isSubscribable(destination)) {
     return Effect.succeed<TriggerHearing>({ kind: 'heard' });
   }
   return Effect.map(
@@ -169,7 +173,7 @@ function subscribedThrough(
   { playbook, asked, serving, providers }: StandingReading,
   hearing: Hearing,
 ): Effect.Effect<Subscribed | undefined> {
-  if (hearing.kind !== 'heard' || !isArranging(hearing.destination)) {
+  if (hearing.kind !== 'heard' || !isSubscribable(hearing.destination)) {
     return Effect.undefined;
   }
   const { destination } = hearing;
@@ -206,22 +210,34 @@ function namedIn(serving: Serving, asked: Asking): Named {
   };
 }
 
+function spokenOf(hearing: Hearing): Pick<HeardStanding, 'speed' | 'pollingIntervalSeconds'> {
+  const heard = speedOf(hearing);
+  return heard.speed === 'instant'
+    ? heard
+    : { speed: heard.speed, pollingIntervalSeconds: heard.polling_interval_seconds };
+}
+
 function standingThrough(parts: ConnectionEventsParts, reading: StandingReading): Effect.Effect<TriggerStanding> {
   const { asked, serving, providers } = reading;
   const hearing = hearingIn(serving, parts.received, asked.type);
   return Effect.map(subscribedThrough(parts, reading, hearing), (subscribed) =>
-    standingAnswered(namedIn(serving, asked), {
-      connection: asked.connection,
-      paused: asked.paused,
-      recorded: asRecorded(serving.kept, providers),
-      hearing,
-      actorDeclared: actorDeclaredIn(hearing, asked.type),
-      subscribed,
-    }),
+    standingAnswered(
+      { ...namedIn(serving, asked), ...spokenOf(hearing) },
+      {
+        connection: asked.connection,
+        paused: asked.paused,
+        recorded: asRecorded(serving.kept, providers),
+        hearing,
+        actorDeclared: actorDeclaredIn(hearing, asked.type),
+        subscribed,
+      },
+    ),
   );
 }
 
-function standingAnswered(named: Named, records: Parameters<typeof triggerStandingOf>[0]): TriggerStanding {
+type Spoken = Named & Pick<HeardStanding, 'speed' | 'pollingIntervalSeconds'>;
+
+function standingAnswered(named: Spoken, records: Parameters<typeof triggerStandingOf>[0]): TriggerStanding {
   const stood = triggerStandingOf(records);
   return stood.listening
     ? { ...named, listening: true, notListeningBecause: null, needsReconnecting: false }
@@ -235,7 +251,7 @@ function standingAnswered(named: Named, records: Parameters<typeof triggerStandi
 
 function standingOfAConnectionGone(asked: StandingAsked): TriggerStanding {
   return standingAnswered(
-    {},
+    { speed: 'instant' },
     {
       connection: asked.connection,
       paused: asked.paused,

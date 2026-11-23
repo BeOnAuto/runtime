@@ -9,9 +9,9 @@ import type { RecordWork, Work } from '@on.auto/definitions';
 import { changesConnectionTriggers, connectionTriggerFacts } from '@on.auto/definitions/connection-triggers';
 import { requestPlaceFacts } from '@on.auto/interaction';
 import type { PlaybookAddress, ProjectionReader, RecordedEvent } from '@on.auto/operations';
-import type { ConnectionTrigger, LoopConnection, Reconciled } from '@on.auto/providers';
-import type { Consumer, DueItem, DueWork } from '@on.auto/workflow-host';
-import { Effect } from 'effect';
+import type { ConnectionTrigger, LoopConnection, Reconciled, TakeListed, TakenIn } from '@on.auto/providers';
+import type { Consumer, DueItem, DueWork, IntakeAnswer, TakeIn } from '@on.auto/workflow-host';
+import { Effect, type Cause } from 'effect';
 
 const subscriptionRoundsName = 'the subscriptions of the playbooks';
 
@@ -217,4 +217,18 @@ export function subscriptionRoundsOf(parts: RoundsParts): SubscriptionRounds {
     recording: parts.arrangesAWay ? recordingOf(owed) : recordedAsItIs,
     asked: owed.ask,
   };
+}
+
+function takenAs({ outcome }: IntakeAnswer): TakenIn {
+  return outcome === 'refused' ? 'held' : outcome;
+}
+
+export function listedIntakeOf(takeIn: TakeIn): TakeListed {
+  return (arrival) =>
+    takeIn(arrival).pipe(
+      Effect.tapCause((cause: Cause.Cause<unknown>) =>
+        Effect.logWarning('An item a check listed was not taken in; it is read again later', cause),
+      ),
+      Effect.match({ onFailure: (): TakenIn => 'held', onSuccess: takenAs }),
+    );
 }

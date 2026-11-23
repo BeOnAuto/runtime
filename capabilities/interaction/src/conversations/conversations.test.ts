@@ -1,12 +1,13 @@
 import type { RecordWork } from '@on.auto/definitions';
 import { PayloadOffloading } from '@on.auto/operations/payloads';
+import { waitBefore, wokenReadAt } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { readings } from '../readings/reading-rows.ts';
 import { openRequests } from '../requests/open-requests.ts';
 import { answererId, chatHarness, farAhead, ledgerKeepingNames, recordsOf } from '../testing/index.ts';
-import { replyWaitMsOf, waitBefore, waitBeforeRead, wokenReadAt } from './cadence.ts';
+import { replyWaitMsOf, waitBeforeRead } from './cadence.ts';
 import { conversations } from './conversation-rows.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
@@ -85,10 +86,10 @@ describe('the cadence of reading a conversation', () => {
 
   it('never waits less than the floor, and as long as a Retry-After asks, an hour at most', () => {
     const waits = [
-      waitBefore({ read: 1, floorMs: 60 * second, retryAfterMs: null }),
-      waitBefore({ read: 19, floorMs: 5 * second, retryAfterMs: null }),
-      waitBefore({ read: 1, floorMs: 5 * second, retryAfterMs: 120 * second }),
-      waitBefore({ read: 1, floorMs: 5 * second, retryAfterMs: 2 * day }),
+      waitBefore({ baseMs: waitBeforeRead(1), floorMs: 60 * second, retryAfterMs: null }),
+      waitBefore({ baseMs: waitBeforeRead(19), floorMs: 5 * second, retryAfterMs: null }),
+      waitBefore({ baseMs: waitBeforeRead(1), floorMs: 5 * second, retryAfterMs: 120 * second }),
+      waitBefore({ baseMs: waitBeforeRead(1), floorMs: 5 * second, retryAfterMs: 2 * day }),
     ];
 
     expect(waits.map((wait) => wait / second)).toEqual([60, 300, 120, 3600]);

@@ -9,19 +9,17 @@ import type {
   Identification,
   IdentifiedConnection,
   LoopConnection,
-  MadeSubscription,
   NamedPlace,
-  Positions,
   Receiving,
   Reconciled,
-  RecordedFailure,
-  RecordedSubscription,
   SubscriptionKey,
   SubscriptionLoopPorts,
   SubscriptionRecords,
   SubscriptionSecrets,
+  ThroughTheConnection,
 } from '../subscriptions/subscription-ports.ts';
 import type { ConnectionTrigger, WaitingRequest } from '../subscriptions/subscription-topics.ts';
+import { anIntake, inMemoryRecords, type FakeIntake, type FakeRecords } from './loop-records.ts';
 import { anApp, postedType, type FakeApp } from './subscription-apps.ts';
 import { theCallback, theQueue } from './subscription-services.ts';
 
@@ -33,79 +31,6 @@ export function aPostIn(subject?: string, connection = 'tracker'): ConnectionTri
 
 export function waitingIn(project: string, connection = 'tracker'): WaitingRequest {
   return { connection, with: { project }, sent: { conversation: 'C0123', id: '1699.1' } };
-}
-
-type Fact =
-  | { readonly type: 'made'; readonly key: SubscriptionKey; readonly made: MadeSubscription }
-  | { readonly type: 'failed'; readonly key: SubscriptionKey; readonly failed: RecordedFailure }
-  | { readonly type: 'removed'; readonly key: SubscriptionKey };
-
-export interface FakeRecords {
-  readonly records: SubscriptionRecords;
-  readonly facts: () => readonly Fact[];
-  readonly rows: () => readonly RecordedSubscription[];
-  readonly rebuilt: () => void;
-  readonly stopsBeforeTheNextMade: () => void;
-}
-
-function keyText({ connection, topic }: SubscriptionKey): string {
-  return JSON.stringify([connection, topic]);
-}
-
-function folded(facts: readonly Fact[]): ReadonlyMap<string, RecordedSubscription> {
-  const rows = new Map<string, RecordedSubscription>();
-  for (const fact of facts) {
-    const { connection, topic } = fact.key;
-    const key = keyText(fact.key);
-    if (fact.type === 'removed') {
-      rows.delete(key);
-    } else if (fact.type === 'made') {
-      rows.set(key, { connection, topic, made: fact.made });
-    } else {
-      rows.set(key, { ...(rows.get(key) ?? { connection, topic }), failed: fact.failed });
-    }
-  }
-  return rows;
-}
-
-function positionedAs(row: RecordedSubscription, positions: Positions | undefined): RecordedSubscription {
-  return positions === undefined ? row : { ...row, positions };
-}
-
-export function inMemoryRecords(mostPartLength: number): FakeRecords {
-  const facts: Fact[] = [];
-  const positions = new Map<string, Positions>();
-  const stops: boolean[] = [];
-  const recorded = (fact: Fact) =>
-    Effect.sync(() => {
-      facts.push(fact);
-      if (fact.type === 'removed') {
-        positions.delete(keyText(fact.key));
-      }
-    });
-  const rows = () => [...folded(facts).values()].map((row) => positionedAs(row, positions.get(keyText(row))));
-  return {
-    records: {
-      read: () => Effect.sync(rows),
-      made: (_playbook, key, made) =>
-        stops.shift() === true ? Effect.die('the runtime stopped') : recorded({ type: 'made', key, made }),
-      failed: (_playbook, key, failed) => recorded({ type: 'failed', key, failed }),
-      removed: (_playbook, key) => recorded({ type: 'removed', key }),
-      moved: (_playbook, key, moved) =>
-        Effect.sync(() => {
-          positions.set(keyText(key), moved);
-        }),
-      holds: (part) => part.length <= mostPartLength,
-    },
-    facts: () => facts,
-    rows,
-    rebuilt: () => {
-      positions.clear();
-    },
-    stopsBeforeTheNextMade: () => {
-      stops.push(true);
-    },
-  };
 }
 
 interface FakeSecrets {
@@ -172,6 +97,8 @@ export interface Runtime {
   readonly callbacks?: Partial<Readonly<Record<Receiving, string>>>;
   readonly mostPerConnection?: number;
   readonly stepMs?: number;
+  readonly pagesARound?: number;
+  readonly through?: ThroughTheConnection;
 }
 
 function takingAStep(records: SubscriptionRecords, stepMs: number | undefined): SubscriptionRecords {
@@ -194,6 +121,7 @@ interface PlaceNamed extends NamedPlace {
 
 export interface Loop {
   readonly app: FakeApp;
+  readonly intake: FakeIntake;
   readonly records: FakeRecords;
   readonly secrets: FakeSecrets;
   readonly connections: Changing<LoopConnection>;
@@ -214,6 +142,7 @@ export function loopOver(
   const named: PlaceNamed[] = [];
   return {
     app: anApp(),
+    intake: anIntake(),
     records: inMemoryRecords(64),
     secrets: inMemorySecrets(),
     connections: held,
@@ -254,7 +183,7 @@ export function roundAt(ports: SubscriptionLoopPorts, time: number, deadline?: n
 export function portsOf(loop: Loop, runtime: Runtime): SubscriptionLoopPorts {
   const { receives = ['webhook', 'queue'], callbacks = { webhook: theCallback, queue: theQueue } } = runtime;
   return {
-    ...loop.app.through,
+    ...(runtime.through ?? loop.app.through),
     callbackOf: (_place, type) => callbacks[type],
     connectionsOf: () => Effect.sync(loop.connections.now),
     receives: (type) => receives.includes(type),
@@ -268,5 +197,7 @@ export function portsOf(loop: Loop, runtime: Runtime): SubscriptionLoopPorts {
         loop.namesPlace({ connection: { id, connected }, ...named });
       }),
     mostPerConnection: runtime.mostPerConnection ?? 8,
+    takeIn: loop.intake.takeIn,
+    ...(runtime.pagesARound === undefined ? {} : { pagesARound: runtime.pagesARound }),
   };
 }

@@ -13,6 +13,7 @@ import {
   archived,
   autoCloud,
   boardsEntryOf,
+  byChecking,
   byTheApp,
   bySubscription,
   heldRefused,
@@ -213,5 +214,14 @@ describe('list_connections on a server that opens sockets', () => {
       output: { connections: [{ source: '/connections/boards', event_types: [{ type: cardMoved.type }] }] },
     });
     expect(hearing.kind).toBe('lacking');
+  });
+});
+
+describe('the events of an app Auto checks on a timer', () => {
+  it('are listed with the pace of the checks, the larger of a minute and what the app allows, wherever the runtime runs', () => {
+    const checked = providersOf(boardsEntryOf([byChecking]));
+    const [moved] = reportedEventsOf(ofTheBoards, checked, nothingReceived).event_types;
+
+    expect(moved).toMatchObject({ type: cardMoved.type, speed: 'polling', polling_interval_seconds: 120 });
   });
 });

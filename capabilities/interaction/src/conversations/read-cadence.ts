@@ -1,4 +1,6 @@
-import { waitBefore } from './cadence.ts';
+import { waitBefore } from '@on.auto/tool-servers';
+
+import { waitBeforeRead } from './cadence.ts';
 import type { Cadence, ConversationRow } from './conversation-rows.ts';
 
 export interface ReadEnd {
@@ -14,7 +16,7 @@ export interface ReadEnd {
 export function cadenceAfter(row: ConversationRow, end: ReadEnd): Cadence {
   const reads = end.foundAnswerer ? 0 : row.reads + 1;
   const activeAt = end.foundAnswerer ? end.now : row.active_at;
-  const wait = waitBefore({ read: reads + 1, floorMs: end.floorMs, retryAfterMs: end.retryAfterMs });
+  const wait = waitBefore({ baseMs: waitBeforeRead(reads + 1), floorMs: end.floorMs, retryAfterMs: end.retryAfterMs });
   return {
     open: end.open,
     active_at: activeAt,

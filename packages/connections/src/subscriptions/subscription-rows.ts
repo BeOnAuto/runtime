@@ -1,8 +1,15 @@
-import { recordedDecoder, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
+import {
+  recordedDecoder,
+  type AddressedStream,
+  type KeyedProjection,
+  type ProjectedMessage,
+  type ProjectedRow,
+} from '@on.auto/operations';
 import {
   SubscriptionFailedBecauseSchema,
   SubscriptionFailureKindSchema,
   type MadeSubscription,
+  type Mark,
   type Positions,
   type RecordedFailure,
   type RecordedSubscription,
@@ -11,9 +18,12 @@ import { Option, Schema } from 'effect';
 
 import {
   EventSubscriptionEventSchema,
+  eventSubscriptionIdOf,
+  eventSubscriptionReadsKind,
   eventSubscriptionTypes,
   eventSubscriptionsKind,
   type RecordedEventSubscriptionEvent,
+  type RecordedEventSubscriptionRead,
 } from './subscription-facts.ts';
 
 export const eventSubscriptionsName = 'event_subscriptions';
@@ -26,7 +36,7 @@ const EventSubscriptionRowSchema = Schema.Struct({
   connection: Schema.String,
   topic: Schema.String,
   removed: Schema.Boolean,
-  type: Schema.NullOr(Schema.Literals(['webhook', 'queue'])),
+  type: Schema.NullOr(Schema.Literals(['webhook', 'queue', 'polling'])),
   id: Schema.NullOr(Schema.String),
   secret_id: Schema.NullOr(Schema.String),
   declared: Schema.NullOr(Schema.String),
@@ -38,6 +48,8 @@ const EventSubscriptionRowSchema = Schema.Struct({
   lapses_at: Schema.NullOr(Schema.Int),
   due_at: Schema.NullOr(Schema.Int),
   reconcile_due_at: Schema.NullOr(Schema.Int),
+  since: Schema.NullOr(Schema.String),
+  page_token: Schema.NullOr(Schema.String),
 });
 
 type EventSubscriptionRow = typeof EventSubscriptionRowSchema.Type;
@@ -45,6 +57,8 @@ type EventSubscriptionRow = typeof EventSubscriptionRowSchema.Type;
 const rowFrom: (row: ProjectedRow) => EventSubscriptionRow = Schema.decodeUnknownSync(EventSubscriptionRowSchema);
 
 const eventSubscriptionFactOf = recordedDecoder(EventSubscriptionEventSchema);
+
+const projectedTypes = [...eventSubscriptionTypes, 'event_subscription_read'];
 
 const noneMade = { type: null, id: null, secret_id: null, declared: null } as const;
 
@@ -57,10 +71,17 @@ const noneFailed = {
 
 const noPositions = { failures_in_a_row: null, lapses_at: null, due_at: null } as const;
 
-function standingOf(row: ProjectedRow | undefined) {
+const noMark = { since: null, page_token: null } as const;
+
+function keptIn(row: ProjectedRow | undefined): EventSubscriptionRow | undefined {
   const kept = row === undefined ? undefined : rowFrom(row);
-  return kept === undefined || kept.removed
-    ? { ...noneMade, ...noneFailed, ...noPositions }
+  return kept?.removed === false ? kept : undefined;
+}
+
+function standingOf(row: ProjectedRow | undefined) {
+  const kept = keptIn(row);
+  return kept === undefined
+    ? { ...noneMade, ...noneFailed, ...noPositions, ...noMark }
     : {
         type: kept.type,
         id: kept.id,
@@ -73,19 +94,33 @@ function standingOf(row: ProjectedRow | undefined) {
         failures_in_a_row: kept.failures_in_a_row,
         lapses_at: kept.lapses_at,
         due_at: kept.due_at,
+        since: kept.since,
+        page_token: kept.page_token,
       };
 }
 
-function rowAfterFact(row: ProjectedRow | undefined, { type, data, context }: RecordedEventSubscriptionEvent) {
+function rowAfterRead(row: ProjectedRow | undefined, { data, context }: RecordedEventSubscriptionRead) {
+  const kept = keptIn(row);
+  return kept === undefined ? undefined : { ...kept, since: data.since, reconcile_due_at: Date.parse(context.at) };
+}
+
+function rowAfterFact(row: ProjectedRow | undefined, fact: RecordedEventSubscriptionEvent) {
+  if (fact.type === 'event_subscription_read') {
+    return rowAfterRead(row, fact);
+  }
+  const { type, data, context } = fact;
   const key = { connection: data.connection, topic: data.topic };
   if (type === 'event_subscription_removed') {
-    return { ...key, removed: true, ...noneMade, ...noneFailed, ...noPositions, reconcile_due_at: null };
+    return { ...key, removed: true, ...noneMade, ...noneFailed, ...noPositions, ...noMark, reconcile_due_at: null };
   }
   const standing = standingOf(row);
   const due = { reconcile_due_at: Date.parse(context.at) };
   if (type === 'event_subscription_made') {
-    const made = { type: data.type, id: data.id, secret_id: data.secret_id ?? null, declared: data.declared };
-    return { ...key, removed: false, ...standing, ...made, ...noneFailed, ...due };
+    const made =
+      data.type === 'polling'
+        ? { type: data.type, id: null, secret_id: null, declared: data.declared, since: data.since }
+        : { type: data.type, id: data.id, secret_id: data.secret_id ?? null, declared: data.declared, since: null };
+    return { ...key, removed: false, ...standing, ...made, page_token: null, ...noneFailed, ...due };
   }
   const failure = {
     failure_kind: data.kind,
@@ -96,11 +131,18 @@ function rowAfterFact(row: ProjectedRow | undefined, { type, data, context }: Re
   return { ...key, removed: false, ...standing, ...failure, ...due };
 }
 
+function keyOfAFact(message: ProjectedMessage, { kind, id }: AddressedStream): string | undefined {
+  return kind === eventSubscriptionsKind
+    ? id
+    : Option.getOrUndefined(Option.map(eventSubscriptionFactOf(message), ({ data }) => eventSubscriptionIdOf(data)));
+}
+
 export const eventSubscriptions: KeyedProjection = {
   name: eventSubscriptionsName,
-  version: 1,
-  kinds: [eventSubscriptionsKind],
-  types: eventSubscriptionTypes,
+  version: 2,
+  kinds: [eventSubscriptionsKind, eventSubscriptionReadsKind],
+  types: projectedTypes,
+  keyOf: keyOfAFact,
   columns: [
     { name: 'connection', kind: 'text' },
     { name: 'topic', kind: 'text' },
@@ -117,6 +159,8 @@ export const eventSubscriptions: KeyedProjection = {
     { name: 'lapses_at', kind: 'integer' },
     { name: 'due_at', kind: 'integer' },
     { name: reconcileDueColumn, kind: 'integer' },
+    { name: 'since', kind: 'text' },
+    { name: 'page_token', kind: 'text' },
   ],
   indexes: [
     { name: 'held', columns: ['removed', 'row_key'] },
@@ -124,17 +168,32 @@ export const eventSubscriptions: KeyedProjection = {
   ],
   advanced: [
     ...positionColumns.map((column) => ({ column, setBy: ['event_subscription_removed'] })),
-    { column: reconcileDueColumn, setBy: eventSubscriptionTypes },
+    { column: reconcileDueColumn, setBy: projectedTypes },
+    { column: 'since', setBy: ['event_subscription_made', 'event_subscription_read', 'event_subscription_removed'] },
+    { column: 'page_token', setBy: ['event_subscription_made', 'event_subscription_removed'] },
   ],
   rowAfter: (row, message: ProjectedMessage) =>
     Option.getOrUndefined(Option.map(eventSubscriptionFactOf(message), (fact) => rowAfterFact(row, fact))),
 };
 
-function madeIn({ type, id, secret_id: secretId, declared }: EventSubscriptionRow): MadeSubscription | undefined {
-  if (type === null || id === null || declared === null) {
+function madeIn({
+  type,
+  id,
+  secret_id: secretId,
+  declared,
+  since,
+}: EventSubscriptionRow): MadeSubscription | undefined {
+  if (type === 'polling' && declared !== null && since !== null) {
+    return { type, declared, since };
+  }
+  if (type === null || type === 'polling' || id === null || declared === null) {
     return undefined;
   }
   return secretId === null ? { type, id, declared } : { type, id, secretId, declared };
+}
+
+export function markAsColumns({ since, pageToken, positions }: Mark): ProjectedRow {
+  return { ...positionsAsColumns(positions), since, page_token: pageToken };
 }
 
 function failedIn(row: EventSubscriptionRow): RecordedFailure | undefined {
@@ -171,6 +230,7 @@ export function recordedSubscriptionOf(projected: ProjectedRow): RecordedSubscri
     ...(made === undefined ? {} : { made }),
     ...(failed === undefined ? {} : { failed }),
     ...(positions === undefined ? {} : { positions }),
+    ...(row.page_token === null ? {} : { pageToken: row.page_token }),
   };
 }
 

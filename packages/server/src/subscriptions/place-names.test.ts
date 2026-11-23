@@ -132,7 +132,11 @@ async function roundOfTheServer(naming: 'answers' | 'fails', webhookUrl?: string
   const items = await Effect.runPromise(served.dueWork.due(0, 16, true));
   await Effect.runPromise(Effect.forEach(items, (item) => item.perform(0), { discard: true }));
   const recorded = await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha));
-  return { sent, named: await placesNamedIn(ledger), recorded: recorded.map(({ topic, made }) => [topic, made?.id]) };
+  return {
+    sent,
+    named: await placesNamedIn(ledger),
+    recorded: recorded.map(({ topic, made }) => [topic, made !== undefined && 'id' in made ? made.id : undefined]),
+  };
 }
 
 type ConnectionFact = typeof ConnectionEventSchema.Type;

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Destination } from '../events/destination-fields.ts';
 import { socketBackoff } from '../sockets/socket-listening.ts';
 import { intoAQueue, ofEachSubscription } from '../testing/event-destinations.ts';
+import { inMemoryRecords } from '../testing/loop-records.ts';
 import {
   anApp,
   answeringItsSecret,
@@ -11,7 +12,7 @@ import {
   type AppAnswering,
   type Failing,
 } from '../testing/subscription-apps.ts';
-import { inMemoryRecords, loopOver, portsOf, roundAt, startedAt, type Loop } from '../testing/subscription-loops.ts';
+import { loopOver, portsOf, roundAt, startedAt, type Loop } from '../testing/subscription-loops.ts';
 import type { SubscriptionKey } from './subscription-ports.ts';
 import { resyncedAfterMs } from './subscription-records.ts';
 

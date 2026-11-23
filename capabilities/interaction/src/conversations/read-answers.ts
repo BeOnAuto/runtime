@@ -4,6 +4,7 @@ import { textAt, valueAt } from '@on.auto/definitions/tool-blocks';
 import { isBoundedPart } from '@on.auto/operations';
 import {
   answerDocument,
+  cursorOf,
   toolBounds,
   type CallAnswered,
   type CalledOnce,
@@ -31,8 +32,8 @@ export type ReadAnswer =
   | (ReadOf & { readonly outcome: 'result'; readonly answered: CallAnswered })
   | (ReadOf & { readonly outcome: ReadingFailedBecause });
 
-export function cursorOf(order: Replies['read']['order'], ids: readonly string[], prior: string | null): string | null {
-  return (order === 'oldest_first' ? ids.at(-1) : ids.at(0)) ?? prior;
+export function cursorAfter({ read }: Pick<Replies, 'read'>, { ids }: ReadAnswer, prior: string | null) {
+  return cursorOf(read.order, ids, prior);
 }
 
 export function failedRead(outcome: ReadingFailedBecause, detail = '', retryAfterMs: number | null = null): ReadAnswer {

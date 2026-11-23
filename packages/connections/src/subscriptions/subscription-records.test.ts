@@ -7,8 +7,12 @@ import { describe, expect, it } from 'vitest';
 import { keptLedger } from '../testing/kept-ledger.ts';
 import {
   EventSubscriptionEventSchema,
+  eventSubscriptionReadDecider,
+  EventSubscriptionReadSchema,
+  eventSubscriptionReadStreamOf,
   eventSubscriptionStreamOf,
   type RecordedEventSubscriptionEvent,
+  type RecordedEventSubscriptionRead,
 } from './subscription-facts.ts';
 import { recordedSubscriptionAt, subscriptionRecordsOf, subscriptionsInAPage } from './subscription-records.ts';
 import { eventSubscriptions } from './subscription-rows.ts';
@@ -53,6 +57,12 @@ function at<A>(effect: Effect.Effect<A>): Promise<A> {
 }
 
 const noTypes: readonly string[] = [];
+
+const readsFold = {
+  initialState: noTypes,
+  evolve: (types: readonly string[], { type }: RecordedEventSubscriptionRead): readonly string[] => [...types, type],
+  eventSchema: EventSubscriptionReadSchema,
+};
 
 const typesFold = {
   initialState: noTypes,
@@ -196,5 +206,88 @@ describe('one subscription read by its key', () => {
     );
 
     expect(read).toEqual([{ ...chat, made: madeThroughAWebhook }, repository, undefined]);
+  });
+});
+
+const checkedSince = '2026-11-18T08:00:00.000Z';
+
+const madeByChecking = { type: 'polling', declared, since: checkedSince } as const;
+
+const reached = { failures: 0, dueAt: nine + minute };
+
+function readStreamsOf(ledger: Ledger['Service']) {
+  return Effect.map(
+    ledger.readProjectedRows('event_subscriptions', alpha, { where: [], orderBy: [], order: 'asc', limit: 10 }),
+    (rows) => rows.map(({ row }) => [row['since'], row['page_token']]),
+  );
+}
+
+describe('a subscription a check keeps', () => {
+  it('is made with the point it reads from, and moves it with its positions and page in one advance', async () => {
+    const { ledger, records } = recordsOver();
+    const walking = { since: checkedSince, pageToken: '{"page_token":"2"}', positions: reached };
+    await at(records.made(alpha, chat, madeByChecking));
+    const made = await at(records.read(alpha));
+    await at(records.marked(alpha, chat, walking, checkedSince));
+    const walked = await at(records.read(alpha));
+    await at(
+      records.marked(
+        alpha,
+        chat,
+        { since: '2026-11-18T09:00:00.000Z', pageToken: null, positions: reached },
+        checkedSince,
+      ),
+    );
+
+    expect([made, walked]).toEqual([
+      [{ ...chat, made: madeByChecking }],
+      [{ ...chat, made: madeByChecking, positions: reached, pageToken: '{"page_token":"2"}' }],
+    ]);
+    expect(await at(readStreamsOf(ledger))).toEqual([['2026-11-18T09:00:00.000Z', null]]);
+  });
+
+  it('moves nothing where its mark moved meanwhile, nor for a key it does not hold', async () => {
+    const { records } = recordsOver();
+    await at(records.made(alpha, chat, madeByChecking));
+    await at(
+      records.marked(alpha, chat, { since: 'later', pageToken: null, positions: reached }, 'not where it stands'),
+    );
+    await at(records.marked(alpha, repository, { since: 'later', pageToken: null, positions: reached }, checkedSince));
+
+    expect(await at(records.read(alpha))).toEqual([{ ...chat, made: madeByChecking }]);
+  });
+});
+
+describe('the reads of a check the record keeps', () => {
+  it('records the point it read to once, on a stream of its own, only where the row stands there', async () => {
+    const { ledger, records } = recordsOver();
+    const later = '2026-11-18T09:00:00.000Z';
+    await at(records.made(alpha, chat, madeByChecking));
+    await at(records.readThrough(alpha, chat, later));
+    await at(records.marked(alpha, chat, { since: later, pageToken: null, positions: reached }, checkedSince));
+    await at(records.readThrough(alpha, chat, later));
+    await at(records.readThrough(alpha, chat, later));
+
+    expect(await at(records.read(alpha))).toEqual([
+      { ...chat, made: { ...madeByChecking, since: later }, positions: reached },
+    ]);
+    expect(await at(ledger.load(eventSubscriptionReadStreamOf(alpha, chat, later), readsFold))).toMatchObject({
+      state: ['event_subscription_read'],
+    });
+  });
+
+  it('records no read of a key the record removed, and a read recorded after the removal changes nothing', async () => {
+    const { ledger, records } = recordsOver();
+    await at(records.made(alpha, chat, madeByChecking));
+    await at(records.removed(alpha, chat));
+    await at(records.readThrough(alpha, chat, checkedSince));
+    const command = { key: chat, since: 'later', at: '2026-11-18T09:00:00.000Z' };
+    await at(
+      Effect.orDie(
+        ledger.execute(eventSubscriptionReadStreamOf(alpha, chat, 'later'), eventSubscriptionReadDecider, command),
+      ),
+    );
+
+    expect(await at(records.read(alpha))).toEqual([]);
   });
 });

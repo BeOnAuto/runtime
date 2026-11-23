@@ -6,6 +6,7 @@ import {
   delivered,
   eventsPathOf,
   itsAccountInRooms,
+  listingRoomsServer,
   loggedLines,
   receivingAt,
   roomsDelivery,
@@ -15,10 +16,12 @@ import {
   takenOnceRecorded,
   theRoom,
   theWebhookUrl,
+  type ListedPost,
 } from '../testing/interaction-servers/room-events.ts';
 import {
   listeningWorkflow,
   postedInARoom,
+  servedCheckingTheRoom,
   servedListeningInTheRoom,
 } from '../testing/interaction-servers/shipped-rooms.ts';
 import { connectionsIn } from '../testing/servers/connected-servers.ts';
@@ -26,9 +29,11 @@ import { connectionsAllowing } from '../testing/servers/loopback-connections.ts'
 import { whenHeld } from '../testing/waiting/until.ts';
 import { signingInWithRooms, signingPeopleIn, tracedWithRooms } from '../testing/webhooks/signed-in-rooms.ts';
 import {
+  firstCheckSwept,
   hookRemovedAt,
   hookSweptAt,
   postedSwept,
+  runsStartedByChecks,
   runsStartedIn,
   runsStartedSwept,
   settledByAReplyRead,
@@ -226,6 +231,29 @@ describe('a self-hosted runtime that nothing outside can reach', () => {
     expect(settled).toMatchObject({ status: 'succeeded', output: { choice: 'approve' } });
     expect(answer).toMatchObject({ status: 404, body: { reason: 'not_found', detail: 'No route matches the path' } });
     expect(rooms.received().filter(({ tool }) => tool === 'create_hook')).toEqual([]);
+  });
+});
+
+describe('a self-hosted runtime that nothing outside can reach, whose workflow’s trigger names a connection Auto checks on a timer', () => {
+  it('checks the app, starts one run for a post listed after its first check, and shows the trigger at the pace of its checks', async () => {
+    const posts: ListedPost[] = [];
+    const rooms = await listingRoomsServer(posts);
+    const server = await servedCheckingTheRoom(rooms.url, {}, defaultOrg);
+    await firstCheckSwept(server, rooms);
+    posts.push({ room: theRoom, id: 'p-1', text: 'hi', at: new Date(server.runsOn.now()).toISOString() });
+
+    const started = await runsStartedByChecks(server, alpha);
+    const workflow = await server.call('GET', `${alpha}/definitions/workflow/${listeningWorkflow}`);
+
+    expect(started).toBe(1);
+    expect(workflow).toMatchObject({
+      status: 200,
+      body: {
+        standing: {
+          triggers: [{ connection: 'rooms', speed: 'polling', polling_interval_seconds: 60, listening: true }],
+        },
+      },
+    });
   });
 });
 

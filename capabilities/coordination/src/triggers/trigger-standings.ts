@@ -22,7 +22,10 @@ function standingOfEach(
     connection,
     ...(standing.event === undefined ? {} : { event: standing.event }),
     ...(standing.subjectName === undefined ? {} : { subject_name: standing.subjectName }),
-    speed: 'instant',
+    speed: standing.speed,
+    ...(standing.pollingIntervalSeconds === undefined
+      ? {}
+      : { polling_interval_seconds: standing.pollingIntervalSeconds }),
     listening: standing.listening,
     not_listening_because: standing.notListeningBecause,
     needs_reconnecting: standing.needsReconnecting,

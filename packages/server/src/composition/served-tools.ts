@@ -1,6 +1,11 @@
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
-import { subscriptionsOfTheServer, type SubscriptionsServing } from '../subscriptions/served-subscriptions.ts';
+import {
+  subscriptionsOfTheServer,
+  type ServedSubscriptions,
+  type SubscriptionsServing,
+} from '../subscriptions/served-subscriptions.ts';
+import { connectionIntakeServedBy, type IntakeServing } from '../workflows/connection-intake.ts';
 import { connectionEventsOf } from './served-connection-events.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
 import { lookupServedBy, type ServedLookup } from './served-lookup.ts';
@@ -23,6 +28,7 @@ export interface ToolUsersWiring extends ProvidersOffered {
   readonly toolTiming?: NonNullable<ToolAccessWiring['toolTiming']>;
   readonly secrets: SubscriptionsServing['secrets'];
   readonly results?: boolean | undefined;
+  readonly now?: () => number;
 }
 
 export interface ServedToolUsers {
@@ -34,13 +40,16 @@ export interface ServedToolUsers {
   readonly connections: ReturnType<typeof connectionAccessOf>;
   readonly connectionEvents: ReturnType<typeof connectionEventsOf>;
   readonly named: MadeToolAccess['named'];
-  readonly subscriptions: ReturnType<typeof subscriptionsOfTheServer>;
+  readonly subscriptionsOver: (
+    store: IntakeServing['store'],
+    pool: { readonly evaluations: { readonly filters: IntakeServing['filters'] } },
+  ) => ServedSubscriptions;
 }
 
 export async function toolUsersServedBy(
   runtime: ServingRuntime,
   settings: Settings,
-  { registry, connections, offering, goals, results, messages, toolTiming, secrets }: ToolUsersWiring,
+  { registry, connections, offering, goals, results, messages, toolTiming, secrets, now = Date.now }: ToolUsersWiring,
 ): Promise<ServedToolUsers> {
   const tools = toolAccessOf(registry.tools, settings, connections, toolTiming);
   return {
@@ -55,9 +64,11 @@ export async function toolUsersServedBy(
     connections: connectionAccessOf(tools.listServers),
     connectionEvents: connectionEventsOf(runtime, settings),
     named: tools.named,
-    subscriptions: subscriptionsOfTheServer(runtime, settings, {
-      tools: { ...tools, ...requestWaysOf(registry.tools) },
-      secrets,
-    }),
+    subscriptionsOver: (store, { evaluations: { filters } }) =>
+      subscriptionsOfTheServer(runtime, settings, {
+        tools: { ...tools, ...requestWaysOf(registry.tools) },
+        secrets,
+        takeIn: connectionIntakeServedBy(runtime, { store, filters, providers: settings.providers, now }),
+      }),
   };
 }

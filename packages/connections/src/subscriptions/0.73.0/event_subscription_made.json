@@ -1,0 +1,14 @@
+{
+  "type": "event_subscription_made",
+  "data": {
+    "connection": "chat",
+    "topic": "C0123",
+    "type": "polling",
+    "declared": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "since": "2026-11-18T08:00:00.000Z"
+  },
+  "context": {
+    "at": "2026-11-18T09:00:00.000Z",
+    "by": "runtime"
+  }
+}

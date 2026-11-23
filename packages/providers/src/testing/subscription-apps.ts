@@ -18,7 +18,7 @@ export function declaredDestinations(...written: readonly object[]): readonly De
   return reportedDestinations([], ...written);
 }
 
-function reportedDestinations(types: readonly object[], ...written: readonly object[]): readonly Destination[] {
+export function reportedDestinations(types: readonly object[], ...written: readonly object[]): readonly Destination[] {
   const events = types.length === 0 ? { destinations: written } : { types, destinations: written };
   const { entry } = providerOf({ ...trackerOverASocket, events });
   return Option.getOrThrow(Option.fromNullishOr(entry.events)).destinations;
@@ -26,7 +26,7 @@ function reportedDestinations(types: readonly object[], ...written: readonly obj
 
 export const postedType = aPost.type;
 
-const placedPostTypes = [{ ...postType, subject: { title: 'Room', required: true } }, roomType];
+export const placedPostTypes = [{ ...postType, subject: { title: 'Room', required: true } }, roomType];
 
 export const postsOfEachRoom = reportedDestinations(
   placedPostTypes,

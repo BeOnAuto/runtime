@@ -5509,8 +5509,15 @@ type ListedConnectionEventTypes {
   """
   subject: ListedConnectionEventTypesSubject
 
-  """`instant` when the workflow starts as it happens"""
+  """
+  `instant` when the workflow starts as it happens. `polling` when Auto checks the app on a timer and starts the workflow for what is new since its last check.
+  """
   speed: String!
+
+  """
+  How often Auto checks the app, in seconds, when `speed` is `polling`. Say it to the person as a pace, such as about every minute.
+  """
+  polling_interval_seconds: Float
 
   """
   The JSON Schema of the event's `data`, for a condition on what happened

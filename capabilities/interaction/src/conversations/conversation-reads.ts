@@ -6,7 +6,7 @@ import { Clock, Effect, Result, type Schema } from 'effect';
 import { readArgumentsOf, readRequestOf } from '../readings/request-readings.ts';
 import { replyTaken, type Intake } from '../replies/reply-intake.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
-import { cursorOf, listsFromTheFirstMessage, readAnswerOf, type ReadAnswer } from './read-answers.ts';
+import { cursorAfter, listsFromTheFirstMessage, readAnswerOf, type ReadAnswer } from './read-answers.ts';
 import { recordedRead, unsentRead } from './read-records.ts';
 import type { ConversationTurn, OneRead, ReadDone } from './turn-parts.ts';
 
@@ -58,7 +58,7 @@ function sentRead(
       (kept, reply) => replyTaken(intake, kept, reply),
     );
     if (recordable(answer, place.row.waited_after)) {
-      const since = state.unrecorded ? read.since : cursorOf(route.replies.read.order, answer.ids, read.since);
+      const since = state.unrecorded ? read.since : cursorAfter(route.replies, answer, read.since);
       const told = answer.detail === undefined ? {} : { detail: answer.detail };
       const record = { start, called, answer, state, callId, reading: read.reading, since, ...told };
       yield* recordedRead(parts.ledger, { request: read.request, row: place.row }, record);

@@ -1,3 +1,8 @@
 const eventSubscriptionsLayout = 28;
 
-export const subscriptionLayoutSteps = [{ layout: eventSubscriptionsLayout, statements: [] }] as const;
+const eventSubscriptionsMarkedLayout = 34;
+
+export const subscriptionLayoutSteps = [
+  { layout: eventSubscriptionsLayout, statements: [] },
+  { layout: eventSubscriptionsMarkedLayout, statements: [] },
+] as const;

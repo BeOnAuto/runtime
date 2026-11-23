@@ -1,8 +1,9 @@
 import type { PlaybookAddress } from '@on.auto/operations';
 import type { CalledOnce, OneCall, RequestOnce } from '@on.auto/tool-servers';
-import type { Effect, Redacted } from 'effect';
+import type { Effect, Redacted, Schema } from 'effect';
 
-import type { Destination } from '../events/destination-fields.ts';
+import type { ArrivalEvent } from '../events/arrival-readings.ts';
+import type { Destination, Read } from '../events/destination-fields.ts';
 import type { IdentitySchema } from '../events/identity-call.ts';
 import type { PlaceName } from '../events/place-name-call.ts';
 import type {
@@ -23,7 +24,7 @@ export interface SubscriptionPlace {
   readonly connection: string;
 }
 
-export type Receiving = Exclude<Destination['type'], 'websocket'>;
+export type Receiving = Exclude<Destination['type'], 'websocket' | 'polling'>;
 
 export interface SubscriptionPorts extends ThroughTheConnection {
   readonly callbackOf: (place: SubscriptionPlace, type: Receiving) => string | undefined;
@@ -94,12 +95,29 @@ interface Naming {
   readonly subject: string;
 }
 
+interface Reading {
+  readonly read: Read;
+  readonly place: SubscriptionPlace;
+  readonly topic: string;
+  readonly since: string;
+  readonly pageToken: string;
+}
+
+export type ReadDone =
+  | { readonly outcome: 'answered'; readonly document: Schema.Json | undefined; readonly retryAfterMs: number | null }
+  | {
+      readonly outcome: 'failed';
+      readonly failure: Pick<SubscriptionCallFailed, 'kind' | 'because'>;
+      readonly retryAfterMs: number | null;
+    };
+
 export interface SubscriptionCalls {
   readonly subscribe: <E, R>(asked: Subscribing<E, R>) => Effect.Effect<Subscribed, SubscriptionCallFailed | E, R>;
   readonly renew: (asked: Renewing) => Effect.Effect<Renewed, SubscriptionCallFailed>;
   readonly unsubscribe: (asked: Unsubscribing) => Effect.Effect<void, SubscriptionCallFailed>;
   readonly identify: (asked: Identifying) => Effect.Effect<Identification, SubscriptionCallFailed>;
   readonly name: (asked: Naming) => Effect.Effect<string, SubscriptionCallFailed>;
+  readonly read: (asked: Reading) => Effect.Effect<ReadDone>;
 }
 
 export interface SubscriptionKey {
@@ -112,12 +130,20 @@ export interface Generation {
   readonly declared: string;
 }
 
-export interface MadeSubscription {
+export interface MadeThroughACall {
   readonly type: Receiving;
   readonly id: string;
   readonly secretId?: string;
   readonly declared: string;
 }
+
+export interface MadeByPolling {
+  readonly type: 'polling';
+  readonly declared: string;
+  readonly since: string;
+}
+
+export type MadeSubscription = MadeThroughACall | MadeByPolling;
 
 export interface RecordedFailure {
   readonly kind: SubscriptionFailureKind;
@@ -135,6 +161,13 @@ export interface RecordedSubscription extends SubscriptionKey {
   readonly made?: MadeSubscription;
   readonly failed?: RecordedFailure;
   readonly positions?: Positions;
+  readonly pageToken?: string;
+}
+
+export interface Mark {
+  readonly since: string;
+  readonly pageToken: string | null;
+  readonly positions: Positions;
 }
 
 export interface SubscriptionRecords {
@@ -143,6 +176,8 @@ export interface SubscriptionRecords {
   readonly failed: (playbook: PlaybookAddress, key: SubscriptionKey, failed: RecordedFailure) => Effect.Effect<void>;
   readonly removed: (playbook: PlaybookAddress, key: SubscriptionKey) => Effect.Effect<void>;
   readonly moved: (playbook: PlaybookAddress, key: SubscriptionKey, positions: Positions) => Effect.Effect<void>;
+  readonly marked: (playbook: PlaybookAddress, key: SubscriptionKey, mark: Mark, from: string) => Effect.Effect<void>;
+  readonly readThrough: (playbook: PlaybookAddress, key: SubscriptionKey, since: string) => Effect.Effect<void>;
   readonly holds: (part: string) => boolean;
 }
 
@@ -191,6 +226,17 @@ export interface NamedPlace {
   readonly name: string;
 }
 
+export interface ListedArrival {
+  readonly playbook: PlaybookAddress;
+  readonly connection: string;
+  readonly event: ArrivalEvent;
+  readonly topic: string;
+}
+
+export type TakenIn = 'taken' | 'not_taken' | 'held';
+
+export type TakeListed = (arrival: ListedArrival) => Effect.Effect<TakenIn>;
+
 export interface SubscriptionLoopPorts extends SubscriptionPorts {
   readonly connectionsOf: (playbook: PlaybookAddress) => Effect.Effect<readonly LoopConnection[]>;
   readonly receives: (type: Destination['type']) => boolean;
@@ -209,6 +255,8 @@ export interface SubscriptionLoopPorts extends SubscriptionPorts {
     named: NamedPlace,
   ) => Effect.Effect<void>;
   readonly mostPerConnection: number;
+  readonly takeIn: TakeListed;
+  readonly pagesARound?: number;
 }
 
 export interface Reconciled {

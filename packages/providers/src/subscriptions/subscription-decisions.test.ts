@@ -5,7 +5,13 @@ import { intoAQueue, ofEachSubscription } from '../testing/event-destinations.ts
 import { leasedWithoutRenewal } from '../testing/subscription-apps.ts';
 import { destinationOf } from '../testing/subscription-services.ts';
 import { decided, type Situation } from './subscription-decisions.ts';
-import type { MadeSubscription, Positions, RecordedFailure, RecordedSubscription } from './subscription-ports.ts';
+import type {
+  MadeSubscription,
+  MadeThroughACall,
+  Positions,
+  RecordedFailure,
+  RecordedSubscription,
+} from './subscription-ports.ts';
 import { declaredOf, generationOf, isArranging, type Arranging } from './subscription-records.ts';
 
 function arranging(destination: Destination): Arranging {
@@ -41,7 +47,7 @@ function wanted(topic: string, destination: Arranging = byRequest) {
   return { connection: 'tracker', topic, destination };
 }
 
-function madeThrough(destination: Arranging, id = 'hook-1'): MadeSubscription {
+function madeThrough(destination: Arranging, id = 'hook-1'): MadeThroughACall {
   return { type: destination.type, id, declared: declaredOf(destination) };
 }
 
