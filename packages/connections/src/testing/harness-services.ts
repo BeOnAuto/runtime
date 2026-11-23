@@ -205,6 +205,7 @@ export function fakeSockets(byValue: Readonly<Record<string, ValueChecked>>): Fa
 
 export function fakeChatModels(offered: readonly string[]): ChatModels {
   return {
+    listsAModel: Effect.succeed(offered.length > 0),
     refusalOf: (model) =>
       Effect.succeed(offered.includes(model) ? undefined : `${model} is not one of the models this server offers`),
   };

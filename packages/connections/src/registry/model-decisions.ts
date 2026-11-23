@@ -1,7 +1,13 @@
 import { Conflict, InvalidInput, type NotFound } from '@on.auto/operations';
 import { Result } from 'effect';
 
-import type { ChatOffered, CredentialGiving, ModelGiven, ModelSetting } from './connection-commands.ts';
+import type {
+  ChatOffered,
+  ChatThroughAnAppCredential,
+  CredentialGiving,
+  ModelGiven,
+  ModelSetting,
+} from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import type { RecordedConnection } from './connection.ts';
 import { keptConnectionOf } from './registry-lookup.ts';
@@ -12,6 +18,17 @@ type Decision = Result.Result<readonly ConnectionEvent[], NotFound | Conflict | 
 const modelPointer = '/model';
 
 const takesNoModel = 'This connection takes no model, because nothing given here lets members write to Auto.';
+
+function modelWanted(label: string): string {
+  return `Choose a model for this connection. With the ${label}, members can write to Auto, and Auto needs a model to answer them.`;
+}
+
+function unconnectedWithoutAModel(name: string, label: string): InvalidInput {
+  return new InvalidInput({
+    detail: `The connection ${name} needs a model before it can be connected.`,
+    issues: [{ pointer: modelPointer, detail: modelWanted(label) }],
+  });
+}
 
 function modelNotTaken(name: string, detail: string): InvalidInput {
   return new InvalidInput({
@@ -35,8 +52,23 @@ export function holdsTheChat(
   return chat.through === 'gateway' ? status === 'connected' : held.some(({ name }) => name === chat.credential);
 }
 
+function chatOpenedBy(
+  chat: ChatOffered | undefined,
+  given: Readonly<Record<string, string>>,
+): ChatThroughAnAppCredential | undefined {
+  return chat?.through === 'app_credential' && Object.hasOwn(given, chat.credential) ? chat : undefined;
+}
+
 export function opensTheChat(chat: ChatOffered | undefined, given: Readonly<Record<string, string>>): boolean {
-  return chat?.through === 'app_credential' && Object.hasOwn(given, chat.credential);
+  return chatOpenedBy(chat, given) !== undefined;
+}
+
+export function chatOpenedWithoutAModel(
+  saved: string | null,
+  { model, chat }: Pick<CredentialGiving, 'model' | 'chat'>,
+  given: Readonly<Record<string, string>>,
+): ChatThroughAnAppCredential | undefined {
+  return model === undefined && saved === null ? chatOpenedBy(chat, given) : undefined;
 }
 
 function issueOfTheModelGiven(name: string, opens: boolean, { notOffered }: ModelGiven): InvalidInput | undefined {
@@ -46,14 +78,19 @@ function issueOfTheModelGiven(name: string, opens: boolean, { notOffered }: Mode
   return notOffered === undefined ? undefined : modelNotTaken(name, notOffered);
 }
 
-export type ModelAtConnect = Pick<CredentialGiving, 'model' | 'chat'>;
+export type ModelAtConnect = Pick<CredentialGiving, 'model' | 'chat' | 'waitsForAModel'>;
 
 export function modelRefusalAtConnect(
-  { connection }: Pick<KeptConnection, 'connection'>,
-  { model, chat }: ModelAtConnect,
+  { connection, model: saved }: Pick<KeptConnection, 'connection' | 'model'>,
+  choice: ModelAtConnect,
   given: Readonly<Record<string, string>>,
 ): InvalidInput | undefined {
-  return model === undefined ? undefined : issueOfTheModelGiven(connection.name, opensTheChat(chat, given), model);
+  const { model, chat, waitsForAModel } = choice;
+  if (model !== undefined) {
+    return issueOfTheModelGiven(connection.name, opensTheChat(chat, given), model);
+  }
+  const waiting = waitsForAModel === true ? chatOpenedWithoutAModel(saved, choice, given) : undefined;
+  return waiting === undefined ? undefined : unconnectedWithoutAModel(connection.name, waiting.label);
 }
 
 function modelSetOf({ connection, model: saved }: KeptConnection, { model }: ModelGiven): readonly ConnectionEvent[] {

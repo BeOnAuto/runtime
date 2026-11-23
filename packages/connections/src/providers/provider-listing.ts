@@ -222,7 +222,9 @@ export function chatOfferedOn(provider: Provider, way: CredentialWay, hosting: C
     provider.entry.chat === undefined
       ? undefined
       : offeredAppCredentialsOf(provider, way, hosting).find(({ destination }) => destination.chat !== undefined);
-  return opening === undefined ? undefined : { through: 'app_credential', credential: opening.credential.name };
+  return opening === undefined
+    ? undefined
+    : { through: 'app_credential', credential: opening.credential.name, label: opening.credential.description };
 }
 
 function chatListedOf(provider: Provider, way: CredentialWay, { opensSockets, chats }: ListingOfTheRuntime) {

@@ -140,15 +140,39 @@ describe('the chat of a connection, where it is left out', () => {
   });
 });
 
+const unwaited: readonly (readonly [string, HarnessOptions, Readonly<Record<string, unknown>>, CallerIdentity])[] = [
+  ['where the credential that lets members write is not given', chatServer, {}, ada],
+  [
+    'where the server lists no model to choose',
+    { ...chatServer, chatModels: fakeChatModels([]) },
+    { app_credentials: writingToAuto },
+    ada,
+  ],
+  [
+    'for a caller who may not choose the model',
+    { ...chatServer, decidedBy: settingDeniedToGrace },
+    { app_credentials: writingToAuto },
+    grace,
+  ],
+];
+
 describe('connecting where members can write to Auto, by give_credential', () => {
-  it('goes through for an admin who gives the credential that lets members write and no model, recording no model', async () => {
+  it('waits for a model where the server lists one and none is saved, refusing at its field and keeping nothing', async () => {
     const h = harness(chatServer);
 
     const { given } = await connectedWith(h, { app_credentials: writingToAuto });
 
-    expect(given).toMatchObject({
+    expect(given).toMatchObject(atTheModel);
+    expect(h.secrets.values().size).toBe(0);
+    expect(await typesOf(h)).toEqual(addedAndLinked);
+  });
+
+  it.each(unwaited)('does not wait %s, recording no model', async (_case, options, given, caller) => {
+    const h = harness(options);
+
+    expect((await connectedWith(h, given, caller)).given).toMatchObject({
       status: 'succeeded',
-      output: { status: 'connected', chat: { held: true, model: null, may_set_model: true } },
+      output: { status: 'connected', chat: { model: null } },
     });
     expect(await typesOf(h)).toEqual([...addedAndLinked, 'connection_approved', 'connection_connected']);
   });
@@ -189,7 +213,7 @@ describe('the model given at Connect, by give_credential', () => {
 });
 
 describe('connecting again, or where the server answers no chat, by give_credential', () => {
-  it('keeps the saved model when connected again, and records a model that changes it', async () => {
+  it('keeps the saved model when connected again, records a model that changes it, and waits for none', async () => {
     const h = harness(chatServer);
     const { id } = await connectedWith(h, { app_credentials: writingToAuto, model: 'acme/fast' });
     const again = await reconnected(h, id);
@@ -203,7 +227,7 @@ describe('connecting again, or where the server answers no chat, by give_credent
     });
   });
 
-  it('takes no model on a server that answers no chat', async () => {
+  it('takes no model and waits for none on a server that answers no chat', async () => {
     const h = harness(theCloud);
 
     expect((await connectedWith(h, { app_credentials: writingToAuto, model: 'acme/fast' })).given).toMatchObject(

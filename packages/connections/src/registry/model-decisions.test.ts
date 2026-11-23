@@ -12,7 +12,7 @@ const connection = 'connection-1';
 
 const ada = { id: 'person:ada', name: 'Ada Lovelace' } as const;
 
-const chat: ChatOffered = { through: 'app_credential', credential: 'app_level_token' };
+const chat: ChatOffered = { through: 'app_credential', credential: 'app_level_token', label: 'Chat app-level token' };
 
 const throughItsGateway: ChatOffered = { through: 'gateway' };
 
@@ -162,9 +162,45 @@ const connectings = [
     outcome: ['connection_model_set acme/fast', ...connected],
   },
   {
-    name: 'records no model where none is given',
+    name: 'records no model where none is given and none can be chosen here',
     facts: [added, linked],
     command: giving,
+    outcome: connected,
+  },
+  {
+    name: 'waits for a model where one can be chosen and none is saved, refusing at its field',
+    facts: [added, linked],
+    command: { ...giving, waitsForAModel: true },
+    outcome: atTheModel,
+  },
+  {
+    name: 'does not wait where the model is saved already, as when it is connected again',
+    facts: [added, linked, modelSet('acme/fast')],
+    command: { ...giving, waitsForAModel: true },
+    outcome: connected,
+  },
+  {
+    name: 'does not wait where the model is given, and records it',
+    facts: [added, linked],
+    command: { ...giving, model: fast, waitsForAModel: true },
+    outcome: ['connection_model_set acme/fast', ...connected],
+  },
+  {
+    name: 'does not wait where the credential that lets members write is not given',
+    facts: [added, linked],
+    command: { ...giving, app_secret_ids: {}, waitsForAModel: true },
+    outcome: connected,
+  },
+  {
+    name: 'does not wait where no member can write to Auto here',
+    facts: [added, linked],
+    command: { ...givingWithoutAChat, waitsForAModel: true },
+    outcome: connected,
+  },
+  {
+    name: 'does not wait for a chat that goes through the connection’s gateway, which no credential given here opens',
+    facts: [added, linked],
+    command: { ...givingWithoutAChat, chat: throughItsGateway, waitsForAModel: true },
     outcome: connected,
   },
   {

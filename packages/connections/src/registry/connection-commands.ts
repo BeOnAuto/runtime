@@ -59,9 +59,10 @@ export interface ModelGiven {
   readonly notOffered?: string;
 }
 
-interface ChatThroughAnAppCredential {
+export interface ChatThroughAnAppCredential {
   readonly through: 'app_credential';
   readonly credential: string;
+  readonly label: string;
 }
 
 interface ChatThroughItsGateway {
@@ -78,6 +79,7 @@ export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly app_secret_ids?: Readonly<Record<string, string>>;
   readonly model?: ModelGiven;
   readonly chat?: ChatOffered;
+  readonly waitsForAModel?: true;
 }
 
 export interface WayChoice extends LinkUse {

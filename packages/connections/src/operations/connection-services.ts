@@ -43,6 +43,7 @@ interface ChatThroughAGateway {
 }
 
 export interface ChatModels {
+  readonly listsAModel: Effect.Effect<boolean>;
   readonly refusalOf: (model: string) => Effect.Effect<string | undefined>;
   readonly throughAGateway?: ChatThroughAGateway;
 }
