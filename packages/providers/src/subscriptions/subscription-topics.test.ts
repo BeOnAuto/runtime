@@ -1,8 +1,14 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ofEachSubscription, overASocket } from '../testing/event-destinations.ts';
-import { declaredDestinations, postsOfEachRoom } from '../testing/subscription-apps.ts';
+import type { Destination } from '../events/destination-fields.ts';
+import { aPost, mapping, ofEachSubscription, ofTheApp, overASocket, roomType } from '../testing/event-destinations.ts';
+import {
+  declaredDestinations,
+  placedPostTypes,
+  postsOfEachRoom,
+  reportedDestinations,
+} from '../testing/subscription-apps.ts';
 import {
   aPostIn,
   alpha,
@@ -21,6 +27,7 @@ import {
   requestsAskerOf,
   topicOf,
   triggersAskerOf,
+  triggerTopicsOf,
   type ConnectionTrigger,
   type WaitingRequest,
 } from './subscription-topics.ts';
@@ -54,7 +61,7 @@ describe('the requests the loop asks', () => {
       await Effect.runPromise(
         askerCounting(() => {
           reads.count += 1;
-        })({ ...alpha, arranged: new Map() }),
+        })({ ...alpha, taken: new Map() }),
       ),
     ).toEqual([]);
     expect(reads.count).toBe(0);
@@ -62,15 +69,15 @@ describe('the requests the loop asks', () => {
 
   it('name the topic of each request waiting through a connection whose destination is arranged, where it renders, with that destination', async () => {
     const reads = { count: 0 };
-    const arranged = new Map(byRequest.map((each) => ['tracker', each]));
+    const taken = new Map([['tracker', byRequest]]);
 
     expect(
       await Effect.runPromise(
         askerCounting(() => {
           reads.count += 1;
-        })({ ...alpha, arranged }),
+        })({ ...alpha, taken }),
       ),
-    ).toEqual([{ connection: 'tracker', topic: 'site', destination: arranged.get('tracker') }]);
+    ).toEqual([{ connection: 'tracker', topic: 'site', destination: byRequest[0] }]);
     expect(reads.count).toBe(1);
   });
 });
@@ -144,18 +151,18 @@ describe('the triggers the loop asks', () => {
 });
 
 describe('the topics the triggers ask for', () => {
-  const arranged = new Map([
-    ...postsOfEachRoom.map((each) => ['tracker', each] as const),
-    ...byRequest.map((each) => ['mail', each] as const),
+  const taken = new Map([
+    ['tracker', postsOfEachRoom],
+    ['mail', byRequest],
   ]);
 
   function askedFor(...triggers: readonly ConnectionTrigger[]) {
-    return Effect.runPromise(triggersAskerOf(() => Effect.succeed(triggers))({ ...alpha, arranged }));
+    return Effect.runPromise(triggersAskerOf(() => Effect.succeed(triggers))({ ...alpha, taken }));
   }
 
   it('are the topic the destination names for a request in the same place, by what the entry declares', async () => {
     expect(await askedFor(aPostIn('site'))).toEqual(
-      await Effect.runPromise(requestsAskerOf(() => Effect.succeed([waitingIn('site')]))({ ...alpha, arranged })),
+      await Effect.runPromise(requestsAskerOf(() => Effect.succeed([waitingIn('site')]))({ ...alpha, taken })),
     );
   });
 
@@ -180,8 +187,75 @@ describe('the topics the triggers ask for', () => {
       }),
     );
 
-    expect(await Effect.runPromise(asker({ ...alpha, arranged: new Map() }))).toEqual([]);
+    expect(await Effect.runPromise(asker({ ...alpha, taken: new Map() }))).toEqual([]);
     expect(reads.count).toBe(0);
+  });
+});
+
+const placedRooms = [...placedPostTypes.slice(0, 1), { ...roomType, subject: { title: 'Room', required: true } }];
+
+const roomsListed = {
+  type: roomType.type,
+  when: {},
+  id: ['$message.payload#/id'],
+  subject: '$message.payload#/room',
+  topic: 'rooms in {{ subject }}',
+};
+
+const [postsByHook, roomsByCheck] = reportedDestinations(
+  placedRooms,
+  mapping(
+    { ...ofEachSubscription, topic: 'posts in {{ with.project }}' },
+    { ...aPost, topic: 'posts in {{ subject }}' },
+  ),
+  {
+    type: 'polling',
+    read: { tool: 'list_rooms', with: { room: '{{ topic }}' }, list: '/rooms', order: 'oldest_first', cursor: '/at' },
+    events: [roomsListed],
+  },
+);
+
+const byTheApp = reportedDestinations(placedRooms, mapping(ofTheApp, aPost));
+
+function aRoomIn(subject: string): ConnectionTrigger {
+  return { connection: 'tracker', type: roomType.type, subject };
+}
+
+async function askedThrough(...listed: readonly (Destination | undefined)[]) {
+  const asking = { ...alpha, taken: new Map([['tracker', listed.filter((each) => each !== undefined)]]) };
+  return [
+    ...(await Effect.runPromise(triggersAskerOf(() => Effect.succeed([aPostIn('site'), aRoomIn('site')]))(asking))),
+    ...(await Effect.runPromise(requestsAskerOf(() => Effect.succeed([waitingIn('site')]))(asking))),
+  ];
+}
+
+function topicsOn(...destinations: readonly Destination[]) {
+  return Effect.runPromise(
+    Effect.forEach(destinations, (destination) => triggerTopicsOf(destination, aPostIn('site'))),
+  );
+}
+
+describe('the destination each asked place is heard through, where an entry lists several', () => {
+  it('is, for a trigger, the first destination taken whose events carry its type, and for a request the first taken', async () => {
+    expect(await askedThrough(postsByHook, roomsByCheck)).toEqual([
+      { connection: 'tracker', topic: 'posts in site', destination: postsByHook },
+      { connection: 'tracker', topic: 'rooms in site', destination: roomsByCheck },
+      { connection: 'tracker', topic: 'posts in site', destination: postsByHook },
+    ]);
+  });
+
+  it('is none for a type no destination taken carries, nor for a request where the first taken gives a place no topic', async () => {
+    expect(await askedThrough(roomsByCheck)).toEqual([
+      { connection: 'tracker', topic: 'rooms in site', destination: roomsByCheck },
+    ]);
+  });
+
+  it('is rendered from no template of a destination that maps no event, or maps the type without a topic', async () => {
+    expect(await topicsOn(...byRequest, ...byTheApp)).toEqual([[], []]);
+  });
+
+  it('is none where the first destination taken that carries the type is heard without a subscription', async () => {
+    expect(await askedThrough(...byTheApp, postsByHook)).toEqual([]);
   });
 });
 

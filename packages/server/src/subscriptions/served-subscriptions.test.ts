@@ -14,6 +14,7 @@ import { Effect, Option, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { requestWaysOf } from '../composition/served-tool-access.ts';
+import { askedThroughTheFirstTaken } from '../testing/subscriptions/asked-subscriptions.ts';
 import { subscriptionLoopPartsOf, subscriptionsServingOf, type SubscriptionsServing } from './served-subscriptions.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -121,10 +122,10 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
       ...ports,
       connectionsOf: () => Effect.succeed(connections),
       askers: [
-        ({ arranged: through }) =>
+        ({ taken: through }) =>
           Effect.sync(() => {
             arranged.push(...through.keys());
-            return askedAt(through, theRepository);
+            return askedThroughTheFirstTaken(through, theRepository);
           }),
       ],
     })(alpha),
@@ -141,9 +142,6 @@ async function roundOverTheShippedEntries(webhookUrl?: string) {
     })),
   };
 }
-
-const askedAt = (at: ReadonlyMap<string, EventDestination>, topic: string) =>
-  [...at].map(([connection, destination]: readonly [string, EventDestination]) => ({ connection, topic, destination }));
 
 describe('the entries the runtime ships', () => {
   it('declare one destination arranged by a call for each subscription, GitHub’s', async () => {
@@ -170,12 +168,12 @@ function roundOfTheTracker(ledger: ReturnType<typeof aLedger>, asked: (connectio
     ...portsOfTheServerOver(ledger),
     connectionsOf: () => Effect.succeed([theTracker]),
     askers: [
-      ({ arranged }) =>
+      ({ taken }) =>
         Effect.sync(() => {
-          for (const connection of arranged.keys()) {
+          for (const connection of taken.keys()) {
             asked(connection);
           }
-          return askedAt(arranged, 'site');
+          return askedThroughTheFirstTaken(taken, 'site');
         }),
     ],
   });
@@ -223,7 +221,7 @@ describe('a topic whose values would change the address its entry writes', () =>
     const round = subscriptionLoopOf({
       ...subscriptionLoopPortsOf(subscriptionLoopPartsOf(serving)),
       connectionsOf: () => Effect.succeed([theTracker]),
-      askers: [({ arranged }) => Effect.succeed(askedAt(arranged, '../../user'))],
+      askers: [({ taken }) => Effect.succeed(askedThroughTheFirstTaken(taken, '../../user'))],
     });
     await Effect.runPromise(round(alpha));
 
@@ -237,9 +235,9 @@ describe('a topic whose values would change the address its entry writes', () =>
 describe('the asker the server composes', () => {
   it('reads the open requests of the playbook once a destination is arranged', async () => {
     const [asker] = portsOfTheServerOver(aLedger()).askers;
-    const arranged = new Map(declared.map((each) => ['tracker', each]));
+    const taken = new Map([['tracker', declared]]);
 
-    expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, arranged }))).toEqual([]);
+    expect(await Effect.runPromise(Option.getOrThrow(Option.fromNullishOr(asker))({ ...alpha, taken }))).toEqual([]);
   });
 });
 

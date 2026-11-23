@@ -1,19 +1,23 @@
-import { cardMoved, overTheBoardsSocket, tracker } from '@on.auto/providers/testing';
+import { cardMoved, ofEachSubscription, overTheBoardsSocket, providersOf, tracker } from '@on.auto/providers/testing';
+import { Array as Arr, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
   archived,
   autoCloud,
+  boardsEntryOf,
   boardsSentBy,
+  byChecking,
   bySubscription,
   byTheApp,
   heldRefused,
   heldUnrefused,
   noneHeld,
+  placedCard,
   theServerWithAnAddress,
   theServerWithNoAddress,
 } from '../testing/boards-reported.ts';
-import { hearingOf, nothingReceived, type Hearing } from './connection-hearing.ts';
+import { hearingOf, nothingReceived, speedOf, type EventsReceived, type Hearing } from './connection-hearing.ts';
 
 const subscribedOrOverASocket = boardsSentBy(bySubscription, overTheBoardsSocket);
 
@@ -123,5 +127,72 @@ describe('whether this runtime hears an event a connection reports', () => {
     ];
 
     expect(answers.map((answer) => shownAs(answer))).toEqual(['not heard', 'not heard']);
+  });
+});
+
+const movedOnABoard = {
+  type: cardMoved.type,
+  when: {},
+  id: ['$message.payload#/board', '$message.payload#/serial'],
+  subject: '$message.payload#/board',
+  data: { column: '$message.payload#/column' },
+  topic: 'moved on {{ subject }}',
+};
+
+const checkingMoves = { ...byChecking, events: [movedOnABoard] };
+
+const checkingArchives = {
+  type: 'polling',
+  read: { tool: 'list_archived', with: { board: '{{ topic }}' }, list: '/cards', order: 'newest_first', cursor: '/at' },
+  events: [
+    {
+      type: archived.type,
+      when: {},
+      id: ['$message.payload#/serial'],
+      subject: '$message.payload#/board',
+      topic: 'archived on {{ subject }}',
+    },
+  ],
+};
+
+const hookedCards = {
+  ...ofEachSubscription,
+  topic: 'cards of {{ with.project }}',
+  events: [
+    {
+      type: cardMoved.type,
+      when: { '$request.body#/kind': ['card'] },
+      id: ['$request.body#/board', '$request.body#/card/serial'],
+      subject: '$request.body#/board',
+      topic: 'cards of {{ subject }}',
+    },
+  ],
+};
+
+const checkedTypes = [placedCard, { ...archived, subject: { title: 'Board', required: true } }];
+
+const checkedThroughSeveral = Option.getOrThrow(
+  Arr.head(
+    providersOf(boardsEntryOf([hookedCards, checkingMoves, checkingArchives], undefined, checkedTypes)).providers,
+  ),
+).entry;
+
+function heardAs(received: EventsReceived, type: string) {
+  return speedOf(hearingOf({ app_credentials: heldUnrefused }, checkedThroughSeveral, received, type));
+}
+
+describe('the way each event type is heard, where an entry checks the app through several reads', () => {
+  it('is the first destination that reports the type and that the runtime can take, its pace that destination’s', () => {
+    expect([
+      heardAs(theServerWithAnAddress, cardMoved.type),
+      heardAs(theServerWithNoAddress, cardMoved.type),
+      heardAs(theServerWithNoAddress, archived.type),
+      heardAs(theServerWithAnAddress, archived.type),
+    ]).toEqual([
+      { speed: 'instant' },
+      { speed: 'polling', polling_interval_seconds: 120 },
+      { speed: 'polling', polling_interval_seconds: 60 },
+      { speed: 'polling', polling_interval_seconds: 60 },
+    ]);
   });
 });

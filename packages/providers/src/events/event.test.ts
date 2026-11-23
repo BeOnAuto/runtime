@@ -25,14 +25,10 @@ describe('the events part of an entry', () => {
     ]).toEqual([[], [], [], []]);
   });
 
-  it('names one destination at least, of each type once', () => {
+  it('names one destination at least, of each type once but polling', () => {
     expect(sentBy()).toMatchObject([['/events/destinations', expect.any(String)]]);
-    expect(sentBy(ofEachSubscription, ofTheApp)).toEqual([
-      [
-        '/events/destinations/1/type',
-        'Expected a type no earlier destination has, since an entry takes one destination of each type, in the order to try them',
-      ],
-    ]);
+    expect(sentBy(ofEachSubscription, ofTheApp)).toEqual([['/events/destinations/1/type', expect.any(String)]]);
+    expect(sentBy(overASocket, intoAQueue, overASocket)).toEqual([['/events/destinations/2/type', expect.any(String)]]);
   });
 
   it('refuses a type, a way of arranging and a queue it does not know', () => {

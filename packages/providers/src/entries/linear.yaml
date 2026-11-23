@@ -5,6 +5,9 @@ summary: Lets your playbooks find, create and update issues, projects and commen
 website: https://linear.app/docs/mcp
 type: mcp
 url: https://mcp.linear.app/mcp
+marks:
+  reads:
+    - list_issues
 credentials:
   - kind: authorization
     account_types: [service, personal]
@@ -15,3 +18,236 @@ credentials:
       write: Create, change, archive and delete issues, projects, comments and other data as the Linear account.
     clients: [registered, metadata_document, dynamic]
     description: Sign in to Linear, choose a workspace and allow access.
+events:
+  types:
+    - type: app.linear.issue.created
+      title: An issue is created
+      subject:
+        title: Team
+        required: true
+        description: The team the issue is in, by its name as Linear shows it, such as Engineering.
+      data:
+        type: object
+        properties:
+          identifier:
+            type: string
+            description: The issue's ID as Linear shows it, such as ENG-123.
+          title:
+            type: string
+            description: The title of the issue.
+          url:
+            type: string
+            description: The link to the issue in Linear.
+          status:
+            type: string
+            description: The name of the issue's status, such as In Progress or Done.
+          status_type:
+            type: string
+            description: >-
+              The kind of status the issue is in, whatever the team calls it: triage, backlog, unstarted, started,
+              completed or canceled.
+          priority:
+            type: string
+            description: The issue's priority, such as Urgent, High, Medium, Low or No priority.
+          assignee:
+            type: string
+            description: The name of the person the issue is assigned to, if anyone.
+          created_at:
+            type: string
+            description: When the issue was created.
+          completed_at:
+            type: string
+            description: When the issue was completed, if it is.
+    - type: app.linear.issue.updated
+      title: An issue is created or updated
+      subject:
+        title: Team
+        required: true
+        description: The team the issue is in, by its name as Linear shows it, such as Engineering.
+      data:
+        type: object
+        properties:
+          identifier:
+            type: string
+            description: The issue's ID as Linear shows it, such as ENG-123.
+          title:
+            type: string
+            description: The title of the issue.
+          url:
+            type: string
+            description: The link to the issue in Linear.
+          status:
+            type: string
+            description: The name of the issue's status, such as In Progress or Done.
+          status_type:
+            type: string
+            description: >-
+              The kind of status the issue is in, whatever the team calls it: triage, backlog, unstarted, started,
+              completed or canceled.
+          priority:
+            type: string
+            description: The issue's priority, such as Urgent, High, Medium, Low or No priority.
+          assignee:
+            type: string
+            description: The name of the person the issue is assigned to, if anyone.
+          created_at:
+            type: string
+            description: When the issue was created.
+          completed_at:
+            type: string
+            description: When the issue was completed, if it is.
+    - type: app.linear.issue.completed
+      title: An issue is completed
+      subject:
+        title: Team
+        required: true
+        description: The team the issue is in, by its name as Linear shows it, such as Engineering.
+      data:
+        type: object
+        properties:
+          identifier:
+            type: string
+            description: The issue's ID as Linear shows it, such as ENG-123.
+          title:
+            type: string
+            description: The title of the issue.
+          url:
+            type: string
+            description: The link to the issue in Linear.
+          status:
+            type: string
+            description: The name of the issue's status, such as In Progress or Done.
+          status_type:
+            type: string
+            description: >-
+              The kind of status the issue is in, whatever the team calls it: triage, backlog, unstarted, started,
+              completed or canceled.
+          priority:
+            type: string
+            description: The issue's priority, such as Urgent, High, Medium, Low or No priority.
+          assignee:
+            type: string
+            description: The name of the person the issue is assigned to, if anyone.
+          created_at:
+            type: string
+            description: When the issue was created.
+          completed_at:
+            type: string
+            description: When the issue was completed, if it is.
+  identity:
+    tool: whoami
+    identified:
+      id: /user/id
+      name: /user/name
+    account: /workspace/id
+  destinations:
+    - type: polling
+      read:
+        tool: list_issues
+        with:
+          team: '{{ topic | remove_first: "issues created in " }}'
+          createdAt: '{{ since }}'
+          orderBy: createdAt
+          limit: 50
+          cursor: '{{ page_token }}'
+          fields:
+            - uuid
+            - title
+            - url
+            - createdAt
+            - updatedAt
+            - completedAt
+            - status
+            - statusType
+            - priority
+            - assignee
+            - team
+            - createdById
+        start: '{{ now }}'
+        list: /issues
+        order: newest_first
+        cursor: /createdAt
+        next_page_token: /cursor
+      events:
+        - type: app.linear.issue.created
+          when: {}
+          id: [$message.payload#/uuid]
+          time: $message.payload#/createdAt
+          subject: $message.payload#/team
+          topic: 'issues created in {{ subject }}'
+          actor: $message.payload#/createdById
+          data:
+            identifier: $message.payload#/id
+            title: $message.payload#/title
+            url: $message.payload#/url
+            status: $message.payload#/status
+            status_type: $message.payload#/statusType
+            priority: $message.payload#/priority/name
+            assignee: $message.payload#/assignee
+            created_at: $message.payload#/createdAt
+            completed_at: $message.payload#/completedAt
+    - type: polling
+      read:
+        tool: list_issues
+        with:
+          team: '{{ topic | remove_first: "issues created or updated in " }}'
+          updatedAt: '{{ since }}'
+          orderBy: updatedAt
+          limit: 50
+          cursor: '{{ page_token }}'
+          fields: [uuid, title, url, createdAt, updatedAt, completedAt, status, statusType, priority, assignee, team]
+        start: '{{ now }}'
+        list: /issues
+        order: newest_first
+        cursor: /updatedAt
+        next_page_token: /cursor
+      events:
+        - type: app.linear.issue.updated
+          when: {}
+          id: [$message.payload#/uuid, $message.payload#/updatedAt]
+          time: $message.payload#/updatedAt
+          subject: $message.payload#/team
+          topic: 'issues created or updated in {{ subject }}'
+          data:
+            identifier: $message.payload#/id
+            title: $message.payload#/title
+            url: $message.payload#/url
+            status: $message.payload#/status
+            status_type: $message.payload#/statusType
+            priority: $message.payload#/priority/name
+            assignee: $message.payload#/assignee
+            created_at: $message.payload#/createdAt
+            completed_at: $message.payload#/completedAt
+    - type: polling
+      read:
+        tool: list_issues
+        with:
+          team: '{{ topic | remove_first: "issues completed in " }}'
+          updatedAt: '{{ since }}'
+          completedAt: '{{ since }}'
+          orderBy: updatedAt
+          limit: 50
+          cursor: '{{ page_token }}'
+          fields: [uuid, title, url, createdAt, updatedAt, completedAt, status, statusType, priority, assignee, team]
+        start: '{{ now }}'
+        list: /issues
+        order: newest_first
+        cursor: /updatedAt
+        next_page_token: /cursor
+      events:
+        - type: app.linear.issue.completed
+          when: {}
+          id: [$message.payload#/uuid, $message.payload#/completedAt]
+          time: $message.payload#/completedAt
+          subject: $message.payload#/team
+          topic: 'issues completed in {{ subject }}'
+          data:
+            identifier: $message.payload#/id
+            title: $message.payload#/title
+            url: $message.payload#/url
+            status: $message.payload#/status
+            status_type: $message.payload#/statusType
+            priority: $message.payload#/priority/name
+            assignee: $message.payload#/assignee
+            created_at: $message.payload#/createdAt
+            completed_at: $message.payload#/completedAt

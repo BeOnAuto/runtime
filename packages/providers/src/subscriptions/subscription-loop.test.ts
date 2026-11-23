@@ -62,6 +62,39 @@ describe('the loop, from nothing arranged', () => {
   });
 });
 
+describe('the destinations the loop hands its askers', () => {
+  it('are, for each connection, those the runtime takes in the entry’s order, and none for a connection where none it takes is kept for each place', async () => {
+    const loop = loopOver([
+      over(declaredDestinations(ofEachSubscription, intoAQueue)),
+      over(declaredDestinations(overASocket), 'chat'),
+    ]);
+    const handed: (readonly (readonly [string, readonly string[]])[])[] = [];
+    const roundTaking = (receives: readonly ('webhook' | 'queue' | 'websocket')[]) =>
+      roundAt(
+        {
+          ...portsOf(loop, { receives }),
+          askers: [
+            ({ taken }) =>
+              Effect.sync(() => {
+                const seen: (readonly [string, readonly string[]])[] = [];
+                for (const [connection, each] of taken) {
+                  seen.push([connection, each.map(({ type }) => type)]);
+                }
+                handed.push(seen);
+                return [];
+              }),
+          ],
+        },
+        startedAt,
+      );
+
+    await roundTaking(['webhook', 'queue']);
+    await roundTaking(['queue', 'websocket']);
+
+    expect(handed).toEqual([[['tracker', ['webhook', 'queue']]], [['tracker', ['queue']]]]);
+  });
+});
+
 describe('the loop, from what is arranged', () => {
   it('removes what no asker names any more, and forgets its secret', async () => {
     const loop = loopOver([over(byRequest)], [inAlpha]);

@@ -93,11 +93,11 @@ export interface AskedKey extends SubscriptionKey {
 }
 
 function askerOf(asked: Changing<AskedKey>): Asker {
-  return ({ arranged }) =>
+  return ({ taken }) =>
     Effect.sync(() =>
       asked
         .now()
-        .flatMap(({ connection, topic, destination = arranged.get(connection) }) =>
+        .flatMap(({ connection, topic, destination = taken.get(connection)?.[0] }) =>
           destination === undefined ? [] : [{ connection, topic, destination }],
         ),
     );

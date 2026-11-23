@@ -99,6 +99,109 @@ describe('the fields a destination that checks the app takes', () => {
   });
 });
 
+const checkedRoom = {
+  type: roomType.type,
+  when: {},
+  id: ['$message.payload#/id'],
+  subject: '$message.payload#/room',
+  data: { name: '$message.payload#/name' },
+};
+
+const placedRooms = [...placedTypes.slice(0, 1), { ...roomType, subject: { title: 'Room', required: true } }];
+
+function checkingRooms(topic: string): Readonly<Record<string, unknown>> {
+  return {
+    type: 'polling',
+    read: {
+      tool: 'list_rooms',
+      with: { room: '{{ topic }}', after: '{{ since }}' },
+      list: '/rooms',
+      order: 'oldest_first',
+      cursor: '/at',
+    },
+    events: [{ ...checkedRoom, topic }],
+  };
+}
+
+function checkingPosts(topic: string): Readonly<Record<string, unknown>> {
+  return { ...checkedOldestFirst, events: [{ ...checkedPost, topic }] };
+}
+
+const postsByHook = mapping(
+  { ...ofEachSubscription, topic: 'posts in {{ with.project }}' },
+  { ...aPost, topic: 'posts in {{ subject }}' },
+);
+
+const takenTogether = [
+  {
+    what: 'two checks whose topics start apart',
+    destinations: [checkingPosts('posts in {{ subject }}'), checkingRooms('rooms in {{ subject }}')],
+  },
+  {
+    what: 'two checks whose topics part before either ends',
+    destinations: [checkingPosts('posts in {{ subject }}'), checkingRooms('room {{ subject }}')],
+  },
+  {
+    what: 'a later check of only what an earlier check reports, under the same topic',
+    destinations: [checkingPosts('{{ subject }}'), checkingPosts('{{ subject }}')],
+  },
+  {
+    what: 'a check of only what an earlier webhook reports, under the same topic',
+    destinations: [placedBy('{{ subject }}'), checkingPosts('{{ subject }}')],
+  },
+] as const;
+
+const refusedTogether = [
+  {
+    what: 'whose earlier topic starts with nothing written',
+    destinations: [checkingPosts('{{ subject }}'), checkingRooms('rooms in {{ subject }}')],
+  },
+  {
+    what: 'whose earlier topic starts the later',
+    destinations: [checkingPosts('posts {{ subject }}'), checkingRooms('posts in {{ subject }}')],
+  },
+  {
+    what: 'whose later topic starts the earlier',
+    destinations: [checkingPosts('posts in {{ subject }}'), checkingRooms('posts {{ subject }}')],
+  },
+  {
+    what: 'whose earlier topic writes no expression, and starts the later',
+    destinations: [checkingPosts('rooms'), checkingRooms('rooms in {{ subject }}')],
+  },
+  {
+    what: 'whose topics part only in the spaces a tag may trim',
+    destinations: [checkingPosts('in {{ subject }}'), checkingRooms('in {{- subject }}')],
+  },
+  {
+    what: 'whose earlier topic starts with a tag, read up to it',
+    destinations: [checkingPosts('room{% if true %}s{% endif %} {{ subject }}'), checkingRooms('rooms {{ subject }}')],
+  },
+  {
+    what: 'whose later topic starts as a webhook’s topic of its events does',
+    destinations: [postsByHook, checkingRooms('posts in {{ subject }}')],
+  },
+  {
+    what: 'whose later topic could render as the topic an earlier webhook gives a request',
+    destinations: [
+      mapping(ofEachSubscription, { ...aPost, topic: 'posts in {{ subject }}' }),
+      checkingRooms('rooms in {{ subject }}'),
+    ],
+  },
+] as const;
+
+describe('the topics of the destinations of one entry', () => {
+  it.each(takenTogether)('take $what', ({ destinations }) => {
+    expect(reporting(destinations, placedRooms)).toEqual([]);
+  });
+
+  it.each(refusedTogether)(
+    'refuse a later destination that reports an event the earlier does not, $what',
+    ({ destinations }) => {
+      expect(pathsOf(reporting(destinations, placedRooms))).toEqual(['/events/destinations/1/events/0/topic']);
+    },
+  );
+});
+
 describe('the events of a destination', () => {
   it('refuses an event whose when names no condition on a destination the service sends to', () => {
     expect(pathsOf(reporting([mapping(ofTheApp, { ...aPost, when: {} })], placedTypes))).toEqual([

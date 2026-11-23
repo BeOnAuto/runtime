@@ -16,7 +16,7 @@ import {
   startingNow,
   timeOf,
 } from '../testing/checked-loops.ts';
-import { ofEachSubscription } from '../testing/event-destinations.ts';
+import { aPost as aPostDelivered, mapping, ofEachSubscription } from '../testing/event-destinations.ts';
 import { loopOver, portsOf, roundAt, startedAt } from '../testing/subscription-loops.ts';
 import { failedAs, notOfferedAs } from '../testing/subscription-services.ts';
 
@@ -115,9 +115,11 @@ interface Change {
   readonly to: readonly object[];
 }
 
+const postsByHook = mapping(ofEachSubscription, { ...aPostDelivered, topic: '{{ subject }}' });
+
 const changes: readonly Change[] = [
-  { what: 'a check to a webhook', from: [checkedOldestFirst], to: [ofEachSubscription, checkedOldestFirst] },
-  { what: 'a webhook to a check', from: [ofEachSubscription, checkedOldestFirst], to: [checkedOldestFirst] },
+  { what: 'a check to a webhook', from: [checkedOldestFirst], to: [postsByHook, checkedOldestFirst] },
+  { what: 'a webhook to a check', from: [postsByHook, checkedOldestFirst], to: [checkedOldestFirst] },
 ];
 
 function through(destinations: readonly object[]) {

@@ -86,16 +86,15 @@ function sentAndTakenBy({ name, events, credentials }: ProviderEntry) {
 }
 
 describe('the events parts of the shipped providers', () => {
-  it('are written by GitHub and Slack Bot alone, so a provider of any other service that hears its events is one whoever runs the runtime adds', () => {
-    expect(declaring.map(({ entry }) => entry.name)).toEqual(['github', 'slack-bot']);
+  it('are written by GitHub, Linear and Slack Bot alone, so a provider of any other service that hears its events is one whoever runs the runtime adds', () => {
+    expect(declaring.map(({ entry }) => entry.name)).toEqual(['github', 'linear', 'slack-bot']);
   });
 
-  it("are GitHub's, a webhook made for each subscription by a request to its API, where its credential goes", () => {
+  it("are GitHub's, a webhook made for each subscription by a request to its API, where its credential goes, then a check of the same API", () => {
     const github = Result.getOrThrow(providerNamed(shipped, 'github'));
 
-    expect(github.entry.events?.destinations.map(({ type, per }) => [type, per])).toEqual([
-      ['webhook', 'subscription'],
-    ]);
+    expect(github.entry.events?.destinations.map(({ type }) => type)).toEqual(['webhook', 'polling', 'polling']);
+    expect(github.entry.events?.destinations[0]?.per).toBe('subscription');
     expect(requestOriginsOf(github.entry)).toEqual(['https://api.github.com']);
   });
 
@@ -190,7 +189,7 @@ function subscribingAt(url: string): ProviderEntry {
   return sending({ ...ofEachSubscription, subscribe, unsubscribe });
 }
 
-const readsThroughPost: ReadonlyArray<readonly [string, readonly string[]]> = [
+const markedReads: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['adobe-analytics', ['runReport']],
   [
     'amazon-ads',
@@ -227,15 +226,16 @@ const readsThroughPost: ReadonlyArray<readonly [string, readonly string[]]> = [
   ],
   ['google-analytics-admin', ['analyticsadmin.properties.runAccessReport']],
   ['google-search-console', ['webmasters.searchanalytics.query', 'searchconsole.urlInspection.index.inspect']],
+  ['linear', ['list_issues']],
   ['search-ads-360', ['searchads360.customers.searchAds360.search', 'searchads360.searchAds360Fields.search']],
 ];
 
 describe('the marks of the shipped providers', () => {
-  it('mark reads the operations of an HTTP API that only read through POST, and mark no tool acts, which its method marks', () => {
+  it('mark reads the operations of an HTTP API that only read through POST and the tool Linear’s checks call, and none acts', () => {
     const marking = shipped.providers.filter(({ entry }) => entry.marks !== undefined);
 
-    expect(marking.map(({ entry }) => [entry.name, entry.type, entry.marks])).toEqual(
-      readsThroughPost.map(([name, reads]: readonly [string, readonly string[]]) => [name, 'openapi', { reads }]),
+    expect(marking.map(({ entry }) => [entry.name, entry.marks])).toEqual(
+      markedReads.map(([name, reads]: readonly [string, readonly string[]]) => [name, { reads }]),
     );
   });
 });

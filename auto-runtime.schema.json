@@ -1782,7 +1782,7 @@
                       "additionalProperties": false
                     },
                     "minItems": 1,
-                    "description": "The ways the service sends what happens where a request waits, one of each type, in the order the runtime tries them, the first it can take serving"
+                    "description": "The ways the service sends what happens where a request waits, in the order the runtime tries them. There is one of each type, except polling, which may have one for each read. An event is heard through the first destination that reports it and that the runtime can take. A request's replies are heard through the first the runtime can take."
                   }
                 },
                 "required": ["destinations"],

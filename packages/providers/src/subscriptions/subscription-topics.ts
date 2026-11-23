@@ -6,6 +6,7 @@ import { Effect, Result, type Schema } from 'effect';
 
 import type { Destination } from '../events/destination-fields.ts';
 import type { AskedSubscription, Asker } from './subscription-ports.ts';
+import { isSubscribable, type Subscribable } from './subscription-records.ts';
 
 export interface PlaceOfARequest {
   readonly with: Readonly<Record<string, Schema.Json>>;
@@ -60,6 +61,20 @@ interface Through {
 
 type TopicsOf<Asked> = (destination: Destination, asked: Asked) => Effect.Effect<readonly (string | undefined)[]>;
 
+type DestinationOf<Asked> = (taken: readonly Destination[], asked: Asked) => Subscribable | undefined;
+
+function subscribableOrNone(destination: Destination | undefined): Subscribable | undefined {
+  return destination !== undefined && isSubscribable(destination) ? destination : undefined;
+}
+
+function arrangedForAPlace(taken: readonly Destination[]): Subscribable | undefined {
+  return subscribableOrNone(taken[0]);
+}
+
+function heardFor(taken: readonly Destination[], type: string): Subscribable | undefined {
+  return subscribableOrNone(taken.find(({ events = [] }) => events.some((event) => event.type === type)));
+}
+
 function keysOf(
   connection: string,
   destination: Destination,
@@ -70,13 +85,14 @@ function keysOf(
 
 function keysAskedBy<Asked extends Through>(
   asking: Effect.Effect<readonly Asked[]>,
-  arranged: ReadonlyMap<string, Destination>,
+  taken: ReadonlyMap<string, readonly Destination[]>,
+  destinationOf: DestinationOf<Asked>,
   topicsOf: TopicsOf<Asked>,
 ): Effect.Effect<readonly AskedSubscription[]> {
   return Effect.flatMap(asking, (asked) =>
     Effect.map(
       Effect.forEach(asked, (each) => {
-        const destination = arranged.get(each.connection);
+        const destination = destinationOf(taken.get(each.connection) ?? [], each);
         return destination === undefined
           ? Effect.succeed([])
           : Effect.map(topicsOf(destination, each), (topics) => keysOf(each.connection, destination, topics));
@@ -88,20 +104,23 @@ function keysAskedBy<Asked extends Through>(
 
 function askerOver<Asked extends Through>(
   readIn: (playbook: PlaybookAddress) => Effect.Effect<readonly Asked[]>,
+  destinationOf: DestinationOf<Asked>,
   topicsOf: TopicsOf<Asked>,
 ): Asker {
-  return ({ org, playbook, arranged }) =>
-    arranged.size === 0 ? Effect.succeed([]) : keysAskedBy(readIn({ org, playbook }), arranged, topicsOf);
+  return ({ org, playbook, taken }) =>
+    taken.size === 0 ? Effect.succeed([]) : keysAskedBy(readIn({ org, playbook }), taken, destinationOf, topicsOf);
 }
 
 export function requestsAskerOf(
   waitingIn: (playbook: PlaybookAddress) => Effect.Effect<readonly WaitingRequest[]>,
 ): Asker {
-  return askerOver(waitingIn, (destination, request) => Effect.map(topicOf(destination, request), (topic) => [topic]));
+  return askerOver(waitingIn, arrangedForAPlace, (destination, request) =>
+    Effect.map(topicOf(destination, request), (topic) => [topic]),
+  );
 }
 
 export function triggersAskerOf(
   triggersIn: (playbook: PlaybookAddress) => Effect.Effect<readonly ConnectionTrigger[]>,
 ): Asker {
-  return askerOver(triggersIn, triggerTopicsOf);
+  return askerOver(triggersIn, (taken, { type }) => heardFor(taken, type), triggerTopicsOf);
 }

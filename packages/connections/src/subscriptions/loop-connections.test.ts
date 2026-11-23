@@ -248,13 +248,13 @@ describe('the ports of the loop', () => {
         );
     const parts = partsOver(readOf('requests', waiting), readOf('triggers', []));
     const ports = subscriptionLoopPortsOf({ ...parts, registry: await aRegistry() });
-    const arranged = new Map(declared.map((each) => ['tracker', each]));
+    const taken = new Map([['tracker', declared]]);
 
     const named = (await Effect.runPromise(ports.connectionsOf(alpha))).map(({ connection }) => connection);
 
     expect(named).toEqual(['tracker', 'notes']);
-    expect(await Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, arranged })))).toEqual([
-      [{ connection: 'tracker', topic: 'site', destination: arranged.get('tracker') }],
+    expect(await Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, taken })))).toEqual([
+      [{ connection: 'tracker', topic: 'site', destination: declared[0] }],
       [],
     ]);
     expect(read).toEqual(['requests of alpha', 'triggers of alpha']);

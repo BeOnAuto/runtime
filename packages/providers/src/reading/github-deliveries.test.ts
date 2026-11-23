@@ -211,7 +211,11 @@ describe('the event a delivery GitHub’s webhook sends is', () => {
     );
     expect(
       events?.destinations.flatMap(({ events: mapped = [] }) => mapped.map(({ type, topic }) => [type, topic])),
-    ).toEqual(reported.map((type) => [type, '{{ subject }}']));
+    ).toEqual([
+      ...reported.map((type) => [type, '{{ subject }}']),
+      ['com.github.issues.opened', 'issues in {{ subject }}'],
+      ['com.github.pull_request.opened', 'pull requests in {{ subject }}'],
+    ]);
   });
 
   it('marked automatic where an app did it, whose account GitHub types Bot', () => {

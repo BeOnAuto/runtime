@@ -211,7 +211,7 @@ export interface LoopConnection {
 }
 
 export interface Asking extends PlaybookAddress {
-  readonly arranged: ReadonlyMap<string, Destination>;
+  readonly taken: ReadonlyMap<string, readonly Destination[]>;
 }
 
 export interface AskedSubscription extends SubscriptionKey {

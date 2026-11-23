@@ -15,32 +15,31 @@ import type {
   SubscriptionKey,
   SubscriptionLoopPorts,
 } from './subscription-ports.ts';
-import { earliest, isSubscribable, keyOf, type Subscribable } from './subscription-records.ts';
+import { earliest, isSubscribable, keyOf } from './subscription-records.ts';
 
 function isTakenBy(ports: SubscriptionLoopPorts, place: PlaybookAddress & { readonly connection: string }) {
   return ({ type }: Destination): boolean =>
     ports.receives(type) && (type === 'websocket' || type === 'polling' || ports.callbackOf(place, type) !== undefined);
 }
 
-function arrangedThrough(
+function takenThrough(
   ports: SubscriptionLoopPorts,
   playbook: PlaybookAddress,
   { connection, destinations }: LoopConnection,
-): Subscribable | undefined {
+): readonly Destination[] {
   const takes = isTakenBy(ports, { ...playbook, connection });
-  const taken = destinations.find((destination) => takes(destination));
-  return taken !== undefined && isSubscribable(taken) ? taken : undefined;
+  return destinations.filter((destination) => takes(destination));
 }
 
-function arrangedOf(
+function takenOf(
   ports: SubscriptionLoopPorts,
   playbook: PlaybookAddress,
   connections: readonly LoopConnection[],
-): ReadonlyMap<string, Subscribable> {
+): ReadonlyMap<string, readonly Destination[]> {
   return new Map(
     connections.flatMap((each) => {
-      const arranged = arrangedThrough(ports, playbook, each);
-      return arranged === undefined ? [] : [[each.connection, arranged] as const];
+      const taken = takenThrough(ports, playbook, each);
+      return taken.some((destination) => isSubscribable(destination)) ? [[each.connection, taken] as const] : [];
     }),
   );
 }
@@ -132,7 +131,7 @@ export function subscriptionLoopOf(
     Effect.gen(function* () {
       const now = yield* Clock.currentTimeMillis;
       const connections = yield* ports.connectionsOf(playbook);
-      const asking = { ...playbook, arranged: arrangedOf(ports, playbook, connections) };
+      const asking = { ...playbook, taken: takenOf(ports, playbook, connections) };
       const asked = yield* Effect.forEach(ports.askers, (asker) => asker(asking));
       const recorded = yield* ports.records.read(playbook);
       const byName = new Map(connections.map((each) => [each.connection, each]));

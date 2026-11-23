@@ -9,6 +9,7 @@ import {
   type Destination,
   type DestinationIssue,
 } from './destination-fields.ts';
+import { sharedTopicIssuesOf } from './destination-topics.ts';
 import {
   answerIssuesOf,
   callIssuesOf,
@@ -32,12 +33,14 @@ const DestinationSchema = DestinationFieldsSchema.check(Schema.makeFilter(destin
 });
 
 const oneOfEachType =
-  'Expected a type no earlier destination has, since an entry takes one destination of each type, in the order to try them';
+  'Expected a type no earlier destination has, since an entry takes one destination of each type other than polling, in the order to try them';
 
 function typeIssuesOf(destinations: readonly Destination[]): readonly DestinationIssue[] {
   const types = destinations.map(({ type }) => type);
   return types.flatMap((type, index): readonly DestinationIssue[] =>
-    types.indexOf(type) === index ? [] : [{ path: ['destinations', index, 'type'], issue: oneOfEachType }],
+    type === 'polling' || types.indexOf(type) === index
+      ? []
+      : [{ path: ['destinations', index, 'type'], issue: oneOfEachType }],
   );
 }
 
@@ -94,7 +97,7 @@ const EventsFieldsSchema = Schema.Struct({
   identity: Schema.optionalKey(IdentitySchema),
   destinations: Schema.Array(DestinationSchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways the service sends what happens where a request waits, one of each type, in the order the runtime tries them, the first it can take serving',
+      "The ways the service sends what happens where a request waits, in the order the runtime tries them. There is one of each type, except polling, which may have one for each read. An event is heard through the first destination that reports it and that the runtime can take. A request's replies are heard through the first the runtime can take.",
   }),
 });
 
@@ -188,6 +191,7 @@ function actorIssuesOf(destinations: readonly Destination[]): readonly Destinati
 function eventsIssuesOf({ types = [], identity, destinations }: EventsFields): readonly DestinationIssue[] {
   return [
     ...typeIssuesOf(destinations),
+    ...sharedTopicIssuesOf(destinations),
     ...declaredTypeIssuesOf(types),
     ...mappedTypeIssuesOf(types, destinations),
     ...subjectIssuesOf(types, destinations),

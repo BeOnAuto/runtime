@@ -258,3 +258,73 @@ events:
             author: $request.body#/pull_request/user/login
             html_url: $request.body#/pull_request/html_url
             merged: $request.body#/pull_request/merged
+    - type: polling
+      read:
+        method: POST
+        url: https://api.github.com/graphql
+        body:
+          query: >-
+            query($owner: String!, $name: String!, $after: String) { repository(owner: $owner, name: $name) {
+            issues(first: 50, after: $after, orderBy: { field: CREATED_AT, direction: DESC }) { nodes { id number
+            title body url createdAt repository { nameWithOwner } author { __typename login ... on User { databaseId }
+            } } pageInfo { endCursor } } } }
+          variables:
+            owner: '{{ topic | remove_first: "issues in " | split: "/" | first }}'
+            name: '{{ topic | split: "/" | last }}'
+            after: '{{ page_token }}'
+        start: '{{ now }}'
+        list: /data/repository/issues/nodes
+        order: newest_first
+        cursor: /createdAt
+        next_page_token: /data/repository/issues/pageInfo/endCursor
+      events:
+        - type: com.github.issues.opened
+          when: {}
+          id: [$message.payload#/id]
+          time: $message.payload#/createdAt
+          subject: $message.payload#/repository/nameWithOwner
+          topic: 'issues in {{ subject }}'
+          automatic:
+            $message.payload#/author/__typename: [Bot]
+          actor: $message.payload#/author/databaseId
+          data:
+            number: $message.payload#/number
+            title: $message.payload#/title
+            body: $message.payload#/body
+            author: $message.payload#/author/login
+            html_url: $message.payload#/url
+    - type: polling
+      read:
+        method: POST
+        url: https://api.github.com/graphql
+        body:
+          query: >-
+            query($owner: String!, $name: String!, $after: String) { repository(owner: $owner, name: $name) {
+            pullRequests(first: 50, after: $after, orderBy: { field: CREATED_AT, direction: DESC }) { nodes { id
+            number title body url createdAt repository { nameWithOwner } author { __typename login ... on User {
+            databaseId } } } pageInfo { endCursor } } } }
+          variables:
+            owner: '{{ topic | remove_first: "pull requests in " | split: "/" | first }}'
+            name: '{{ topic | split: "/" | last }}'
+            after: '{{ page_token }}'
+        start: '{{ now }}'
+        list: /data/repository/pullRequests/nodes
+        order: newest_first
+        cursor: /createdAt
+        next_page_token: /data/repository/pullRequests/pageInfo/endCursor
+      events:
+        - type: com.github.pull_request.opened
+          when: {}
+          id: [$message.payload#/id]
+          time: $message.payload#/createdAt
+          subject: $message.payload#/repository/nameWithOwner
+          topic: 'pull requests in {{ subject }}'
+          automatic:
+            $message.payload#/author/__typename: [Bot]
+          actor: $message.payload#/author/databaseId
+          data:
+            number: $message.payload#/number
+            title: $message.payload#/title
+            body: $message.payload#/body
+            author: $message.payload#/author/login
+            html_url: $message.payload#/url

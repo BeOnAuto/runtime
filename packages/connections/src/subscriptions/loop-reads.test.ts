@@ -61,7 +61,7 @@ async function askedFor(...triggers: readonly ConnectionTrigger[]) {
       return triggers;
     }),
   );
-  return { asked: await Effect.runPromise(asker({ ...alpha, arranged: new Map() })), counted };
+  return { asked: await Effect.runPromise(asker({ ...alpha, taken: new Map() })), counted };
 }
 
 describe('the subscriptions the reads triggers name ask the loop for', () => {
@@ -107,7 +107,7 @@ const noSecrets = {
 };
 
 function askedBy(ports: ReturnType<typeof subscriptionLoopPortsOf>) {
-  return Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, arranged: new Map() })));
+  return Effect.runPromise(Effect.forEach(ports.askers, (asker) => asker({ ...alpha, taken: new Map() })));
 }
 
 describe('the ports of the loop', () => {
