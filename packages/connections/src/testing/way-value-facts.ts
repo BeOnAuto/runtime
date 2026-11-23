@@ -47,7 +47,7 @@ export const addedAsAServiceAccount: readonly (typeof ConnectionEventSchema.Type
   },
 ];
 
-export const addedActingAsItself: readonly (typeof ConnectionEventSchema.Type)[] = [
+const addedActingAsItself: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_added',
     data: {
@@ -69,3 +69,28 @@ export const addedActingAsItself: readonly (typeof ConnectionEventSchema.Type)[]
     context: acted,
   },
 ];
+
+const wayChosenAsAnInstalledApp: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_way_chosen',
+    data: {
+      ...ofTheConnection,
+      credential: {
+        kind: 'jwt_bearer',
+        permissions: 'application',
+        issuer: 'https://api.mail.example.com/apps',
+        client_id: '1234567',
+        token_request: {
+          method: 'POST',
+          url: 'https://api.mail.example.com/apps/installations/12345678/tokens',
+          issued: { access_token: '/token', expires_at: '/expires_at' },
+        },
+      },
+      says: {},
+      placeholders: { app: '1234567', installation: '12345678' },
+    },
+    context: acted,
+  },
+];
+
+export const keyFileWayFacts = [...addedActingAsItself, ...wayChosenAsAnInstalledApp];

@@ -5398,7 +5398,7 @@ type ListedConnectionCredential {
   issuer: String
 
   """
-  For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected
+  For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values
   """
   client_id: String
 
@@ -5416,6 +5416,11 @@ type ListedConnectionCredential {
   For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
   """
   parameters: JSON
+
+  """
+  For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends
+  """
+  token_request: ListedConnectionCredentialTokenRequest
 
   """
   For authorization, the authorization endpoint, where the server publishes no metadata
@@ -5466,6 +5471,35 @@ type ListedConnectionCredential {
   For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched
   """
   pattern: String
+}
+
+"""
+For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends
+"""
+type ListedConnectionCredentialTokenRequest {
+  """The method of the request, POST"""
+  method: String!
+
+  """The https URL the request is sent to, which lies under the issuer"""
+  url: String!
+
+  """
+  Where the answer names the access token and the time it ends, each as a JSON Pointer
+  """
+  issued: ListedConnectionCredentialTokenRequestIssued!
+}
+
+"""
+Where the answer names the access token and the time it ends, each as a JSON Pointer
+"""
+type ListedConnectionCredentialTokenRequestIssued {
+  """A JSON Pointer into the answer, to the access token"""
+  access_token: String!
+
+  """
+  A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out
+  """
+  expires_at: String
 }
 
 """The caller who added it, by id and name"""
@@ -5881,7 +5915,7 @@ type LinkedConnectionCredential {
   issuer: String
 
   """
-  For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected
+  For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values
   """
   client_id: String
 
@@ -5899,6 +5933,11 @@ type LinkedConnectionCredential {
   For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
   """
   parameters: JSON
+
+  """
+  For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends
+  """
+  token_request: LinkedConnectionCredentialTokenRequest
 
   """
   For authorization, the authorization endpoint, where the server publishes no metadata
@@ -5949,6 +5988,35 @@ type LinkedConnectionCredential {
   For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched
   """
   pattern: String
+}
+
+"""
+For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends
+"""
+type LinkedConnectionCredentialTokenRequest {
+  """The method of the request, POST"""
+  method: String!
+
+  """The https URL the request is sent to, which lies under the issuer"""
+  url: String!
+
+  """
+  Where the answer names the access token and the time it ends, each as a JSON Pointer
+  """
+  issued: LinkedConnectionCredentialTokenRequestIssued!
+}
+
+"""
+Where the answer names the access token and the time it ends, each as a JSON Pointer
+"""
+type LinkedConnectionCredentialTokenRequestIssued {
+  """A JSON Pointer into the answer, to the access token"""
+  access_token: String!
+
+  """
+  A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out
+  """
+  expires_at: String
 }
 
 """The caller who added it, by id and name"""
@@ -6277,6 +6345,9 @@ type ProviderCredentials {
   """
   key_page_title: String
 
+  """For jwt_bearer, the key file the person gives on the page"""
+  key_file: ProviderCredentialsKeyFile
+
   """
   For client_credentials and authorization, the label of the field the person gives the client's ID in, as the service names it, where the entry gives one.
   """
@@ -6348,6 +6419,14 @@ type ProviderCredentialsMoreScopes {
 
   """What a connection can do through it, in one sentence"""
   says: String!
+}
+
+"""For jwt_bearer, the key file the person gives on the page"""
+type ProviderCredentialsKeyFile {
+  """
+  json for a JSON key file that names the client's ID and holds the private key; pem for a file that is the private key itself in PEM
+  """
+  format: String!
 }
 
 """

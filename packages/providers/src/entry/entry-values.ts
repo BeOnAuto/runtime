@@ -82,6 +82,8 @@ function serverPartOf({
         ...Object.fromEntries(wayAddresses.map((field) => [field, way[field]])),
         base_url: way.base_url,
         subject: way.subject,
+        client_id: way.client_id,
+        ...(way.token_request === undefined ? {} : { token_request: { url: way.token_request.url } }),
       }),
     ),
   });

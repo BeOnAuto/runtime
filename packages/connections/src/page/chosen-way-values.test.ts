@@ -1,4 +1,11 @@
-import { asAServiceAccount, mail, providerListOf, providerOf, signingInToMail } from '@on.auto/providers/testing';
+import {
+  asAnInstalledApp,
+  asAServiceAccount,
+  mail,
+  providerListOf,
+  providerOf,
+  signingInToMail,
+} from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { added, lastFact, notes, type Added } from '../testing/additions.ts';
@@ -148,6 +155,33 @@ describe('a way that signs an assertion, chosen for a connection that signs in',
     });
     expect(signing).toMatchObject({ kind: 'jwt_bearer', steps: { pages: asAServiceAccount.steps.pages } });
     expect(signing).not.toHaveProperty('subject');
-    expect(signing).not.toHaveProperty('key_file');
+    expect(signing?.['key_file']).toEqual({ format: 'json' });
+  });
+});
+
+describe('a way whose key file is the private key itself in PEM, chosen for a connection that signs in', () => {
+  it('is recorded with the client and the token request its values name, and listed as taking a file in PEM, naming neither', async () => {
+    const entry = { ...mail, credentials: [signingInToMail, asAnInstalledApp] };
+    const h = harness({ providers: providerListOf(providerOf(entry)) });
+    const link = await added(h, { provider: 'mail' });
+
+    await choosing(h, link, {
+      credential: { kind: 'jwt_bearer' },
+      placeholders: { app: '1234567', installation: '7' },
+    });
+    const [, ofTheApp] = await waysListedOf(entry);
+
+    expect(await lastFact(h)).toMatchObject({
+      credential: {
+        kind: 'jwt_bearer',
+        permissions: 'application',
+        client_id: '1234567',
+        token_request: { url: 'https://api.mail.example.com/apps/installations/7/tokens' },
+      },
+    });
+    expect(ofTheApp).toMatchObject({ kind: 'jwt_bearer', permissions: 'application', key_file: { format: 'pem' } });
+    expect(ofTheApp?.['key_file']).toEqual({ format: 'pem' });
+    expect(ofTheApp).not.toHaveProperty('client_id');
+    expect(ofTheApp).not.toHaveProperty('token_request');
   });
 });

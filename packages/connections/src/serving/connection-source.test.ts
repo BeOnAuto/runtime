@@ -1,8 +1,9 @@
 import { Buffer } from 'node:buffer';
+import { generateKeyPairSync } from 'node:crypto';
 
 import { askedTogether } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
-import { providerListOf, providerOf } from '@on.auto/providers/testing';
+import { asAnInstalledApp, installedAppRequest, providerListOf, providerOf } from '@on.auto/providers/testing';
 import type {
   ConnectionServer,
   ConnectionServerSettings,
@@ -411,6 +412,62 @@ describe('the token of a connection of client credentials to an MCP server whose
     expect(called).toMatchObject({ status: 'rejected' });
     expect([server.tokenRequests(), named.tokenRequests()]).toEqual([0, 0]);
     expect(named.heard().map(({ path }) => path)).toContain('/.well-known/oauth-authorization-server');
+  });
+});
+
+function graphInstalledAt(server: FakeMcpServer): ProviderList {
+  const { origin } = server;
+  return providerListOf(
+    providerOf({
+      name: 'graph',
+      title: 'Graph',
+      description: 'Search the graph of an organization.',
+      website: 'https://developer.graph.example.com',
+      type: 'mcp',
+      url: server.url,
+      credentials: [
+        {
+          ...asAnInstalledApp,
+          issuer: `${origin}/apps`,
+          token_request: { ...installedAppRequest, url: `${origin}/apps/installations/{installation}/tokens` },
+        },
+      ],
+    }),
+  );
+}
+
+describe('the token of a connection made as an app whose service gives tokens through a request of its own', () => {
+  it('is asked at the address the values of its way name, with the assertion its key signs, and the server is called with it', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+    });
+    const server = fakeMcpInProcess({
+      client: {
+        clientId: '1234567',
+        publicKey,
+        expiresInSeconds: 3600,
+        tokenRequestPath: '/apps/installations/12345678/tokens',
+      },
+    });
+    onTestFinished(server.close);
+    const providers = graphInstalledAt(server);
+    const h = harness({ policy: loopbackPolicy, providers, mostSecretCharacters: 4096 });
+    await connectedConnectionSource(
+      h,
+      {
+        provider: 'graph',
+        credential: { kind: 'jwt_bearer' },
+        placeholders: { app: '1234567', installation: '12345678' },
+      },
+      { key_file: privateKey },
+    );
+
+    const tools = await toolsThrough(h, askingThrough(), { providers });
+
+    expect(await tools.call('execute_connection', searchingTheGraph)).toMatchObject({ status: 'succeeded' });
+    expect(server.tokenRequests()).toBe(2);
   });
 });
 

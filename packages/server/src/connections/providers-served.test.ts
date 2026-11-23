@@ -152,8 +152,8 @@ const waysWithoutAClient = {
   'apollo-graphos-agent-services': ['secret offered'],
   atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
-  github: ['secret offered', underTheOrgsOAuthClientAlone],
   ...withTheKeyFile(['jwt_bearer offered', underTheOrgsOAuthClientAlone]),
+  github: ['secret offered', underTheOrgsOAuthClientAlone, 'jwt_bearer offered'],
   gmail: [underTheOrgsOAuthClientAlone, 'jwt_bearer offered'],
   'google-drive': [underTheOrgsOAuthClientAlone],
   hubspot: [underTheOrgsOAuthClientAlone],
@@ -178,8 +178,8 @@ const waysWithAClient = {
   'apollo-graphos-agent-services': ['secret offered'],
   atlassian: ['authorization offered', 'secret offered'],
   buffer: ['secret offered'],
-  github: ['authorization offered', 'secret offered'],
   ...withTheKeyFile(['authorization offered', 'jwt_bearer offered']),
+  github: ['authorization offered', 'secret offered', 'jwt_bearer offered'],
   'google-drive': ['authorization offered'],
   hubspot: ['authorization offered'],
   linear: ['authorization offered'],
@@ -211,7 +211,7 @@ describe('the ways of the providers a server lists', () => {
       waysExpected(waysWithAClient, ['authorization offered']),
       names,
     ]);
-    expect([atGoogle.length, atMicrosoft.length, signingWithAKeyFile.length]).toEqual([16, 5, 10]);
+    expect([atGoogle.length, atMicrosoft.length, signingWithAKeyFile.length]).toEqual([16, 5, 11]);
   });
 });
 

@@ -1,0 +1,29 @@
+{
+  "type": "connection_way_chosen",
+  "data": {
+    "connection": "connection-1",
+    "credential": {
+      "kind": "jwt_bearer",
+      "permissions": "application",
+      "issuer": "https://api.mail.example.com/apps",
+      "client_id": "1234567",
+      "token_request": {
+        "method": "POST",
+        "url": "https://api.mail.example.com/apps/installations/12345678/tokens",
+        "issued": {
+          "access_token": "/token",
+          "expires_at": "/expires_at"
+        }
+      }
+    },
+    "says": {},
+    "placeholders": {
+      "app": "1234567",
+      "installation": "12345678"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

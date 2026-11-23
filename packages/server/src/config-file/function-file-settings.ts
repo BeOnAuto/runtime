@@ -54,6 +54,6 @@ export const functionFileSettings: readonly FileSetting[] = [
         'The tool servers whose tools a function may name, each bound to an org and optionally its playbooks: url for a remote MCP server, command for an MCP server run as a process, document for an HTTP API described by an OpenAPI document. Secrets are references such as ${GRAPH_API_KEY}. TOOL_SERVERS wins over it',
     }),
     asJson,
-    { references: 'kept', judgedByShape: ['placeholders'] },
+    { references: 'kept', judgedByShape: ['placeholders', 'token_request'] },
   ),
 ];

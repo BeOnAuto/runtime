@@ -45,11 +45,11 @@ function toolSetsOfEachProvider(byWay: Readonly<Record<string, Readonly<Record<s
 }
 
 describe('the tools every shipped document offers, by the way of each provider', () => {
-  it('are committed as the bridge derives them, each tool by the digest of what an agent is listed; pnpm --filter @on.auto/connections shipped-tools writes them again', async () => {
+  it('are committed as the bridge derives them, each tool by the digest of what an agent is listed and of the method, the path and the place of each input its call sends, so a change to where a shipped tool calls shows in its diff; pnpm --filter @on.auto/connections shipped-tools writes them again', async () => {
     expect(readFileSync(shippedToolsFile, 'utf8')).toBe(await shippedToolsText());
   });
 
-  it('are the same tools, by name and by what an agent is listed, for every way of one provider, wherever a way sends its calls', async () => {
+  it('are the same tools, by name, by what an agent is listed and by the call each sends, for every way of one provider, wherever a way sends its calls', async () => {
     const byWay = Schema.decodeUnknownSync(ToolsByWaySchema)(await shippedToolsText());
 
     expect(toolSetsOfEachProvider(byWay)).toEqual([

@@ -48,6 +48,61 @@ credentials:
         instructions: On GitHub's page, select **Generate token**, then copy the token and paste it here.
     example: github_pat_…
     pattern: ^github_pat_.+$
+  - kind: jwt_bearer
+    issuer: https://api.github.com
+    client_id: '{app_id}'
+    key_file:
+      format: pem
+    token_request:
+      method: POST
+      url: https://api.github.com/app/installations/{installation_id}/access_tokens
+      issued:
+        access_token: /token
+        expires_at: /expires_at
+    placeholders:
+      app_id:
+        title: App ID
+        description: The App ID on the settings page of the GitHub App.
+        pattern: '^[0-9]+$'
+        example: '1234567'
+      installation_id:
+        title: Installation ID
+        description: The number at the end of the address of the page GitHub opens after the app is installed.
+        pattern: '^[0-9]+$'
+        example: '12345678'
+    key_page: https://github.com/settings/organizations
+    key_page_title: Open GitHub's developer settings
+    steps:
+      key_page:
+        title: Register a GitHub App
+        instructions: |-
+          - In your organization's **Settings**, select **Developer settings**, then **GitHub Apps**, then **New GitHub App**.
+          - Enter a **GitHub App name** and a **Homepage URL**.
+          - Under **Webhook**, deselect **Active**.
+          - Under **Permissions**, set **Contents** to read-only, and **Issues**, **Pull requests** and **Webhooks** to read and write.
+          - Under **Where can this GitHub App be installed?**, select **Only on this account**.
+          - Select **Create GitHub App**.
+
+          This needs an owner of your GitHub organization.
+      pages:
+        - title: Create its private key
+          page: https://github.com/settings/organizations
+          page_title: Open GitHub's developer settings
+          instructions: |-
+            - On the app's page, select **Credentials**, then **Key pairs**, then **New key**.
+            - GitHub downloads a file ending in .pem. Keep it: GitHub stores only the public part.
+        - title: Install the app on your repositories
+          page: https://github.com/settings/organizations
+          page_title: Open GitHub's developer settings
+          instructions: |-
+            - On the app's page, select **Install App**, then **Install** next to your organization.
+            - Choose **Only select repositories**, pick the ones your playbooks use, then select **Install**.
+            - GitHub then opens the installation's page. Its address ends in a number: that is the Installation ID.
+      key:
+        title: Enter the app's details here
+        instructions: Choose the file ending in .pem that GitHub downloaded, and enter the App ID and the Installation ID.
+    limitation: It can't reach a repository until it is installed on it.
+    description: The App ID, private key and installation ID of a GitHub App your company registers and installs on its repositories.
 events:
   types:
     - type: com.github.issues.opened
@@ -57,7 +112,8 @@ events:
         required: true
         description: >-
           The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
-          account needs admin access to it, since GitHub lets only an admin set this up.
+          account needs admin access to it. A connection made as an app needs the Webhooks permission and to be
+          installed on it.
       data:
         type: object
         properties:
@@ -83,7 +139,8 @@ events:
         required: true
         description: >-
           The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
-          account needs admin access to it, since GitHub lets only an admin set this up.
+          account needs admin access to it. A connection made as an app needs the Webhooks permission and to be
+          installed on it.
       data:
         type: object
         properties:
@@ -109,7 +166,8 @@ events:
         required: true
         description: >-
           The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
-          account needs admin access to it, since GitHub lets only an admin set this up.
+          account needs admin access to it. A connection made as an app needs the Webhooks permission and to be
+          installed on it.
       data:
         type: object
         properties:
@@ -135,7 +193,8 @@ events:
         required: true
         description: >-
           The repository as owner/name, such as octo-org/hello-world, written as GitHub shows it. The connection's
-          account needs admin access to it, since GitHub lets only an admin set this up.
+          account needs admin access to it. A connection made as an app needs the Webhooks permission and to be
+          installed on it.
       data:
         type: object
         properties:
@@ -155,11 +214,13 @@ events:
             type: boolean
             description: Whether the pull request was merged. It is false when it was closed without merging.
   identity:
-    method: GET
-    url: https://api.github.com/user
+    method: POST
+    url: https://api.github.com/graphql
+    body:
+      query: query { viewer { databaseId login } }
     identified:
-      id: /id
-      name: /login
+      id: /data/viewer/databaseId
+      name: /data/viewer/login
   destinations:
     - type: webhook
       per: subscription

@@ -72,7 +72,9 @@ function aServiceThatSubscribes() {
     requestOnce: ({ method, url }) =>
       Effect.sync(() => {
         sent.push(`${method} ${url}`);
-        const answer = method === 'GET' ? { id: 7001, login: 'sam' } : { id: 480_932_108 };
+        const answer = url.endsWith('/graphql')
+          ? { data: { viewer: { databaseId: 7001, login: 'sam' } } }
+          : { id: 480_932_108 };
         return { kind: 'answered', outcome: 'result', answer } as const;
       }),
     mostRequestBytesTo: () => 1_048_576,
@@ -164,7 +166,7 @@ describe('a saved workflow whose trigger names a connection that is removed, add
     await server.wokenAt(nine + 2000);
 
     const hooks = `POST https://api.github.com/repos/${theRepository}/hooks`;
-    const whoAmI = 'GET https://api.github.com/user';
+    const whoAmI = 'POST https://api.github.com/graphql';
     expect([subscribed, forgottenAtTheRemoval]).toEqual([2, ['secret-1']]);
     expect(server.sent).toEqual([whoAmI, hooks, whoAmI, hooks]);
     expect(await Effect.runPromise(subscriptionRecordsOf(ledger).read(alpha))).toMatchObject([

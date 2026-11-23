@@ -1,6 +1,7 @@
 import { servesOrg, servesPlaybook } from '@on.auto/config';
 import type { Redacted } from 'effect';
 
+import type { TokenRequest } from '../assertions/token-requests.ts';
 import type { ConsentServed } from '../consent/consent-client.ts';
 import type { FailureCodes } from '../openapi/failure-codes.ts';
 
@@ -25,6 +26,7 @@ export interface AuthSettings {
   readonly grant?: AuthGrant;
   readonly subject?: string;
   readonly parameters?: Readonly<Record<string, string>>;
+  readonly token_request?: TokenRequest;
   readonly credential: AuthCredential;
 }
 

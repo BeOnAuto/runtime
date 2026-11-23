@@ -44,7 +44,7 @@ const unusedByTheProvider =
   'Expected the placeholder in the address, a header or a query value of the provider, since nothing else takes it';
 
 const unusedByTheWay =
-  "Expected the placeholder in this way's addresses, its base_url, its subject or its parameters, since nothing else takes it";
+  "Expected the placeholder in this way's addresses, its base_url, its subject, its client_id, its parameters or its token_request, since nothing else takes it";
 
 const namedAsTheProviders =
   "Expected a name no placeholder of the provider has, since a way's placeholder is asked beside the provider's";

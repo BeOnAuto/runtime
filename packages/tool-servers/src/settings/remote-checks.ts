@@ -1,5 +1,6 @@
 import { Redacted } from 'effect';
 
+import { tokenRequestIssuesOf } from '../assertions/token-request-checks.ts';
 import {
   accepted,
   headerNamePattern,
@@ -85,14 +86,51 @@ function checkedParameters(name: string, { grant, parameters }: Auth): Checked<P
   return problems.length === 0 ? accepted({ parameters }) : rejected(problems);
 }
 
-function authSettingsOf(auth: Auth, granted: Granted & Parameters, credential: MintingCredential): AuthSettings {
+type Requested = Pick<AuthSettings, 'token_request'>;
+
+const requestOfAnAssertion = 'Expected token_request only beside grant jwt_bearer, whose signed JWT it sends';
+
+const namedByTheRequest =
+  'Expected no subject or scope beside token_request, whose JWT names the client alone and carries no scope';
+
+function checkedTokenRequest(name: string, auth: Auth): Checked<Requested> {
+  const { token_request: request, grant, subject, scope } = auth;
+  if (request === undefined) {
+    return accepted({});
+  }
+  if (grant !== 'jwt_bearer') {
+    return refused(name, ['auth', 'token_request'], requestOfAnAssertion);
+  }
+  if (subject !== undefined || scope !== undefined) {
+    return refused(name, ['auth', 'token_request'], namedByTheRequest);
+  }
+  const problems = problemsOf(
+    ...tokenRequestIssuesOf(auth.issuer, request).map(({ path, issue }) =>
+      refused(name, ['auth', 'token_request', ...path], issue),
+    ),
+  );
+  return problems.length === 0 ? accepted({ token_request: request }) : rejected(problems);
+}
+
+type Asked = Granted & Parameters & Requested;
+
+function askedOf(name: string, auth: Auth): Checked<Asked> {
+  const granted = checkedGrant(name, auth);
+  const parameters = checkedParameters(name, auth);
+  const requested = checkedTokenRequest(name, auth);
+  return granted.ok && parameters.ok && requested.ok
+    ? accepted({ ...granted.value, ...parameters.value, ...requested.value })
+    : rejected(problemsOf(granted, parameters, requested));
+}
+
+function authSettingsOf(auth: Auth, asked: Asked, credential: MintingCredential): AuthSettings {
   return {
     issuer: auth.issuer,
     client_id: auth.client_id,
     scope: auth.scope ?? null,
     ...(auth.discovery === undefined ? {} : { discovery: auth.discovery }),
     ...(auth.audience === undefined ? {} : { audience: auth.audience }),
-    ...granted,
+    ...asked,
     credential,
   };
 }
@@ -106,10 +144,9 @@ export function checkedAuth(name: string, { auth, headers = {} }: ServerEntryFie
     ? refused(name, ['auth'], 'Set an Authorization header or an auth block, not both')
     : accepted(auth);
   const credential = checkedCredential(name, auth);
-  const granted = checkedGrant(name, auth);
-  const parameters = checkedParameters(name, auth);
-  const problems = problemsOf(issuer, alone, credential, granted, parameters);
-  return credential.ok && granted.ok && parameters.ok && problems.length === 0
-    ? accepted(authSettingsOf(auth, { ...granted.value, ...parameters.value }, credential.value))
+  const asked = askedOf(name, auth);
+  const problems = problemsOf(issuer, alone, credential, asked);
+  return credential.ok && asked.ok && problems.length === 0
+    ? accepted(authSettingsOf(auth, asked.value, credential.value))
     : rejected(problems);
 }

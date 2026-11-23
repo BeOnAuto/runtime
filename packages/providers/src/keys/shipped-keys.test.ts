@@ -155,6 +155,17 @@ describe('the ways of a key file of the shipped providers', () => {
     expect(shipped.providers.flatMap(({ entry }) => keyFileStepsOf(entry))).toEqual([
       stepsOfAKeyFile('campaign-manager-360', ['https://campaignmanager.google.com/']),
       stepsOfAKeyFile('display-video-360', ['https://displayvideo.google.com/']),
+      [
+        'github',
+        'https://github.com/settings/organizations',
+        false,
+        false,
+        [
+          ['https://github.com/settings/organizations', false],
+          ['https://github.com/settings/organizations', false],
+        ],
+        false,
+      ],
       stepsOfAKeyFile('gmail', ['https://admin.google.com/ac/owl/domainwidedelegation']),
       stepsOfAKeyFile('google-ads', [
         'https://console.cloud.google.com/google/ads-apis/overview',

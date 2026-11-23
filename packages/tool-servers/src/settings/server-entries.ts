@@ -1,5 +1,6 @@
 import { Schema } from 'effect';
 
+import { TokenRequestSchema } from '../assertions/token-requests.ts';
 import { FailureCodesSchema } from '../openapi/failure-codes.ts';
 
 export const toolServersSetting = 'TOOL_SERVERS';
@@ -54,6 +55,12 @@ const AuthSchema = Schema.Struct({
     Schema.Record(Schema.String, Schema.String).annotate({
       description:
         'Parameters sent with each token request beside the ones Auto sets itself, by name. A grant_type among them is sent in place of client_credentials, for an authorization server that names a grant of its own. Not taken with grant jwt_bearer',
+    }),
+  ),
+  token_request: Schema.optionalKey(
+    TokenRequestSchema.annotate({
+      description:
+        "With grant jwt_bearer, for a service that gives tokens through a request of its own instead of an OAuth token endpoint: the request's method and its https URL under issuer, sent with the signed JWT as its Bearer, and in issued where its answer names the token and the time it ends. The JWT then names client_id as its issuer and carries no subject, audience or scope, and the issuer's metadata is not read",
     }),
   ),
 }).annotate({

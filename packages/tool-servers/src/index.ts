@@ -203,7 +203,9 @@ export {
 export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
 export { markIssuesOf, marksOf } from './settings/tool-lists.ts';
 export { failureCodeIssuesOf, failureCodesOf, isJsonPointer } from './openapi/failure-codes.ts';
-export { assertionAlgorithm, keyFileOf, type KeyFilePointers } from './assertions/key-files.ts';
+export { assertionAlgorithm, keyFileReadOf, type KeyFileTaken } from './assertions/key-files.ts';
+export { TokenRequestSchema, type TokenRequest } from './assertions/token-requests.ts';
+export { tokenRequestIssuesOf } from './assertions/token-request-checks.ts';
 export type { Assertion } from './assertions/signed-assertions.ts';
 export { assertionCheckedOf, type AssertionChecked } from './assertions/assertion-checks.ts';
 export { passingErrorCodes } from './consent/consent-failures.ts';

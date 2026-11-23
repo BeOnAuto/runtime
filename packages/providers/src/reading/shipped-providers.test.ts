@@ -159,7 +159,7 @@ const waysOfTheShipped = [
   ['campaign-manager-360', ['authorization', 'jwt_bearer'], []],
   ['display-video-360', ['authorization', 'jwt_bearer'], []],
   ['display-video-360-reports', ['authorization'], []],
-  ['github', ['authorization', 'secret'], []],
+  ['github', ['authorization', 'secret', 'jwt_bearer'], []],
   ['gmail', ['authorization', 'jwt_bearer'], []],
   ['google-ads', ['authorization', 'jwt_bearer'], []],
   ['google-analytics', ['authorization', 'jwt_bearer'], []],

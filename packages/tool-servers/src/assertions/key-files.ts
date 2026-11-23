@@ -2,11 +2,14 @@ import { Option, Predicate, Schema } from 'effect';
 import { importPKCS8 } from 'jose';
 
 import { valueAt } from '../openapi/failure-codes.ts';
+import { pkcs8Of } from './private-keys.ts';
 
 export interface KeyFilePointers {
   readonly client_id: string;
   readonly private_key: string;
 }
+
+export type KeyFileTaken = { readonly format: 'pem' } | (KeyFilePointers & { readonly format?: 'json' });
 
 export interface KeyFileRead {
   readonly clientId: string;
@@ -48,14 +51,35 @@ function valuesIn(text: string, pointers: KeyFilePointers): KeyFileRead | undefi
   return clientId === undefined || privateKey === undefined ? undefined : { clientId, privateKey };
 }
 
+function isWithin(text: string, mostBytes: number): boolean {
+  return new TextEncoder().encode(text).byteLength <= mostBytes;
+}
+
 export async function keyFileOf(
   text: string,
   pointers: KeyFilePointers,
   mostBytes = mostKeyFileBytes,
 ): Promise<KeyFileRead | undefined> {
-  if (new TextEncoder().encode(text).byteLength > mostBytes) {
+  if (!isWithin(text, mostBytes)) {
     return undefined;
   }
   const read = valuesIn(text, pointers);
   return read !== undefined && (await importsForSigning(read.privateKey)) ? read : undefined;
+}
+
+export async function pemKeyOf(text: string, mostBytes = mostKeyFileBytes): Promise<string | undefined> {
+  const privateKey = isWithin(text, mostBytes) ? pkcs8Of(text) : undefined;
+  return privateKey !== undefined && (await importsForSigning(privateKey)) ? privateKey : undefined;
+}
+
+export async function keyFileReadOf(
+  text: string,
+  taken: KeyFileTaken,
+  clientId: string | undefined,
+): Promise<KeyFileRead | undefined> {
+  if (taken.format !== 'pem') {
+    return keyFileOf(text, taken);
+  }
+  const privateKey = clientId === undefined ? undefined : await pemKeyOf(text);
+  return clientId === undefined || privateKey === undefined ? undefined : { clientId, privateKey };
 }

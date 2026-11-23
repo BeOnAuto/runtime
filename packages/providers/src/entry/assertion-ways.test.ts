@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 
 import { mostPageSteps, stepsSchemaOf } from '../keys/key-fields.ts';
 import { problemsOf } from '../testing/entry-problems.ts';
-import { asAServiceAccount, asTheServiceAccountItself, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import {
+  asAnInstalledApp,
+  asAServiceAccount,
+  asTheServiceAccountItself,
+  installedAppRequest,
+  mail,
+  signingInToMail,
+} from '../testing/own-app-providers.ts';
 import { accountTypesOf, permissionsOf } from './account-types.ts';
 
 type Fields = Readonly<Record<string, unknown>>;
@@ -101,5 +108,77 @@ describe('the steps a way asks for on other pages of its service', () => {
         steps: { ...steps, pages: [{ ...aPage, page: 'http://admin.mail.example.com', page_title: 'x'.repeat(41) }] },
       }),
     ).toEqual(['/credentials/1/steps/pages/0/page', '/credentials/1/steps/pages/0/page_title']);
+  });
+});
+
+function withTheInstalledApp(changes: Fields): readonly string[] {
+  return pathsOf({ ...asAnInstalledApp, ...changes });
+}
+
+const { client_id: _appsId, ...namingNoClient } = asAnInstalledApp;
+
+const { issuer: _appsIssuer, ...namingNoIssuer } = asAnInstalledApp;
+
+const refusedAsAnInstalledApp: readonly (readonly [string, Fields, readonly string[]])[] = [
+  ['a subject beside its token request', { subject: '{app}' }, ['/credentials/1/subject']],
+  [
+    'a scope beside its token request',
+    { scope: 'mail.read', says: { 'mail.read': 'Read the mail.' } },
+    ['/credentials/1/scope'],
+  ],
+  [
+    'a token request outside its issuer',
+    { token_request: { ...installedAppRequest, url: 'https://api.mail.example.com/users/{installation}' } },
+    ['/credentials/1/token_request/url'],
+  ],
+  [
+    'a pointer into the answer that is no JSON Pointer',
+    { token_request: { ...installedAppRequest, issued: { access_token: 'token' } } },
+    ['/credentials/1/token_request/issued/access_token'],
+  ],
+  [
+    'a token request whose address holds a placeholder of no way',
+    { token_request: { ...installedAppRequest, url: 'https://api.mail.example.com/apps/{tenant}/tokens' } },
+    ['/credentials/1/token_request/url', '/credentials/1/placeholders/installation'],
+  ],
+];
+
+const keyFilesRefused: readonly (readonly [string, Fields])[] = [
+  ['pointers into the file beside its format', { format: 'pem', client_id: '/c', private_key: '/k' }],
+  ['a format no key file has', { format: 'p12' }],
+];
+
+describe('a way that signs an assertion with a key file that is the private key itself in PEM', () => {
+  it('takes the client the way names in its values, and the request the service has of its own for a token', () => {
+    expect(withTheInstalledApp({})).toEqual([]);
+    expect([permissionsOf(asAnInstalledApp), accountTypesOf(asAnInstalledApp)]).toEqual(['application', []]);
+  });
+
+  it('is refused with no client_id, since the file names none, and with no issuer, the token request then checked no further', () => {
+    expect([pathsOf(namingNoClient), pathsOf(namingNoIssuer)]).toEqual([
+      ['/credentials/1/client_id'],
+      ['/credentials/1/issuer'],
+    ]);
+  });
+
+  it.each(refusedAsAnInstalledApp)('is refused with %s', (_case, changes, paths) => {
+    expect(withTheInstalledApp(changes)).toEqual(paths);
+  });
+
+  it.each(keyFilesRefused)('is refused with %s, at its key file', (_case, keyFile) => {
+    const paths = withTheInstalledApp({ key_file: keyFile });
+
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((path) => !path.startsWith('/credentials/1/key_file/'))).toEqual([]);
+  });
+});
+
+describe('a client_id and a token request of a way', () => {
+  it('are taken by a way of the kind jwt_bearer alone, and a client_id never beside a key file with pointers', () => {
+    expect(withTheServiceAccount({ client_id: 'robot@acme.example.com' })).toEqual(['/credentials/1/client_id']);
+    expect(pathsOf({ ...signingInToMail, client_id: 'auto' })).toEqual(['/credentials/1/client_id']);
+    expect(pathsOf({ ...signingInToMail, token_request: installedAppRequest })).toEqual([
+      '/credentials/1/token_request',
+    ]);
   });
 });

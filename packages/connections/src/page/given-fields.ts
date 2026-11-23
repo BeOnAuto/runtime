@@ -44,7 +44,7 @@ export const GivingSchema = Schema.Struct({
   key_file: Schema.optionalKey(
     GivenField.annotate({
       description:
-        "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names. It keeps nothing else of the file.",
+        "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names, where it names one. It keeps nothing else of the file.",
     }),
   ),
   playbooks: ChosenPlaybooksField,
@@ -136,7 +136,7 @@ export const refusedByTheService =
   "The provider refused this key. Copy it again from the provider's page and paste all of it.";
 
 export const notAKeyFile =
-  'Auto cannot use this key file for this connection. Check that it is the JSON file that was downloaded when the key was created. If it is, remove the connection and add it again.';
+  'Auto cannot use this key file for this connection. Check that it is the file that was downloaded when the key was created. If it is, remove the connection and add it again.';
 
 export function keyRefusedWith(code: string): string {
   return `The provider did not accept this key. Check that each step on this page was done for this key and that the values you entered are right. A change at the provider can take a few minutes to apply. The provider answered: ${code}.`;

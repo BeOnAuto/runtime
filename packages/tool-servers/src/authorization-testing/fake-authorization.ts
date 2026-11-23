@@ -1,6 +1,6 @@
 import { jwtBearerGrant } from '../assertions/signed-assertions.ts';
 import { json } from './authorization-answers.ts';
-import { assertionsGranted } from './fake-assertions.ts';
+import { assertionsGranted, tokenRequestsGranted } from './fake-assertions.ts';
 import { fakeClients, type ClientRegistration, type ExtensionGrant, type FakeClients } from './fake-clients.ts';
 import { fakeGrants, fakeTokens, type TokenRequest } from './fake-grants.ts';
 
@@ -178,11 +178,17 @@ export function fakeAuthorization(origin: string, registration: ClientRegistrati
   };
   const revoke = async (request: Readonly<Request>): Promise<Response> =>
     asClient(clients, { request, form: await formOf(request), requested }, grants.revoke);
+  const granted = tokenRequestsGranted(registration, tokens);
+  const requestedOwn = (request: Readonly<Request>): Promise<Response> => {
+    requested += 1;
+    return Promise.resolve(granted(request, requested));
+  };
   const routes = new Map<string, (request: Readonly<Request>) => Promise<Response>>([
     ['/token', token],
     ['/authorize', grants.authorize],
     ['/revoke', revoke],
     ...(registration.dynamicRegistration === true ? [['/register', clients.register] as const] : []),
+    ...(registration.tokenRequestPath === undefined ? [] : [[registration.tokenRequestPath, requestedOwn] as const]),
     ...documentRoutesOf(origin, registration),
   ]);
   return {

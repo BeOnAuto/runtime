@@ -24,6 +24,10 @@ function parametersOf(settings: ServerSettings): Readonly<Record<string, string>
   return settings.type === 'stdio' ? undefined : settings.auth?.parameters;
 }
 
+function authOf(settings: ServerSettings) {
+  return settings.type === 'stdio' ? undefined : settings.auth;
+}
+
 function pathValuesOf(settings: ServerSettings): Readonly<Record<string, string>> | undefined {
   return settings.type === 'openapi' ? Object.fromEntries(settings.path_values) : undefined;
 }
@@ -47,5 +51,33 @@ describe('the path values a connection’s way provides, placed in the settings 
       pathValuesOf(settingsOf(asTheApp, { ...providing, path_values: pathValues })),
       pathValuesOf(settingsOf(asTheApp, providing)),
     ]).toEqual([pathValues, {}]);
+  });
+});
+
+describe('a credential that signs an assertion for a token request of its own, placed in the settings of its server', () => {
+  it('sends the assertion to the address its way named, reading the token where the way says, as they are written', () => {
+    const tokenRequest = {
+      method: 'POST',
+      url: 'https://api.meetings.example.com/apps/installations/7$1/tokens',
+      issued: { access_token: '/to$ken', expires_at: '/expires_at' },
+    } as const;
+    const ofTheApp: Credential = {
+      kind: 'jwt_bearer',
+      issuer: 'https://api.meetings.example.com/apps',
+      token_request: tokenRequest,
+    };
+    const withNoEnd = { ...tokenRequest, issued: { access_token: '/token' } };
+    const { token_request: _request, ...withNoRequest } = ofTheApp;
+
+    expect([
+      authOf(settingsOf(ofTheApp, providing)),
+      authOf(settingsOf({ ...ofTheApp, token_request: withNoEnd }, providing))?.token_request,
+      authOf(settingsOf(withNoRequest, providing)),
+    ]).toMatchObject([
+      { grant: 'jwt_bearer', client_id: 'acme-app', token_request: tokenRequest, credential: { kind: 'private_key' } },
+      withNoEnd,
+      { grant: 'jwt_bearer' },
+    ]);
+    expect(authOf(settingsOf(withNoRequest, providing))).not.toHaveProperty('token_request');
   });
 });

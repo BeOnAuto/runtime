@@ -236,6 +236,39 @@
                   "type": "string"
                 },
                 "description": "Parameters sent with each token request beside the ones Auto sets itself, by name. A grant_type among them is sent in place of client_credentials, for an authorization server that names a grant of its own. Not taken with grant jwt_bearer"
+              },
+              "token_request": {
+                "type": "object",
+                "properties": {
+                  "method": {
+                    "type": "string",
+                    "enum": ["POST"],
+                    "description": "The method of the request, POST"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The https URL the request is sent to, which lies under the issuer"
+                  },
+                  "issued": {
+                    "type": "object",
+                    "properties": {
+                      "access_token": {
+                        "type": "string",
+                        "description": "A JSON Pointer into the answer, to the access token"
+                      },
+                      "expires_at": {
+                        "type": "string",
+                        "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                      }
+                    },
+                    "required": ["access_token"],
+                    "additionalProperties": false,
+                    "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                  }
+                },
+                "required": ["method", "url", "issued"],
+                "additionalProperties": false,
+                "description": "With grant jwt_bearer, for a service that gives tokens through a request of its own instead of an OAuth token endpoint: the request's method and its https URL under issuer, sent with the signed JWT as its Bearer, and in issued where its answer names the token and the time it ends. The JWT then names client_id as its issuer and carries no subject, audience or scope, and the issuer's metadata is not read"
               }
             },
             "required": ["issuer", "client_id"],
@@ -2113,18 +2146,78 @@
                       "description": "For jwt_bearer, the account the token is asked for, such as a mailbox, each {name} in it a placeholder of the way or of the provider. Leave it out where the service account acts as itself: Auto then asks for a token for the service account, and the JWT names no subject"
                     },
                     "key_file": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "format": {
+                              "type": "string",
+                              "enum": ["json"],
+                              "description": "json, the default, where the key file is a JSON object that holds the client's ID and the key"
+                            },
+                            "client_id": {
+                              "type": "string"
+                            },
+                            "private_key": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["client_id", "private_key"],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, where the two values sit in the key file the service gives, each as a JSON Pointer. Auto keeps the private key, sealed, and records the client's ID; it keeps nothing else of the file"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "format": {
+                              "type": "string",
+                              "enum": ["pem"],
+                              "description": "For jwt_bearer, pem where the key file is the private key itself in PEM. The client's ID then comes from client_id"
+                            }
+                          },
+                          "required": ["format"],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, a key file that is the private key itself in PEM, in PKCS #1 or PKCS #8. Auto keeps the private key, sealed"
+                        }
+                      ]
+                    },
+                    "client_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "For jwt_bearer with a key file in PEM, the client's ID the assertion names as its issuer, which may hold one of this way's placeholders"
+                    },
+                    "token_request": {
                       "type": "object",
                       "properties": {
-                        "client_id": {
-                          "type": "string"
+                        "method": {
+                          "type": "string",
+                          "enum": ["POST"],
+                          "description": "The method of the request, POST"
                         },
-                        "private_key": {
-                          "type": "string"
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL the request is sent to, which lies under the issuer"
+                        },
+                        "issued": {
+                          "type": "object",
+                          "properties": {
+                            "access_token": {
+                              "type": "string",
+                              "description": "A JSON Pointer into the answer, to the access token"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                            }
+                          },
+                          "required": ["access_token"],
+                          "additionalProperties": false,
+                          "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
                         }
                       },
-                      "required": ["client_id", "private_key"],
+                      "required": ["method", "url", "issued"],
                       "additionalProperties": false,
-                      "description": "For jwt_bearer, where the two values sit in the key file the service gives, each as a JSON Pointer. Auto keeps the private key, sealed, and records the client's ID; it keeps nothing else of the file"
+                      "description": "For jwt_bearer, the request that asks the service for a token, for a service that has its own: its method and its https URL under the issuer, sent with the signed assertion as its Bearer. In issued, the JSON Pointers to the token and to the time it ends in the answer"
                     },
                     "instructions": {
                       "type": "string",

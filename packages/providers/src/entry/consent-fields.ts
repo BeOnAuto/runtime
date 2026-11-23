@@ -113,3 +113,20 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
     ...endingIssuesOf(fields),
   ];
 }
+
+interface ChoosingClients {
+  readonly oauth_client?: string | undefined;
+  readonly clients?: readonly string[] | undefined;
+}
+
+export function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: ChoosingClients): readonly WayIssue[] {
+  return oauthClient === undefined || clients === undefined
+    ? []
+    : [
+        {
+          path: ['clients'],
+          issue:
+            "Expected no clients beside oauth_client: a way that requires the organization's own OAuth client takes consent under that client alone",
+        },
+      ];
+}

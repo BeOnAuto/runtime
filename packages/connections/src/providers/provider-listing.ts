@@ -8,7 +8,6 @@ import {
   type AppCredential,
   type CredentialWay,
   type EventDestination,
-  type Placeholder,
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
@@ -20,8 +19,9 @@ import type { ChatOffered } from '../registry/connection-commands.ts';
 import { chatThroughOf, type ChatAnswering, type ChatHosting } from './chat-answers.ts';
 import { consentOfferedOf } from './consent-offered.ts';
 import {
+  listedPlaceholdersOf,
   listedWayOf,
-  type ListedPlaceholder,
+  wayPlaceholdersOf,
   type ListedProvider,
   type OAuthClientChoice,
 } from './listed-providers.ts';
@@ -54,27 +54,6 @@ function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPoli
     (credentialKinds === null || credentialKinds.includes(way.kind)) &&
     hostAlternativesOf(provider, way).some((hosts) => hosts.every((host) => reachable(host)))
   );
-}
-
-function listedPlaceholderOf([name, placeholder]: readonly [string, Placeholder]): ListedPlaceholder {
-  const { title: label, description, pattern, example, required = true, choices } = placeholder;
-  return {
-    name,
-    ...(label === undefined ? {} : { title: label }),
-    description,
-    ...(pattern === undefined ? {} : { pattern }),
-    ...(example === undefined ? {} : { example }),
-    required,
-    ...(choices === undefined ? {} : { choices: choices.map(({ value, title }) => ({ value, title })) }),
-  };
-}
-
-function listedPlaceholdersOf(placeholders: Readonly<Record<string, Placeholder>> = {}) {
-  return Object.entries(placeholders).map((each: readonly [string, Placeholder]) => listedPlaceholderOf(each));
-}
-
-function wayPlaceholdersOf({ placeholders }: CredentialWay) {
-  return placeholders === undefined ? {} : { placeholders: listedPlaceholdersOf(placeholders) };
 }
 
 interface OAuthClientOffered {
@@ -245,6 +224,10 @@ function actingOf(way: CredentialWay) {
   };
 }
 
+function keyFileListedOf({ key_file: keyFile }: CredentialWay) {
+  return keyFile === undefined ? {} : { key_file: { format: keyFile.format ?? 'json' } };
+}
+
 function appCredentialsListedOf(provider: Provider, way: CredentialWay, listing: ListingOfTheRuntime) {
   const offered = offeredAppCredentialsOf(provider, way, listing);
   return offered.length === 0 ? {} : { app_credentials: offered.map(({ credential }) => credential) };
@@ -266,8 +249,11 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
           'placeholders',
           'subject',
           'key_file',
+          'client_id',
+          'token_request',
         ]),
         ...actingOf(way),
+        ...keyFileListedOf(way),
         ...wayPlaceholdersOf(way),
         ...appCredentialsListedOf(provider, way, listing),
         ...chatListedOf(provider, way, listing),

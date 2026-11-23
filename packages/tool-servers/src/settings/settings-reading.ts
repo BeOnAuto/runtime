@@ -1,5 +1,4 @@
 import {
-  credentialProblems,
   decodedJsonSetting,
   placeholdersReplaced,
   pointerOf,
@@ -16,6 +15,7 @@ import { misplacedReferencesOfEntry, secretsOfEntry, unreferencedSecurity } from
 import { entryToRead, type EntryToRead, type ProviderResolver } from './provider-entries.ts';
 import { ServerEntrySchema, ToolServersSchema, toolServersSetting, type ServerEntryFields } from './server-entries.ts';
 import type { DocumentsPlace, ServerSettings, ToolServerSettings } from './server-settings.ts';
+import { credentialPlacesIn } from './written-credentials.ts';
 
 export type Environment = Readonly<Record<string, string | undefined>>;
 
@@ -64,7 +64,7 @@ function readWritten(
 ): Result.Result<ServerSettings, readonly SettingProblem[]> {
   const pointer = pointerOf([name]);
   const resolved = substituted(written, pointer, environment);
-  const flagged = credentialProblems(name, written, pointer).map(({ pointer: place }) => place);
+  const flagged = credentialPlacesIn(name, written, pointer);
   const writtenOut = unreferencedSecurity(name, written, resolved.references).filter(
     (place) => !flagged.includes(place),
   );

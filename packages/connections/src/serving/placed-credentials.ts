@@ -100,11 +100,27 @@ function placedValue(entry: ConnectionEntry, credential: Credential, variable: s
   };
 }
 
-function grantOf({ kind, subject }: Credential): Pick<NonNullable<ServerEntryFields['auth']>, 'grant' | 'subject'> {
+type Granted = Pick<NonNullable<ServerEntryFields['auth']>, 'grant' | 'subject' | 'token_request'>;
+
+function requestedOf({ token_request: request }: Credential): Pick<Granted, 'token_request'> {
+  if (request === undefined) {
+    return {};
+  }
+  const { method, url, issued } = request;
+  const { access_token: accessToken, expires_at: expiresAt } = issued;
+  const ending = expiresAt === undefined ? {} : { expires_at: literalText(expiresAt) };
+  return {
+    token_request: { method, url: literalText(url), issued: { access_token: literalText(accessToken), ...ending } },
+  };
+}
+
+function grantOf(credential: Credential): Granted {
+  const { kind, subject } = credential;
   if (kind !== 'jwt_bearer') {
     return {};
   }
-  return subject === undefined ? { grant: kind } : { grant: kind, subject: literalText(subject) };
+  const named = subject === undefined ? {} : { subject: literalText(subject) };
+  return { grant: kind, ...named, ...requestedOf(credential) };
 }
 
 type Discovery = Pick<NonNullable<ServerEntryFields['auth']>, 'discovery'>;

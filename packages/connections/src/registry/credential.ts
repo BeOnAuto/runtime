@@ -1,4 +1,3 @@
-import { variableNamePattern } from '@on.auto/config';
 import { articled, listed } from '@on.auto/phrasing';
 import {
   consentEndpoints,
@@ -15,9 +14,11 @@ import {
   headerNamePattern,
   isPinnableUrl,
   pinnedUrlShape,
+  TokenRequestSchema,
 } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { nameIssuesOf, variableIssuesOf } from './credential-places.ts';
 import {
   credentialThroughAGateway,
   fieldsThroughAGateway,
@@ -65,7 +66,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   client_id: Schema.optionalKey(
     ClientIdSchema.annotate({
       description:
-        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected",
+        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values",
     }),
   ),
   scope: Schema.optionalKey(
@@ -83,6 +84,12 @@ export const CredentialFieldsSchema = Schema.Struct({
     wayFields.parameters.annotate({
       description:
         'For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials',
+    }),
+  ),
+  token_request: Schema.optionalKey(
+    TokenRequestSchema.annotate({
+      description:
+        "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends",
     }),
   ),
   authorization_endpoint: Schema.optionalKey(
@@ -153,6 +160,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'scope',
   'subject',
   'parameters',
+  'token_request',
   ...consentEndpoints,
   'pkce',
   'clients',
@@ -175,7 +183,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
     required: ['issuer'],
     optional: ['scope', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'client_id', 'client_source'],
   },
-  jwt_bearer: { required: ['issuer'], optional: ['subject', 'client_id', 'scope'] },
+  jwt_bearer: { required: ['issuer'], optional: ['subject', 'client_id', 'scope', 'token_request'] },
 };
 
 function fieldsTakenBy(credential: CredentialFields): TakenFields {
@@ -214,23 +222,6 @@ function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
       ? [{ path: [field], issue: `Expected no ${field}: ${named} takes ${fieldsTakenInWords(taken)}` }]
       : [];
   });
-}
-
-function variableIssuesOf({ variable }: CredentialFields): readonly FieldIssue[] {
-  return variable === undefined || variableNamePattern.test(variable)
-    ? []
-    : [
-        {
-          path: ['variable'],
-          issue: 'Expected the name of a variable: letters, digits and underscores, not starting with a digit',
-        },
-      ];
-}
-
-function nameIssuesOf({ name, in: placement }: CredentialFields): readonly FieldIssue[] {
-  return name !== undefined && placement === 'header' && !headerNamePattern.test(name)
-    ? [{ path: ['name'], issue: 'Expected a header name' }]
-    : [];
 }
 
 function schemeIssueOf(credential: CredentialFields, scheme: string): string | undefined {

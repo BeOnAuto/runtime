@@ -10,7 +10,8 @@ import {
 } from '@modelcontextprotocol/client';
 import { Option, Redacted } from 'effect';
 
-import { assertedTokensOf, type AssertedTokens, type Assertion } from '../assertions/signed-assertions.ts';
+import type { AssertedTokens } from '../assertions/requested-tokens.ts';
+import { assertedTokensOf, type Assertion } from '../assertions/signed-assertions.ts';
 import type { ConsentServed, TokenServing } from '../consent/consent-client.ts';
 import { isResourceOf } from '../consent/server-metadata.ts';
 import type { MintingAuth, MintingCredential } from '../settings/server-settings.ts';
@@ -173,6 +174,7 @@ function assertionOf(settings: MintingAuth, { scope }: Asking): Assertion {
     scope,
     privateKey,
     algorithm,
+    tokenRequest: settings.token_request,
   };
 }
 

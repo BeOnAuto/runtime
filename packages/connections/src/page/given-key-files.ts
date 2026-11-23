@@ -1,5 +1,5 @@
 import type { InvalidInput } from '@on.auto/operations';
-import { assertionAlgorithm, keyFileOf } from '@on.auto/tool-servers';
+import { assertionAlgorithm, keyFileReadOf } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 
 import { clientIdReadingIssuesOf, type EntryChecking } from '../entries/entry-checks.ts';
@@ -24,11 +24,11 @@ function keyFileRead(
   text: string,
   services: KeyFileServices,
 ): Effect.Effect<KeyFileValues, InvalidInput> {
-  const pointers = wayOf(connection, services)?.way.key_file;
-  return pointers === undefined
+  const taken = wayOf(connection, services)?.way.key_file;
+  return taken === undefined
     ? Effect.fail(notTheKeyFile)
     : Effect.flatMap(
-        Effect.promise(() => keyFileOf(text, pointers)),
+        Effect.promise(() => keyFileReadOf(text, taken, connection.credential.client_id)),
         (read) => (read === undefined ? Effect.fail(notTheKeyFile) : Effect.succeed(read)),
       );
 }

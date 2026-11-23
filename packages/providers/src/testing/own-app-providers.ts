@@ -117,6 +117,37 @@ export const asTheServiceAccountItself = {
   description: 'A service account your company creates at Mail, acting as itself.',
 } as const;
 
+export const installedAppRequest = {
+  method: 'POST',
+  url: 'https://api.mail.example.com/apps/installations/{installation}/tokens',
+  issued: { access_token: '/token', expires_at: '/expires_at' },
+} as const;
+
+export const asAnInstalledApp = {
+  kind: 'jwt_bearer',
+  issuer: 'https://api.mail.example.com/apps',
+  client_id: '{app}',
+  key_file: { format: 'pem' },
+  token_request: installedAppRequest,
+  placeholders: {
+    app: { title: 'App ID', description: 'The ID of the app at Mail.', pattern: '^[0-9]+$', example: '1234567' },
+    installation: {
+      title: 'Installation ID',
+      description: 'The ID of the app where it is installed.',
+      pattern: '^[0-9]+$',
+      example: '12345678',
+    },
+  },
+  key_page: 'https://admin.mail.example.com/apps',
+  key_page_title: 'Open the apps of Mail',
+  steps: {
+    key_page: { title: 'Register an app at Mail', instructions: 'Register an app and create its private key.' },
+    key: { title: 'Enter the details here', instructions: 'Choose the private key and enter the two IDs.' },
+  },
+  limitation: 'It can’t reach a mailbox until it is installed on it.',
+  description: 'The ID, private key and installation of an app your company registers at Mail.',
+} as const;
+
 export const mail: ProviderEntry = decodeEntry({
   name: 'mail',
   title: 'Mail',

@@ -131,9 +131,9 @@ async function toolsOf(addition: ProviderAddition): Promise<Digests> {
     ),
   );
   return Object.fromEntries(
-    apiOf(servers).operations.map(({ tool: { name, ...served } }): readonly [string, string] => [
+    apiOf(servers).operations.map(({ tool: { name, ...served }, method, path, inputs }): readonly [string, string] => [
       name,
-      digestOf(served),
+      digestOf({ ...served, method, path, inputs }),
     ]),
   );
 }

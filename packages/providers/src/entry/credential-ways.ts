@@ -9,8 +9,8 @@ import { Schema } from 'effect';
 
 import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
 import { AccountTypesSchema, accountTypeIssuesOf, isTheWayAsked } from './account-types.ts';
-import { assertionFields } from './assertion-ways.ts';
-import { consentEndpoints, consentIssuesOf } from './consent-fields.ts';
+import { assertionFieldNames, assertionFields, assertionIssuesOf } from './assertion-ways.ts';
+import { consentEndpoints, consentIssuesOf, oauthClientIssuesOf } from './consent-fields.ts';
 import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
 import { clientIdTitleField, ownValueFields, pathValueIssuesOf } from './way-values.ts';
@@ -135,8 +135,7 @@ const everyField: readonly Field[] = [
   'placeholders',
   'base_url',
   'path_values',
-  'subject',
-  'key_file',
+  ...assertionFieldNames,
   ...keyFieldNames,
   'key_page_title',
   'client_id_title',
@@ -182,7 +181,18 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   jwt_bearer: {
     required: ['issuer', 'key_file'],
-    optional: ['subject', 'scope', 'says', 'key_page', 'key_page_title', 'steps', 'limitation', ...ownValues],
+    optional: [
+      'subject',
+      'client_id',
+      'token_request',
+      'scope',
+      'says',
+      'key_page',
+      'key_page_title',
+      'steps',
+      'limitation',
+      ...ownValues,
+    ],
   },
   authorization: {
     required: ['issuer'],
@@ -249,18 +259,6 @@ function presenceIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
   });
 }
 
-function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialWayFields): readonly WayIssue[] {
-  return oauthClient === undefined || clients === undefined
-    ? []
-    : [
-        {
-          path: ['clients'],
-          issue:
-            "Expected no clients beside oauth_client: a way that requires the organization's own OAuth client takes consent under that client alone",
-        },
-      ];
-}
-
 function tokenParameterIssuesOf({ kind, parameters = {} }: CredentialWayFields): readonly WayIssue[] {
   return kind === 'client_credentials'
     ? parametersTheRuntimeSets(parameters).map((name) => ({
@@ -275,6 +273,7 @@ function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
     ...presenceIssuesOf(way),
     ...tokenParameterIssuesOf(way),
     ...pathValueIssuesOf(way),
+    ...assertionIssuesOf(way),
     ...wordsIssuesOf(way.scope, way.says),
     ...keyWayIssuesOf(way),
     ...accountTypeIssuesOf(way),

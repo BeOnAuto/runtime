@@ -46,7 +46,11 @@ const hostsOfTheWays = [
   [[['dfareporting.googleapis.com', google]], [['dfareporting.googleapis.com', google]]],
   [[['displayvideo.googleapis.com', google]], [['displayvideo.googleapis.com', google]]],
   [[['doubleclickbidmanager.googleapis.com', google]]],
-  [[['api.githubcopilot.com', 'github.com']], [['api.githubcopilot.com']]],
+  [
+    [['api.githubcopilot.com', 'github.com']],
+    [['api.githubcopilot.com']],
+    [['api.githubcopilot.com', 'api.github.com']],
+  ],
   [[['gmail.googleapis.com', google]], [['gmail.googleapis.com', google]]],
   [[['googleads.googleapis.com', google]], [['googleads.googleapis.com', google]]],
   [[['analyticsdata.googleapis.com', google]], [['analyticsdata.googleapis.com', google]]],

@@ -1,5 +1,5 @@
 import type { Issue } from '@on.auto/operations';
-import type { ClientSource, WayOAuthClient } from '@on.auto/tool-servers';
+import type { ClientSource, TokenRequest, WayOAuthClient } from '@on.auto/tool-servers';
 import { Option, Result } from 'effect';
 
 import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
@@ -30,6 +30,8 @@ export interface ProviderCredential extends WayAddresses, Partial<Readonly<Recor
   readonly clients?: NonNullable<CredentialWay['clients']>;
   readonly client_source?: Extract<ClientSource, 'own' | 'gateway'>;
   readonly subject?: string;
+  readonly client_id?: string;
+  readonly token_request?: TokenRequest;
 }
 
 export interface ProviderConnectionEntry {
@@ -118,6 +120,18 @@ function placedEach(written: Placed, values: Values): Placed {
   );
 }
 
+function assertedOf(
+  way: CredentialWay,
+  values: Values,
+): Pick<ProviderCredential, 'subject' | 'client_id' | 'token_request'> {
+  const { subject, client_id: clientId, token_request: request } = way;
+  return {
+    ...(subject === undefined ? {} : { subject: placedText(subject, values) }),
+    ...(clientId === undefined ? {} : { client_id: placedText(clientId, values) }),
+    ...(request === undefined ? {} : { token_request: { ...request, url: placedText(request.url, values) } }),
+  };
+}
+
 function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthClient | undefined): ProviderCredential {
   const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
@@ -132,7 +146,7 @@ function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthC
     ...(parameters === undefined ? {} : { parameters: placedEach(parameters, values) }),
     ...(pkce === undefined ? {} : { pkce }),
     ...(clients === undefined ? {} : { clients }),
-    ...(way.subject === undefined ? {} : { subject: placedText(way.subject, values) }),
+    ...assertedOf(way, values),
   };
 }
 

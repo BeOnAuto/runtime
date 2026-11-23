@@ -5,7 +5,15 @@ import { describe, expect, it } from 'vitest';
 
 import { listedEventOf } from '../events/arrival-readings.ts';
 import type { Destination } from '../events/destination-fields.ts';
-import { providerNamed, providersShippedRoots, readProviders, subscriptionCallsOf, triggersAskerOf } from '../index.ts';
+import {
+  accountTypesOf,
+  permissionsOf,
+  providerNamed,
+  providersShippedRoots,
+  readProviders,
+  subscriptionCallsOf,
+  triggersAskerOf,
+} from '../index.ts';
 import { requestedWith } from '../testing/subscription-services.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
@@ -180,5 +188,30 @@ describe('the check of GitHub’s pull requests, and which check hears which typ
       [],
       [],
     ]);
+  });
+});
+
+describe('the way of GitHub that connects as the company’s own GitHub App', () => {
+  it('comes last, after the sign-in and the key, acts as the app, and asks its installation’s token of GitHub with a JWT the .pem file signs, naming the App ID', () => {
+    const { entry } = Result.getOrThrow(providerNamed(shipped, 'github'));
+    const ofTheApp = Option.getOrThrow(Option.fromNullishOr(entry.credentials.at(-1)));
+
+    expect(entry.credentials.map(({ kind }) => kind)).toEqual(['authorization', 'secret', 'jwt_bearer']);
+    expect([permissionsOf(ofTheApp), accountTypesOf(ofTheApp)]).toEqual(['application', []]);
+    expect(ofTheApp).toMatchObject({
+      issuer: 'https://api.github.com',
+      client_id: '{app_id}',
+      key_file: { format: 'pem' },
+      token_request: {
+        method: 'POST',
+        url: 'https://api.github.com/app/installations/{installation_id}/access_tokens',
+        issued: { access_token: '/token', expires_at: '/expires_at' },
+      },
+    });
+    expect(Object.keys(Option.getOrThrow(Option.fromNullishOr(ofTheApp.placeholders)))).toEqual([
+      'app_id',
+      'installation_id',
+    ]);
+    expect(ofTheApp.limitation).toBeDefined();
   });
 });

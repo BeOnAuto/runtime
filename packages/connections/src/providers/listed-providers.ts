@@ -1,4 +1,4 @@
-import { AccountTypeSchema, WayKindSchema, wayFields } from '@on.auto/providers';
+import { AccountTypeSchema, WayKindSchema, wayFields, type CredentialWay, type Placeholder } from '@on.auto/providers';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -105,6 +105,14 @@ export const ListedWaySchema = Schema.Struct({
       description:
         'For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
+  ),
+  key_file: Schema.optionalKey(
+    Schema.Struct({
+      format: Schema.Literals(['json', 'pem']).annotate({
+        description:
+          "json for a JSON key file that names the client's ID and holds the private key; pem for a file that is the private key itself in PEM",
+      }),
+    }).annotate({ description: 'For jwt_bearer, the key file the person gives on the page' }),
   ),
   client_id_title: Schema.optionalKey(
     Schema.String.annotate({
@@ -240,3 +248,24 @@ export const ProvidersSchema = Schema.Struct({
       "The address the runtime sends a provider's authorization server as redirect_uri for a connection under the organization's own OAuth client, which that client registers as an authorized redirect URI",
   }),
 });
+
+function listedPlaceholderOf([name, placeholder]: readonly [string, Placeholder]): ListedPlaceholder {
+  const { title: label, description, pattern, example, required = true, choices } = placeholder;
+  return {
+    name,
+    ...(label === undefined ? {} : { title: label }),
+    description,
+    ...(pattern === undefined ? {} : { pattern }),
+    ...(example === undefined ? {} : { example }),
+    required,
+    ...(choices === undefined ? {} : { choices: choices.map(({ value, title }) => ({ value, title })) }),
+  };
+}
+
+export function listedPlaceholdersOf(placeholders: Readonly<Record<string, Placeholder>> = {}) {
+  return Object.entries(placeholders).map((each: readonly [string, Placeholder]) => listedPlaceholderOf(each));
+}
+
+export function wayPlaceholdersOf({ placeholders }: CredentialWay) {
+  return placeholders === undefined ? {} : { placeholders: listedPlaceholdersOf(placeholders) };
+}

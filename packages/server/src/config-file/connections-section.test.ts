@@ -77,9 +77,20 @@ const providerOfAKeyFile = `connections:
             private_key: /private_key
 `;
 
+const askingItsOwnTokens = `connections:
+  providers:
+    - { name: apps, title: Apps, description: Read the apps., website: 'https://apps.example.com', type: mcp, url: 'https://mcp.apps.example.com/mcp', credentials: [{ kind: jwt_bearer, issuer: 'https://api.apps.example.com', client_id: '{app}', key_file: { format: pem }, token_request: { method: POST, url: 'https://api.apps.example.com/tokens', issued: { access_token: /token } }, placeholders: { app: { description: The ID of the app., pattern: '^[0-9]+$', example: '1234' } } }] }
+tool_servers:
+  appserver: { url: 'https://mcp.apps.example.com/mcp', org: acme, auth: { issuer: 'https://api.apps.example.com', client_id: '1234', private_key: '\${APPS_KEY}', algorithm: RS256, grant: jwt_bearer, token_request: { method: POST, url: 'https://api.apps.example.com/tokens', issued: { access_token: /token } } } }
+`;
+
 describe('a provider the connections section adds, whose way takes a key file', () => {
   it('is read, the pointers into its key file not taken for credentials', () => {
     expect(refusalOf(fileOf(providerOfAKeyFile))).toBe('read');
+  });
+
+  it('is read with a token request of its own, as an auth block is, the pointers into its answer not taken for credentials', () => {
+    expect(refusalOf(fileOf(askingItsOwnTokens), { APPS_KEY: 'k' })).toBe('read');
   });
 });
 

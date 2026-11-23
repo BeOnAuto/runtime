@@ -27,7 +27,7 @@ export function keyFileChecked(
   { clientId, privateKey }: KeyFileValues,
   services: KeyFileChecking,
 ): Effect.Effect<void, InvalidInput | Unavailable | Conflict> {
-  const { issuer, subject, scope } = connection.credential;
+  const { issuer, subject, scope, token_request: tokenRequest } = connection.credential;
   return Effect.gen(function* () {
     const at = DateTime.toEpochMillis(yield* DateTime.now);
     const fetch = fetchWithin(yield* fetchOfTheCall(services.fetch), reachesUnder(services.policy, services.resolve));
@@ -38,6 +38,7 @@ export function keyFileChecked(
       scope,
       privateKey: Redacted.make(privateKey),
       algorithm: assertionAlgorithm,
+      tokenRequest,
     };
     const checked = yield* Effect.promise(() => assertionCheckedOf(assertion, { fetch, now: () => at }));
     yield* loggedWhenUnreached(connection, checked);

@@ -215,6 +215,73 @@ describe('the token endpoint of a fake that takes a signed assertion', () => {
   });
 });
 
+const ownRequest = '/apps/installations/7/tokens';
+
+const issuingThroughItsOwnRequest = fakeMcpAnswers({ client: { ...robot, tokenRequestPath: ownRequest } }).handlerAt(
+  assertingOrigin,
+);
+
+const sayingNoLifetime = fakeMcpAnswers({
+  client: { ...robot, expiresInSeconds: null, tokenRequestPath: ownRequest },
+}).handlerAt(assertingOrigin);
+
+interface Requested {
+  readonly method?: string;
+  readonly lastsSeconds?: number;
+  readonly privateKey?: string;
+  readonly iss?: string;
+  readonly answering?: (request: Readonly<Request>) => Promise<Response>;
+}
+
+async function requestAnswered({
+  method = 'POST',
+  lastsSeconds = 300,
+  privateKey = asserting.privateKey,
+  iss = 'robot',
+  answering = issuingThroughItsOwnRequest,
+}: Requested) {
+  const signed = await new SignJWT({})
+    .setProtectedHeader({ alg: 'RS256' })
+    .setIssuer(iss)
+    .setIssuedAt(1_800_000_000)
+    .setExpirationTime(1_800_000_000 + lastsSeconds)
+    .sign(await importPKCS8(privateKey, 'RS256'));
+  const answer = await answering(
+    new Request(`${assertingOrigin}${ownRequest}`, { method, headers: { authorization: `Bearer ${signed}` } }),
+  );
+  return [
+    answer.status,
+    Object.keys(Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Unknown))(await answer.json())),
+  ];
+}
+
+describe('a fake that gives tokens through a request of its own', () => {
+  it('gives a token and the time it ends to an assertion its client signed, posted as the Bearer and lasting at most ten minutes, and refuses any other', async () => {
+    const unsigned = await issuingThroughItsOwnRequest(
+      new Request(`${assertingOrigin}${ownRequest}`, { method: 'POST' }),
+    );
+
+    expect(
+      await Promise.all([
+        requestAnswered({ lastsSeconds: 600 }),
+        requestAnswered({ answering: sayingNoLifetime }),
+        requestAnswered({ lastsSeconds: 601 }),
+        requestAnswered({ method: 'GET' }),
+        requestAnswered({ privateKey: rsaKeys().privateKey }),
+        requestAnswered({ iss: 'another' }),
+      ]),
+    ).toEqual([
+      [201, ['token', 'expires_at']],
+      [201, ['token', 'expires_at']],
+      [401, ['message']],
+      [401, ['message']],
+      [401, ['message']],
+      [401, ['message']],
+    ]);
+    expect(unsigned.status).toBe(401);
+  });
+});
+
 describe('a fake whose issuer has a path in its address, as an authorization server of one tenant has', () => {
   it.each(placesOfTheMetadata)(
     'answers where %s for that issuer, naming the issuer with its path, and nowhere else',

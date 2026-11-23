@@ -1,9 +1,11 @@
-import { generateKeyPairSync } from 'node:crypto';
+import { createPrivateKey, generateKeyPairSync } from 'node:crypto';
 
 import type { ProviderList } from '@on.auto/providers';
 import {
+  asAnInstalledApp,
   asAServiceAccount,
   asTheServiceAccountItself as wayOfTheServiceAccountItself,
+  installedAppRequest,
   mail,
   providerListOf,
   providerOf,
@@ -70,3 +72,47 @@ export const asTheServiceAccount = {
 } as const;
 
 export const asTheServiceAccountItself = { provider: 'mail', credential: { kind: 'jwt_bearer' } } as const;
+
+export const appId = '1234567';
+
+export const installation = '12345678';
+
+export interface InstalledApp {
+  readonly service: FakeMcpServer;
+  readonly providers: ProviderList;
+  readonly pkcs1: string;
+  readonly pkcs8: string;
+}
+
+export function installedAppAt(): InstalledApp {
+  const { publicKey, privateKey: pkcs1 } = generateKeyPairSync('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs1', format: 'pem' },
+  });
+  const service = fakeMcpInProcess({
+    client: {
+      clientId: appId,
+      publicKey,
+      expiresInSeconds: 3600,
+      tokenRequestPath: `/apps/installations/${installation}/tokens`,
+    },
+  });
+  const way = {
+    ...asAnInstalledApp,
+    issuer: `${service.origin}/apps`,
+    token_request: { ...installedAppRequest, url: `${service.origin}/apps/installations/{installation}/tokens` },
+  };
+  return {
+    service,
+    providers: providerListOf(providerOf({ ...mail, credentials: [signingInToMail, way] })),
+    pkcs1,
+    pkcs8: createPrivateKey(pkcs1).export({ type: 'pkcs8', format: 'pem' }),
+  };
+}
+
+export const asTheInstalledApp = {
+  provider: 'mail',
+  credential: { kind: 'jwt_bearer' },
+  placeholders: { app: appId, installation },
+} as const;

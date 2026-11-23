@@ -5886,7 +5886,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -5903,6 +5903,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -6661,7 +6702,7 @@
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                             },
                             "scope": {
                               "type": "string",
@@ -6678,6 +6719,47 @@
                                 "type": "string"
                               },
                               "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                            },
+                            "token_request": {
+                              "type": "object",
+                              "properties": {
+                                "method": {
+                                  "type": "string",
+                                  "enum": [
+                                    "POST"
+                                  ],
+                                  "description": "The method of the request, POST"
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "description": "The https URL the request is sent to, which lies under the issuer"
+                                },
+                                "issued": {
+                                  "type": "object",
+                                  "properties": {
+                                    "access_token": {
+                                      "type": "string",
+                                      "description": "A JSON Pointer into the answer, to the access token"
+                                    },
+                                    "expires_at": {
+                                      "type": "string",
+                                      "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                    }
+                                  },
+                                  "required": [
+                                    "access_token"
+                                  ],
+                                  "additionalProperties": false,
+                                  "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                                }
+                              },
+                              "required": [
+                                "method",
+                                "url",
+                                "issued"
+                              ],
+                              "additionalProperties": false,
+                              "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                             },
                             "authorization_endpoint": {
                               "type": "string",
@@ -7527,7 +7609,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -7544,6 +7626,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -8389,7 +8512,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -8406,6 +8529,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -9141,7 +9305,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -9158,6 +9322,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -9899,7 +10104,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -9916,6 +10121,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -10666,7 +10912,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -10683,6 +10929,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -11425,7 +11712,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -11442,6 +11729,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -12444,7 +12772,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -12461,6 +12789,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -13460,7 +13829,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -13477,6 +13846,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -14263,7 +14673,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -14280,6 +14690,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -14868,7 +15319,7 @@
                   "key_file": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names. It keeps nothing else of the file."
+                    "description": "For jwt_bearer, the whole text of the key file the service gave, given alone. The runtime checks the key with the service before it keeps anything, then keeps the private key, sealed, and records the client's ID the file names, where it names one. It keeps nothing else of the file."
                   },
                   "playbooks": {
                     "anyOf": [
@@ -15077,7 +15528,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -15094,6 +15545,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -15893,7 +16385,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -15910,6 +16402,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -16862,7 +17395,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page; for jwt_bearer, the id of the client in the key file the person gives on the page, once connected, or for a key file in PEM the one given with the way's values"
                         },
                         "scope": {
                           "type": "string",
@@ -16879,6 +17412,47 @@
                             "type": "string"
                           },
                           "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials"
+                        },
+                        "token_request": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "POST"
+                              ],
+                              "description": "The method of the request, POST"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The https URL the request is sent to, which lies under the issuer"
+                            },
+                            "issued": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the access token"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                                }
+                              },
+                              "required": [
+                                "access_token"
+                              ],
+                              "additionalProperties": false,
+                              "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "url",
+                            "issued"
+                          ],
+                          "additionalProperties": false,
+                          "description": "For jwt_bearer, the request that asks the service for a token, where the service has its own: its method and its https URL under the issuer, with the way's values in it, sent with the signed assertion as its Bearer, and where the answer names the token and the time it ends"
                         },
                         "authorization_endpoint": {
                           "type": "string",
@@ -17636,6 +18210,24 @@
                               "key_page_title": {
                                 "type": "string",
                                 "description": "For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens the key page, where the entry gives one; left out otherwise"
+                              },
+                              "key_file": {
+                                "type": "object",
+                                "properties": {
+                                  "format": {
+                                    "type": "string",
+                                    "enum": [
+                                      "json",
+                                      "pem"
+                                    ],
+                                    "description": "json for a JSON key file that names the client's ID and holds the private key; pem for a file that is the private key itself in PEM"
+                                  }
+                                },
+                                "required": [
+                                  "format"
+                                ],
+                                "additionalProperties": false,
+                                "description": "For jwt_bearer, the key file the person gives on the page"
                               },
                               "client_id_title": {
                                 "type": "string",

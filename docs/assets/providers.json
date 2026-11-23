@@ -694,6 +694,10 @@
           "description": "GitHub fine-grained personal access token",
           "key_page": "https://github.com/settings/personal-access-tokens/new",
           "instructions": "Make a token at [GitHub](https://github.com/settings/personal-access-tokens/new), under **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**. As **Resource owner**, choose the account or organization that owns the repositories, and under **Repository access** select the repositories your functions use. Under **Permissions**, give **Contents** read-only access, and **Issues**, **Pull requests** and **Webhooks** read and write access. An organization that requires approval keeps the token pending, reading public resources alone, until an organization administrator approves it. The token starts with `github_pat_`."
+        },
+        {
+          "kind": "jwt_bearer",
+          "description": "The App ID, private key and installation ID of a GitHub App your company registers and installs on its repositories."
         }
       ],
       "placeholders": [],

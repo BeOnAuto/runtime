@@ -1,5 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Option, Result, type Schema } from 'effect';
+import { Effect, Option, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,6 +11,7 @@ import {
   providersShippedRoots,
   readProviders,
 } from '../index.ts';
+import { identifiedIn } from '../subscriptions/subscription-answers.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
 
@@ -253,7 +254,7 @@ describe('each type GitHub’s entry lists', () => {
 });
 
 describe('the account that did what a delivery GitHub’s webhook sends reports', () => {
-  it('is the one its sender names, by the id that GitHub answers for the authenticated user too', () => {
+  it('is the one its sender names, by the numeric id that GitHub’s GraphQL API answers for the viewer too', () => {
     const comment = { action: 'created', issue: anOpenedIssue, comment: aComment };
     const github = Result.getOrThrow(providerNamed(shipped, 'github'));
 
@@ -262,10 +263,15 @@ describe('the account that did what a delivery GitHub’s webhook sends reports'
       readOf('pull_request', { action: 'closed', pull_request: aClosedPullRequest, sender: theAuthor }).event?.actor,
       readOf('issue_comment', comment).event?.actor,
     ]).toEqual(['1', '1', undefined]);
-    expect(github.entry.events?.identity).toEqual({
-      method: 'GET',
-      url: 'https://api.github.com/user',
-      identified: { id: '/id', name: '/login' },
+    const identity = Option.getOrThrow(Option.fromNullishOr(github.entry.events?.identity));
+    const viewer = { data: { viewer: { databaseId: 1, login: 'octocat' } } };
+
+    expect(identity).toEqual({
+      method: 'POST',
+      url: 'https://api.github.com/graphql',
+      body: { query: 'query { viewer { databaseId login } }' },
+      identified: { id: '/data/viewer/databaseId', name: '/data/viewer/login' },
     });
+    expect(Effect.runSync(identifiedIn(viewer, identity))).toEqual({ user: { id: '1', name: 'octocat' } });
   });
 });

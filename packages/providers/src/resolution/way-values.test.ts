@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '../index.ts';
 import { providerOf } from '../testing/fixture-providers.ts';
 import {
+  asAnInstalledApp,
   asAServiceAccount,
   asTheCompanysApp,
   asTheServiceAccountItself,
@@ -134,5 +135,34 @@ describe('a way that signs an assertion for the service account itself', () => {
       account_types: [],
     });
     expect(addition.credential).not.toHaveProperty('subject');
+  });
+});
+
+describe('a way that signs an assertion with a key file in PEM, asking a token through a request of its own', () => {
+  const provider = providerOf({ ...mail, credentials: [signingInToMail, asAnInstalledApp] });
+  const addedAs = (placeholders: Readonly<Record<string, string>>) =>
+    additionOfProvider(provider.entry, { kind: 'jwt_bearer', placeholders });
+
+  it('is added with the client and the address of its token request resolved from the values given for them, acting as the app', () => {
+    expect(Result.getOrThrow(addedAs({ app: '1234567', installation: '12345678' }))).toMatchObject({
+      credential: {
+        kind: 'jwt_bearer',
+        issuer: 'https://api.mail.example.com/apps',
+        client_id: '1234567',
+        token_request: {
+          method: 'POST',
+          url: 'https://api.mail.example.com/apps/installations/12345678/tokens',
+          issued: { access_token: '/token', expires_at: '/expires_at' },
+        },
+      },
+      permissions: 'application',
+      account_types: [],
+    });
+  });
+
+  it('is refused a value that misses its pattern, so none moves the address its token request goes to', () => {
+    expect(Result.getOrThrow(Result.flip(addedAs({ app: '1234567', installation: '../../user' })))).toEqual([
+      { pointer: '/placeholders/installation', detail: anyWords },
+    ]);
   });
 });
