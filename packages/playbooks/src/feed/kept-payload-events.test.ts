@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import {
   ActedContextSchema,
   Ledger,
+  type Lineage,
   ServedAsTool,
   changingNothing,
   contentHoldersOf,
@@ -25,7 +26,7 @@ import { memoryLedger, memoryPlaybookRegistry } from '@on.auto/operations/testin
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineGetEvent, playbookRows } from '../index.ts';
+import { defineGetEvent, defineGetRunTree, playbookRows } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
@@ -189,5 +190,86 @@ describe('one event of a fact that offloads a payload, read whole by a presenter
     );
 
     expect(await unreachable).toMatchObject({ status: 'succeeded', output: { data: { title: '1' } } });
+  });
+});
+
+const HeldSchema = Schema.Union([
+  factOf(
+    'held',
+    Schema.Struct({ title: Schema.String, text_sha256: Schema.String, text_bytes: Schema.Number }),
+    ActedContextSchema,
+    { content: { holds: ['/text_sha256'] } },
+  ),
+]);
+
+type Held = Decided<typeof HeldSchema.Type>;
+
+const holding: Decider<null, { readonly fact: Held; readonly at: string }, typeof HeldSchema.Type> = {
+  initialState: null,
+  evolve: (state) => state,
+  decide: ({ fact }) => Result.succeed([fact]),
+  context: ({ at: when }) => ({ at: when, by: 'acme-admin' }),
+  eventSchema: HeldSchema,
+};
+
+const decodeHeld = Schema.decodeUnknownSync(
+  Schema.Struct({ title: Schema.String, text_sha256: Schema.String, text_bytes: Schema.Number }),
+);
+
+const helds: Presenter = {
+  streamKind: 'helds',
+  publicNames: { held: ['note_held'] },
+  present: ({ data }, content) => {
+    const { title, text_sha256: sha256, text_bytes: bytes } = decodeHeld(data);
+    const text = content(sha256);
+    return [
+      {
+        type: 'note_held',
+        summary: 'A note was held.',
+        data: { title, text_sha256: sha256, text_bytes: bytes, ...(text === undefined ? {} : { text }) },
+      },
+    ];
+  },
+  changes: changingNothing(['held']),
+};
+
+const heldHolders = contentHoldersOf([HeldSchema]);
+
+const run = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const ofTheRun: Lineage = { causationId: null, correlationId: run };
+
+function heldIn(feed: ReturnType<typeof harness>, number: number, text: string) {
+  const payload = toKeep(text);
+  const put = payloadKept(feed.ledger.service.content, { org: 'acme', playbook: 'alpha' }, payload);
+  const { sha256, bytes } = payload;
+  const fact: Held = { type: 'held', data: { title: `${number}`, text_sha256: sha256, text_bytes: bytes } };
+  return feed.run(
+    Effect.orDie(put).pipe(
+      Effect.andThen(
+        feed.ledger.service.execute(`playbook/acme/alpha/helds/${number}`, holding, { fact, at }, ofTheRun),
+      ),
+      Effect.orDie,
+    ),
+    at,
+  );
+}
+
+describe('the tree of a run whose events hold content kept outside them', () => {
+  it('reads none of that content, and gives each by its digest and size alone', async () => {
+    const feed = harness(alphaKnown, memoryLedger(undefined, [playbookRows], heldHolders));
+    await heldIn(feed, 1, 'kept apart');
+    const { sha256, bytes } = toKeep('kept apart');
+    const tree = await feed.run(
+      makeDispatcher([])
+        .dispatchToPlaybook(defineGetRunTree([helds]).registration, toAlpha(acmeAdmin, { run_id: run }))
+        .pipe(Effect.provideService(Ledger, unreachableContent(feed.ledger.service))),
+    );
+
+    expect(tree).toMatchObject({
+      status: 'succeeded',
+      output: { events: [{ data: { title: '1', text_sha256: sha256, text_bytes: bytes } }] },
+    });
+    expect(JSON.stringify(tree)).not.toContain('kept apart');
   });
 });

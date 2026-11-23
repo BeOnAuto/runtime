@@ -143,7 +143,7 @@ export type { ResourceReference } from './access-control/policy-decision-point.t
 export { cursorOfParts, cursorWithin, partsOfCursor, type CursorPart } from './reading/cursor-parts.ts';
 export { eventsPageOf } from './reading/event-paging.ts';
 export { eventMetadataOf } from './reading/event-metadata.ts';
-export { keptContentOf } from './reading/kept-content.ts';
+export { keptContentOf, nothingKept } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
 export { AskedTogether, askedTogether, readOnceTogether, togetherAsked } from './reading/read-together.ts';

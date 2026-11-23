@@ -55,6 +55,7 @@ export const servedDeclarations: readonly string[] = [
   'playbook/get_playbook_analytics: playbook:read',
   'playbook/get_run: playbook:read',
   'playbook/get_run_history: playbook:read',
+  'playbook/get_run_tree: playbook:read',
   'playbook/introspect: playbook:read',
   'playbook/list_comments: playbook:read',
   'playbook/list_definitions: playbook:read',

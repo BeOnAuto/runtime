@@ -54,6 +54,7 @@ const whatReadingPermits = [
   'playbook/get_playbook_analytics',
   'playbook/get_run',
   'playbook/get_run_history',
+  'playbook/get_run_tree',
   'playbook/introspect',
   'playbook/list_comments',
   'playbook/list_definitions',
@@ -126,7 +127,6 @@ const whatReadingAndRunningPermit = [...whatReadingPermits, ...whatRunningPermit
 const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted();
 
 const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
-
 const everythingButWhatManagesPermissions = everything.filter((name) => !whatManagesPermissions.includes(name));
 
 const whatManagesConnections = [
