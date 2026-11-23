@@ -1,5 +1,63 @@
 # Changelog
 
+## [0.61.0](https://github.com/BeOnAuto/runtime/compare/v0.60.0...v0.61.0) (2026-11-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connections:** a connection's link no longer expires. It works until its connection is connected or removed, or a newer link replaces it, so a link given before the upgrade and never used works again. add_connection and reconnect_connection answer connect as { url }, with no expires_at, and no longer answer link_ran_out; read_link answers link with no expires_at. A program that composes the core gives answerAfterTheLink without linkLastsMs. An earlier release does not open a ledger in which this release has recorded a link, so upgrades go forward only.
+
+### Features
+
+* **access-control:** an operator runs playbooks and answers requests ([882fe17](https://github.com/BeOnAuto/runtime/commit/882fe1726e38aba07fddf28d00949890bf8cdd34))
+* **access-control:** only an admin connects an app for the organization ([5f0f7d8](https://github.com/BeOnAuto/runtime/commit/5f0f7d8b4c47a7c7a1e255d1fe0298faa838c9df))
+* **api:** one GraphQL query per screen over stored entities, kept current by one feed of the org ([fd6e482](https://github.com/BeOnAuto/runtime/commit/fd6e482d053c2cb5d16901b5cacf534d4fe258f5))
+* **connections:** a connection lists the events it reports, and a trigger can start from one ([f8fd11f](https://github.com/BeOnAuto/runtime/commit/f8fd11fc65652c11ceea390f276fd8ddb4526386))
+* **connections:** a connection records the model Auto answers with ([ba70518](https://github.com/BeOnAuto/runtime/commit/ba70518b12dad0f06191d5b8e45f2f23a5de1179))
+* **connections:** a connection's link has no time limit ([887f68c](https://github.com/BeOnAuto/runtime/commit/887f68cfc71880e547ced85d481c00666530b060))
+* **connections:** an admin chooses the model Auto answers members with, on Auto's cloud as well ([292d74e](https://github.com/BeOnAuto/runtime/commit/292d74e06fef805a5d9570035fa794d4a54eb1af))
+* **connections:** an MCP provider's client credentials get their token from their way's issuer ([4f5c525](https://github.com/BeOnAuto/runtime/commit/4f5c5252a5396c32834e685661bd3663aea826e5))
+* **connections:** check an app on a timer and start a workflow for what is new ([e094d71](https://github.com/BeOnAuto/runtime/commit/e094d716ba5f41f271e97c002706b68c34558825))
+* **connections:** someone who may not connect an app asks for it ([d47b6bc](https://github.com/BeOnAuto/runtime/commit/d47b6bcfbb7482574862dbb42a838e9cf2dee896))
+* **connections:** the name of a place a trigger listens in is kept, such as a channel's name ([dd9b6c8](https://github.com/BeOnAuto/runtime/commit/dd9b6c88c3206f773c55718e9d563bde546111a0))
+* **definitions:** start a workflow from what a tool of any connection lists ([49db83b](https://github.com/BeOnAuto/runtime/commit/49db83b436af965f523d676ea5b94e22bbfffa40))
+* **interaction:** an answer can require a field only for one choice ([9cdde19](https://github.com/BeOnAuto/runtime/commit/9cdde19aa9d9a71fded45731397ad92d9c9df8cc))
+* **ledger:** a call's reads of the store are named by projection and fold ([df82e33](https://github.com/BeOnAuto/runtime/commit/df82e3360e6242e4eb8ce700001db0fa841c72ef))
+* **openid-connect:** the sign-in records a verified address, and a person can link a chat account ([a1b0251](https://github.com/BeOnAuto/runtime/commit/a1b0251ad7bb5755f8bf14bf83ddcc81444c0d55))
+* **providers:** a company's own app connects to Outlook ([a1b0251](https://github.com/BeOnAuto/runtime/commit/a1b0251ad7bb5755f8bf14bf83ddcc81444c0d55))
+* **providers:** a company's own GitHub App connects GitHub through an installation's token ([725fd30](https://github.com/BeOnAuto/runtime/commit/725fd305212095a9d238923c9341eb31c47d4f76))
+* **providers:** a key for GitHub is set up in short steps ([37bcb9f](https://github.com/BeOnAuto/runtime/commit/37bcb9f512f54d954fd1b93a1b4f9eec7604aa68))
+* **providers:** a key-file way may name no account, and the service account acts as itself ([ce2fcbd](https://github.com/BeOnAuto/runtime/commit/ce2fcbd868084896b532d2e476cd527f8b9aabe8))
+* **providers:** a provider's entry can declare a chat, and the Slack Bot entry declares one ([a294e56](https://github.com/BeOnAuto/runtime/commit/a294e56f0e8af43b8de094107f1507fbf3f8795c))
+* **providers:** a sign-in way states the steps for the organization's own OAuth client ([e4e94b2](https://github.com/BeOnAuto/runtime/commit/e4e94b226a94ee36a23f99021aa932421d299d58))
+* **providers:** a way states what it cannot do, and three apps connect as the company ([4f4581f](https://github.com/BeOnAuto/runtime/commit/4f4581ff150c2c7555f6baf6ee1e89eb19ad90f9))
+* **providers:** a way's own values reach its token request and its paths ([11b9114](https://github.com/BeOnAuto/runtime/commit/11b9114802a502744802d659795b890371da6e4f))
+* **providers:** adobe analytics mcp is removed; adobe analytics stays ([494f15c](https://github.com/BeOnAuto/runtime/commit/494f15cd0433ec66d82d51d0f3b1ea63372225d4))
+* **providers:** nine Google apps connect as the company through a service account's key file ([28f1ff4](https://github.com/BeOnAuto/runtime/commit/28f1ff40ff674b008977b799a8f07ea6083ece40))
+* **providers:** start a workflow from what Auto reads in Linear and GitHub ([442a35e](https://github.com/BeOnAuto/runtime/commit/442a35e15e3a9bbbd86f7ec4689566672b92df05))
+* **providers:** the built-in apps include Apollo GraphOS Agent Services ([c62106a](https://github.com/BeOnAuto/runtime/commit/c62106ae292cc71ca754ccfc0a6ebfe3fdaab7ad))
+* **server:** a conversation with Auto is kept sealed in tables of its own, and a command deletes it ([6259f3b](https://github.com/BeOnAuto/runtime/commit/6259f3b7edda742cc7729dbd001f92e06d6c6040))
+* **server:** a member writes to Auto in a chat and Auto answers as that member ([c11e4a1](https://github.com/BeOnAuto/runtime/commit/c11e4a1dfcee3ba9045f909ff6ae0b4b4f449283))
+* **server:** a reply that arrives over a socket carries the run on at once ([37bcb9f](https://github.com/BeOnAuto/runtime/commit/37bcb9f512f54d954fd1b93a1b4f9eec7604aa68))
+* **server:** an event that arrives over a socket is taken in ([1b80408](https://github.com/BeOnAuto/runtime/commit/1b8040830419ecb5c1622ef6354823abffbd565d))
+* **server:** show that Auto is working under a reply a playbook's request waits for ([a5999a6](https://github.com/BeOnAuto/runtime/commit/a5999a6436140b1449cae589d0ed10b096a052b6))
+* **tool-servers:** a connection signs in as a service account with a signed assertion ([70e571b](https://github.com/BeOnAuto/runtime/commit/70e571bccead4ccde64fc7d93353d2839af7ef16))
+
+
+### Bug Fixes
+
+* **connections:** connecting waits for a model where members can write to Auto ([afc35f3](https://github.com/BeOnAuto/runtime/commit/afc35f3eeb6b539225f19fd1c88f7c6c75a16d37))
+* **providers:** a GitHub subscription asks for every event its entry lists ([af23a6d](https://github.com/BeOnAuto/runtime/commit/af23a6d60fb416df51f3f3442fdf8d364519961a))
+* **providers:** the first step of Slack Bot's setup says to sign in to Slack before creating the app ([222660a](https://github.com/BeOnAuto/runtime/commit/222660acd221e1b7394ccdcf7ec518a01fba7b0e))
+* **server:** a server that signs nobody in offers no chat on its connections or providers ([b6a8144](https://github.com/BeOnAuto/runtime/commit/b6a8144a0733251009708748a656c0d5541f1312))
+
+
+### Performance Improvements
+
+* **api:** a screen's query answers each read as it comes, and slow reads go beside it ([b249d01](https://github.com/BeOnAuto/runtime/commit/b249d01f1907d4a3200d4d47bfd48ffef3fbe492))
+* **goals:** a goals read asks every connection's status at once, and a query reads them once ([b6a8144](https://github.com/BeOnAuto/runtime/commit/b6a8144a0733251009708748a656c0d5541f1312))
+* **playbooks:** a run's tree reads in one answer, its contents unread ([60737f7](https://github.com/BeOnAuto/runtime/commit/60737f79ab4b2fb99160518b3dcad97a5836e8dc))
+
 ## [0.60.0](https://github.com/BeOnAuto/runtime/compare/v0.59.0...v0.60.0) (2026-11-22)
 
 
