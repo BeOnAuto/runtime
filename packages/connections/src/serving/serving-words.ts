@@ -2,11 +2,11 @@ import { listed } from '@on.auto/phrasing';
 
 import { variableUnset } from '../registry/registry-decisions.ts';
 
-const reconnects = 'the person who added it reconnects it';
+const reconnects = 'it needs to be reconnected';
 
 export const servingWords = {
   pending: (name: string) =>
-    `Nobody has approved the connection ${name} yet; the person who added it opens its link, or reconnects it for a new link`,
+    `Nobody has approved the connection ${name} yet; it needs to be approved on the page its link opens, or reconnected for a new link`,
   unreadableNow: (name: string) =>
     `The credential of the connection ${name} cannot be read now. It stays connected: ask again later, and if it still cannot be read, whoever runs the runtime finds the cause in its log`,
   unreadableBecause: (name: string, cause: string) =>
@@ -21,14 +21,14 @@ export const servingWords = {
   clientGone: (name: string) =>
     `The client the connection ${name} was made with is no longer registered, so ${reconnects}`,
   ownClientGone: (name: string) =>
-    `The client secret of the organization's own OAuth client for the connection ${name} is no longer in the secret store, so ${reconnects} and gives its client ID and client secret again`,
+    `The client secret of the organization's own OAuth client for the connection ${name} is no longer in the secret store, so ${reconnects} with its client ID and client secret given again`,
   keyUnknown: (name: string) =>
     `Auto's consent service does not know the key of the connection ${name}, so its tokens cannot be renewed, and ${reconnects}`,
   keyRefused: (answered: string) => `${answered}: it refused the credential the connection holds, so ${reconnects}`,
   noneRefused: (answered: string) =>
-    `${answered}: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one`,
+    `${answered}: it asks for a credential the connection does not hold, so it needs to be removed and added again with one`,
   referenceRefused: (answered: string, variable: string) =>
-    `${answered}: it refused the value of the variable ${variable}, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it`,
+    `${answered}: it refused the value of the variable ${variable}, so whoever runs the runtime sets it right and starts it again, and then the connection needs to be reconnected`,
   unchecked: (name: string, details: readonly string[]) =>
     `The entry of the connection ${name} is not one this runtime takes any more: ${listed(details)}`,
 } as const;

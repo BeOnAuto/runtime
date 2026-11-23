@@ -225,7 +225,7 @@ const trackerNowAnApi: Provider = {
 };
 
 describe('a connection recorded as an MCP server from a provider that is an HTTP API since', () => {
-  it('is refused in words that tell the person who added it to remove it and add it again', async () => {
+  it('is refused in words that say it needs to be removed and added again', async () => {
     const h = harness();
     const tracked = { provider: 'tracker', placeholders: { site: 'acme' }, credential: { kind: 'none' } };
     const { id, token } = await added(h, tracked);
@@ -237,7 +237,7 @@ describe('a connection recorded as an MCP server from a provider that is an HTTP
     expect(served).toEqual({
       because: 'connection_not_allowed',
       detail:
-        'The entry of the connection tracker is not one this runtime takes any more: Its provider reaches an HTTP API now, where the connection was made for an MCP server, so the person who added it removes it and adds it again',
+        'The entry of the connection tracker is not one this runtime takes any more: Its provider reaches an HTTP API now, where the connection was made for an MCP server, so it needs to be removed and added again',
     });
   });
 });

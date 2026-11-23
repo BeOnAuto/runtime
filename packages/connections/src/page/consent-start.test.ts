@@ -135,19 +135,14 @@ describe('the start of a consent, as the link shows it', () => {
 });
 
 describe('a start refused by its link', () => {
-  it('is refused for a token unknown, to another person, and for a connection that takes no consent', async () => {
+  it('is refused for a token unknown and for a connection that takes no consent', async () => {
     const fake = served();
     const h = consentHarnessAt(fake, { policy: loopbackAndCrmPolicy });
     const link = await added(h, { provider: 'files' });
     const secret = await added(h, crm);
 
-    expect([
-      await starting(h, { ...link, token: 'unknown' }),
-      await h.call(operationNamed(h.operations, 'start'), grace, { id: link.id, token: link.token }),
-      await starting(h, secret),
-    ]).toMatchObject([
+    expect([await starting(h, { ...link, token: 'unknown' }), await starting(h, secret)]).toMatchObject([
       { reason: 'not_found' },
-      { reason: 'forbidden' },
       {
         reason: 'conflict',
         detail: anyWords,

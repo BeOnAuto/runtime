@@ -116,7 +116,7 @@ function providerTypeIssues({ type }: AdditionInput, { providing }: EntryCheckin
     : [
         {
           pointer: '/type',
-          detail: `Its provider reaches ${servedAs[now]} now, where the connection was made for ${servedAs[type]}, so the person who added it removes it and adds it again`,
+          detail: `Its provider reaches ${servedAs[now]} now, where the connection was made for ${servedAs[type]}, so it needs to be removed and added again`,
         },
       ];
 }

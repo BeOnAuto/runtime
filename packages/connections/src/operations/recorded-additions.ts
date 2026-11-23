@@ -32,7 +32,7 @@ const recordedWithItsDocument = Effect.fnUntraced(function* (
 ) {
   yield* documentKeptFor(named, given);
   return yield* recordInRegistry(named, recorded(yield* recordedCaller)).pipe(
-    Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
+    Effect.catchTags({ not_found: Effect.die, invalid_input: Effect.die }),
   );
 });
 

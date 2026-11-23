@@ -10,20 +10,17 @@ import {
   pressed,
   pressingWith,
   revocationsAt,
-  startingAs,
   standingOf,
 } from '../testing/presses.ts';
 
 const linus: CallerIdentity = { ...ada, id: 'person:linus', name: 'Linus Torvalds' };
-
-const byAnotherPerson = 'The connection files was added by another person, and only they may approve it';
 
 const graceAlone = () => startedByAdminsOf('messages', [grace.id]);
 
 const adaAndGrace = () => startedByAdminsOf('messages', [ada.id, grace.id]);
 
 describe('Connect again, where only an admin connects the provider that replaces the one it was made from', () => {
-  it('is pressed by an admin who did not add it, and the connection added again is theirs to finish, and nobody else’s', async () => {
+  it('is pressed by an admin who did not add it, and the connection added again under its name is finished through its link', async () => {
     const pressing = await pressingWith(graceAlone().starts);
     const before = (await pressing.h.facts()).length;
 
@@ -39,7 +36,6 @@ describe('Connect again, where only an admin connects the provider that replaces
       ['connection_added', moved.id],
       ['connection_link_issued', moved.id],
     ]);
-    expect(await startingAs(pressing, moved, ada)).toMatchObject({ reason: 'forbidden', detail: byAnotherPerson });
     expect(await connectedAs(pressing, moved, grace)).toMatchObject({
       status: 'succeeded',
       output: { status: 'connected', connected_by: recordedAs.grace, entry: { playbooks: ['sales'] } },
@@ -91,47 +87,32 @@ describe('a connection an admin connected again and left waiting', () => {
     });
   });
 
-  it('is added again as theirs by another admin, under its name and for its playbooks, who then finishes it', async () => {
+  it('is given a new link by another admin, the same connection under its name and for its playbooks, which they then finish', async () => {
     const pressing = await pressingWith(adaAndGrace().starts);
     const left = linkOf(await pressed(pressing, pressing.old.id, ada));
     const before = (await pressing.h.facts()).length;
 
-    const taken = await pressed(pressing, left.id, grace);
-    const theirs = linkOf(taken);
+    const relinked = await pressed(pressing, left.id, grace);
+    const newer = linkOf(relinked);
 
-    expect(taken).toMatchObject({ output: { name: 'files', status: 'pending', added_by: recordedAs.grace } });
-    expect(await changesSince(pressing.h, before)).toEqual([
-      ['connection_removed', left.id],
-      ['connection_added', theirs.id],
-      ['connection_link_issued', theirs.id],
-    ]);
-    expect(await connectedAs(pressing, theirs, grace)).toMatchObject({
-      output: { status: 'connected', entry: { playbooks: ['sales'] } },
+    expect(relinked).toMatchObject({ output: { id: left.id, status: 'pending', added_by: recordedAs.ada } });
+    expect(await changesSince(pressing.h, before)).toEqual([['connection_link_issued', left.id]]);
+    expect(await connectedAs(pressing, newer, grace)).toMatchObject({
+      output: { status: 'connected', connected_by: recordedAs.grace, entry: { playbooks: ['sales'] } },
     });
   });
-});
 
-describe('a connection an admin connected again, refused to others', () => {
-  it('is refused to anyone but an admin, in the host’s words, changing nothing', async () => {
-    const pressing = await pressingWith(adaAndGrace().starts);
-    const left = linkOf(await pressed(pressing, pressing.old.id, ada));
-    const before = await standingOf(pressing);
-
-    expect(await pressed(pressing, left.id, linus)).toMatchObject({ reason: 'forbidden', detail: adminsAlone });
-    expect(await standingOf(pressing)).toEqual(before);
-  });
-
-  it('once connected by the admin who pressed it, is theirs: another admin’s press changes nothing', async () => {
+  it('once connected by the admin who pressed it, is given a new link by another admin, as any connection is', async () => {
     const pressing = await pressingWith(adaAndGrace().starts);
     const pressedByAda = linkOf(await pressed(pressing, pressing.old.id, ada));
     await connectedAs(pressing, pressedByAda, ada);
-    const before = await pressing.h.facts();
+    const before = (await pressing.h.facts()).length;
 
     expect(await pressed(pressing, pressedByAda.id, grace)).toMatchObject({
-      reason: 'forbidden',
-      detail: byAnotherPerson,
+      status: 'succeeded',
+      output: { id: pressedByAda.id, status: 'connected' },
     });
-    expect(await pressing.h.facts()).toEqual(before);
+    expect(await changesSince(pressing.h, before)).toEqual([['connection_link_issued', pressedByAda.id]]);
   });
 });
 
@@ -176,24 +157,21 @@ describe('Connect again, refused to whoever is no person of the org, before the 
 });
 
 describe('Connect again, where whoever may add a connection connects the provider that replaces its own', () => {
-  it('is pressed by the person who added it alone, as before', async () => {
+  it('is pressed by a person who did not add it, and the connection added again under its name is theirs', async () => {
     const pressing = await pressingWith(startedByAdminsOf('drive', [grace.id]).starts);
-    const before = await standingOf(pressing);
 
     expect(await pressed(pressing, pressing.old.id, grace)).toMatchObject({
-      reason: 'forbidden',
-      detail: byAnotherPerson,
-    });
-    expect(await standingOf(pressing)).toEqual(before);
-    expect(await pressed(pressing, pressing.old.id, ada)).toMatchObject({
-      output: { provider: 'messages', added_by: recordedAs.ada },
+      output: { provider: 'messages', added_by: recordedAs.grace },
     });
   });
 
-  it('leaves a connection someone else left waiting to them, as before', async () => {
+  it('gives a connection someone else left waiting a new link, the same connection', async () => {
     const pressing = await pressingWith(startedByAdminsOf('drive', [grace.id]).starts);
     const left = linkOf(await pressed(pressing, pressing.old.id, ada));
 
-    expect(await pressed(pressing, left.id, grace)).toMatchObject({ reason: 'forbidden', detail: byAnotherPerson });
+    expect(await pressed(pressing, left.id, grace)).toMatchObject({
+      status: 'succeeded',
+      output: { id: left.id, added_by: recordedAs.ada },
+    });
   });
 });

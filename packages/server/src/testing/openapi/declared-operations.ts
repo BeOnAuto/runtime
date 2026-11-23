@@ -58,7 +58,23 @@ const managingPermissions: ReadonlySet<string> = new Set(
     .map(({ registration }) => actionOf(registration)),
 );
 
-const managingConnections: ReadonlySet<string> = new Set(['org/set_connection_model']);
+const managingConnections: ReadonlySet<string> = new Set([
+  'org/approve',
+  'org/choose_way',
+  'org/decline_connection_request',
+  'org/finish',
+  'org/give_client',
+  'org/give_credential',
+  'org/read_link',
+  'org/reconnect_connection',
+  'org/remove_connection',
+  'org/remove_connection_signing_secret',
+  'org/set_connection_account_type',
+  'org/set_connection_model',
+  'org/set_connection_playbooks',
+  'org/set_connection_signing_secret',
+  'org/start',
+]);
 
 function withWhatItManages(declared: DeclaredAction): ServedDeclaration {
   const action = actionOf(declared);

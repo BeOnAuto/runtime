@@ -44,7 +44,6 @@ export interface PlaybooksChoice {
 export interface LinkUse {
   readonly connection: string;
   readonly token_sha256: string;
-  readonly bindsPerson: boolean;
 }
 
 interface Connecting extends LinkUse {
@@ -177,7 +176,6 @@ export interface PlaceNaming {
 export interface ConnectionReconnection {
   readonly type: 'reconnect';
   readonly connection: string;
-  readonly bindsPerson: boolean;
   readonly link: OpenLink;
   readonly connected_by: RecordedCaller;
   readonly variablesSet: ReadonlySet<string>;
@@ -186,9 +184,6 @@ export interface ConnectionReconnection {
 export interface ConnectionReplacement {
   readonly type: 'replace';
   readonly connection: string;
-  readonly bindsPerson: boolean;
-  readonly takesOver: boolean;
-  readonly whilePending: boolean;
   readonly addition: ConnectionAddition;
 }
 

@@ -98,17 +98,15 @@ describe('a credential given in the wrong fields', () => {
     expect(h.secrets.values().size).toBe(0);
   });
 
-  it('refuses a connection that takes no credential to give and a link of another person', async () => {
+  it('refuses a connection that takes no credential to give', async () => {
     const h = harness();
     const none = await added(h, notes);
-    const { id, token } = await added(h, crm);
 
     expect(await giving(h, { id: none.id, token: none.token, value: 'x' })).toEqual({
       status: 'rejected',
       reason: 'conflict',
       detail: anyWords,
     });
-    expect(await giving(h, { id, token, value: 'x' }, grace)).toMatchObject({ reason: 'forbidden' });
     expect(h.secrets.values().size).toBe(0);
   });
 

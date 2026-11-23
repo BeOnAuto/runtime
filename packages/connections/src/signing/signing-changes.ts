@@ -22,7 +22,7 @@ export const signingChanged = Effect.fnUntraced(function* (
 ) {
   const { secrets } = services;
   const { before, after } = yield* recordChangeInRegistry(services, change).pipe(
-    Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
+    Effect.catchTag('invalid_input', Effect.die),
   );
   yield* Effect.forEach(signingSecretsReleasedOf(before.signing, after.signing), (id) => secrets.forget(id), {
     discard: true,

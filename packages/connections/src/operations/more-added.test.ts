@@ -165,7 +165,7 @@ describe('more added', () => {
   describe('the words of adding a connection with a group of more', () => {
     it('say its link asks the person to allow the group as well, in the words of what it is for', async () => {
       expect(await wordsOfAdding(sharingHarness(), sharingToo)).toBe(
-        'Added the connection “files”. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
+        'Added the connection “files”. Show the person a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
       );
     });
   });

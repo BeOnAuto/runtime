@@ -1608,7 +1608,7 @@
       ]
     },
     {
-      "sha256": "feb4921ef23d611db8963c4608bb5b304495dacdfa72564c5e2ecc7804bbae29",
+      "sha256": "d06fbdd9b28283723d27bff7ac5f06982445e3b4ca8b0efc16b68377e1715691",
       "tier": 1,
       "received": [
         {
@@ -1621,7 +1621,7 @@
         }
       ],
       "lines": [
-        "Issues a new link to Studio's page for a connection that is broken, or whose link the person no longer has, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, or where the person no longer has the link of a connection that is not connected yet. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
+        "Issues a new link to Studio's page for a connection that is broken, or whose link the person no longer has, so the person gives its credential or signs in again; the link before stops working. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, or where the person no longer has the link of a connection that is not connected yet. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link for the person to open, or, where a broken connection sends a variable of the runtime that is set, connected again at once."
       ]
     },
     {

@@ -287,7 +287,7 @@ function loggedBy(logged: { readonly mock: { readonly calls: readonly (readonly 
 }
 
 const keyRefused =
-  'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
+  'The tool server answered HTTP 401: it refused the credential the connection holds, so it needs to be reconnected';
 
 const clientSecret = 'billing-client-secret-3a9f71';
 

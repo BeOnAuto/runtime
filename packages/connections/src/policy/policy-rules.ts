@@ -236,10 +236,6 @@ export function signerRefusalOf(access: RuntimeAccess, caller: CallerIdentity): 
       });
 }
 
-export function bindsPerson(access: RuntimeAccess): boolean {
-  return access === 'people';
-}
-
 function rulesRefusalOf(
   policy: ConnectionPolicy,
   addition: Addition,

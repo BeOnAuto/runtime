@@ -165,7 +165,7 @@ describe('the connections of an org as tool servers', () => {
       unready: {
         because: 'connection_pending',
         detail:
-          'Nobody has approved the connection crm yet; the person who added it opens its link, or reconnects it for a new link',
+          'Nobody has approved the connection crm yet; it needs to be approved on the page its link opens, or reconnected for a new link',
       },
     });
   });

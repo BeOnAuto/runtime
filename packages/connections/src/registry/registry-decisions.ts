@@ -14,11 +14,11 @@ import type {
 import type { ConnectionEvent } from './connection-events.ts';
 import { decidedThroughTheLink, isThroughTheLink } from './link-decisions.ts';
 import { decidePlaybooks } from './playbooks-decisions.ts';
-import { bindingRefusalOf, isConnectedAt, keptConnectionOf } from './registry-lookup.ts';
+import { isConnectedAt, keptConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 import { decideOnSigning, isSigning, type CommandWithoutSigning } from './signing-decisions.ts';
 
-export type RegistryRefusal = 'not_found' | 'conflict' | 'forbidden' | 'invalid_input';
+export type RegistryRefusal = 'not_found' | 'conflict' | 'invalid_input';
 
 export type Decision = Result.Result<readonly ConnectionEvent[], Rejection<RegistryRefusal>>;
 
@@ -114,18 +114,14 @@ function unsetVariableOf(kept: KeptConnection, variablesSet: ReadonlySet<string>
   return variablesSet.has(variable) ? undefined : new Conflict({ detail: variableUnset(name, variable) });
 }
 
-function reconnectionRefusalOf(
-  kept: KeptConnection,
-  { bindsPerson, variablesSet, by }: ConnectionReconnection & CommandMetadata,
-): Rejection<RegistryRefusal> | undefined {
-  const { name, status } = kept.connection;
-  const binding = bindingRefusalOf(kept, bindsPerson, by);
-  if (binding !== undefined) {
-    return binding;
-  }
+function removedRefusalOf({ connection: { name, status } }: KeptConnection): Conflict | undefined {
   return status === 'removed'
     ? new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` })
-    : unsetVariableOf(kept, variablesSet);
+    : undefined;
+}
+
+function reconnectionRefusalOf(kept: KeptConnection, { variablesSet }: ConnectionReconnection): Conflict | undefined {
+  return removedRefusalOf(kept) ?? unsetVariableOf(kept, variablesSet);
 }
 
 function reconnectedOf(kept: KeptConnection, { connection, link, connected_by }: ConnectionReconnection): Decision {
@@ -145,29 +141,9 @@ function decideReconnection(command: ConnectionReconnection & CommandMetadata, r
   });
 }
 
-function standingRefusalOf({ connection }: KeptConnection, whilePending: boolean): Conflict | undefined {
-  const { name, status } = connection;
-  if (status === 'removed') {
-    return new Conflict({ detail: `The connection ${name} is removed, so it is added again rather than reconnected` });
-  }
-  return whilePending && status !== 'pending'
-    ? new Conflict({
-        detail: `The connection ${name} is ${status} now, so it is not added again: the person who added it connected it meanwhile`,
-      })
-    : undefined;
-}
-
-function replacementRefusalOf(
-  kept: KeptConnection,
-  { bindsPerson, takesOver, whilePending, by }: ConnectionReplacement & CommandMetadata,
-): Rejection<RegistryRefusal> | undefined {
-  const binding = takesOver ? undefined : bindingRefusalOf(kept, bindsPerson, by);
-  return binding ?? standingRefusalOf(kept, whilePending);
-}
-
 function decideReplacement(command: ConnectionReplacement & CommandMetadata, registry: Registry): Decision {
   return Result.flatMap(keptConnectionOf(registry, command.connection), (kept): Decision => {
-    const refusal = replacementRefusalOf(kept, command);
+    const refusal = removedRefusalOf(kept);
     if (refusal !== undefined) {
       return Result.fail(refusal);
     }

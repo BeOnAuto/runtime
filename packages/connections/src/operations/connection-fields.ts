@@ -40,7 +40,7 @@ export const AddedSchema = Schema.Struct({
   link_replaced: Schema.optionalKey(
     Schema.Literal(true).annotate({
       description:
-        'Answered after the link: a newer link, still open, replaced the link offered, so the person who added the connection opens the newest',
+        'Answered after the link: a newer link, still open, replaced the link offered, so the newest link is the one to open',
     }),
   ),
 }).annotate({

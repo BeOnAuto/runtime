@@ -30,8 +30,26 @@ const allowed: AccessDecision = { decision: 'allow', determiningPolicies: ['by-t
 
 const denied: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: [] };
 
-const settingDeniedToGrace = decidingEach(({ context, principal }) =>
-  Effect.succeed(context.operation.connectionsManagement && principal.id === 'grace' ? denied : allowed),
+const operationsThatManageConnections = [
+  'approve',
+  'choose_way',
+  'decline_connection_request',
+  'finish',
+  'give_client',
+  'give_credential',
+  'read_link',
+  'reconnect_connection',
+  'remove_connection',
+  'remove_connection_signing_secret',
+  'set_connection_account_type',
+  'set_connection_model',
+  'set_connection_playbooks',
+  'set_connection_signing_secret',
+  'start',
+];
+
+const settingDeniedToGrace = decidingEach(({ action, principal }) =>
+  Effect.succeed(action.name === 'set_connection_model' && principal.id === 'grace' ? denied : allowed),
 );
 
 function calling(h: Harness, operation: string, input: unknown, caller = ada): Promise<Outcome> {
@@ -231,15 +249,16 @@ describe('setting the model of a connection, by set_connection_model', () => {
     });
   });
 
-  it('is the one operation of the connections that declares it manages them, so the decision point keeps it to whom it decides', async () => {
+  it('is one of the operations of the connections that declare they manage them, every one that changes a connection or acts through its link, so the decision point keeps it to whom it decides', async () => {
     const h = harness({ ...chatServer, decidedBy: settingDeniedToGrace });
     const { id } = await connectedWith(h, { app_credentials: writingToAuto, model: 'acme/fast' });
 
     expect(
       h.operations
         .filter(({ registration }) => registration.connectionsManagement === true)
-        .map(({ registration }) => registration.name),
-    ).toEqual(['set_connection_model']);
+        .map(({ registration }) => registration.name)
+        .toSorted(),
+    ).toEqual(operationsThatManageConnections);
     expect(await calling(h, 'set_connection_model', { id, model: 'acme/deep' }, grace)).toMatchObject({
       reason: 'forbidden',
     });

@@ -13,7 +13,7 @@ import { whenSwept } from '../testing/servers/workflow-server.ts';
 const decodeStructured = Schema.decodeUnknownSync(Schema.Struct({ structuredContent: Schema.Unknown }));
 
 const pendingWords =
-  'Nobody has approved the connection chat yet; the person who added it opens its link, or reconnects it for a new link';
+  'Nobody has approved the connection chat yet; it needs to be approved on the page its link opens, or reconnected for a new link';
 
 describe('an interaction function that delivers through a connection', () => {
   it('names it at its start, and records the connection beside the server of each delivery', async () => {

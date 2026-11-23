@@ -92,7 +92,6 @@ function decided(facts: readonly RecordedConnectionEvent[], choice: Choice) {
     type: 'choose_way',
     ...ofTheConnection,
     token_sha256: 'a1b2',
-    bindsPerson: true,
     says: {},
   } as const;
   return Result.getOrThrow(

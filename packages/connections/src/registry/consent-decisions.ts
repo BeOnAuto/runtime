@@ -1,4 +1,4 @@
-import { Conflict, type Forbidden, type InvalidInput, type NotFound } from '@on.auto/operations';
+import { Conflict, type InvalidInput, type NotFound } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type { CommandMetadata, ConsentFinish, ConsentStart, LinkUse } from './connection-commands.ts';
@@ -15,7 +15,7 @@ import {
 } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
-type ConsentRefusal = NotFound | Forbidden | Conflict | InvalidInput;
+type ConsentRefusal = NotFound | Conflict | InvalidInput;
 
 type Decision = Result.Result<readonly ConnectionEvent[], ConsentRefusal>;
 
@@ -37,12 +37,8 @@ function takingConsent(kept: KeptWithLink): Result.Result<KeptWithLink, Conflict
   return ungiven === undefined ? Result.succeed(kept) : Result.fail(ungiven);
 }
 
-export function startableConnectionOf(
-  registry: Registry,
-  use: LinkUse,
-  acted: CommandMetadata,
-): Result.Result<KeptWithLink, ConsentRefusal> {
-  return Result.flatMap(linkedConnectionOf(registry, use, acted), takingConsent);
+export function startableConnectionOf(registry: Registry, use: LinkUse): Result.Result<KeptWithLink, ConsentRefusal> {
+  return Result.flatMap(linkedConnectionOf(registry, use), takingConsent);
 }
 
 function underTheClientGiven(kept: KeptWithLink, clientId: string): Result.Result<KeptWithLink, Conflict> {
@@ -50,18 +46,14 @@ function underTheClientGiven(kept: KeptWithLink, clientId: string): Result.Resul
   return changed === undefined ? Result.succeed(kept) : Result.fail(changed);
 }
 
-export function finishedConnectionOf(
-  registry: Registry,
-  use: LinkUse,
-  acted: CommandMetadata,
-): Result.Result<KeptWithLink, ConsentRefusal> {
-  return Result.flatMap(linkedConnectionOf(registry, use, acted), takingConsent);
+export function finishedConnectionOf(registry: Registry, use: LinkUse): Result.Result<KeptWithLink, ConsentRefusal> {
+  return Result.flatMap(linkedConnectionOf(registry, use), takingConsent);
 }
 
 export function decideStart(command: ConsentStart & CommandMetadata, registry: Registry): Decision {
   const { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, scope, says } = command;
   const asked = scope === undefined ? {} : { scope };
-  const startable = Result.flatMap(startableConnectionOf(registry, command, command), (kept) =>
+  const startable = Result.flatMap(startableConnectionOf(registry, command), (kept) =>
     underTheClientGiven(kept, client_id),
   );
   return Result.map(startable, (kept) => [
@@ -94,5 +86,5 @@ function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata
 }
 
 export function decideFinish(command: ConsentFinish & CommandMetadata, registry: Registry): Decision {
-  return Result.flatMap(finishedConnectionOf(registry, command, command), (kept) => finishedOf(kept, command));
+  return Result.flatMap(finishedConnectionOf(registry, command), (kept) => finishedOf(kept, command));
 }

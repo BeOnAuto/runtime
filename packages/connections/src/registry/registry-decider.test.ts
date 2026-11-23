@@ -49,7 +49,6 @@ describe('giving a credential to a connection that takes none', () => {
       type: 'give',
       connection: 'crm-id',
       token_sha256: 'a1b2',
-      bindsPerson: true,
       connected_by: { id: 'person:ada', name: 'Ada Lovelace' },
       secret_id: 'secret-1',
       ...acted,

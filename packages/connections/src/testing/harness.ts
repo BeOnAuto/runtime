@@ -2,12 +2,18 @@ import {
   allPermissions,
   CallFetch,
   makeDispatcher,
+  type AccessDecision,
   type CallerIdentity,
   type Outcome,
   type PolicyDecisionPoint,
   type Runnable,
 } from '@on.auto/operations';
-import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
+import {
+  decidingEach,
+  memoryPlaybookRegistry,
+  recordingReporter,
+  type MemoryLedger,
+} from '@on.auto/operations/testing';
 import { fixtureProviders } from '@on.auto/providers/testing';
 import { Array as Arr, DateTime, Effect, Layer, Logger, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -238,6 +244,20 @@ export function harness({
         }),
       ),
   };
+}
+
+const allowedByTheTest: AccessDecision = { decision: 'allow', determiningPolicies: ['by-the-test'], errors: [] };
+
+const deniedByTheTest: AccessDecision = { decision: 'deny', determiningPolicies: [], errors: [] };
+
+export function connectionsManagedBy(...managers: readonly string[]): PolicyDecisionPoint {
+  return decidingEach(({ context, principal }) =>
+    Effect.succeed(
+      !context.operation.connectionsManagement || principal.type !== 'person' || managers.includes(principal.id)
+        ? allowedByTheTest
+        : deniedByTheTest,
+    ),
+  );
 }
 
 export function operationNamed(operations: ConnectionOperations, name: string) {

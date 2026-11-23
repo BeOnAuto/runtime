@@ -133,7 +133,7 @@ describe('a connection under the organization’s own OAuth client whose client 
 
     const refused = await Effect.runPromise(Effect.flip(await preparedIn(h)));
     const detail =
-      "The client secret of the organization's own OAuth client for the connection files is no longer in the secret store, so the person who added it reconnects it and gives its client ID and client secret again";
+      "The client secret of the organization's own OAuth client for the connection files is no longer in the secret store, so it needs to be reconnected with its client ID and client secret given again";
 
     expect(refused).toEqual({ because: 'connection_broken', detail });
     expect((await h.facts()).at(-1)).toMatchObject({

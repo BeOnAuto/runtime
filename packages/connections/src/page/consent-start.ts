@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
 import { ClientSourceField } from '../operations/connection-fields.ts';
-import { actedNow, allowedToChoose, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
+import { allowedToChoose, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/consent-decisions.ts';
 import { forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
 import { askedForASignIn, consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
@@ -34,12 +34,12 @@ const startDescription = [
   "A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given.",
   'The consent is finished within ten minutes, and a second start replaces the first.',
   'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
-  'On a runtime that signs people in, only the person who added the connection may start it.',
+  'On a runtime that signs people in, only an admin of the organization may start it.',
   'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the start; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
 ].join(' ');
 
 export function defineStartConsent(services: ConsentServices) {
-  const { consent, secrets, bindsPerson } = services;
+  const { consent, secrets } = services;
   return defineHttpOperation('org', 'command', {
     name: 'start',
     title: 'Start consent',
@@ -49,13 +49,14 @@ export function defineStartConsent(services: ConsentServices) {
     reachesOutside: true,
     mayChangeOutside: true,
     successStatus: 201,
+    connectionsManagement: true,
     inputSchema: LinkWithPlaybooksSchema,
     outputSchema: StartedSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
       yield* allowedToChoose(choice.playbooks);
-      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
-      const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
+      const use = { connection: id, token_sha256: tokenSha256Of(token) };
+      const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry(services), use));
       const sources = yield* sourcesFor(kept.connection, services);
       const { scope, says } = yield* Effect.fromResult(askedOfTheLink(kept, services.providers, sources));
       const asked = yield* askedForASignIn(kept, services, scope);

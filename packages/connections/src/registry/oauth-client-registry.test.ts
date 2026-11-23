@@ -155,7 +155,7 @@ describe('the clients of a connection under the organization’s own OAuth clien
   });
 });
 
-const acting = { token_sha256: 'a1b2', bindsPerson: true, ...acted };
+const acting = { token_sha256: 'a1b2', ...acted };
 
 const linkIssued: ConnectionEvent = {
   type: 'connection_link_issued',

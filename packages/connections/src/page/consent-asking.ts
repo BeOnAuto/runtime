@@ -51,9 +51,7 @@ type ClientAsking = Asking & {
 export type ConsentServices = Pick<
   ConnectionServices,
   'consent' | 'policy' | 'pages' | 'secrets' | 'resolve' | 'providers'
-> & {
-  readonly bindsPerson: boolean;
-};
+>;
 
 export type Sources = Pick<HadSources, 'sourceOf'>;
 

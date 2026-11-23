@@ -17,7 +17,7 @@ const declinedConnection = Effect.fnUntraced(function* (id: string, services: De
     return yield* Effect.fail(refusal);
   }
   const recording = recordInRegistry(services, { type: 'decline', connection: id }).pipe(
-    Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
+    Effect.catchTag('invalid_input', Effect.die),
     Effect.map((removed) => ({ removed })),
   );
   const { removed } = yield* removedAround(found, recording, services);
@@ -36,6 +36,7 @@ export function defineDeclineConnectionRequest(services: DecliningServices) {
     route: { method: 'POST', path: '/connections/{id}/decline' },
     body: { kind: 'none' },
     irreversible: true,
+    connectionsManagement: true,
     inputSchema: Schema.Struct({ id: ConnectionIdField }),
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'conflict', 'unavailable'],

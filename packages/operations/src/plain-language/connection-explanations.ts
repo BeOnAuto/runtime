@@ -24,9 +24,9 @@ export const connectionBecauses: Readonly<Record<ConnectionBecause, string>> = {
 
 export const connectionRemedies: Remedies = {
   connection_pending:
-    'The person who added the connection approves it on the page its link opens, or reconnects it for a new link; then it can be tried again.',
+    'The connection needs to be approved on the page its link opens, or reconnected for a new link; then it can be tried again.',
   connection_broken:
-    'Trying again will not help until what the details say is done, most often that the person who added the connection reconnects it.',
+    'Trying again will not help until what the details say is done, most often that the connection is reconnected.',
   connection_not_allowed:
     'Trying again will not help until what the details say is put right, or it names another tool server, which search shows.',
   connection_unavailable:

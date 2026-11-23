@@ -2,7 +2,6 @@ import { OrgContext } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { connectOf } from '../links/connect-page.ts';
-import { bindsPerson } from '../policy/policy-rules.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { linkIssuedFor } from './more-asked.ts';
 import { recordInRegistry, recordedCaller } from './registry-access.ts';
@@ -13,13 +12,12 @@ export const linkedAgain = Effect.fnUntraced(function* (
   more: string | undefined,
   services: ConnectionServices,
 ) {
-  const { secrets, pages, access, variables } = services;
+  const { secrets, pages, variables } = services;
   const { org } = yield* OrgContext;
   const { token, ...link } = yield* linkIssuedFor(id, more, services);
   const kept = yield* recordInRegistry(services, {
     type: 'reconnect',
     connection: id,
-    bindsPerson: bindsPerson(access),
     link,
     connected_by: yield* recordedCaller,
     variablesSet: new Set(variables.keys()),

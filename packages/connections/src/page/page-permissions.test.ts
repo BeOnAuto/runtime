@@ -15,9 +15,12 @@ import {
   acmeReader,
   acmeViewer,
   acmeWriter,
+  connectionsManagedBy,
+  grace,
   harness,
   operationNamed,
   type Harness,
+  type HarnessOptions,
 } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
@@ -38,34 +41,36 @@ function consentServed(): FakeMcpServer {
   return fake;
 }
 
-const openLinks: Readonly<Record<string, () => Promise<Calling>>> = {
-  read_link: async () => {
-    const h = harness({ access: 'local' });
+const locally: HarnessOptions = { access: 'local' };
+
+const openLinks: Readonly<Record<string, (options?: HarnessOptions) => Promise<Calling>>> = {
+  read_link: async (options = locally) => {
+    const h = harness(options);
     const { id, token } = await added(h, crm);
     return callingOn(h, 'read_link', { id, token });
   },
-  approve: async () => {
-    const h = harness({ access: 'local' });
+  approve: async (options = locally) => {
+    const h = harness(options);
     const { id, token } = await added(h, notes);
     return callingOn(h, 'approve', { id, token });
   },
-  give_credential: async () => {
-    const h = harness({ access: 'local' });
+  give_credential: async (options = locally) => {
+    const h = harness(options);
     const { id, token } = await added(h, crm);
     return callingOn(h, 'give_credential', { id, token, value: 'Bearer crm-0f3c' });
   },
-  give_client: async () => {
-    const h = consentHarnessAt(consentServed(), { access: 'local' });
+  give_client: async (options = locally) => {
+    const h = consentHarnessAt(consentServed(), options);
     const { id, token } = await added(h, underTheOrgsOAuthClient);
     return callingOn(h, 'give_client', { id, token, ...theOrgsOAuthClient });
   },
-  start: async () => {
-    const h = consentHarnessAt(consentServed(), { access: 'local' });
+  start: async (options = locally) => {
+    const h = consentHarnessAt(consentServed(), options);
     const { id, token } = await added(h, { provider: 'files' });
     return callingOn(h, 'start', { id, token });
   },
-  finish: async () => {
-    const h = consentHarnessAt(consentServed(), { access: 'local' });
+  finish: async (options = locally) => {
+    const h = consentHarnessAt(consentServed(), options);
     const link = await added(h, { provider: 'files' });
     const { code, state, iss } = await consentedOf(h, link);
     return callingOn(h, 'finish', { id: link.id, token: link.token, code, state, iss });
@@ -97,6 +102,20 @@ describe.each(Object.entries(openLinks))('the page operation %s', (_operation, o
     const calling = await open();
 
     expect(await calling(acmeWriter)).toMatchObject({ status: 'succeeded' });
+  });
+});
+
+describe.each(Object.entries(openLinks))('the page operation %s, where people sign in', (_operation, open) => {
+  it('refuses a person the decision point does not let manage the connections of the org, for their role', async () => {
+    const calling = await open({ access: 'people', decidedBy: connectionsManagedBy('ada') });
+
+    expect(await calling(grace)).toMatchObject({ status: 'rejected', reason: 'forbidden', kind: 'permission_denied' });
+  });
+
+  it('is taken from another person who may manage the connections of the org, whoever added the connection', async () => {
+    const calling = await open({ access: 'people', decidedBy: connectionsManagedBy('ada', 'grace') });
+
+    expect(await calling(grace)).toMatchObject({ status: 'succeeded' });
   });
 });
 

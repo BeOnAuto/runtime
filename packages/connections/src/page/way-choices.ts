@@ -3,17 +3,16 @@ import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { actedNow, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
+import { loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { credentialChosenFor, type WayChoosing } from './chosen-ways.ts';
 import { forgottenVerifierOf, releasedClientsForgottenOf } from './consent-asking.ts';
 import { ChoosingTheWaySchema } from './way-fields.ts';
 
-type Choosing = WayChoosing & Pick<ConnectionServices, 'secrets'> & { readonly bindsPerson: boolean };
+type Choosing = WayChoosing & Pick<ConnectionServices, 'secrets'>;
 
 export function defineChooseWay(services: Choosing) {
-  const { bindsPerson } = services;
   return defineHttpOperation('org', 'command', {
     name: 'choose_way',
     title: 'Choose way',
@@ -27,22 +26,23 @@ export function defineChooseWay(services: Choosing) {
       "A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for.",
       'A connection that is connected or broken is refused as conflict.',
       "A way the operator's rules do not allow is refused as forbidden.",
-      'On a runtime that signs people in, only the person who added the connection may choose.',
+      'On a runtime that signs people in, only an admin of the organization may choose.',
     ].join(' '),
     route: { method: 'PUT', path: '/connections/{id}/way' },
     body: { kind: 'json' },
     repeatable: true,
+    connectionsManagement: true,
     inputSchema: ChoosingTheWaySchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input'],
     handle: Effect.fnUntraced(function* ({ id, token, credential, account_type: accountType, placeholders }) {
-      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
+      const use = { connection: id, token_sha256: tokenSha256Of(token) };
       const asked = {
         credential,
         ...(accountType === undefined ? {} : { account_type: accountType }),
         ...(placeholders === undefined ? {} : { placeholders }),
       };
-      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
+      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use));
       const chosen = yield* credentialChosenFor(kept, asked, services);
       const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'choose_way',

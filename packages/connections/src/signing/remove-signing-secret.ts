@@ -18,6 +18,7 @@ export function defineRemoveConnectionSigningSecret(services: Pick<ConnectionSer
     route: { method: 'DELETE', path: '/connections/{id}/signing-secret' },
     body: { kind: 'none' },
     repeatable: true,
+    connectionsManagement: true,
     inputSchema: Schema.Struct({
       id: ConnectionIdField,
       previous: Schema.optionalKey(

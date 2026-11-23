@@ -60,7 +60,7 @@ function goneCounted(h: Harness) {
 }
 
 const brokenReason =
-  'The credential of the connection crm is no longer in the secret store, so the person who added it reconnects it';
+  'The credential of the connection crm is no longer in the secret store, so it needs to be reconnected';
 
 describe('a connection whose credential the secret store no longer holds', () => {
   it('is broken by the runtime with its kind, the sentence of why and its time, and answered broken from then on', async () => {
@@ -174,7 +174,7 @@ describe('a break the registry does not take', () => {
 
 const answered401 = 'The tool server answered HTTP 401';
 
-const keyRefused = `${answered401}: it refused the credential the connection holds, so the person who added it reconnects it`;
+const keyRefused = `${answered401}: it refused the credential the connection holds, so it needs to be reconnected`;
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
@@ -235,7 +235,7 @@ describe('a connection of client credentials whose server refuses them', () => {
     expect(
       await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused('The tool server answered invalid_auth')),
     ).toBe(
-      'The tool server answered invalid_auth: it refused the credential the connection holds, so the person who added it reconnects it',
+      'The tool server answered invalid_auth: it refused the credential the connection holds, so it needs to be reconnected',
     );
   });
 });
@@ -253,7 +253,7 @@ describe('a connection whose server asks for a credential it does not hold', () 
         data: {
           kind: 'credential_wanted',
           reason:
-            'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one',
+            'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so it needs to be removed and added again with one',
         },
       },
     ]);
@@ -276,7 +276,7 @@ describe('a connection of a reference whose server refuses the value of its vari
         data: {
           kind: 'credential_refused',
           reason:
-            'The tool server answered HTTP 401: it refused the value of the variable NOTES_API_KEY, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it',
+            'The tool server answered HTTP 401: it refused the value of the variable NOTES_API_KEY, so whoever runs the runtime sets it right and starts it again, and then the connection needs to be reconnected',
         },
       },
     ]);

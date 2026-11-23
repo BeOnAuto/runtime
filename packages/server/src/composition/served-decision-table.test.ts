@@ -123,7 +123,23 @@ const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
 
 const everythingButWhatManagesPermissions = everything.filter((name) => !whatManagesPermissions.includes(name));
 
-const whatManagesConnections = ['org/set_connection_model'];
+const whatManagesConnections = [
+  'org/approve',
+  'org/choose_way',
+  'org/decline_connection_request',
+  'org/finish',
+  'org/give_client',
+  'org/give_credential',
+  'org/read_link',
+  'org/reconnect_connection',
+  'org/remove_connection',
+  'org/remove_connection_signing_secret',
+  'org/set_connection_account_type',
+  'org/set_connection_model',
+  'org/set_connection_playbooks',
+  'org/set_connection_signing_secret',
+  'org/start',
+];
 
 const whatOnlyAnAdminChanges = [...whatManagesPermissions, ...whatManagesConnections].toSorted();
 
@@ -237,7 +253,19 @@ function approvingOfThoseAdding(rows: readonly DecidedRow[]): readonly (readonly
 }
 
 describe('adding a connection, as the decision point the server loads decides who may also approve it', () => {
-  it('lets every caller it lets add a connection approve one too, so each is answered a link as before and none a request', () => {
-    expect(approvingOfThoseAdding(table)).toEqual(approvingOfThoseAdding(pinned).map(([caller]) => [caller, true]));
+  it('lets an admin, a key and the local developer approve what they add, so each is answered a link, and leaves an editor and a viewer in a run a request', () => {
+    expect(approvingOfThoseAdding(table)).toEqual([
+      ['Admin, in Studio', true],
+      ['Admin, through their connected agent', true],
+      ['Admin, asking @Auto in Slack', true],
+      ['Admin, in a run they started', true],
+      ['Editor, in Studio', false],
+      ['Editor, through their connected agent', false],
+      ['Editor, asking @Auto in Slack', false],
+      ['Editor, in a run they started', false],
+      ['Viewer, in a run they started', false],
+      ['An API key', true],
+      ['The local developer', true],
+    ]);
   });
 });

@@ -38,7 +38,7 @@ export function defineSetConnectionModel(services: Setting, models: ChatModels) 
         connection: id,
         model: yield* modelGivenOf(model, chatting),
         ...(chat === undefined ? {} : { chat }),
-      }).pipe(Effect.catchTag('forbidden', Effect.die));
+      });
       const shown = yield* shownConnection(services.secrets, kept);
       return { ...shown, ...chatAnswerOf(kept, chat, yield* chatAnsweringOf([chat], chatting)) };
     }),

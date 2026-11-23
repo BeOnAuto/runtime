@@ -118,17 +118,10 @@ describe('the organization’s own OAuth client given again', () => {
 });
 
 describe('the person who gives the organization’s own OAuth client', () => {
-  it('is the person who added the connection alone, where the runtime signs people in', async () => {
+  it('is anyone who holds the link, whoever added the connection', async () => {
     const { h, link } = await underTheOrgsOAuthClientAt();
 
-    const refused = await givingTheClient(h, link, theOrgsOAuthClient, grace);
-
-    expect(refused).toMatchObject({
-      status: 'rejected',
-      reason: 'forbidden',
-      detail: anyWords,
-    });
-    expect([...h.secrets.values()]).toEqual([]);
+    expect(await givingTheClient(h, link, theOrgsOAuthClient, grace)).toMatchObject({ status: 'succeeded' });
   });
 
   it('is anyone who holds the link, where the runtime signs nobody in', async () => {

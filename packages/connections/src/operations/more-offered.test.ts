@@ -149,7 +149,7 @@ describe('the words of reconnecting a connection for more', () => {
     const words = await wordsOfReconnectingFor(h, pending.id, longest.name);
 
     expect([words.length, withinCharacters(words, mostOutcomeCharacters)]).toEqual([
-      567,
+      542,
       expect.stringContaining('never its address.'),
     ]);
   });
@@ -158,7 +158,7 @@ describe('the words of reconnecting a connection for more', () => {
     const { id } = await added(h, { provider: 'files' });
 
     expect(await wordsOfReconnectingFor(h, id, 'share')).toBe(
-      'Gave a new link to the connection “files”; the link before it stops working. Show the person who added the connection a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
+      'Gave a new link to the connection “files”; the link before it stops working. Show the person a link named “Approve the Files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 
@@ -167,7 +167,7 @@ describe('the words of reconnecting a connection for more', () => {
     const id = await connectedFor(h);
 
     expect(await wordsOfReconnectingFor(h, id, 'delete')).toMatch(
-      /^Gave a new link to the connection “files”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working\. Show the person who added the connection a link named “[^”]+”, never its address\. .* The link asks them to allow “delete” as well: Delete files you no longer need\.$/u,
+      /^Gave a new link to the connection “files”, which stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working\. Show the person a link named “[^”]+”, never its address\. .* The link asks them to allow “delete” as well: Delete files you no longer need\.$/u,
     );
   });
 });

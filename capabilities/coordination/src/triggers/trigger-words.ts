@@ -25,7 +25,7 @@ export function notHeardWords(connection: string, type: string): string {
 }
 
 export function brokenWords(connection: string): string {
-  return `The connection ${connection} is broken, so no workflow can start from it until it is reconnected. reconnect_connection gives a link for the person who added it; save this workflow again once they have used it`;
+  return `The connection ${connection} is broken, so no workflow can start from it until it is reconnected. reconnect_connection gives a link for the person to open; save this workflow again once it has been used`;
 }
 
 export function subjectWords(type: string, title: string): string {

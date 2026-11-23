@@ -54,8 +54,7 @@ async function addedCrm() {
 
 const anHour = 3_600_000;
 
-const consentEnded =
-  'The consent of the connection files was revoked or has ended, so the person who added it reconnects it';
+const consentEnded = 'The consent of the connection files was revoked or has ended, so it needs to be reconnected';
 
 const KeptTokensSchema = Schema.fromJsonString(
   Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String }),

@@ -239,7 +239,7 @@ const linkIssued: ConnectionEvent = {
   data: { connection: 'crm-id', token_sha256: 'a1b2' },
 };
 
-const linkUse = { connection: 'crm-id', token_sha256: 'a1b2', bindsPerson: true };
+const linkUse = { connection: 'crm-id', token_sha256: 'a1b2' };
 
 function decided(command: ConnectionCommand, credential: Credential) {
   const registry = [addedWith(credential), linkIssued].reduce(
@@ -918,17 +918,13 @@ describe('an approval that names the playbooks that may use the connection', () 
   });
 });
 
-describe('an approval refused that names playbooks', () => {
-  it('records nothing, whether another person approves or the token is not the link’s', () => {
+describe('an approval that names playbooks, through the link', () => {
+  it('is taken from whoever holds the link, the person who added the connection or not, and records nothing where the token is not the link’s', () => {
     expect([
-      decided(approving({ playbooks: ['support'] }, { by: 'person:grace' }), takingNone),
+      Result.isSuccess(decided(approving({ playbooks: ['support'] }, { by: 'person:grace' }), takingNone)),
       decided(giving({ playbooks: ['support'] }, { token_sha256: 'e5f6' }), takingASecret),
-      decided(starting({ playbooks: ['support'] }, { by: 'person:grace' }), byConsent),
-    ]).toMatchObject([
-      Result.fail({ _tag: 'forbidden' }),
-      Result.fail({ _tag: 'not_found' }),
-      Result.fail({ _tag: 'forbidden' }),
-    ]);
+      Result.isSuccess(decided(starting({ playbooks: ['support'] }, { by: 'person:grace' }), byConsent)),
+    ]).toMatchObject([true, Result.fail({ _tag: 'not_found' }), true]);
   });
 });
 

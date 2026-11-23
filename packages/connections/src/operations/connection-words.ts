@@ -85,7 +85,7 @@ function doingOf({ provider, credential }: Linked): string {
 
 function linkWordsOf(connection: Linked, providers: ProviderList): string {
   const linkName = approvalLinkNamed(providerTitleOf(connection.provider, providers));
-  return `Show the person who added the connection a link named ${linkName}, never its address. On that page they approve it and ${doingOf(connection)}.`;
+  return `Show the person a link named ${linkName}, never its address. On that page they approve it and ${doingOf(connection)}.`;
 }
 
 function groupWordsOf(group: ScopeGroup | undefined): readonly string[] {
@@ -95,7 +95,7 @@ function groupWordsOf(group: ScopeGroup | undefined): readonly string[] {
 function standingWordsOf(connection: Omit<AddedConnection, 'connect'>): string {
   const named = connectionNamed(connection);
   if (connection.link_replaced === true) {
-    return `${capitalized(named)} is ${connection.status}. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.`;
+    return `${capitalized(named)} is ${connection.status}. A newer link is available. Whoever has it should open it; reconnecting would replace it again.`;
   }
   if (connection.status === 'connected') {
     return `Connected ${named}; nothing is left to open.`;

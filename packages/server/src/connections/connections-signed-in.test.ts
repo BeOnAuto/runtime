@@ -1,3 +1,4 @@
+import { toolNamesIn, withMcpSession } from '@on.auto/api/testing';
 import { createApiKey } from '@on.auto/identity';
 import { defaultOrg } from '@on.auto/openid-connect';
 import { allPermissions } from '@on.auto/operations';
@@ -6,7 +7,6 @@ import { Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { personSigningIn, type PersonSigningIn } from '../sign-in/person-signing-in.ts';
-import { answerFieldsOf } from '../testing/servers/connected-servers.ts';
 import { connectionsOnLoopback } from '../testing/servers/loopback-connections.ts';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
@@ -75,30 +75,85 @@ function grantedOnly(signing: PersonSigningIn, origin: string, ...permissions: r
   return signing.tokenAt(origin, 'Ada', ['user:org:read', ...permissions]);
 }
 
-describe('a connection on a runtime that signs people in', () => {
-  it('links to the page with PUBLIC_URL as the server, and is approved by the person who added it alone', async () => {
+async function linusMadeAnAdminBy(admin: string, signing: PersonSigningIn, served: ReasoningServer) {
+  const signedIn = await signing.tokenAt(served.origin, 'Linus');
+  await served.call('PUT', `/v1/orgs/${defaultOrg}/role-assignments/${signing.personOf('Linus')}/admin`, {
+    key: admin,
+  });
+  return signedIn;
+}
+
+const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);
+
+const RequestedSchema = Schema.Struct({ id: Schema.String, request: Schema.Struct({ requested_by: Schema.String }) });
+
+describe('a connection on a runtime that signs people in, over HTTP', () => {
+  it('links to the page with PUBLIC_URL as the server, is approved by any admin, and is refused to an editor for their role', async () => {
     const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
     const ada = await tokenOf('Ada');
     const grace = await graceMadeAnEditorBy(ada, signing, served);
+    const linus = await linusMadeAnAdminBy(ada, signing, served);
 
     const answer = await served.call('POST', connections, { key: ada, body: notes() });
     const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
     const { token, server: named } = linkOf(connect.url);
     const byGrace = await served.call('POST', `${connections}/${id}/approve`, { key: grace, body: { token } });
-    const byAda = await served.call('POST', `${connections}/${id}/approve`, { key: ada, body: { token } });
+    const byLinus = await served.call('POST', `${connections}/${id}/approve`, { key: linus, body: { token } });
 
     expect(answer).toMatchObject({ status: 201, body: { added_by: { id: `person:${signing.personOf('Ada')}` } } });
     expect(named).toBe(signing.publicUrl);
-    expect(byGrace).toMatchObject({
-      status: 403,
-      body: { detail: 'The connection notes was added by another person, and only they may approve it' },
+    expect(byGrace).toMatchObject({ status: 403, body: { kind: 'permission_denied' } });
+    expect(byLinus).toMatchObject({
+      status: 200,
+      body: { status: 'connected', connected_by: { id: `person:${signing.personOf('Linus')}` } },
     });
-    expect(byAda).toMatchObject({ status: 200, body: { status: 'connected' } });
+  });
+
+  it('added by an editor, is recorded as their request with no link, which an admin then reconnects and removes', async () => {
+    const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
+    const ada = await tokenOf('Ada');
+    const grace = await graceMadeAnEditorBy(ada, signing, served);
+
+    const asked = await served.call('POST', connections, { key: grace, body: notes() });
+    const { id, request } = Schema.decodeUnknownSync(RequestedSchema)(asked.body);
+    const refused = await served.call('POST', `${connections}/${id}/link`, { key: grace, body: {} });
+    const relinked = await served.call('POST', `${connections}/${id}/link`, { key: ada, body: {} });
+    const removed = await served.call('DELETE', `${connections}/${id}`, { key: ada });
+
+    expect([asked.status, request.requested_by]).toEqual([201, `person:${signing.personOf('Grace')}`]);
+    expect(asked.body).not.toHaveProperty('connect');
+    expect(refused).toMatchObject({ status: 403, body: { kind: 'permission_denied' } });
+    expect([relinked.status, Schema.decodeUnknownSync(AddedSchema)(relinked.body).id]).toEqual([200, id]);
+    expect(removed).toMatchObject({ status: 200, body: { id, status: 'removed' } });
+  });
+});
+
+describe('a connection on a runtime that signs people in, through an editor’s agent over MCP', () => {
+  it('is asked for as a request, with no link, and the tools that reconnect or remove one are not offered', async () => {
+    const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
+    const ada = await tokenOf('Ada');
+    await graceMadeAnEditorBy(ada, signing, served);
+    const gracesAgent = await signing.agentTokenAt(served.origin, 'Grace');
+
+    const { offered, asked } = await withMcpSession(
+      'current revision',
+      { url: `${served.origin}/mcp`, headers: { authorization: `Bearer ${gracesAgent}` } },
+      async (session) => ({
+        offered: toolNamesIn(await session.listTools()),
+        asked: await session.callTool('add_connection', { ...notes(), name: 'notes-asked' }),
+      }),
+    );
+
+    expect(
+      ['add_connection', 'reconnect_connection', 'remove_connection'].map((tool) => offered.includes(tool)),
+    ).toEqual([true, false, false]);
+    expect(asked).toMatchObject({ structuredContent: { name: 'notes-asked', request: { message: null } } });
+    expect(asked.structuredContent).not.toHaveProperty('connect');
   });
 });
 
 describe('the playbooks named as a connection is approved on a runtime that signs people in', () => {
-  it('are recorded with the approval of the person who added it, and the approval another person tries changes nothing', async () => {
+  it('are recorded with an admin’s approval, and the approval an editor tries changes nothing', async () => {
     const { signing, served, tokenOf } = await signedInServer(connectionsOnLoopback);
     const ada = await tokenOf('Ada');
     const grace = await graceMadeAnEditorBy(ada, signing, served);
@@ -207,7 +262,9 @@ describe('the providers the search of an org lists on a runtime that signs peopl
       ),
     );
 
-    expect(answers.map(({ status, body }) => [status, answerFieldsOf(body)])).toEqual([
+    expect(
+      answers.map(({ status, body }) => [status, Object.keys(Schema.decodeUnknownSync(AnswerSchema)(body))]),
+    ).toEqual([
       [200, ['servers', 'tools', 'scopes']],
       [200, ['servers', 'tools', 'scopes']],
       [200, ['servers', 'tools', 'scopes', 'providers']],

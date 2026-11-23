@@ -10,10 +10,7 @@ import { playbooksChosenOf } from './playbooks-decisions.ts';
 import { linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
-type Decision = Result.Result<
-  readonly ConnectionEvent[],
-  Rejection<'not_found' | 'conflict' | 'forbidden' | 'invalid_input'>
->;
+type Decision = Result.Result<readonly ConnectionEvent[], Rejection<'not_found' | 'conflict' | 'invalid_input'>>;
 
 type Approving = Extract<ConnectionCommand, { readonly type: 'approve' }>;
 
@@ -36,7 +33,7 @@ export function connectedByConsent(name: string): Conflict {
 }
 
 function decideApproval(command: Approving, registry: Registry): Decision {
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+  return Result.flatMap(linkedConnectionOf(registry, command), (kept): Decision => {
     if (takesConsent(kept)) {
       return Result.fail(connectedByConsent(kept.connection.name));
     }
@@ -63,7 +60,7 @@ function decideGiving(command: Giving, registry: Registry): Decision {
   const client = clientId === undefined ? {} : { client_id: clientId };
   const { app_secret_ids: appSecretIds = {} } = command;
   const apps = Object.keys(appSecretIds).length === 0 ? {} : { app_secret_ids: appSecretIds };
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept): Decision => {
+  return Result.flatMap(linkedConnectionOf(registry, command), (kept): Decision => {
     if (takesConsent(kept)) {
       return Result.fail(connectedByConsent(kept.connection.name));
     }

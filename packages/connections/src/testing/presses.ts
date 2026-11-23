@@ -37,7 +37,7 @@ export function linkOf(outcome: Outcome): Added {
   return { id: output.id, token, url: output.connect.url };
 }
 
-export function startingAs(
+function startingAs(
   { h, ops }: Pick<Pressing, 'h' | 'ops'>,
   { id, token }: Added,
   caller: CallerIdentity,

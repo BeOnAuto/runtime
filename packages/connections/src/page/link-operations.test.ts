@@ -179,28 +179,12 @@ describe('approving a connection', () => {
     });
   });
 
-  it('is refused to another person where sign-in is on, and taken from the token alone where it is not', async () => {
-    const signedIn = harness();
-    const local = harness({ access: 'local' });
-    const there = await added(signedIn, notes);
-    const here = await added(local, notes);
-
-    expect(await approving(signedIn, there.id, there.token, grace)).toEqual({
-      status: 'rejected',
-      reason: 'forbidden',
-      detail: anyWords,
-    });
-    expect(await approving(local, here.id, here.token, grace)).toMatchObject({ output: { status: 'connected' } });
-  });
-});
-
-describe('the person who may approve a connection where sign-in is on', () => {
-  it('is the person who added it by their id, whatever name they sign in with now', async () => {
+  it('is taken from the token alone, whoever added the connection', async () => {
     const h = harness();
     const { id, token } = await added(h, notes);
 
-    expect(await approving(h, id, token, { ...ada, name: 'Ada King' })).toMatchObject({
-      output: { status: 'connected', added_by: { id: 'person:ada', name: 'Ada Lovelace' } },
+    expect(await approving(h, id, token, grace)).toMatchObject({
+      output: { status: 'connected', added_by: { id: 'person:ada' }, connected_by: { id: 'person:grace' } },
     });
   });
 });

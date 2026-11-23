@@ -100,7 +100,6 @@ function decided(providers: ProviderList, facts: readonly RecordedConnectionEven
     type: 'choose_way',
     ...ofTheConnection,
     token_sha256: 'a1b2',
-    bindsPerson: true,
     says: said,
   } as const;
   const decision = registryDeciderOf(providers).decide(
@@ -192,13 +191,6 @@ const refused: readonly Case<Readonly<Record<string, unknown>>>[] = [
     credential: appKey,
     token_sha256: 'e5f6',
     outcome: { _tag: 'not_found' },
-  },
-  {
-    name: 'another person',
-    ...fromTheProvider,
-    credential: appKey,
-    by: 'person:grace',
-    outcome: { _tag: 'forbidden' },
   },
 ];
 

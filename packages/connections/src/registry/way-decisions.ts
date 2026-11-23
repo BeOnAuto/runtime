@@ -1,4 +1,4 @@
-import { Conflict, InvalidInput, type Forbidden, type NotFound } from '@on.auto/operations';
+import { Conflict, InvalidInput, type NotFound } from '@on.auto/operations';
 import {
   accountTypeIssueOf,
   accountTypeWhereNoneIsGiven,
@@ -17,7 +17,7 @@ import type { ConnectionEvent } from './connection-events.ts';
 import { linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
-type Decision = Result.Result<readonly ConnectionEvent[], NotFound | Forbidden | Conflict | InvalidInput>;
+type Decision = Result.Result<readonly ConnectionEvent[], NotFound | Conflict | InvalidInput>;
 
 interface ActingWay {
   readonly kind: string;
@@ -146,7 +146,7 @@ function keptAccountTypeOf({ account_type: kept }: Connection, { account_type: g
 }
 
 function decideWayChoice(command: WayChoice & CommandMetadata, registry: Registry, providers: ProviderList): Decision {
-  return Result.flatMap(linkedConnectionOf(registry, command, command), (kept) =>
+  return Result.flatMap(linkedConnectionOf(registry, command), (kept) =>
     Result.map(wayChosenOf(kept, command, providers), (way): readonly ConnectionEvent[] => {
       const { connection } = kept;
       if (!isTheWayAsked(connection.credential, way)) {

@@ -46,7 +46,7 @@ describe('a connection added under a name the provider that replaces another had
     expect((await h.facts()).slice(before).map(({ type }) => type)).toEqual(['connection_link_issued']);
   });
 
-  it('left waiting, where only an admin connects that provider, is added again by another admin from it under its name now', async () => {
+  it('left waiting, is given a new link by another person under its name now, the same connection, with no host asked', async () => {
     const { h, providers } = relayed();
     const left = await added(h, { provider: 'relay' });
     const heard = startedByAdminsOf('messages', [ada.id, grace.id]);
@@ -54,8 +54,8 @@ describe('a connection added under a name the provider that replaces another had
 
     expect(await pressed({ h, ops }, left.id, grace)).toMatchObject({
       status: 'succeeded',
-      output: { name: 'relay', provider: 'messages', status: 'pending', added_by: recordedAs.grace },
+      output: { id: left.id, name: 'relay', provider: 'messages', status: 'pending', added_by: recordedAs.ada },
     });
-    expect(heard.asked()).toEqual([['messages', grace.id]]);
+    expect(heard.asked()).toEqual([]);
   });
 });

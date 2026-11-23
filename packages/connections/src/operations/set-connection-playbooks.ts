@@ -21,13 +21,14 @@ export function defineSetConnectionPlaybooks(services: Pick<ConnectionServices, 
     route: { method: 'PUT', path: '/connections/{id}/playbooks' },
     body: { kind: 'json' },
     repeatable: true,
+    connectionsManagement: true,
     inputSchema: Schema.Struct({ id: ConnectionIdField, playbooks: PlaybooksField }),
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, playbooks }) {
       yield* mayChoosePlaybooks;
       const kept = yield* recordInRegistry(services, { type: 'set_playbooks', connection: id, playbooks }).pipe(
-        Effect.catchTags({ forbidden: Effect.die, invalid_input: Effect.die }),
+        Effect.catchTag('invalid_input', Effect.die),
       );
       return yield* shownConnection(secrets, kept);
     }),

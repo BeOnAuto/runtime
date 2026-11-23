@@ -19,10 +19,10 @@ const crmKey = 'crm-api-key-6e2b9d41';
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const pendingWords =
-  'Nobody has approved the connection crm yet; the person who added it opens its link, or reconnects it for a new link';
+  'Nobody has approved the connection crm yet; it needs to be approved on the page its link opens, or reconnected for a new link';
 
 const keyRefused =
-  'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
+  'The tool server answered HTTP 401: it refused the credential the connection holds, so it needs to be reconnected';
 
 const refusedAsBroken = { kind: 'credential_refused', detail: keyRefused };
 
@@ -275,7 +275,7 @@ describe('a connection that holds no credential', () => {
     const standing = await standingOf(server, id);
 
     expect(standing).toMatchObject({ status: 'broken', broken: { kind: 'credential_wanted' } });
-    expect(JSON.stringify(standing)).toContain('it asks for a credential the connection does not hold, so the person');
+    expect(JSON.stringify(standing)).toContain('so it needs to be removed and added again with one');
   });
 });
 

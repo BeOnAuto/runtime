@@ -97,19 +97,15 @@ describe('a connection whose provider another provider replaces, added again', (
     expect(JSON.stringify(outcome)).not.toContain('west');
   });
 
-  it('is refused to anyone but the person who added it, before anything is revoked or recorded', async () => {
+  it('is pressed by another person than the one who added it, and the connection added again is theirs', async () => {
     const replacing = replacingFiles();
     const { h, after } = replacing;
     const old = await connectedFiles(replacing);
-    const before = await h.facts();
 
     const outcome = await reconnecting(h, after, { id: old.id }, grace);
 
-    expect(outcome).toMatchObject({
-      reason: 'forbidden',
-      detail: anyWords,
-    });
-    expect([await h.facts(), revocationsAt(replacing)]).toEqual([before, 0]);
+    expect(outcome).toMatchObject({ status: 'succeeded', output: { name: 'files', added_by: { id: grace.id } } });
+    expect(revocationsAt(replacing)).toBe(1);
   });
 
   it('is refused once removed, as any removed connection is', async () => {
@@ -135,7 +131,7 @@ describe('the words of a connection added again from the provider that replaces 
 
     expect(outcome).toMatchObject({ output: { name: 'files', provider: 'shared-files' } });
     expect(wordsOf(after).outcome(outputOf(outcome), input)).toBe(
-      'Added the connection “files” again from the provider “shared-files”, under its name and for the same playbooks; the connection before is removed and its credential forgotten. Show the person who added the connection a link named “Approve the Shared files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
+      'Added the connection “files” again from the provider “shared-files”, under its name and for the same playbooks; the connection before is removed and its credential forgotten. Show the person a link named “Approve the Shared files connection”, never its address. On that page they approve it and give its credential where it takes one. The link asks them to allow “share” as well: Share your files with other people.',
     );
   });
 
@@ -147,7 +143,7 @@ describe('the words of a connection added again from the provider that replaces 
     const outcome = await reconnecting(replacing.h, replacing.after, input);
 
     expect(wordsOf(replacing.after).outcome(outputOf(outcome), input)).toMatch(
-      /^Added the connection “files” again from the provider “messages”, under its name and for the same playbooks; the connection before is removed and its credential forgotten\. Show the person who added the connection a link named “[^”]+”, never its address\. On that page they approve it and [^.]+\.$/u,
+      /^Added the connection “files” again from the provider “messages”, under its name and for the same playbooks; the connection before is removed and its credential forgotten\. Show the person a link named “[^”]+”, never its address\. On that page they approve it and [^.]+\.$/u,
     );
   });
 });

@@ -50,7 +50,6 @@ const added = byTheAdmin({ type: 'add', ...addition, added_by: admin, link });
 const reviewed = byTheAdmin({
   type: 'reconnect',
   connection: 'crm-id',
-  bindsPerson: false,
   link,
   connected_by: admin,
   variablesSet: new Set(),
@@ -60,7 +59,6 @@ const approved = byTheAdmin({
   type: 'approve',
   connection: 'crm-id',
   token_sha256: link.token_sha256,
-  bindsPerson: false,
   connected_by: admin,
 });
 

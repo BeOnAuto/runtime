@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, issuesIn, notes } from '../testing/additions.ts';
 import { consentFake, consentHarnessAt } from '../testing/consents.ts';
-import { ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
+import { ada, connectionsManagedBy, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -165,9 +165,9 @@ describe('an approval by a caller that may access only some playbooks of the org
   });
 });
 
-describe('an approval with playbooks by another person than the one who added the connection', () => {
+describe('an approval with playbooks by a person who may not manage the connections of the org', () => {
   it('changes nothing', async () => {
-    const h = harness();
+    const h = harness({ decidedBy: connectionsManagedBy('ada') });
     const { id, token } = await added(h, notesForSales);
     const recordedBefore = (await h.facts()).length;
 

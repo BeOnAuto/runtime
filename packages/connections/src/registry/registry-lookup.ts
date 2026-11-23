@@ -1,4 +1,4 @@
-import { Conflict, Forbidden, InvalidInput, NotFound, OrgReader } from '@on.auto/operations';
+import { Conflict, InvalidInput, NotFound, OrgReader } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 import { Effect, Result } from 'effect';
 
@@ -20,11 +20,6 @@ export interface KeptWithLink extends KeptConnection {
 
 export interface KeptWithConsent extends KeptWithLink {
   readonly consent: StartedConsent;
-}
-
-interface Acted {
-  readonly by: string;
-  readonly at: string;
 }
 
 function connectionNotFound(id: string): NotFound {
@@ -60,32 +55,12 @@ function isOfTheToken(kept: KeptConnection, tokenSha256: string): kept is KeptWi
   return kept.link !== undefined && kept.link.token_sha256 === tokenSha256;
 }
 
-export function bindingRefusalOf(
-  { connection }: KeptConnection,
-  bindsPerson: boolean,
-  by: string,
-): Forbidden | undefined {
-  return bindsPerson && connection.added_by.id !== by
-    ? new Forbidden({
-        detail: `The connection ${connection.name} was added by another person, and only they may approve it`,
-      })
-    : undefined;
-}
-
 export function linkedConnectionOf(
   registry: Registry,
-  { connection, token_sha256: tokenSha256, bindsPerson }: LinkUse,
-  { by }: Acted,
-): Result.Result<KeptWithLink, NotFound | Forbidden> {
-  return Result.flatMap(
-    keptConnectionOf(registry, connection),
-    (kept): Result.Result<KeptWithLink, NotFound | Forbidden> => {
-      if (!isOfTheToken(kept, tokenSha256)) {
-        return Result.fail(unusableLinkOf(kept, tokenSha256));
-      }
-      const refusal = bindingRefusalOf(kept, bindsPerson, by);
-      return refusal === undefined ? Result.succeed(kept) : Result.fail(refusal);
-    },
+  { connection, token_sha256: tokenSha256 }: LinkUse,
+): Result.Result<KeptWithLink, NotFound> {
+  return Result.flatMap(keptConnectionOf(registry, connection), (kept): Result.Result<KeptWithLink, NotFound> =>
+    isOfTheToken(kept, tokenSha256) ? Result.succeed(kept) : Result.fail(unusableLinkOf(kept, tokenSha256)),
   );
 }
 

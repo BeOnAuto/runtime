@@ -144,7 +144,6 @@ const givingWithoutAChat = {
   type: 'give',
   connection,
   token_sha256: 'a1b2',
-  bindsPerson: false,
   connected_by: ada,
   secret_id: 'secret-1',
   app_secret_ids: { app_level_token: 'secret-2' },

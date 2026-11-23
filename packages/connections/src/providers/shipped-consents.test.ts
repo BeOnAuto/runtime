@@ -217,8 +217,7 @@ const sixtyDaysMs = 5_184_000_000;
 
 const connectedAt = Date.parse('2026-10-15T14:00:00.000Z');
 
-const consentEnded =
-  'The consent of the connection linkedin was revoked or has ended, so the person who added it reconnects it';
+const consentEnded = 'The consent of the connection linkedin was revoked or has ended, so it needs to be reconnected';
 
 const refusedByLinkedIn = {
   response: new Response(null, { status: 401 }),

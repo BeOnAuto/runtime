@@ -3,7 +3,16 @@ import { describe, expect, it } from 'vitest';
 
 import { added, crm, notes, reconnected, reconnecting, type Added } from '../testing/additions.ts';
 import { brokenCrm, connectedCrm, giving } from '../testing/crm-connections.ts';
-import { acmeReader, ada, grace, harness, operationNamed, recordedAs, type Harness } from '../testing/harness.ts';
+import {
+  acmeReader,
+  ada,
+  connectionsManagedBy,
+  grace,
+  harness,
+  operationNamed,
+  recordedAs,
+  type Harness,
+} from '../testing/harness.ts';
 import { servedAs, sourceOver } from '../testing/served-connections.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -13,7 +22,7 @@ const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
 
 const keyRefused =
-  'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
+  'The tool server answered HTTP 401: it refused the credential the connection holds, so it needs to be reconnected';
 
 const refusedAsBroken = { kind: 'credential_refused', detail: keyRefused };
 
@@ -159,29 +168,27 @@ describe('who reconnects a connection', () => {
     });
   });
 
-  it('is the person who added it where people sign in, refusing another person as the page does and a key as adding does', async () => {
-    const h = harness({ access: 'people' });
+  it('is anyone the decision point lets manage the connections of the org where people sign in, whoever added it, refusing a key as adding does', async () => {
+    const h = harness({ access: 'people', decidedBy: connectionsManagedBy('ada', 'grace') });
     const id = await brokenCrm(h);
     const key: CallerIdentity = { ...ada, id: 'acme-builder', name: 'acme-builder' };
 
-    const refused = [
-      await h.call(operationNamed(h.operations, 'reconnect_connection'), grace, { id }),
-      await h.call(operationNamed(h.operations, 'reconnect_connection'), key, { id }),
-    ];
+    expect(await h.call(operationNamed(h.operations, 'reconnect_connection'), key, { id })).toEqual({
+      status: 'rejected',
+      reason: 'forbidden',
+      detail: anyWords,
+    });
+    expect(await h.call(operationNamed(h.operations, 'reconnect_connection'), grace, { id })).toMatchObject({
+      status: 'succeeded',
+      output: { added_by: { id: 'person:ada' } },
+    });
+  });
 
-    expect(refused).toEqual([
-      {
-        status: 'rejected',
-        reason: 'forbidden',
-        detail: anyWords,
-      },
-      {
-        status: 'rejected',
-        reason: 'forbidden',
-        detail: anyWords,
-      },
-    ]);
-    expect(await reconnecting(h, id)).toMatchObject({ status: 'succeeded' });
+  it('is refused to a person the decision point does not let manage the connections of the org', async () => {
+    const h = harness({ access: 'people', decidedBy: connectionsManagedBy('grace') });
+    const { id } = await added(h, crm, { caller: grace });
+
+    expect(await reconnecting(h, id)).toMatchObject({ status: 'rejected', reason: 'forbidden' });
   });
 
   it('is the local developer for any connection in local mode', async () => {

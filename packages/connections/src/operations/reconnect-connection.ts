@@ -1,7 +1,7 @@
 import { Caller, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { adderRefusalOf, bindsPerson } from '../policy/policy-rules.ts';
+import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { addedAgainOf } from '../replacements/connected-again.ts';
 import { addedAgainFrom } from '../replacements/replaced-reconnections.ts';
 import { AddedSchema, ConnectionIdField } from './connection-fields.ts';
@@ -14,7 +14,7 @@ const description = [
   "Issues a new link to Studio's page for a connection that is broken, or whose link the person no longer has, so the person gives its credential or signs in again; the link before stops working.",
   'Use it where list_connections or search says a connection is broken and its reason says to reconnect it, or where the person no longer has the link of a connection that is not connected yet.',
   'With more, a group list_connections offers, the link asks its scopes beside those the connection holds.',
-  'It answers the connection with the link, which the person who added it opens, or, where a broken connection sends a variable of the runtime that is set, connected again at once.',
+  'It answers the connection with the link for the person to open, or, where a broken connection sends a variable of the runtime that is set, connected again at once.',
 ].join(' ');
 
 export function defineReconnectConnection(services: ConnectionServices) {
@@ -24,6 +24,7 @@ export function defineReconnectConnection(services: ConnectionServices) {
     title: 'Reconnect connection',
     description,
     route: { method: 'POST', path: '/connections/{id}/link' },
+    connectionsManagement: true,
     inputSchema: Schema.Struct({
       id: ConnectionIdField,
       more: Schema.optionalKey(
@@ -43,7 +44,7 @@ export function defineReconnectConnection(services: ConnectionServices) {
       const again = yield* addedAgainOf(found, services);
       return yield* again === undefined
         ? linkedAgain(id, more, services)
-        : addedAgainFrom({ ...again, found, more, bindsPerson: bindsPerson(access) }, services);
+        : addedAgainFrom({ ...again, found, more }, services);
     }),
     plainLanguage: {
       task: 'reconnect a connection',

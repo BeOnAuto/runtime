@@ -42,20 +42,18 @@ import { makeConnectionSource } from './connection-source.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
-const consentEnded =
-  'The consent of the connection files was revoked or has ended, so the person who added it reconnects it';
+const consentEnded = 'The consent of the connection files was revoked or has ended, so it needs to be reconnected';
 
 const clientGone =
-  'The client the connection files was made with is no longer registered, so the person who added it reconnects it';
+  'The client the connection files was made with is no longer registered, so it needs to be reconnected';
 
 const keyUnknown =
-  "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and the person who added it reconnects it";
+  "Auto's consent service does not know the key of the connection files, so its tokens cannot be renewed, and it needs to be reconnected";
 
 const notTokens =
-  'The credential of the connection files is not the tokens of a consent the runtime keeps, so the person who added it reconnects it';
+  'The credential of the connection files is not the tokens of a consent the runtime keeps, so it needs to be reconnected';
 
-const gone =
-  'The credential of the connection files is no longer in the secret store, so the person who added it reconnects it';
+const gone = 'The credential of the connection files is no longer in the secret store, so it needs to be reconnected';
 
 function served(): FakeMcpServer {
   const fake = consentFake();
@@ -245,7 +243,7 @@ describe('consent serving', () => {
       const refused = await Effect.runPromise(server.refused('The tool server answered HTTP 401'));
 
       expect(refused).toBe(
-        'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it',
+        'The tool server answered HTTP 401: it refused the credential the connection holds, so it needs to be reconnected',
       );
       expect((await h.facts()).at(-1)).toMatchObject({
         type: 'connection_broken',

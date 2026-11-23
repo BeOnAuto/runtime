@@ -119,10 +119,9 @@ function connectedWith(finished: FinishedConsent, recording: Recording, services
 }
 
 const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, services: ConsentServices) {
-  const { bindsPerson } = services;
-  const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token), bindsPerson };
+  const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token) };
   const acted = yield* actedNow;
-  const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry(services), use, acted));
+  const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry(services), use));
   const stateSha256 = tokenSha256Of(finishing.state);
   const kept = yield* openConsentOf(linked, { at: acted.at, stateSha256 }, services);
   const began = kept.consent.client_source === 'auto' || kept.consent.client_source === 'gateway' ? 'handle' : 'code';
@@ -145,12 +144,13 @@ export function defineFinishConsent(services: ConsentServices) {
       "A consent begun through Auto's consent service is finished with the handle and the state the service sent the person back with instead.",
       'The runtime keeps the tokens sealed in its secret store, and no answer, record or history of the org ever holds them.',
       'Where the secret store cannot read the verifier just now, it answers unavailable and the same code may be tried again; where it cannot keep the tokens once the code is redeemed, it answers unavailable, revokes them, and the person starts again, since the code is spent.',
-      'On a runtime that signs people in, only the person who added the connection may finish it.',
+      'On a runtime that signs people in, only an admin of the organization may finish it.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/consent/code' },
     body: { kind: 'json' },
     reachesOutside: true,
     mayChangeOutside: true,
+    connectionsManagement: true,
     inputSchema: FinishingSchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],

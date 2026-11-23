@@ -24,6 +24,7 @@ export function defineSetConnectionAccountType(services: Pick<ConnectionServices
     route: { method: 'PUT', path: '/connections/{id}/account-type' },
     body: { kind: 'json' },
     repeatable: true,
+    connectionsManagement: true,
     inputSchema: Schema.Struct({
       id: ConnectionIdField,
       account_type: AccountTypeSchema.annotate({
@@ -38,7 +39,7 @@ export function defineSetConnectionAccountType(services: Pick<ConnectionServices
         type: 'set_account_type',
         connection: id,
         account_type: accountType,
-      }).pipe(Effect.catchTag('forbidden', Effect.die));
+      });
       return yield* shownConnection(secrets, kept);
     }),
   });

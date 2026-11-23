@@ -50,17 +50,12 @@ const messagesAdded: ConnectionAddition = {
 
 interface Pressed {
   readonly by?: string;
-  readonly takesOver?: boolean;
-  readonly whilePending?: boolean;
 }
 
-function replacing({ by = acted.by, takesOver = false, whilePending = false }: Pressed = {}): ConnectionCommand {
+function replacing({ by = acted.by }: Pressed = {}): ConnectionCommand {
   return {
     type: 'replace',
     connection: 'files-id',
-    bindsPerson: true,
-    takesOver,
-    whilePending,
     addition: messagesAdded,
     ...acted,
     by,
@@ -88,15 +83,10 @@ describe('a connection replaced by its addition from another provider', () => {
     );
   });
 
-  it('is refused to anyone but the person who added it, where people sign in, and when it is removed or unknown', () => {
+  it('is decided for whoever asks, the person who added it or not, and refused when it is removed or unknown', () => {
     const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'files-id' } };
 
-    expect(decided(replacing({ by: 'person:grace' }), filesAdded)).toMatchObject({
-      failure: {
-        _tag: 'forbidden',
-        detail: anyWords,
-      },
-    });
+    expect(Result.isSuccess(decided(replacing({ by: 'person:grace' }), filesAdded))).toBe(true);
     expect(decided(replacing(), filesAdded, removed)).toMatchObject({
       failure: {
         _tag: 'conflict',
@@ -104,31 +94,5 @@ describe('a connection replaced by its addition from another provider', () => {
       },
     });
     expect(decided(replacing())).toMatchObject({ failure: { _tag: 'not_found' } });
-  });
-});
-
-describe('a connection replaced by a person the admission found may take it over', () => {
-  it('is decided for them, whoever added it, but never once it is removed', () => {
-    const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'files-id' } };
-    const takenOver = replacing({ by: 'person:grace', takesOver: true });
-
-    expect(Result.isSuccess(decided(takenOver, filesAdded))).toBe(true);
-    expect(decided(takenOver, filesAdded, removed)).toMatchObject({ failure: { _tag: 'conflict' } });
-  });
-
-  it('is decided only while the connection waits to be connected, where it is added again while pending', () => {
-    const connected: ConnectionEvent = {
-      type: 'connection_connected',
-      data: { connection: 'files-id', connected_by: ada },
-    };
-    const whilePending = replacing({ by: 'person:grace', takesOver: true, whilePending: true });
-
-    expect(Result.isSuccess(decided(whilePending, filesAdded))).toBe(true);
-    expect(decided(whilePending, filesAdded, connected)).toMatchObject({
-      failure: {
-        _tag: 'conflict',
-        detail: anyWords,
-      },
-    });
   });
 });

@@ -150,19 +150,20 @@ export function defineReadLink(reading: LinkReading) {
       'For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read.',
       'For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them.',
       'A token that is unknown, used up or replaced is answered as not found.',
+      'On a runtime that signs people in, only an admin of the organization may read it.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
     body: { kind: 'none' },
     permittedBy: ['org:write'],
+    connectionsManagement: true,
     inputSchema: LinkSchema,
     outputSchema: LinkedSchema,
     reasons: ['not_found', 'conflict', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const registry = yield* loadRegistry(reading);
-      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
       const acted = yield* actedNow;
-      const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
-        Effect.catchTag('forbidden', Effect.die),
+      const kept = yield* Effect.fromResult(
+        linkedConnectionOf(registry, { connection: id, token_sha256: tokenSha256Of(token) }),
       );
       const sources = yield* sourcesFor(kept.connection, reading);
       const asked = yield* Effect.fromResult(askedOfTheLink(kept, reading.providers, sources));
@@ -187,28 +188,25 @@ export function defineReadLink(reading: LinkReading) {
   });
 }
 
-export function defineApprove(services: {
-  readonly bindsPerson: boolean;
-  readonly providers: LinkReading['providers'];
-}) {
-  const { bindsPerson } = services;
+export function defineApprove(services: { readonly providers: LinkReading['providers'] }) {
   return defineHttpOperation('org', 'command', {
     name: 'approve',
     title: 'Approve connection',
     description: [
       'Approves a connection that takes no credential to give, one of the credential none or reference, through its open link, and answers it connected.',
-      'On a runtime that signs people in, only the person who added the connection may approve it.',
+      'On a runtime that signs people in, only an admin of the organization may approve it.',
       'A connection that takes a secret or client credentials is approved by give_credential instead.',
       'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/approve' },
     body: { kind: 'json' },
+    connectionsManagement: true,
     inputSchema: LinkWithPlaybooksSchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
       yield* allowedToChoose(choice.playbooks);
-      const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
+      const use = { connection: id, token_sha256: tokenSha256Of(token) };
       const { connection } = yield* recordInRegistry(services, {
         type: 'approve',
         ...use,

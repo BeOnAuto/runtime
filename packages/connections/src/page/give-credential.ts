@@ -3,7 +3,6 @@ import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import {
-  actedNow,
   allowedToChoose,
   loadRegistry,
   recordChangeInRegistry,
@@ -18,12 +17,10 @@ import { modelAtConnect } from './models-at-connect.ts';
 
 type GivingServices = Parameters<typeof givenValuesKept>[2] &
   Parameters<typeof forgottenCredentialOf>[1] &
-  Parameters<typeof modelAtConnect>[2] & {
-    readonly bindsPerson: boolean;
-  };
+  Parameters<typeof modelAtConnect>[2];
 
 export function defineGiveCredential(services: GivingServices) {
-  const { secrets, bindsPerson } = services;
+  const { secrets } = services;
   return defineHttpOperation('org', 'command', {
     name: 'give_credential',
     title: 'Give credential',
@@ -34,18 +31,19 @@ export function defineGiveCredential(services: GivingServices) {
       'Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again.',
       'Before it keeps anything, the runtime checks with the service each app credential given and, where the provider has a check for its key, the key: a value the service refuses is refused as invalid_input at its field, and where the check cannot be completed, as when the service cannot be reached or answers an error, it answers unavailable, keeps nothing and leaves the link open.',
       'It takes the app credentials list_providers lists for the way in app_credentials, each optional, and refuses one it does not list here.',
-      'On a runtime that signs people in, only the person who added the connection may give it.',
+      'On a runtime that signs people in, only an admin of the organization may give it.',
       'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/credential' },
     body: { kind: 'json' },
     inputSchema: GivingSchema,
     outputSchema: GivenConnectionSchema,
+    connectionsManagement: true,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ playbooks, model, ...giving }) {
       yield* allowedToChoose(playbooks);
-      const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
-      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use, yield* actedNow));
+      const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token) };
+      const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use));
       const atConnect = yield* modelAtConnect(kept, { model, appsGiven: giving.app_credentials ?? {} }, services);
       const values = yield* givenValuesKept(kept.connection, giving, services);
       const { given, secretId, appSecretIds } = values;
