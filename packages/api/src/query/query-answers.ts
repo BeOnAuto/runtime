@@ -37,7 +37,8 @@ export interface QueryServed {
   readonly limits?: QueryLimits | undefined;
 }
 
-export type ReadsAnswered = (reads: readonly ReadAsked[]) => Promise<readonly Outcome[]>;
+/** Reads asked together, each answered on its own as its answer comes, in the order they were asked. */
+export type ReadsAnswered = (reads: readonly ReadAsked[]) => readonly Promise<Outcome>[];
 
 const POSITION_READ = 'list_org_changes';
 
@@ -62,6 +63,12 @@ export function queryServingOf(
     position,
     positionInput: takesAScope(position) ? ACROSS_THE_PLAYBOOKS : {},
   };
+}
+
+function valueOrError(outcome: Outcome): unknown {
+  const value = valueOf(outcome);
+  if (value instanceof GraphQLError) throw value;
+  return value;
 }
 
 function valueOf(outcome: Outcome): unknown {
@@ -109,8 +116,8 @@ function cursorTakenFirst(
     taken.cursor ??=
       position === undefined
         ? Promise.resolve(null)
-        : answered([{ registration: position, input: positionInput }]).then(
-            ([outcome]) => (outcome?.status === 'succeeded' ? cursorOf(outcome.output) : null),
+        : Promise.resolve(answered([{ registration: position, input: positionInput }])[0]).then(
+            (outcome) => (outcome?.status === 'succeeded' ? cursorOf(outcome.output) : null),
             () => null,
           );
     return taken.cursor;
@@ -139,7 +146,7 @@ export async function queryAnswered(
           staleReadsOf(registration.staleOn, { playbook, input }),
         ),
       );
-      return (await answered(reads)).map((outcome) => valueOf(outcome));
+      return answered(reads).map((outcome) => outcome.then(valueOrError));
     },
     { cacheKeyFn: keyOf },
   );

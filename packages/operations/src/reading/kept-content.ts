@@ -36,23 +36,34 @@ function isText({ mediaType }: StreamedContent): boolean {
 
 export const nothingKept: KeptContent = (sha256) => new Map<string, string>().get(sha256);
 
+/** How many contents a read of a page reads at once from where they are kept. */
+const keptContentReadsAtOnce = 8;
+
 export function keptContentOf(
   records: readonly RecordedFact[],
   mostBytes: number,
   holders: ContentHolders,
+  readsAtOnce: number = keptContentReadsAtOnce,
 ): Effect.Effect<KeptContent, never, PlaybookReader> {
   const digests = [...new Set(records.flatMap((record) => digestsKeptIn(record, mostBytes, holders)))];
   return Effect.gen(function* () {
     const reader = yield* PlaybookReader;
-    const kept = new Map<string, string>();
-    for (const digest of digests) {
-      const content = yield* reader.readContent(digest);
-      if (content !== undefined && isText(content)) {
-        kept.set(digest, yield* textOfContent(content));
-      } else if (content !== undefined) {
-        yield* leftUnread(content.stream);
-      }
-    }
+    const texts = yield* Effect.forEach(
+      digests,
+      (digest) =>
+        Effect.gen(function* () {
+          const content = yield* reader.readContent(digest);
+          if (content !== undefined && isText(content)) {
+            return [[digest, yield* textOfContent(content)] as const];
+          }
+          if (content !== undefined) {
+            yield* leftUnread(content.stream);
+          }
+          return [];
+        }),
+      { concurrency: readsAtOnce },
+    );
+    const kept = new Map<string, string>(texts.flat());
     return (sha256: string) => kept.get(sha256);
   });
 }

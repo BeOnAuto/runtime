@@ -63,7 +63,7 @@ function answeredBy(answer: (read: ReadAsked) => Outcome) {
     batches.push(
       reads.map(({ registration, playbook }) => `${registration.name}${playbook === undefined ? '' : `@${playbook}`}`),
     );
-    return Promise.resolve(reads.map((read) => answer(read)));
+    return reads.map((read) => Promise.resolve(answer(read)));
   };
   return { batches, answers };
 }
@@ -251,9 +251,11 @@ describe('a query whose reads are refused', () => {
 });
 
 const failingTheCursor: ReadsAnswered = (reads) =>
-  reads.some(({ registration }) => registration.name === 'list_org_changes')
-    ? Promise.reject(new Error('The cursor could not be read'))
-    : Promise.resolve(reads.map((read) => notes(read)));
+  reads.map((read) =>
+    read.registration.name === 'list_org_changes'
+      ? Promise.reject(new Error('The cursor could not be read'))
+      : Promise.resolve(notes(read)),
+  );
 
 describe('a query whose cursor fails', () => {
   it('answers its reads and no cursor where the read of the cursor fails outright', async () => {

@@ -217,3 +217,46 @@ describe('the content kept for the events of a read', () => {
     expect([a1, r1].map((digest) => nothingKept(digest))).toEqual([undefined, undefined]);
   });
 });
+
+function contentsReadAtOnce() {
+  const records = [
+    recordOf({ arguments_bytes: 13, arguments_sha256: a1 }),
+    recordOf({ result_bytes: 14, result_sha256: r1 }),
+    recordOf({ result_bytes: 45, result_sha256: r2 }),
+  ];
+  const { service } = memoryLedger();
+  const reader = playbookReaderOf(service, playbook);
+  const reading = { now: 0, most: 0 };
+  const readContent = (sha256: string) =>
+    Effect.gen(function* () {
+      reading.now += 1;
+      reading.most = Math.max(reading.most, reading.now);
+      yield* Effect.yieldNow;
+      yield* Effect.yieldNow;
+      reading.now -= 1;
+      return yield* reader.readContent(sha256);
+    });
+  const read = (atOnce: number) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        yield* service.content.put(playbook, textToKeep(texts.a1, 'application/json'));
+        yield* service.content.put(playbook, textToKeep(texts.r1, 'application/json'));
+        yield* service.content.put(playbook, textToKeep(texts.r2, 'application/json'));
+        const content = yield* keptContentOf(records, Infinity, new Map(), atOnce);
+        return [a1, r1, r2].map((digest) => content(digest));
+      }).pipe(Effect.provideService(PlaybookReader, PlaybookReader.of({ ...reader, readContent }))),
+    );
+  return { reading, read };
+}
+
+describe('the contents of a page read together', () => {
+  it('reads as many at once as its bound lets', async () => {
+    const { reading, read } = contentsReadAtOnce();
+
+    await expect(read(2)).resolves.toEqual([texts.a1, texts.r1, texts.r2]);
+    expect(reading.most).toBe(2);
+    reading.most = 0;
+    await expect(read(8)).resolves.toEqual([texts.a1, texts.r1, texts.r2]);
+    expect(reading.most).toBe(3);
+  });
+});

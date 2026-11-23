@@ -1,4 +1,4 @@
-import { rejected, type Catalog, type Dispatcher, type DispatcherServices } from '@on.auto/operations';
+import { rejected, type Catalog, type Dispatcher, type DispatcherServices, type Outcome } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
 import type { AppRuntime } from '../app-runtime.ts';
@@ -42,12 +42,24 @@ export function queryRoutes({
       }
       const reads = together(dispatcher, { caller, org });
       const context = routes.callContext(c.req.raw);
-      const { status, body } = await queryAnswered(serving, asked.success, async (each) => {
-        const answered = await run(
-          reads(each).pipe(Effect.provideContext(context), Effect.annotateLogs({ requestId: c.get('requestId') })),
-          c.req.raw.signal,
+      const { status, body } = await queryAnswered(serving, asked.success, (each) => {
+        const resolvers: ((outcome: Outcome) => void)[] = [];
+        const answers = each.map(
+          (_, at) =>
+            new Promise<Outcome>((resolve) => {
+              resolvers[at] = resolve;
+            }),
         );
-        return 'status' in answered ? each.map(() => stoppedBeforeReading) : answered;
+        const unanswered = () => {
+          for (const resolve of resolvers) resolve(stoppedBeforeReading);
+        };
+        void run(
+          reads(each, (at, outcome) => {
+            resolvers[at]?.(outcome);
+          }).pipe(Effect.provideContext(context), Effect.annotateLogs({ requestId: c.get('requestId') })),
+          c.req.raw.signal,
+        ).then(unanswered, unanswered);
+        return answers;
       });
       return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
     });
