@@ -46,7 +46,7 @@ export interface PoolEvaluations {
   readonly close: () => Promise<void>;
 }
 
-interface Live {
+export interface Live {
   readonly stop: () => Promise<number>;
   readonly port: MessagePort;
   readonly flags: Int32Array;
@@ -120,25 +120,35 @@ function remainingUntil(at: number): number {
   return Math.max(0, at - performance.now());
 }
 
-function keeperOf(module: ModuleAddress, settings: PoolSettings): Keeper {
+export function keeperOf(start: () => Live): Keeper {
   const state: ThreadState = { closed: false };
+  const dying = new Set<Promise<number>>();
+  const letGo = (): void => {
+    if (state.live === undefined) {
+      return;
+    }
+    const ended = state.live.stop();
+    dying.add(ended);
+    void ended.then(() => dying.delete(ended));
+  };
   return {
     current: () => {
       if (!state.closed && (state.live === undefined || state.live.gone())) {
-        state.live = started(module(), settings);
+        state.live = start();
       }
       return state.closed ? undefined : state.live;
     },
     replaced: () => {
-      void state.live?.stop();
-      state.live = started(module(), settings);
+      letGo();
+      state.live = start();
     },
     release: (unit) => {
       state.live?.port.postMessage({ kind: 'close', unit }, []);
     },
     close: async () => {
       state.closed = true;
-      await state.live?.stop();
+      letGo();
+      await Promise.all(dying);
     },
   };
 }
@@ -226,8 +236,8 @@ export function poolEvaluationsOf(
   settings: PoolSettings,
   wait: FlagWait = atomicWait,
 ): PoolEvaluations {
-  const deciding = keeperOf(module, settings);
-  const filtering = keeperOf(module, settings);
+  const deciding = keeperOf(() => started(module(), settings));
+  const filtering = keeperOf(() => started(module(), settings));
   return {
     evaluations: remoteEvaluations(callingThreadOf(deciding, wait), askingThreadOf(filtering), hostClock),
     close: async () => {

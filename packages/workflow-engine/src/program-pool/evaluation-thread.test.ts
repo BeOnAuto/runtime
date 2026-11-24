@@ -7,10 +7,12 @@ import {
   answerGraceMs,
   churn,
   evaluatedAt,
+  keeperOf,
   loadingAfterItsWork,
   machineWaitingOn,
   readyFlag,
   runningOutOnce,
+  type Live,
 } from '../pool-testing/evaluation-workers.ts';
 import { machineOnTheThread, testPoolSettings } from '../pool-testing/test-pools.ts';
 import { countedThreadStarts, threadsAlive, type ThreadStarts } from '../pool-testing/threads-alive.ts';
@@ -66,12 +68,82 @@ function threadStartsOfTheTest(): ThreadStarts {
   return starts;
 }
 
+interface EndingOnCue {
+  readonly live: Live;
+  readonly end: () => void;
+}
+
+function endingOnCue(): EndingOnCue {
+  const ended = Promise.withResolvers<number>();
+  const { port1 } = new MessageChannel();
+  onTestFinished(() => {
+    port1.close();
+  });
+  return {
+    live: {
+      stop: () => ended.promise,
+      port: port1,
+      flags: new Int32Array(new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT)),
+      ready: Promise.resolve(),
+      gone: () => false,
+      post: () => {},
+      answer: () => Promise.resolve('timed-out'),
+    },
+    end: () => {
+      ended.resolve(1);
+    },
+  };
+}
+
+interface Settling {
+  readonly settled: () => boolean;
+  readonly promise: Promise<unknown>;
+}
+
+function settlingOf(promise: Promise<void>): Settling {
+  const state = { settled: false };
+  return {
+    settled: () => state.settled,
+    promise: promise.then(() => Object.assign(state, { settled: true })),
+  };
+}
+
+async function aTurnOfTheLoop(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    setImmediate(resolve);
+  });
+}
+
 describe('a scripted wait on the flags of an evaluation worker', () => {
   it('fails, naming the flag, where the worker has not notified it by the bound of the test', () => {
     const waits = runningOutOnce('answer', 0);
     const flags = new Int32Array(new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT));
 
     expect(() => waits.wait(flags, readyFlag, 0, longerThanTheTestMs)).toThrow(/ready/u);
+  });
+});
+
+describe('the keeper of an evaluation worker, closed while the worker it replaced has not ended', () => {
+  it('settles its close only once that worker has ended too, not as soon as the worker it kept ends', async () => {
+    const started: EndingOnCue[] = [];
+    const keeper = keeperOf(() => {
+      const worker = endingOnCue();
+      started.push(worker);
+      return worker.live;
+    });
+    keeper.current();
+    keeper.replaced();
+    const [replaced, fresh] = started;
+
+    const closing = settlingOf(keeper.close());
+    fresh?.end();
+    await aTurnOfTheLoop();
+    const closedBeforeTheReplacedEnded = closing.settled();
+    replaced?.end();
+    await closing.promise;
+
+    expect(started).toHaveLength(2);
+    expect(closedBeforeTheReplacedEnded).toBe(false);
   });
 });
 

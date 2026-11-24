@@ -10,7 +10,7 @@ import { moduleOfSource } from './source-modules.ts';
 import { testPoolSettings } from './test-pools.ts';
 import { nextThreadStarted } from './threads-alive.ts';
 
-export { answerGraceMs } from '../program-pool/evaluation-thread.ts';
+export { answerGraceMs, keeperOf, type Live } from '../program-pool/evaluation-thread.ts';
 export { readyFlag } from '../jobs/evaluation-messages.ts';
 
 type Flag = 'answer' | 'ready';
