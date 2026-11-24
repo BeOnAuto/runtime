@@ -24,7 +24,7 @@ export interface Asking {
   readonly resources: () => readonly (string | null)[];
 }
 
-export function askingThrough(): Asking {
+export function askingThrough(standingIn: ReadonlyMap<string, string> = new Map()): Asking {
   const asked: string[] = [];
   const resources: (string | null)[] = [];
   return {
@@ -34,7 +34,8 @@ export function askingThrough(): Asking {
       if (new URL(request.url).pathname === '/token') {
         resources.push(new URLSearchParams(await request.clone().text()).get('resource'));
       }
-      return inProcessFetch(request);
+      const fake = standingIn.get(request.url);
+      return inProcessFetch(fake === undefined ? request : new Request(fake, Object.assign({}, init)));
     },
     asked: () => [...asked],
     resources: () => [...resources],

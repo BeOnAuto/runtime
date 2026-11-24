@@ -2,8 +2,9 @@ import { Buffer } from 'node:buffer';
 import { generateKeyPairSync } from 'node:crypto';
 
 import { askedTogether } from '@on.auto/operations';
-import type { ProviderList } from '@on.auto/providers';
+import { providerNamed, providersShippedRoots, readProviders, type ProviderList } from '@on.auto/providers';
 import { asAnInstalledApp, installedAppRequest, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import type {
   ConnectionServer,
   ConnectionServerSettings,
@@ -12,7 +13,7 @@ import type {
   OrgConnection,
 } from '@on.auto/tool-servers';
 import { fakeMcpInProcess, pendingWords, playbookToolCalls, type FakeMcpServer } from '@on.auto/tool-servers/testing';
-import { Effect, Option, Redacted, Schema } from 'effect';
+import { Effect, Option, Redacted, Result, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { documentDecider, documentStreamOfOrg, keptTextOf } from '../documents/document-streams.ts';
@@ -468,6 +469,81 @@ describe('the token of a connection made as an app whose service gives tokens th
 
     expect(await tools.call('execute_connection', searchingTheGraph)).toMatchObject({ status: 'succeeded' });
     expect(server.tokenRequests()).toBe(2);
+  });
+});
+
+const linearsServer = 'https://mcp.linear.app/mcp';
+
+const linearsSignIn = 'https://mcp.linear.app';
+
+const linearsApi = 'https://api.linear.app';
+
+const linearAppSecret = 'linear-app-client-secret-5e93';
+
+const shippedLinear = providerListOf(
+  Result.getOrThrow(
+    providerNamed(Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots()))), 'linear'),
+  ),
+);
+
+function linearAt(issuer: string, authorizationServers?: readonly string[]): FakeMcpServer {
+  const fake = fakeMcpInProcess({
+    client: {
+      clientId: 'linear-app',
+      clientSecret: linearAppSecret,
+      expiresInSeconds: 3600,
+      issuer,
+      protectedResource: linearsServer,
+      ...(authorizationServers === undefined ? {} : { authorizationServers }),
+    },
+  });
+  onTestFinished(fake.close);
+  return fake;
+}
+
+function standingInForLinear(api: FakeMcpServer, signIn: FakeMcpServer): ReadonlyMap<string, string> {
+  return new Map([
+    [linearsServer, api.url],
+    [
+      `${linearsSignIn}/.well-known/oauth-protected-resource/mcp`,
+      `${api.origin}/.well-known/oauth-protected-resource/mcp`,
+    ],
+    [`${linearsApi}/.well-known/oauth-authorization-server`, `${api.origin}/.well-known/oauth-authorization-server`],
+    [
+      `${linearsSignIn}/.well-known/oauth-authorization-server`,
+      `${signIn.origin}/.well-known/oauth-authorization-server`,
+    ],
+  ]);
+}
+
+const atLinearsAddresses = connectionPolicyOf({
+  allowed_hosts: ['mcp.linear.app', 'api.linear.app', '*.in-process.test'],
+});
+
+describe('the token of a connection of Linear’s shipped way of a company’s own app, against fakes at Linear’s addresses', () => {
+  it('is asked at Linear’s API, the issuer the way names, with the resource Linear’s MCP server names, and never at the sign-in service the server names', async () => {
+    const signIn = linearAt(linearsSignIn);
+    const api = linearAt(linearsApi, [linearsSignIn]);
+    const h = harness({ policy: atLinearsAddresses, providers: shippedLinear });
+    await connectedConnectionSource(
+      h,
+      { provider: 'linear', credential: { kind: 'client_credentials' } },
+      { client_id: 'linear-app', client_secret: linearAppSecret },
+    );
+    const asking = askingThrough(standingInForLinear(api, signIn));
+    const tools = await toolsThrough(h, asking, { policy: atLinearsAddresses, providers: shippedLinear });
+
+    const called = await tools.call('execute_connection', {
+      server: 'linear',
+      tool: 'search',
+      arguments: { query: 'acme' },
+    });
+
+    expect(called).toMatchObject({ status: 'succeeded' });
+    expect([api.tokenRequests(), signIn.tokenRequests()]).toEqual([1, 0]);
+    expect(asking.resources()).toEqual([linearsServer]);
+    expect(asking.asked()).toContain(`${linearsApi}/.well-known/oauth-authorization-server`);
+    expect(signIn.heard()).toEqual([]);
   });
 });
 

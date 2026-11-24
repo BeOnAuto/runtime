@@ -30,30 +30,25 @@ describe('the ways of the shipped apps that let a company add a separate user', 
   });
 });
 
-const connectingAsTheCompany = ['atlassian', 'onedrive', 'stripe', 'zoom'];
+const connectingAsTheCompany = ['atlassian', 'linear', 'onedrive', 'stripe', 'zoom'];
 
-function waysAfterTheSignInOf(name: string) {
+const signingIn = ['authorization', 'delegated', ['service', 'personal'], false];
+
+const signingInAsAPerson = ['authorization', 'delegated', ['personal'], false];
+
+function waysOfTheCompanyOf(name: string) {
   const { entry } = Result.getOrThrow(providerNamed(shipped, name));
-  const [first, ...later] = entry.credentials;
-  return [
-    first?.kind,
-    later.map((way) => [way.kind, permissionsOf(way), accountTypesOf(way), way.limitation !== undefined]),
-  ];
+  return entry.credentials.map((way) => [way.kind, permissionsOf(way), accountTypesOf(way), 'limitation' in way]);
 }
 
-describe('the ways of the shipped apps that connect as the company, after the sign-in', () => {
-  it('come after the sign-in way, each acting as the app or as a service account alone, and each stating what it cannot do', () => {
-    expect(connectingAsTheCompany.map((name) => waysAfterTheSignInOf(name))).toEqual([
-      ['authorization', [['secret', 'delegated', ['service'], true]]],
-      ['authorization', [['client_credentials', 'application', [], true]]],
-      ['authorization', [['secret', 'application', [], true]]],
-      [
-        'authorization',
-        [
-          ['authorization', 'application', [], true],
-          ['client_credentials', 'application', [], true],
-        ],
-      ],
+describe('the ways of the shipped apps that connect as the company', () => {
+  it('are a way acting as the app or as a service account alone that states what it cannot do, beside the sign-in, Linear’s written first', () => {
+    expect(connectingAsTheCompany.map((name) => waysOfTheCompanyOf(name))).toEqual([
+      [signingInAsAPerson, ['secret', 'delegated', ['service'], true]],
+      [['client_credentials', 'application', [], true], signingIn],
+      [signingIn, ['client_credentials', 'application', [], true]],
+      [signingIn, ['secret', 'application', [], true]],
+      [signingInAsAPerson, ['authorization', 'application', [], true], ['client_credentials', 'application', [], true]],
     ]);
   });
 });

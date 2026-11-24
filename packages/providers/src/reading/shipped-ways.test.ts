@@ -67,7 +67,7 @@ const hostsOfTheWays = [
   keylessAt('sheets.googleapis.com', 2),
   keylessAt('slides.googleapis.com', 2),
   [[['mcp.hubspot.com', 'mcp.hubspot.com']]],
-  [[['mcp.linear.app', 'mcp.linear.app']]],
+  [[['mcp.linear.app', 'api.linear.app']], [['mcp.linear.app', 'mcp.linear.app']]],
   [[['api.linkedin.com', 'www.linkedin.com', 'www.linkedin.com', 'www.linkedin.com']]],
   [[['partner.api.bingads.microsoft.com', microsoft, microsoft, microsoft]]],
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]]],

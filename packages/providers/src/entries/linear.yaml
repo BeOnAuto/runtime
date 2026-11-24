@@ -1,6 +1,6 @@
 name: linear
 title: Linear
-description: Find, create and update Linear issues, projects and comments, in the workspace the person who connects chooses, as that person, through Linear's MCP server.
+description: Find, create and update Linear issues, projects and comments through Linear's MCP server, as the account that signs in or as your company's own application, which sees public teams and the private teams it was added to.
 summary: Lets your playbooks find, create and update issues, projects and comments in Linear.
 website: https://linear.app/docs/mcp
 type: mcp
@@ -9,6 +9,27 @@ marks:
   reads:
     - list_issues
 credentials:
+  - kind: client_credentials
+    issuer: https://api.linear.app
+    scope: read,write
+    says:
+      read,write: Read, create, change, archive and delete the issues, projects, comments and other data the application can see.
+    key_page: https://linear.app/settings/api/applications/new
+    key_page_title: Open Linear's new application page
+    steps:
+      key_page:
+        title: Create an OAuth application in Linear
+        instructions: |-
+          - Enter an **Application name**, and your company's name and website as **Developer name** and **Developer URL**.
+          - Leave **Redirect URIs** blank.
+          - Turn on **Client credentials**, then create the application.
+
+          The application sees every public team. To let it into a private team, change its team access on the application's page in Linear.
+      key:
+        title: Enter the app's details here
+        instructions: Paste the client ID and client secret from the application's page in Linear.
+    limitation: It can't see a private team until someone adds it to that team.
+    description: The client ID and secret of an OAuth application your company creates in Linear, with client credentials tokens turned on.
   - kind: authorization
     account_types: [service, personal]
     issuer: https://mcp.linear.app

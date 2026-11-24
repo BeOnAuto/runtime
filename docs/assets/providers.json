@@ -1393,7 +1393,7 @@
     {
       "name": "linear",
       "title": "Linear",
-      "description": "Find, create and update Linear issues, projects and comments, in the workspace the person who connects chooses, as that person, through Linear's MCP server.",
+      "description": "Find, create and update Linear issues, projects and comments through Linear's MCP server, as the account that signs in or as your company's own application, which sees public teams and the private teams it was added to.",
       "website": "https://linear.app/docs/mcp",
       "server": {
         "type": "mcp",
@@ -1402,6 +1402,16 @@
         ]
       },
       "ways": [
+        {
+          "kind": "client_credentials",
+          "description": "The client ID and secret of an OAuth application your company creates in Linear, with client credentials tokens turned on.",
+          "scopes": [
+            {
+              "scope": "read,write",
+              "says": "Read, create, change, archive and delete the issues, projects, comments and other data the application can see."
+            }
+          ]
+        },
         {
           "kind": "authorization",
           "description": "Sign in to Linear, choose a workspace and allow access.",

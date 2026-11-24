@@ -170,7 +170,7 @@ const waysOfTheShipped = [
   ['google-sheets', ['authorization', 'jwt_bearer', 'token_exchange', 'token_exchange'], []],
   ['google-slides', ['authorization', 'jwt_bearer', 'token_exchange', 'token_exchange'], []],
   ['hubspot', ['authorization'], []],
-  ['linear', ['authorization'], []],
+  ['linear', ['client_credentials', 'authorization'], []],
   ['linkedin', ['authorization'], []],
   ['microsoft-advertising', ['authorization'], []],
   ['microsoft-teams', ['authorization'], []],
