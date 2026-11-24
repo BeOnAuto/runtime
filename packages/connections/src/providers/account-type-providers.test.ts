@@ -1,7 +1,10 @@
 import { drive } from '@on.auto/providers/testing';
+import { registeredAt } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { waysListedOf } from '../testing/listed-ways.ts';
+
+const clientForTheApp = registeredAt('https://accounts.drive.example.com', { permissions: 'application' });
 
 function driveWith(declared: Readonly<Record<string, unknown>>) {
   return { ...drive, credentials: drive.credentials.map((way) => ({ ...way, ...declared })) };
@@ -13,7 +16,7 @@ describe('what a connection made through a listed way acts as', () => {
     [{ account_types: ['personal'] }, ['delegated', ['personal']]],
     [{ permissions: 'application' }, ['application', undefined]],
   ] as const)('is said of a way that declares %o as %o', async (declared, acting) => {
-    const [way] = await waysListedOf(driveWith(declared));
+    const [way] = await waysListedOf(driveWith(declared), { registeredClients: [clientForTheApp] });
 
     expect([way?.['permissions'], way?.['account_types']]).toEqual(acting);
   });

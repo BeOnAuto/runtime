@@ -126,6 +126,7 @@ export {
   type WayOfClients,
   type WayPkce,
 } from './consent/client-sources.ts';
+export { statesTheSamePermissions, type PermissionsStated } from './consent/client-permissions.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
 export { gatewayPaths } from './consent-through-a-gateway/gateway-calls.ts';
 export { makeConsentClient } from './consent/consent-making.ts';

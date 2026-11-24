@@ -23,6 +23,7 @@ export interface ServiceStartAsked {
   readonly resources: readonly string[];
   readonly returnTo: ConsentReturn;
   readonly challenge: string;
+  readonly permissions?: 'application';
 }
 
 interface ServiceRefreshAsked {
@@ -256,9 +257,8 @@ function resourceFieldOf(resources: readonly string[]): string | readonly string
   return resources.length > 1 ? resources : resources[0];
 }
 
-function startBodyOf({ issuer, scope, parameters, resources, returnTo, challenge }: ServiceStartAsked) {
-  const resource = resourceFieldOf(resources);
-  return { issuer, scope, parameters, resource, return: returnTo, challenge, challenge_method: challengeMethod };
+function startBodyOf({ resources, returnTo, ...asked }: ServiceStartAsked) {
+  return { ...asked, resource: resourceFieldOf(resources), return: returnTo, challenge_method: challengeMethod };
 }
 
 function revokeBodyOf({ issuer, tokens, connectionKey }: ServiceRevokeAsked) {

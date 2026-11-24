@@ -17,7 +17,7 @@ import { Struct, type Redacted } from 'effect';
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import type { ChatOffered } from '../registry/connection-commands.ts';
 import { chatThroughOf, type ChatAnswering, type ChatHosting } from './chat-answers.ts';
-import { consentOfferedOf, takesTheRuntimesOwnClientAlone } from './consent-offered.ts';
+import { consentOfferedOf, takesAClientForTheApp, takesTheRuntimesOwnClientAlone } from './consent-offered.ts';
 import {
   listedPlaceholdersOf,
   listedWayOf,
@@ -143,12 +143,12 @@ function asksValuesOfItsOwn({ placeholders }: CredentialWay): boolean {
   return placeholders !== undefined;
 }
 
-function installsWithoutItsClient(provider: Provider, way: CredentialWay, listing: Listing): boolean {
-  return way.installation !== undefined && 'because' in consentOfferedOf(provider.entry.name, way, listing.consent);
+function lacksItsClientForTheApp(provider: Provider, way: CredentialWay, listing: Listing): boolean {
+  return takesAClientForTheApp(way) && 'because' in consentOfferedOf(provider.entry.name, way, listing.consent);
 }
 
 export function waysInOrderOf(provider: Provider, listing: Listing): readonly CredentialWay[] {
-  const credentials = provider.entry.credentials.filter((way) => !installsWithoutItsClient(provider, way, listing));
+  const credentials = provider.entry.credentials.filter((way) => !lacksItsClientForTheApp(provider, way, listing));
   const ofItsOwnValues = credentials.filter((way) => asksValuesOfItsOwn(way));
   const alone = credentials.filter(
     (way) => !ofItsOwnValues.includes(way) && isUnderTheOrgsOAuthClientAlone(provider, way, listing),

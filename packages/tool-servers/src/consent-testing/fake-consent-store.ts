@@ -13,6 +13,7 @@ export interface FakeConsentServiceOptions {
   readonly vendor: Pick<FakeMcpServer, 'origin'>;
   readonly now: () => number;
   readonly scopes?: readonly string[];
+  readonly permissions?: 'application';
   readonly fetch?: typeof globalThis.fetch;
   readonly studioBase?: string;
 }

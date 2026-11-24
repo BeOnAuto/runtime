@@ -1,9 +1,10 @@
 import { alternatives } from '@on.auto/phrasing';
-import { isPinnableTemplate, pinnedTemplateShape } from '@on.auto/providers';
+import { isPinnableTemplate, PermissionsSchema, pinnedTemplateShape } from '@on.auto/providers';
 import {
   isPinnableUrl,
   isSameIssuer,
   pkcs8Of,
+  statesTheSamePermissions,
   type RegisteredApplication,
   type RegisteredClient,
   type RegisteredCredential,
@@ -78,6 +79,12 @@ const RegisteredClientFieldsSchema = Schema.Struct({
         description:
           "The scopes the client may ask at its issuers, each as a provider's way writes it: a consent takes the first client at its issuer that names every scope it asks, the scope of the way at a first consent, and with a group of the way's more the scopes the connection holds and the group's. Named for each client where several clients serve one issuer, and left out for a client that may ask any",
       }),
+  ),
+  permissions: Schema.optionalKey(
+    PermissionsSchema.annotate({
+      description:
+        'Whether the client was registered to act as the app, application, or as an account at the service, delegated. A way takes only a client with the same permissions as its own. delegated where it is left out.',
+    }),
   ),
   application: Schema.optionalKey(ApplicationSchema),
 });
@@ -204,7 +211,10 @@ const scopesUnnamed =
   'Expected scopes, the scopes the client may ask, since another registered client names one of its issuers too, a trailing slash aside: a client that names none would serve every way there that no client before it covers, and a client after it never';
 
 function sharesAnIssuer(client: RegisteredClientFields, other: RegisteredClientFields): boolean {
-  return client.issuers.some((issuer) => other.issuers.some((named) => isSameIssuer(named, issuer)));
+  return (
+    statesTheSamePermissions(client, other) &&
+    client.issuers.some((issuer) => other.issuers.some((named) => isSameIssuer(named, issuer)))
+  );
 }
 
 function unnamedScopeIssuesOf(clients: readonly RegisteredClientFields[]): readonly ClientIssue[] {
@@ -259,6 +269,7 @@ export function registeredClientsOf(clients: readonly RegisteredClientFields[]):
     credential: credentialOf(client),
     tokenEndpointAuthMethod: client.token_endpoint_auth_method ?? null,
     ...(client.scopes === undefined ? {} : { scopes: client.scopes }),
+    ...(client.permissions === undefined ? {} : { permissions: client.permissions }),
     ...applicationOf(client),
   }));
 }

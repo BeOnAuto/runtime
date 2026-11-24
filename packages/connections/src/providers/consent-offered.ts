@@ -1,6 +1,7 @@
 import type {
   ClientSource,
   HadSources,
+  PermissionsStated,
   WayClientSource,
   WayGateway,
   WayOfClients,
@@ -10,16 +11,30 @@ import type {
 import { notReachedHereWords } from '../page/consent-words.ts';
 
 interface WayOfConsent {
+  readonly kind?: string;
   readonly issuer?: string;
   readonly scope?: string;
   readonly clients?: readonly WayClientSource[];
   readonly pkce?: WayPkce;
   readonly gateway?: WayGateway;
   readonly installation?: unknown;
+  readonly permissions?: PermissionsStated;
+  readonly oauth_client?: string;
 }
 
 export function takesTheRuntimesOwnClientAlone({ gateway, installation }: WayOfConsent): boolean {
   return gateway !== undefined || installation !== undefined;
+}
+
+export function takesAClientForTheApp({
+  kind,
+  permissions,
+  gateway,
+  oauth_client: oauthClient,
+}: WayOfConsent): boolean {
+  return (
+    kind === 'authorization' && permissions === 'application' && gateway === undefined && oauthClient === undefined
+  );
 }
 
 export type ConsentOffered = { readonly client_source: ClientSource } | { readonly because: string };
@@ -28,12 +43,21 @@ function throughARegisteredClient(provider: string): string {
   return `The provider ${provider} takes consent through a client whoever runs Auto registers`;
 }
 
-function wayOfClientsOf({ issuer, scope, clients, pkce, gateway, installation }: WayOfConsent): WayOfClients {
+function wayOfClientsOf({
+  issuer,
+  scope,
+  clients,
+  pkce,
+  gateway,
+  installation,
+  permissions,
+}: WayOfConsent): WayOfClients {
   return {
     issuer: String(issuer),
     scope,
     clients,
     pkce,
+    permissions,
     ...(gateway === undefined ? {} : { gateway: { url: gateway.url } }),
     ...(installation === undefined ? {} : { installs: true }),
   };

@@ -82,6 +82,7 @@ const decodeStart = Schema.decodeUnknownOption(
       return: ReturnSchema,
       challenge: ChallengeSchema,
       challenge_method: Schema.Literal('S256'),
+      permissions: Schema.optionalKey(Schema.Literal('application')),
     }),
   ),
 );
@@ -134,7 +135,12 @@ function started({ text }: Asked, store: Store): Response {
   if (asked === undefined || setsItsOwn || refuses(store, 'start')) {
     return problem(400, 'The consent cannot be started as it is asked');
   }
-  if (asked.issuer !== store.options.vendor.origin || !isServedBase(asked.return, store)) {
+  const servesThePermissionsAsked = asked.permissions === store.options.permissions;
+  if (
+    asked.issuer !== store.options.vendor.origin ||
+    !servesThePermissionsAsked ||
+    !isServedBase(asked.return, store)
+  ) {
     return problem(400, 'Auto has no client at this issuer, or does not send people back to this base');
   }
   const state = randomText();
@@ -214,9 +220,10 @@ function redeemed(asked: Asked, store: Store): Promise<Response> | Response {
   return person === undefined ? signInFirst() : redeemedWith(asked, store, person);
 }
 
-function listed(_asked: Asked, { options: { vendor, scopes } }: Store): Response {
+function listed(_asked: Asked, { options: { vendor, scopes, permissions } }: Store): Response {
   const named = scopes === undefined ? {} : { scopes };
-  return answer({ clients: [{ issuer: vendor.origin, client_id: client.clientId, ...named }] });
+  const stated = permissions === undefined ? {} : { permissions };
+  return answer({ clients: [{ issuer: vendor.origin, client_id: client.clientId, ...named, ...stated }] });
 }
 
 const routes: ReadonlyMap<string, Route> = new Map<string, Route>([

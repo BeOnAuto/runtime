@@ -39,6 +39,18 @@ describe('the client a connection is connected with', () => {
     expect(h.ledger.streamNames()).toContain(clientRegistrationsStream);
   });
 
+  it('is the client set up with the permissions of the way the connection was added through, whichever client stands first', async () => {
+    const fake = served();
+    const forTheCompany = registeredAt(fake.origin, { clientId: 'for-the-company', permissions: 'application' });
+    const h = consentHarnessAt(fake, {
+      way: { scope: 'files.read', permissions: 'application' },
+      consenting: { registeredClients: [registeredAt(fake.origin), forTheCompany] },
+    });
+    const link = await added(h, { provider: 'files' });
+
+    expect(new URL((await startedAt(h, link)).url).searchParams.get('client_id')).toBe('for-the-company');
+  });
+
   it('is gone where the registration it was made with is no longer kept, and the finish says so', async () => {
     const fake = served({ dynamicRegistration: true });
     const h = consentHarnessAt(fake, { way: dynamicWay });

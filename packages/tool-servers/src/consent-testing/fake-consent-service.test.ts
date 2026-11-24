@@ -71,6 +71,26 @@ describe('the clients the fake consent service lists', () => {
   });
 });
 
+describe('the fake consent service whose client states application permissions', () => {
+  it('lists the client with them, and makes only a start that asks them, as the service does with a client of each permissions', async () => {
+    const stating = serving({}, { permissions: 'application' });
+    const unstating = serving();
+    const [calls, callsOfNone] = [serviceCallsAt(stating.service), serviceCallsAt(unstating.service)];
+
+    expect([
+      await Effect.runPromise(calls.clients),
+      await run(calls.start(startOf(stating.fake, { permissions: 'application' }))),
+      await run(calls.start(startOf(stating.fake))),
+      await run(callsOfNone.start(startOf(unstating.fake, { permissions: 'application' }))),
+    ]).toMatchObject([
+      [{ issuer: stating.fake.origin, client_id: 'auto-runtime', permissions: 'application' }],
+      { _tag: 'Success' },
+      { failure: { refused: 'start_refused' } },
+      { failure: { refused: 'start_refused' } },
+    ]);
+  });
+});
+
 describe('a start at the fake consent service', () => {
   it('answers the page of the authorization server with its client, its own state and challenge, and the parameters asked', async () => {
     const { fake: vendor, service } = serving();

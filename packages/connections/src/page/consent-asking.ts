@@ -88,6 +88,7 @@ function wayOf(
     revocation_endpoint: credential.revocation_endpoint,
     pkce: credential.pkce,
     clients: credential.clients,
+    permissions: credential.permissions,
     oauth_client: credential.client_source === 'own' ? credential.client_source : undefined,
     ...(gateway === undefined ? {} : { gateway }),
     ...(credential.installation === undefined ? {} : { installs: true }),

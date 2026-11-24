@@ -15,7 +15,7 @@ import {
   throughAutoInProcess,
   type ClientRegistration,
 } from '../testing/index.ts';
-import type { FakeConsentService, ThroughAuto } from '../testing/served-fakes.ts';
+import type { FakeConsentService, ServiceListing, ThroughAuto } from '../testing/served-fakes.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -23,8 +23,8 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-function throughAuto(changes: Partial<ClientRegistration> = {}): ThroughAuto {
-  const serving = throughAutoInProcess(changes);
+function throughAuto(changes: Partial<ClientRegistration> = {}, listing: ServiceListing = {}): ThroughAuto {
+  const serving = throughAutoInProcess(changes, listing);
   closing.push(serving.close);
   return serving;
 }
@@ -96,6 +96,55 @@ describe('the start of a consent through Auto’s consent service', () => {
       returnAddress,
     ]);
     expect(start.state).not.toBe('state-1');
+  });
+});
+
+describe('the start of a consent through Auto’s consent service, by the permissions of its way', () => {
+  it.each([
+    ['states none', {}],
+    ['states delegated permissions', { permissions: 'delegated' }],
+  ] as const)('asks the service for a client that states none, where the way %s', async (_, way) => {
+    const { fake, service } = throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
+
+    const start = await started(client, { ...startAskedAt(fake, way), studioBase: loopbackBase });
+
+    expect(start.client.client_source).toBe('auto');
+    expect(service.calls().at(-1)?.body).not.toHaveProperty('permissions');
+  });
+
+  it('asks the service for a client with application permissions, where the way states them and the service lists one', async () => {
+    const { fake, service } = throughAuto({}, { permissions: 'application' });
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
+
+    const start = await started(client, {
+      ...startAskedAt(fake, { permissions: 'application' }),
+      studioBase: loopbackBase,
+    });
+
+    expect(start.client.client_source).toBe('auto');
+    expect(service.calls().at(-1)?.body).toHaveProperty('permissions', 'application');
+  });
+
+  it.each([
+    [
+      'states none, and the service lists only a client with application permissions',
+      {},
+      { permissions: 'application' },
+    ],
+    [
+      'states application permissions, and the service lists only a client that states none',
+      { permissions: 'application' },
+      {},
+    ],
+  ] as const)('is not started through the service where the way %s', async (_, way, listing) => {
+    const { fake, service } = throughAuto({}, listing);
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
+
+    expect(await refused(client, { ...startAskedAt(fake, way), studioBase: loopbackBase })).toEqual({
+      refused: 'no_client',
+    });
+    expect(pathsHeardBy(service)).toEqual(['/clients']);
   });
 });
 

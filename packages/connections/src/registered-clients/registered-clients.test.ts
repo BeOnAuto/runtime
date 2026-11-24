@@ -140,6 +140,40 @@ describe('the scopes of a registered client', () => {
   });
 });
 
+describe('the permissions of a registered client', () => {
+  it('leave scopes unnamed where the other client at the issuer states other permissions, which are delegated where left out', () => {
+    const sharing = { ...publicClient, issuers: ['https://accounts.example.com/'] };
+    const withPermissions = (permissions: string) => ({ ...sharing, permissions });
+
+    expect([
+      clientsOf(withASecret, withPermissions('application')).map(({ clientId, permissions }) => ({
+        clientId,
+        permissions,
+      })),
+      refusalOf(withASecret, withPermissions('delegated')),
+      refusalOf({ ...withASecret, permissions: 'application' }, withPermissions('application')),
+    ]).toEqual([
+      [
+        { clientId: '1234.apps.example.com', permissions: undefined },
+        { clientId: 'auto-runtime', permissions: 'application' },
+      ],
+      `${prefix}/scopes: ${scopesUnnamed}; CONNECTIONS: /registered_clients/1/scopes: ${scopesUnnamed}`,
+      `${prefix}/scopes: ${scopesUnnamed}; CONNECTIONS: /registered_clients/1/scopes: ${scopesUnnamed}`,
+    ]);
+  });
+
+  it('are read as stated, application or delegated, left out where it states none, and refused otherwise', () => {
+    expect([
+      clientsOf(
+        { ...withASecret, permissions: 'application' },
+        { ...withAKey, permissions: 'delegated' },
+        publicClient,
+      ).map(({ permissions }) => permissions),
+      refusalOf({ ...withASecret, permissions: 'admin' }).startsWith(`${prefix}/permissions: `),
+    ]).toEqual([['application', 'delegated', undefined], true]);
+  });
+});
+
 describe('the credential of a registered client', () => {
   it('is a client secret or a private key with its algorithm, or neither, and no method its kind does not authenticate with', () => {
     const withoutASecret = { issuers: withASecret.issuers, client_id: withASecret.client_id };

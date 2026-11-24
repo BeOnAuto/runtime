@@ -15,7 +15,7 @@ import type {
 import { grantedScopeOf } from '../consent/scopes.ts';
 import { scopeAskedOf, serverMetadataOf } from '../consent/server-metadata.ts';
 import { autoOf, type AutoOn, type ThroughAuto } from './auto-clients.ts';
-import type { ConsentReturn } from './consent-service.ts';
+import type { ConsentReturn, ServiceStartAsked } from './consent-service.ts';
 
 type FetchFor = Requests['fetchFor'];
 
@@ -32,6 +32,10 @@ const verifierBytes = 32;
 export function handoffVerifier(): { readonly verifier: string; readonly challenge: string } {
   const verifier = randomBytes(verifierBytes).toString('base64url');
   return { verifier, challenge: createHash('sha256').update(verifier).digest('base64url') };
+}
+
+function permissionsAskedOf({ permissions }: StartAsked['way']): Pick<ServiceStartAsked, 'permissions'> {
+  return permissions === 'application' ? { permissions } : {};
 }
 
 function chosenOf(clientId: string): ChosenClient {
@@ -53,6 +57,7 @@ export function startedThroughAuto(
       resources: resourcesAskedOf(resource, asked.requestOrigins).asked,
       returnTo: { kind, base: asked.studioBase },
       challenge,
+      ...permissionsAskedOf(asked.way),
     });
     return { url, state, verifier: Redacted.make(verifier), client: chosenOf(clientId) };
   });

@@ -1,6 +1,8 @@
 import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
+import { PermissionsStatedSchema, statesTheSamePermissions, type PermissionsStated } from './client-permissions.ts';
+
 const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own', 'gateway'] as const;
 
 export const ClientSourceSchema = Schema.Literals(clientSources);
@@ -49,6 +51,7 @@ export interface RegisteredClient {
   readonly credential: RegisteredCredential;
   readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
   readonly scopes?: readonly string[];
+  readonly permissions?: PermissionsStated;
   readonly application?: RegisteredApplication;
 }
 
@@ -61,6 +64,7 @@ export const ServiceClientSchema = Schema.Struct({
   issuer: Schema.String,
   client_id: ClientIdSchema,
   scopes: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMinLength(1)))),
+  permissions: Schema.optionalKey(PermissionsStatedSchema),
 });
 
 export type ServiceClient = typeof ServiceClientSchema.Type;
@@ -84,6 +88,7 @@ export interface WayOfClients {
   readonly oauth_client?: WayOAuthClient | undefined;
   readonly gateway?: WayGateway | undefined;
   readonly installs?: boolean | undefined;
+  readonly permissions?: PermissionsStated | undefined;
 }
 
 export interface HadSources {
@@ -169,8 +174,10 @@ function installsAnApplication({ installs }: Pick<WayOfClients, 'installs'>): bo
   return installs === true;
 }
 
-function actsAsTheWayDoes({ application }: RegisteredClient, way: WayOfClients): boolean {
-  return (application !== undefined) === installsAnApplication(way);
+function actsAsTheWayDoes(client: RegisteredClient, way: WayOfClients): boolean {
+  return installsAnApplication(way)
+    ? client.application !== undefined
+    : client.application === undefined && statesTheSamePermissions(client, way);
 }
 
 export function registeredClientFor(
@@ -195,7 +202,10 @@ export function registeredClientNamed(
 }
 
 export function serviceClientFor(clients: readonly ServiceClient[], way: WayOfClients): ServiceClient | undefined {
-  return clients.find((client) => isRegisteredAt(client.issuer, way.issuer) && covers(client, way));
+  return clients.find(
+    (client) =>
+      isRegisteredAt(client.issuer, way.issuer) && covers(client, way) && statesTheSamePermissions(client, way),
+  );
 }
 
 export function metadataDocumentOf(publicUrl: string | undefined): string | undefined {

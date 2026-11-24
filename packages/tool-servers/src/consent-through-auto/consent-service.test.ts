@@ -100,6 +100,24 @@ describe('the clients a consent service lists', () => {
     expect(await Effect.runPromise(serviceCallsAt({ url }).clients)).toEqual(clients);
   });
 
+  it('are read with the permissions a client states, and without them where it states none', async () => {
+    const clients = [
+      { issuer, client_id: 'auto-signing-in' },
+      { issuer, client_id: 'auto-for-the-account', permissions: 'application' },
+    ];
+    const url = await answeringEvery(() => Response.json({ clients }));
+
+    expect(await Effect.runPromise(serviceCallsAt({ url }).clients)).toEqual(clients);
+  });
+
+  it('are unanswered where a client states permissions other than application or delegated', async () => {
+    const url = await answeringEvery(() =>
+      Response.json({ clients: [{ issuer, client_id: 'auto-for-the-account', permissions: 'admin' }] }),
+    );
+
+    expect(await outcomeOf(serviceCallsAt({ url }).clients)).toEqual(unanswered);
+  });
+
   it('are unanswered where a client names an empty scope', async () => {
     const url = await answeringEvery(() =>
       Response.json({ clients: [{ issuer, client_id: 'auto-reading', scopes: [''] }] }),
