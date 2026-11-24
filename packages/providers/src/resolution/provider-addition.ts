@@ -217,7 +217,7 @@ export function additionOfProvider(
   return Result.match(chosenWayOf(provider, given), {
     onFailure: (refused) => Result.fail([...placingIssuesOf(provider, placeholders), ...refused]),
     onSuccess: (offered) =>
-      Result.flatMap(valuesOf(provider, wayAskingItsValues(offered), placeholders), (values) => {
+      Result.flatMap(valuesOf(provider, wayAskingItsValues(offered, placeholders), placeholders), (values) => {
         const oauthClient = given.oauthClientFor?.(offered);
         return Result.map(chosenOf(provider.name, offered, oauthClient), (chosen) => ({
           name: given.name ?? provider.name,

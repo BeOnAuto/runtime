@@ -204,14 +204,16 @@ async function actingAsTheCompanysOwn() {
 const errorsOf = (h: Harness) => h.logged().filter((line) => line.includes('"level":"ERROR"'));
 
 describe('a connection that acts as a service account Auto created, reconnected another way', () => {
-  it('keeps the account until the way chosen connects, then removes it', async () => {
+  it('keeps the account until the way chosen connects, its values given on its page, then removes it', async () => {
     const { h, accounts, link } = await actingAsAnAccountAutoCreated();
 
+    await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: {} });
+    const refused = await onTheLink(h, 'approve', link);
     await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: ownValues });
     const meanwhile = accounts.removed();
     const approved = await onTheLink(h, 'approve', link);
 
-    expect(meanwhile).toEqual([]);
+    expect([refused, meanwhile]).toMatchObject([{ status: 'rejected', reason: 'invalid_input' }, []]);
     expect(approved).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
     expect(approved).not.toHaveProperty(['output', 'service_account']);
     expect(accounts.removed()).toEqual([{ ...theAccount, connection: link.id }]);

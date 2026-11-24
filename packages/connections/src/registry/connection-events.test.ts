@@ -6,9 +6,20 @@ import { describe, expect, it } from 'vitest';
 
 import { actingAsAnAccount, keptWaysOfAServer, requested, wayChosenAgain } from '../testing/account-type-facts.ts';
 import { heldAppCredentials, modelSet } from '../testing/app-credential-facts.ts';
-import { givenItsEvents, identifiedByTheRuntime, identifiedInItsAccount, placeNamed } from '../testing/event-facts.ts';
+import {
+  givenItsEvents,
+  identifiedByTheRuntime,
+  identifiedInItsAccount,
+  placeNamed,
+  signingSecrets,
+} from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
-import { actingAsTheApp, addedAsAServiceAccount, wayChosenWithItsValues } from '../testing/way-value-facts.ts';
+import {
+  actingAsTheApp,
+  addedAsAServiceAccount,
+  leftToThePage,
+  wayChosenWithItsValues,
+} from '../testing/way-value-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
@@ -219,19 +230,6 @@ const playbooksSet: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
-const signingSecrets: readonly (typeof ConnectionEventSchema.Type)[] = [
-  {
-    type: 'connection_signing_secret_set',
-    data: { ...ofTheConnection, secret_id: 'secret-6', previous_until: '2026-10-30T10:00:00.000Z' },
-    context: acted,
-  },
-  {
-    type: 'connection_signing_secret_removed',
-    data: { ...ofTheConnection, which: 'previous' },
-    context: acted,
-  },
-];
-
 const documentText = JSON.stringify({
   openapi: '3.1.0',
   info: { title: 'Ledgers', version: '1' },
@@ -284,6 +282,7 @@ describe('the facts of the registry of connections', () => {
       '0.71.0': [...keptWaysOfAServer, ...identifiedInItsAccount, ...requested],
       '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed, ...addedAsAServiceAccount, ...modelSet],
       '0.73.0': actingAsTheApp,
+      '0.74.0': leftToThePage,
     },
   });
 });

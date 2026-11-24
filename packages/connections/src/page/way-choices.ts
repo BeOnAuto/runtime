@@ -24,6 +24,7 @@ export function defineChooseWay(services: WayChoosing) {
       "Choosing the same way again with other values records the choice again: a sign-in started and the organization's own OAuth client given are dropped, and the account type stays as it is unless one is given.",
       'Choosing the same way again with the same values changes only the account type, where one is given, and otherwise records nothing.',
       "A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for.",
+      'A way that exchanges a token may be chosen with none of the values it asks for itself: choose it again with them before approving the connection.',
       'Choosing another way first removes a service account Auto created for the way it had before; where Auto cannot remove it now, the choice is refused as unavailable and nothing is changed. A connection that is connected or broken keeps the service account it acts as until the way chosen connects.',
       "A way the runtime's rules do not allow is refused as forbidden.",
       'On a runtime that signs people in, only an admin of the organization may choose.',

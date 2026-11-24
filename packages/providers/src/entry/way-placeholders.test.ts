@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { problemsOf } from '../testing/entry-problems.ts';
 import { keyMadeAt, messages } from '../testing/fixture-providers.ts';
-import { asTheCompanysApp, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import { asTheCompanysApp, asTheCompanysServiceAccount, mail, signingInToMail } from '../testing/own-app-providers.ts';
+import { leavesItsValuesToThePage } from './placeholders.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -207,5 +208,22 @@ describe('the path values of a way', () => {
 
   it.each(pathValueRefusals)('are refused where a value holds %s', (_case, value) => {
     expect(pathsOf(withTheApp({ path_values: { userId: value } }))).toContain('/credentials/1/path_values/userId');
+  });
+});
+
+const exchanging = asTheCompanysServiceAccount;
+
+const ownValues = { project: '123456789012', account: 'robot@acme.example.com' } as const;
+
+describe('the values a way leaves to the page its connection’s link opens', () => {
+  it.each([
+    ['leaves them where a way that exchanges a token is given none of them', exchanging, {}, true],
+    ['leaves them where it is given a value of the provider alone', exchanging, { region: 'eu' }, true],
+    ['leaves none where it is given one of them', exchanging, { project: ownValues.project }, false],
+    ['leaves none where it is given all of them', exchanging, ownValues, false],
+    ['leaves none of a way that exchanges a token and asks none', { kind: 'token_exchange' }, {}, false],
+    ['leaves none of a way of another kind', { kind: 'client_credentials', placeholders: { tenant } }, {}, false],
+  ] as const)('%s', (_named, way, given, left) => {
+    expect(leavesItsValuesToThePage(way, given)).toBe(left);
   });
 });

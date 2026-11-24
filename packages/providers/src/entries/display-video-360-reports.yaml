@@ -150,5 +150,8 @@ credentials:
             This step needs an admin user of Display & Video 360.
       key:
         title: Enter the details here
-        instructions: Enter the project number and the email address of the service account from step 1.
+        instructions: |-
+          Enter the project number and the email address of the service account from step 1.
+
+          If Connect is refused at first, wait a few minutes and select Connect again: Google can take that long to apply the access you granted in step 3.
     description: Connect as a service account your company creates at Google.

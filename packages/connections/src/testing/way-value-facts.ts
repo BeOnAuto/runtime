@@ -170,3 +170,61 @@ export const actingAsTheApp = [
   ...nextWayChosen,
   ...startedForTheNextWay,
 ];
+
+const exchangingForTheCompany = {
+  kind: 'token_exchange',
+  permissions: 'application',
+  token_endpoint: 'https://sts.mail.example.com/v1/token',
+  scope: 'mail.read',
+  parameters: {
+    requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+    scope: 'https://mail.example.com/auth/platform',
+  },
+} as const;
+
+const exchangeSays = { 'mail.read': 'Read the mail of the mailboxes the account reaches.' };
+
+/**
+ * A connection added, a way chosen, and a way chosen for a connection that is connected, through a way that exchanges a
+ * token with none of the way's own values, which the page its link opens asks after its steps: the same facts and
+ * members as before, their values empty, as those of a service account Auto manages already were (a weak schema).
+ */
+export const leftToThePage: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'mail',
+      server_type: 'openapi',
+      provider: 'mail',
+      placeholders: {},
+      entry: { document: 'https://mail.example.com/openapi.json', base_url: 'https://api.mail.example.com/v1/self' },
+      credential: exchangingForTheCompany,
+      says: exchangeSays,
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
+    },
+    context: acted,
+  },
+  {
+    type: 'connection_way_chosen',
+    data: {
+      ...ofTheConnection,
+      credential: exchangingForTheCompany,
+      says: exchangeSays,
+      placeholders: {},
+      base_url: 'https://api.mail.example.com/v1/self',
+    },
+    context: acted,
+  },
+  {
+    type: 'connection_next_way_chosen',
+    data: {
+      ...ofTheConnection,
+      credential: exchangingForTheCompany,
+      says: exchangeSays,
+      placeholders: {},
+      base_url: 'https://api.mail.example.com/v1/self',
+    },
+    context: acted,
+  },
+];

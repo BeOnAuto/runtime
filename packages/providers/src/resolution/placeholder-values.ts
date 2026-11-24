@@ -5,7 +5,14 @@ import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Option, Result } from 'effect';
 
 import type { CredentialWay } from '../entry/credential-ways.ts';
-import { isAnAddress, isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
+import {
+  isAnAddress,
+  isRequired,
+  leavesItsValuesToThePage,
+  patternOf,
+  type Choice,
+  type Placeholder,
+} from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress, marked, templatedFieldsOf, type TemplatedField } from '../entry/templates.ts';
 
@@ -156,20 +163,23 @@ function placeholdersOfTheWay(entry: ProviderEntry, way: CredentialWay | undefin
 }
 
 /**
- * The way whose own values an addition through it is given: none for a way of a service account Auto manages, whose
- * values are set once Auto creates the account, not by the caller.
+ * The way whose own values an addition or a choice through it is checked for, given these values: none for a way of a
+ * service account Auto manages, whose values are set once Auto creates the account, not by the caller, and none for a
+ * way that leaves them to the page its connection's link opens (`leavesItsValuesToThePage`), where the person gives
+ * them before the connection is approved.
  */
-export function wayAskingItsValues(way: CredentialWay): CredentialWay | undefined {
-  return way.managed_service_account === true ? undefined : way;
+export function wayAskingItsValues(way: CredentialWay, given: Given): CredentialWay | undefined {
+  return way.managed_service_account === true || leavesItsValuesToThePage(way, given) ? undefined : way;
 }
 
 /**
  * Whether an addition through the way takes the values given, by their names alone: each is one the provider or the
- * way asks, and none of those they require is left out. An addition through a way that does not is refused, so one
- * that names no way does not take it.
+ * way asks, and none of those they require is left out, where the way asks its own values of the addition at all
+ * (`wayAskingItsValues`). An addition through a way that does not is refused, so one that names no way does not take
+ * it.
  */
 export function takesTheValuesGiven(entry: ProviderEntry, way: CredentialWay, given: Given): boolean {
-  const placeholders = placeholdersOfTheWay(entry, wayAskingItsValues(way));
+  const placeholders = placeholdersOfTheWay(entry, wayAskingItsValues(way, given));
   return (
     Object.keys(given).every((name) => Object.hasOwn(placeholders, name)) &&
     Object.entries(placeholders).every(

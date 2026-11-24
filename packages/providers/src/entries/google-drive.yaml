@@ -159,6 +159,9 @@ credentials:
             This step needs a Manager of the shared drive. To let the app read a file or folder outside a shared drive, share it with the service account's email address, as with a colleague.
       key:
         title: Enter the details here
-        instructions: Enter the project number and the email address of the service account from step 1.
+        instructions: |-
+          Enter the project number and the email address of the service account from step 1.
+
+          If Connect is refused at first, wait a few minutes and select Connect again: Google can take that long to apply the access you granted in step 3.
     limitation: It can't own files, so it saves only into shared drives, and it reads only what was shared with it.
     description: Connect as a service account your company creates at Google.

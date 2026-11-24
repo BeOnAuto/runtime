@@ -66,3 +66,16 @@ export const identifiedInItsAccount: readonly (typeof ConnectionEventSchema.Type
     context: { at: recordedAt, by: 'runtime' },
   },
 ];
+
+export const signingSecrets: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_signing_secret_set',
+    data: { connection: 'connection-1', secret_id: 'secret-6', previous_until: '2026-10-30T10:00:00.000Z' },
+    context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+  },
+  {
+    type: 'connection_signing_secret_removed',
+    data: { connection: 'connection-1', which: 'previous' },
+    context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+  },
+];

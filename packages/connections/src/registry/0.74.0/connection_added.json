@@ -1,0 +1,35 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "mail",
+    "server_type": "openapi",
+    "provider": "mail",
+    "placeholders": {},
+    "entry": {
+      "document": "https://mail.example.com/openapi.json",
+      "base_url": "https://api.mail.example.com/v1/self"
+    },
+    "credential": {
+      "kind": "token_exchange",
+      "permissions": "application",
+      "scope": "mail.read",
+      "parameters": {
+        "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+        "scope": "https://mail.example.com/auth/platform"
+      },
+      "token_endpoint": "https://sts.mail.example.com/v1/token"
+    },
+    "says": {
+      "mail.read": "Read the mail of the mailboxes the account reaches."
+    },
+    "added_by": {
+      "id": "person:ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

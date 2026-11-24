@@ -2,7 +2,7 @@ import { asAManagedServiceAccount, asTheCompanysServiceAccount, signingInToMail 
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { added, issuesIn, lastFact } from '../testing/additions.ts';
+import { added, adding, issuesIn, lastFact } from '../testing/additions.ts';
 import { addedThe, exchanging, type Port } from '../testing/exchange-harness.ts';
 import { exchangeProvidersWith, managedWay, ownValues, ownWay, tokenEndpoint } from '../testing/exchanges.ts';
 import { ada, operationNamed } from '../testing/harness.ts';
@@ -60,8 +60,14 @@ const takenWhereNoneIsNamed: readonly (readonly [string, readonly Port[], Readon
       { credential: { kind: 'token_exchange', token_endpoint: tokenEndpoint } },
     ],
     [
-      'a sign-in as a service account, where none is created here and the company’s own is given no values',
+      'the company’s own service account, given no values, where none is created here',
       ['managedServiceAccounts'],
+      {},
+      { credential: { kind: 'token_exchange', token_endpoint: tokenEndpoint } },
+    ],
+    [
+      'a sign-in as a service account, where no token is exchanged here',
+      ['subjectTokens', 'managedServiceAccounts'],
       {},
       { credential: { kind: 'authorization', permissions: 'delegated' }, accountType: 'service' },
     ],
@@ -83,7 +89,20 @@ describe('a connection added with no way named', () => {
     const { data } = Schema.decodeUnknownSync(AddedFactSchema)((await h.facts())[0]);
 
     expect(data).toMatchObject({ credential: taken.credential, placeholders });
+    expect('service_account' in data.credential).toBe('service_account' in taken.credential);
     expect(data.account_type).toBe(taken.accountType);
+  });
+
+  it.each([
+    ['where a service account is created here', []],
+    ['where none is', ['managedServiceAccounts']],
+  ] as const)('is refused given some of the company’s own values, %s', async (_where, without) => {
+    const { h } = exchanging({ providers: signingInOrExchanging }, without);
+
+    const outcome = await adding(h, { provider: 'mail', placeholders: { project: ownValues.project } });
+
+    expect(outcome).toMatchObject({ status: 'rejected', reason: 'invalid_input' });
+    expect(await h.facts()).toEqual([]);
   });
 
   it('records a sign-in as a person’s own account where the way is named by its kind, as before', async () => {
@@ -95,6 +114,32 @@ describe('a connection added with no way named', () => {
       credential: { kind: 'authorization' },
       account_type: 'personal',
     });
+  });
+});
+
+const namedWays: readonly (readonly [string, Readonly<Record<string, unknown>>, Readonly<Record<string, string>>])[] = [
+  ['a sign-in', { kind: 'authorization' }, {}],
+  ['the company’s own service account, given no values', ownWay, {}],
+  ['the company’s own service account, given its values', ownWay, ownValues],
+];
+
+const createdHereOrNot: readonly (readonly Port[])[] = [[], ['managedServiceAccounts']];
+
+describe('a connection added with its way named', () => {
+  it.each(namedWays)('takes %s, whether or not a service account is created here', async (_named, way, values) => {
+    const taken = await Promise.all(
+      createdHereOrNot.map(async (without) => {
+        const { h } = exchanging({ providers: signingInOrExchanging }, without);
+        await addedThe(h, way, { placeholders: values });
+        return Schema.decodeUnknownSync(AddedFactSchema)((await h.facts())[0]).data;
+      }),
+    );
+
+    expect(taken).toMatchObject([
+      { credential: way, placeholders: values },
+      { credential: way, placeholders: values },
+    ]);
+    expect(taken.map(({ credential }) => 'service_account' in credential)).toEqual([false, false]);
   });
 });
 

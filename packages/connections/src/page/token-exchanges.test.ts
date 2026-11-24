@@ -168,6 +168,35 @@ describe('an approval with a check of its own arguments, whose credential the se
   });
 });
 
+describe('a connection of the company’s own service account added with none of its values', () => {
+  it('is added with its link, and approved once its page gives them by choose_way', async () => {
+    const { h, exchange } = exchanging();
+    const link = await addedThe(h, ownWay);
+
+    expect((await h.facts())[0]?.data).toMatchObject({ placeholders: {}, credential: { kind: 'token_exchange' } });
+    expect(await onTheLink(h, 'approve', link)).toMatchObject({ status: 'rejected', reason: 'invalid_input' });
+    expect(exchange.asked()).toEqual([]);
+    expect(await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: ownValues })).toMatchObject({
+      status: 'succeeded',
+      output: { placeholders: ownValues },
+    });
+    expect(await onTheLink(h, 'approve', link)).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
+  });
+
+  it('is chosen in place of Auto’s service account with none of its values, and refused with some of them', async () => {
+    const { h } = exchanging();
+    const link = await addedThe(h, managedWay);
+
+    expect([
+      await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: { project: ownValues.project } }),
+      await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: {} }),
+    ]).toMatchObject([
+      { status: 'rejected', reason: 'invalid_input' },
+      { status: 'succeeded', output: { credential: { kind: 'token_exchange' }, placeholders: {} } },
+    ]);
+  });
+});
+
 describe('an approval of a connection whose values no longer fit its way', () => {
   it('is refused, and asks nothing', async () => {
     const made = exchanging();

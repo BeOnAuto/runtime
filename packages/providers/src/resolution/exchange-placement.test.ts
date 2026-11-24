@@ -35,6 +35,30 @@ describe('the addition a provider of a way that exchanges a token makes', () => 
   });
 });
 
+describe('an addition through the way of the company’s own account that gives none of its values', () => {
+  it('is taken with no values, and one that gives some of them is checked for the rest', () => {
+    expect([
+      resolved(exchanging, { kind: 'token_exchange' }),
+      refused(exchanging, { kind: 'token_exchange', placeholders: { project: ownValues.project } }),
+    ]).toMatchObject([
+      {
+        placeholders: {},
+        credential: { kind: 'token_exchange', token_endpoint: 'https://sts.mail.example.com/v1/token' },
+      },
+      [{ pointer: '/placeholders/account', detail: anyWords }],
+    ]);
+  });
+
+  it('leaves the exchange unplaced until the values are given', () => {
+    const way = Option.getOrThrow(Option.fromNullishOr(ownWay));
+
+    expect(Result.getOrThrow(Result.flip(exchangeOfProvider(exchanging, way, {})))).toEqual([
+      { pointer: '/placeholders/project', detail: anyWords },
+      { pointer: '/placeholders/account', detail: anyWords },
+    ]);
+  });
+});
+
 describe('the exchange a way places', () => {
   it('places its values in the audiences and the impersonation address', () => {
     expect(

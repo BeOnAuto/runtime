@@ -5,6 +5,7 @@ import {
   additionOfProvider,
   hostAlternativesOf,
   takesTheValuesGiven,
+  wayTakenWhereNoneIsNamed,
   type CredentialWay,
   type GivenToProvider,
   type ProviderEntry,
@@ -149,13 +150,48 @@ describe('whether an addition through a way takes the values given', () => {
     ['an app', { ...theCompanysValues, region: 'eu' }, false],
     ['a client of a provider whose manager is optional', { tenant: 'acme' }, true],
     ['a key of a provider that asks a site', {}, false],
-    ["the company's own service account", {}, false],
+    ["the company's own service account", {}, true],
+    ["the company's own service account", { project: ownValuesOfMail.project }, false],
+    ["the company's own service account", { ...ownValuesOfMail }, true],
     ['a service account Auto creates', {}, true],
     ['a service account Auto creates', { ...ownValuesOfMail }, false],
   ] as const)('is answered for %s given %o as %s', (named, given, takes) => {
     const [entry, way] = waysAsked[named];
 
     expect(takesTheValuesGiven(entry, way, given)).toBe(takes);
+  });
+});
+
+const everyWay: readonly CredentialWay[] = [aSignIn, theCompanysAccount, aManagedAccount];
+
+describe('the way an addition that names no way takes, of the ways offered that take the values given', () => {
+  it.each([
+    ['Auto’s service account, where it is offered', everyWay, {}, aManagedAccount],
+    ['the company’s own, where Auto’s is not offered', [aSignIn, theCompanysAccount], {}, theCompanysAccount],
+    ['the company’s own, given all of its values', everyWay, { ...ownValuesOfMail }, theCompanysAccount],
+    ['none, given some of the company’s own values', everyWay, { project: ownValuesOfMail.project }, undefined],
+    ['a sign-in, where no way that exchanges a token is offered', [aSignIn], {}, aSignIn],
+  ] as const)('is %s', (_named, offered, given, taken) => {
+    const takes = offered.filter((way) => takesTheValuesGiven(exchanging, way, given));
+
+    expect(wayTakenWhereNoneIsNamed(takes)?.way).toBe(taken);
+  });
+});
+
+describe('an addition that names its way', () => {
+  it.each([
+    ['a sign-in', {}],
+    ['an app', { ...theCompanysValues }],
+    ["the company's own service account", {}],
+    ["the company's own service account", { project: ownValuesOfMail.project }],
+    ["the company's own service account", { ...ownValuesOfMail }],
+    ['a service account Auto creates', {}],
+    ['a service account Auto creates', { ...ownValuesOfMail }],
+  ] as const)('through %s given %o is taken where one that names no way takes it', (named, given) => {
+    const [entry, way] = waysAsked[named];
+    const naming = additionOfProvider({ ...entry, credentials: [way] }, { kind: way.kind, placeholders: given });
+
+    expect(Result.isSuccess(naming)).toBe(takesTheValuesGiven(entry, way, given));
   });
 });
 

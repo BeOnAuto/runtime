@@ -166,6 +166,26 @@ export function isRequired({ required = true }: Placeholder): boolean {
   return required;
 }
 
+interface WayOfValues {
+  readonly kind: string;
+  readonly placeholders?: Readonly<Record<string, unknown>> | undefined;
+}
+
+/**
+ * Whether an addition or a choice through the way leaves the way's own values to the page its connection's link opens:
+ * a way that exchanges a token Auto signs, given none of the values it asks for itself. The service takes such a
+ * token only once a person has set it up as the way's steps say, with the issuer and the subject that page shows, and
+ * the values come from that setup, so the person gives them there, after the steps. A connection made so cannot be
+ * approved until they are given. A way given any of its values is checked for all of them, as any way is.
+ */
+export function leavesItsValuesToThePage(
+  { kind, placeholders = {} }: WayOfValues,
+  given: Readonly<Record<string, string>>,
+): boolean {
+  const own = Object.keys(placeholders);
+  return kind === 'token_exchange' && own.length > 0 && !own.some((name) => Object.hasOwn(given, name));
+}
+
 type Placed = ReadonlyMap<string, string>;
 
 function placedBy({ sets = {} }: Choice): Placed {
