@@ -1,11 +1,17 @@
-import { defineHttpOperation } from '@on.auto/operations';
+import { defineHttpOperation, OrgContext } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { allowedToChoose, linkedThrough, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
+import {
+  allowedToChoose,
+  linkedThrough,
+  recordChangeInRegistry,
+  recordedCaller,
+} from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { checkedBeforeApproval } from './approval-checks.ts';
 import type { ExchangeChecking, Reached } from './exchange-checks.ts';
 import { LinkWithPlaybooksSchema } from './link-operations.ts';
+import { replacedWayOf } from './replaced-ways.ts';
 
 const ApprovedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
@@ -21,7 +27,26 @@ function reachedShown({ reached }: Reached) {
   return reached === undefined ? {} : { reached };
 }
 
-export function defineApprove(services: ExchangeChecking) {
+type Approving = ExchangeChecking & Parameters<typeof replacedWayOf>[2];
+
+const approvedThrough = Effect.fnUntraced(function* (
+  { id, token, ...choice }: typeof LinkWithPlaybooksSchema.Type,
+  services: Approving,
+) {
+  yield* allowedToChoose(choice.playbooks);
+  const { kept, use } = yield* linkedThrough(services, { id, token });
+  const checked = yield* checkedBeforeApproval(kept, services);
+  const { before, after } = yield* recordChangeInRegistry(services, {
+    type: 'approve',
+    ...use,
+    connected_by: yield* recordedCaller,
+    ...choice,
+  }).pipe(Effect.catchTag('invalid_input', Effect.die));
+  yield* replacedWayOf(before, after, services);
+  return { ...connectionShown(after.connection, null), ...reachedShown(checked) };
+});
+
+export function defineApprove(services: Approving) {
   return defineHttpOperation('org', 'command', {
     name: 'approve',
     title: 'Approve connection',
@@ -38,17 +63,9 @@ export function defineApprove(services: ExchangeChecking) {
     inputSchema: LinkWithPlaybooksSchema,
     outputSchema: ApprovedSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
-    handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
-      yield* allowedToChoose(choice.playbooks);
-      const { kept, use } = yield* linkedThrough(services, { id, token });
-      const checked = yield* checkedBeforeApproval(kept, services);
-      const { connection } = yield* recordInRegistry(services, {
-        type: 'approve',
-        ...use,
-        connected_by: yield* recordedCaller,
-        ...choice,
-      }).pipe(Effect.catchTag('invalid_input', Effect.die));
-      return { ...connectionShown(connection, null), ...reachedShown(checked) };
+    handle: Effect.fnUntraced(function* (approving) {
+      const { org } = yield* OrgContext;
+      return yield* approvedThrough(approving, services).pipe(Effect.annotateLogs({ org, connection: approving.id }));
     }),
   });
 }

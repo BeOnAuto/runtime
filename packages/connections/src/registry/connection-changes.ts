@@ -47,6 +47,7 @@ const named: Readonly<
   connection_requested: null,
   connection_request_declined: null,
   connection_way_chosen: connectionChangedBy,
+  connection_next_way_chosen: null,
   connection_link_issued: null,
   connection_client_given: connectionChangedBy,
   connection_consent_started: scopesAddedBy,

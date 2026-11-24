@@ -120,9 +120,53 @@ const serviceAccountCreated: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const nextWayChosen: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_next_way_chosen',
+    data: {
+      ...ofTheConnection,
+      credential: {
+        kind: 'jwt_bearer',
+        permissions: 'application',
+        issuer: 'https://api.mail.example.com/apps',
+        client_id: '1234567',
+        token_request: {
+          method: 'POST',
+          url: 'https://api.mail.example.com/apps/installations/12345678/tokens',
+          issued: { access_token: '/token', expires_at: '/expires_at' },
+        },
+      },
+      says: {},
+      placeholders: { app: '1234567', installation: '12345678' },
+      base_url: 'https://api.mail.example.com/v1',
+    },
+    context: acted,
+  },
+];
+
+const startedForTheNextWay: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_consent_started',
+    data: {
+      ...ofTheConnection,
+      state_sha256: 'b8c9d0',
+      verifier_secret_id: 'secret-9',
+      client_id: 'auto-runtime',
+      client_source: 'registered',
+      expires_at: '2026-10-29T10:10:00.000Z',
+      scope: 'mail.read',
+      says: {},
+      playbooks: ['sales', 'support'],
+    },
+    context: acted,
+  },
+];
+
 export const actingAsTheApp = [
   ...addedActingAsItself,
   ...wayChosenAsAnInstalledApp,
   ...connectedThroughAnInstallation,
   ...serviceAccountCreated,
+  ...nextWayChosen,
+  ...startedForTheNextWay,
 ];

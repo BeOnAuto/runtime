@@ -160,7 +160,12 @@ export function consentAskedOf(
   };
 }
 
-export function forgottenVerifierOf({ consent }: KeptConnection, { secrets }: ConsentServices): Effect.Effect<void> {
+function consentOfTheWayItConnects({ consent, nextWay }: KeptConnection): KeptConnection['consent'] {
+  return nextWay === undefined ? consent : nextWay.consent;
+}
+
+export function forgottenVerifierOf(kept: KeptConnection, { secrets }: ConsentServices): Effect.Effect<void> {
+  const consent = consentOfTheWayItConnects(kept);
   return consent === undefined ? Effect.void : secrets.forget(consent.verifier_secret_id);
 }
 

@@ -7,20 +7,23 @@ import type {
   ConsentStart,
   InstallationChosen,
   LinkUse,
+  PlaybooksChoice,
 } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import type { Installed } from './connection.ts';
+import { nextWayTakenOf } from './kept-next-ways.ts';
 import { clientUngivenOf } from './oauth-client-decisions.ts';
-import { playbooksChosenOf } from './playbooks-decisions.ts';
+import { playbooksChosenOf, playbooksKeptOf } from './playbooks-decisions.ts';
 import {
   clientChangedOf,
   isOpenConsent,
   linkedConnectionOf,
   noOpenConsent,
   stateIssueOf,
+  type KeptWithConsent,
   type KeptWithLink,
 } from './registry-lookup.ts';
-import type { KeptConnection, Registry } from './registry.ts';
+import type { KeptConnection, Registry, StartedConsent } from './registry.ts';
 
 type ConsentRefusal = NotFound | Conflict | InvalidInput;
 
@@ -57,6 +60,14 @@ export function finishedConnectionOf(registry: Registry, use: LinkUse): Result.R
   return Result.flatMap(linkedConnectionOf(registry, use), takingConsent);
 }
 
+function playbooksSetAtTheStartOf(kept: KeptWithLink, command: ConsentStart): readonly ConnectionEvent[] {
+  return kept.nextWay === undefined ? playbooksChosenOf(kept, command) : [];
+}
+
+function playbooksKeptUntilConnectedOf(kept: KeptWithLink, command: ConsentStart): PlaybooksChoice {
+  return kept.nextWay === undefined ? {} : playbooksKeptOf(command);
+}
+
 export function decideStart(command: ConsentStart & CommandMetadata, registry: Registry): Decision {
   const { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, scope, says } = command;
   const asked = scope === undefined ? {} : { scope };
@@ -64,10 +75,20 @@ export function decideStart(command: ConsentStart & CommandMetadata, registry: R
     underTheClientGiven(kept, client_id),
   );
   return Result.map(startable, (kept) => [
-    ...playbooksChosenOf(kept, command),
+    ...playbooksSetAtTheStartOf(kept, command),
     {
       type: 'connection_consent_started',
-      data: { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, ...asked, says },
+      data: {
+        connection,
+        state_sha256,
+        verifier_secret_id,
+        client_id,
+        client_source,
+        expires_at,
+        ...asked,
+        says,
+        ...playbooksKeptUntilConnectedOf(kept, command),
+      },
     },
   ]);
 }
@@ -118,12 +139,19 @@ function installationOf(kept: KeptWithLink, given: InstallationChosen | undefine
   return admin ? Result.succeed({ installation: { id, name } }) : Result.fail(unadministeredOf(kept.connection.name));
 }
 
+function playbooksKeptWith({ playbooks }: StartedConsent): PlaybooksChoice {
+  return playbooks === undefined ? {} : { playbooks };
+}
+
 function connectedFactsOf(
+  kept: KeptWithConsent,
   command: ConsentFinish,
   installed: { readonly installation?: Installed },
 ): readonly ConnectionEvent[] {
   const { connection, secret_id, client_id, client_source, scope, account, connected_by } = command;
   return [
+    ...nextWayTakenOf(kept),
+    ...playbooksChosenOf(kept, playbooksKeptWith(kept.consent)),
     { type: 'connection_approved', data: { connection } },
     {
       type: 'connection_connected',
@@ -150,7 +178,7 @@ function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata
     return Result.fail(stateIssue);
   }
   return Result.flatMap(underTheClientGiven(kept, command.client_id), () =>
-    Result.map(installationOf(kept, command.installation), (installed) => connectedFactsOf(command, installed)),
+    Result.map(installationOf(kept, command.installation), (installed) => connectedFactsOf(kept, command, installed)),
   );
 }
 

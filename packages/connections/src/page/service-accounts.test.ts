@@ -1,8 +1,10 @@
 import { asTheCompanysServiceAccount } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
+import { reconnected, type Added } from '../testing/additions.ts';
 import { addedThe, byItsId, exchanging, onTheLink, sameLedgerWith } from '../testing/exchange-harness.ts';
 import { emailOf, exchangeProvidersWith, managedWay, ownValues, ownWay, tokenEndpoint } from '../testing/exchanges.ts';
+import type { Harness } from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
 
@@ -176,5 +178,110 @@ describe('the removal of a connection that acts as a service account Auto create
       status: 'rejected',
       reason: 'unavailable',
     });
+  });
+});
+
+const theAccount = { tokenEndpoint, org: 'acme' };
+
+async function actingAsAnAccountAutoCreated() {
+  const made = exchanging();
+  const first = await addedThe(made.h, managedWay);
+  await onTheLink(made.h, 'create_service_account', first);
+  await onTheLink(made.h, 'approve', first);
+  return { ...made, link: await reconnected(made.h, first.id) };
+}
+
+async function actingAsTheCompanysOwn() {
+  const made = exchanging();
+  const first = await addedThe(made.h, ownWay, { placeholders: ownValues });
+  await onTheLink(made.h, 'approve', first);
+  const link = await reconnected(made.h, first.id);
+  await onTheLink(made.h, 'choose_way', link, { credential: managedWay });
+  await onTheLink(made.h, 'create_service_account', link);
+  return { ...made, link };
+}
+
+const errorsOf = (h: Harness) => h.logged().filter((line) => line.includes('"level":"ERROR"'));
+
+describe('a connection that acts as a service account Auto created, reconnected another way', () => {
+  it('keeps the account until the way chosen connects, then removes it', async () => {
+    const { h, accounts, link } = await actingAsAnAccountAutoCreated();
+
+    await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: ownValues });
+    const meanwhile = accounts.removed();
+    const approved = await onTheLink(h, 'approve', link);
+
+    expect(meanwhile).toEqual([]);
+    expect(approved).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
+    expect(approved).not.toHaveProperty(['output', 'service_account']);
+    expect(accounts.removed()).toEqual([{ ...theAccount, connection: link.id }]);
+  });
+
+  it('stays connected the way chosen, and logs at the error level where its account is, when it cannot be removed then', async () => {
+    const { h, accounts, link } = await actingAsAnAccountAutoCreated();
+    await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: ownValues });
+    accounts.failWith('unavailable');
+
+    const approved = await onTheLink(h, 'approve', link);
+    const [line = ''] = errorsOf(h);
+
+    expect(approved).toMatchObject({ status: 'succeeded', output: { status: 'connected' } });
+    expect([accounts.removed(), errorsOf(h)]).toMatchObject([[], [anyWords]]);
+    expect(line).toContain(
+      `"annotations":{"org":"acme","connection":"${link.id}","token_endpoint":"${tokenEndpoint}"}`,
+    );
+  });
+
+  it('is refused another account while no other way is chosen for it', async () => {
+    const { h, link } = await actingAsAnAccountAutoCreated();
+
+    expect(await onTheLink(h, 'create_service_account', link)).toMatchObject({
+      status: 'rejected',
+      reason: 'conflict',
+    });
+  });
+});
+
+async function choosingItsOwnAgain(h: Harness, link: Added) {
+  await onTheLink(h, 'choose_way', link, { credential: ownWay, placeholders: ownValues });
+  await onTheLink(h, 'choose_way', link, { credential: managedWay });
+  return onTheLink(h, 'create_service_account', link);
+}
+
+describe('the account Auto creates for the way chosen, where the connection acts as an account Auto created', () => {
+  it('is the account it acts as, which no later choice and no connecting removes, and a removal removes once', async () => {
+    const replaced = await actingAsAnAccountAutoCreated();
+    const connected = await actingAsAnAccountAutoCreated();
+    const removed = await actingAsAnAccountAutoCreated();
+    const created = await choosingItsOwnAgain(replaced.h, replaced.link);
+    await choosingItsOwnAgain(connected.h, connected.link);
+    await choosingItsOwnAgain(removed.h, removed.link);
+
+    await onTheLink(replaced.h, 'choose_way', replaced.link, { credential: ownWay, placeholders: ownValues });
+    const approved = await onTheLink(connected.h, 'approve', connected.link);
+    await byItsId(removed.h, 'remove_connection', removed.link);
+
+    expect(created).toMatchObject({ status: 'succeeded' });
+    expect(approved).toMatchObject({ status: 'succeeded', output: { credential: { service_account: 'managed' } } });
+    expect([replaced.accounts.removed(), connected.accounts.removed(), removed.accounts.removed()]).toEqual([
+      [],
+      [],
+      [{ ...theAccount, connection: removed.link.id }],
+    ]);
+  });
+});
+
+describe('the account Auto created for the way chosen, where the connection acts as the company’s own', () => {
+  it('is removed when another way is chosen, or when the connection is removed', async () => {
+    const replaced = await actingAsTheCompanysOwn();
+    const removed = await actingAsTheCompanysOwn();
+
+    await onTheLink(replaced.h, 'choose_way', replaced.link, { credential: ownWay, placeholders: ownValues });
+    await byItsId(removed.h, 'remove_connection', removed.link);
+
+    expect([replaced.accounts.removed(), removed.accounts.removed()]).toEqual([
+      [{ ...theAccount, connection: replaced.link.id }],
+      [{ ...theAccount, connection: removed.link.id }],
+    ]);
   });
 });

@@ -58,6 +58,46 @@ const histories: readonly (readonly (readonly [string, string])[])[] = [
     ['0.70.0', 'connection_account_type_set'],
   ],
   [['0.73.0', 'connection_added'], ['0.73.0', 'connection_service_account_created'], ...laterRelease],
+  [
+    ['0.60.0', 'connection_added'],
+    ['0.60.0', 'connection_connected'],
+    ['0.73.0', 'connection_next_way_chosen'],
+  ],
+  [
+    ['0.60.0', 'connection_added'],
+    ['0.60.0', 'connection_connected'],
+    ['0.73.0', 'connection_next_way_chosen'],
+    ['0.49.0', 'connection_client_given'],
+    ['0.60.0', 'connection_consent_started'],
+    ['0.73.0', 'connection_service_account_created'],
+    ['0.72.0', 'connection_way_chosen'],
+    ['0.60.0', 'connection_connected'],
+  ],
+  [
+    ['0.46.0', 'connection_added'],
+    ['0.60.0', 'connection_connected'],
+    ['0.73.0', 'connection_next_way_chosen'],
+    ...laterRelease,
+  ],
+  [
+    ['0.60.0', 'connection_added'],
+    ['0.60.0', 'connection_connected'],
+    ['0.73.0', 'connection_next_way_chosen'],
+    ['0.73.0', 'connection_consent_started'],
+  ],
+  [
+    ['0.60.0', 'connection_added'],
+    ['0.73.0', 'connection_consent_started'],
+  ],
+  [
+    ['0.60.0', 'connection_added'],
+    ['0.60.0', 'connection_connected'],
+    ['0.73.0', 'connection_next_way_chosen'],
+    ['0.73.0', 'connection_consent_started'],
+    ['0.72.0', 'connection_way_chosen'],
+    ['0.57.0', 'connection_playbooks_set'],
+    ['0.60.0', 'connection_connected'],
+  ],
 ];
 
 function rowsAfter(stored: readonly unknown[]): readonly ProjectedKeyedRow[] {

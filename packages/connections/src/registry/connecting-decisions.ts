@@ -4,10 +4,10 @@ import { Result } from 'effect';
 import type { ConnectionCommand } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import { takesConsent } from './consent-decisions.ts';
+import { nextWayTakenOf } from './kept-next-ways.ts';
 import { modelChosenAtConnect, modelRefusalAtConnect } from './model-decisions.ts';
 import { playbooksChosenOf } from './playbooks-decisions.ts';
-import { linkedConnectionOf } from './registry-lookup.ts';
-import type { KeptConnection, Registry } from './registry.ts';
+import { linkedConnectionOf, type KeptWithLink } from './registry-lookup.ts';
 import { awaitingItsServiceAccountOf } from './service-account-decisions.ts';
 
 type Decision = Result.Result<readonly ConnectionEvent[], Rejection<'not_found' | 'conflict' | 'invalid_input'>>;
@@ -16,9 +16,11 @@ type Approving = Extract<ConnectionCommand, { readonly type: 'approve' }>;
 
 type Giving = Extract<ConnectionCommand, { readonly type: 'give' }>;
 
+type Registry = Parameters<typeof linkedConnectionOf>[0];
+
 const kindsGivenOnThePage: ReadonlySet<string> = new Set(['secret', 'client_credentials', 'jwt_bearer']);
 
-function takesAValue({ connection }: KeptConnection): boolean {
+function takesAValue({ connection }: KeptWithLink): boolean {
   return kindsGivenOnThePage.has(connection.credential.kind);
 }
 
@@ -48,6 +50,7 @@ export function decideApproval(command: Approving, registry: Registry): Decision
           }),
         )
       : Result.succeed([
+          ...nextWayTakenOf(kept),
           ...playbooksChosenOf(kept, command),
           { type: 'connection_approved', data: { connection: command.connection } },
           {
@@ -74,6 +77,7 @@ export function decideGiving(command: Giving, registry: Registry): Decision {
     const modelRefusal = modelRefusalAtConnect(kept, command, appSecretIds);
     return modelRefusal === undefined
       ? Result.succeed([
+          ...nextWayTakenOf(kept),
           ...playbooksChosenOf(kept, command),
           ...modelChosenAtConnect(kept, command),
           { type: 'connection_approved', data: { connection } },

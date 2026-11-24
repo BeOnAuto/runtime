@@ -16,6 +16,7 @@ const connectionFactTypes = [
   'connection_requested',
   'connection_request_declined',
   'connection_way_chosen',
+  'connection_next_way_chosen',
   'connection_link_issued',
   'connection_client_given',
   'connection_consent_started',
@@ -36,6 +37,30 @@ const connectionFactTypes = [
 
 const Text = Schema.String;
 
+const ConsentStoredSchema = Schema.Struct({
+  state_sha256: Text,
+  verifier_secret_id: Text,
+  client_id: Text,
+  client_source: ClientSourceSchema,
+  scope: Schema.optionalKey(Text),
+  started_at: Text,
+  expires_at: Text,
+  playbooks: Schema.optionalKey(Schema.NullOr(Schema.Array(Text))),
+});
+
+const ServiceAccountStoredSchema = Schema.Struct({ email: Text, id: Text, placeholders: Schema.Record(Text, Text) });
+
+const NextWayStoredSchema = Schema.Struct({
+  credential: RecordedCredentialFieldsSchema,
+  account_type: ConnectionSchema.fields.account_type,
+  asked_scopes: ConnectionSchema.fields.asked_scopes,
+  placeholders: ConnectionSchema.fields.placeholders,
+  base_url: Schema.optionalKey(Text),
+  consent: Schema.optionalKey(ConsentStoredSchema),
+  client_secret_id: Schema.optionalKey(Text),
+  service_account: Schema.optionalKey(ServiceAccountStoredSchema),
+});
+
 const KeptSchema = Schema.Struct({
   connection: Schema.Struct({
     ...Struct.omit(ConnectionSchema.fields, ['credential_ends_with', 'credential', 'permissions']),
@@ -50,17 +75,7 @@ const KeptSchema = Schema.Struct({
     }),
   ),
   replaced_links: Schema.Array(Text),
-  consent: Schema.optionalKey(
-    Schema.Struct({
-      state_sha256: Text,
-      verifier_secret_id: Text,
-      client_id: Text,
-      client_source: ClientSourceSchema,
-      scope: Schema.optionalKey(Text),
-      started_at: Text,
-      expires_at: Text,
-    }),
-  ),
+  consent: Schema.optionalKey(ConsentStoredSchema),
   secret_id: Schema.optionalKey(Text),
   algorithm: Schema.optionalKey(Text),
   client_secret_id: Schema.optionalKey(Text),
@@ -75,9 +90,8 @@ const KeptSchema = Schema.Struct({
   model: Schema.NullOr(Text),
   identified: Schema.optionalKey(Schema.Struct({ id: Text, name: Schema.optionalKey(Text) })),
   place_names: Schema.Array(Schema.Tuple([Text, Schema.Array(Schema.Tuple([Text, Text]))])),
-  service_account: Schema.optionalKey(
-    Schema.Struct({ email: Text, id: Text, placeholders: Schema.Record(Text, Text) }),
-  ),
+  service_account: Schema.optionalKey(ServiceAccountStoredSchema),
+  next_way: Schema.optionalKey(NextWayStoredSchema),
 });
 
 type Kept = typeof KeptSchema.Type;
@@ -103,18 +117,60 @@ const connectionFactOf = recordedDecoder(ConnectionEventSchema);
 
 type StartedConsent = NonNullable<KeptConnection['consent']>;
 
+type NextWay = NonNullable<KeptConnection['nextWay']>;
+
+type NextWayStored = typeof NextWayStoredSchema.Type;
+
+type ConsentStored = typeof ConsentStoredSchema.Type;
+
 type KeptSigning = NonNullable<KeptConnection['signing']>;
 
-function consentStored({ scope, ...consent }: StartedConsent) {
-  return { ...consent, ...(scope === undefined ? {} : { scope }) };
+function consentStored({ scope, playbooks, ...consent }: StartedConsent) {
+  return { ...consent, ...(scope === undefined ? {} : { scope }), ...(playbooks === undefined ? {} : { playbooks }) };
+}
+
+function consentOf(stored: ConsentStored): StartedConsent {
+  return { ...stored, scope: stored.scope, playbooks: stored.playbooks };
 }
 
 function signingStored({ current, previous }: KeptSigning) {
   return { current, ...(previous === undefined ? {} : { previous }) };
 }
 
-function serviceAccountStoredOf({ serviceAccount }: KeptConnection): Pick<Kept, 'service_account'> {
+function serviceAccountStoredOf({ serviceAccount }: Pick<KeptConnection, 'serviceAccount'>) {
   return serviceAccount === undefined ? {} : { service_account: serviceAccount };
+}
+
+function nextWayStored(nextWay: NextWay): NextWayStored {
+  const { base_url: baseUrl, consent, clientSecretId } = nextWay;
+  return {
+    credential: nextWay.credential,
+    account_type: nextWay.account_type,
+    asked_scopes: nextWay.asked_scopes,
+    placeholders: nextWay.placeholders,
+    ...(baseUrl === undefined ? {} : { base_url: baseUrl }),
+    ...(consent === undefined ? {} : { consent: consentStored(consent) }),
+    ...(clientSecretId === undefined ? {} : { client_secret_id: clientSecretId }),
+    ...serviceAccountStoredOf(nextWay),
+  };
+}
+
+function nextWayStoredOf({ nextWay }: KeptConnection): Pick<Kept, 'next_way'> {
+  return nextWay === undefined ? {} : { next_way: nextWayStored(nextWay) };
+}
+
+function nextWayOf(stored: NextWayStored): NextWay {
+  const { consent } = stored;
+  return {
+    credential: stored.credential,
+    account_type: stored.account_type,
+    asked_scopes: stored.asked_scopes,
+    placeholders: stored.placeholders,
+    base_url: stored.base_url,
+    consent: consent === undefined ? undefined : consentOf(consent),
+    clientSecretId: stored.client_secret_id,
+    serviceAccount: stored.service_account,
+  };
 }
 
 function storedOf(kept: KeptConnection): Kept {
@@ -137,6 +193,7 @@ function storedOf(kept: KeptConnection): Kept {
       ([type, names]: readonly [string, ReadonlyMap<string, string>]) => [type, [...names]] as const,
     ),
     ...serviceAccountStoredOf(kept),
+    ...nextWayStoredOf(kept),
   };
 }
 
@@ -147,7 +204,7 @@ function keptOf(stored: Kept): KeptConnection {
     ways: stored.ways,
     link: stored.link,
     replacedLinks: new Set(stored.replaced_links),
-    consent: consent === undefined ? undefined : { ...consent, scope: consent.scope },
+    consent: consent === undefined ? undefined : consentOf(consent),
     secretId: stored.secret_id,
     algorithm: stored.algorithm,
     clientSecretId: stored.client_secret_id,
@@ -158,6 +215,7 @@ function keptOf(stored: Kept): KeptConnection {
     identified: stored.identified,
     placeNames: new Map(stored.place_names.map(([type, names]) => [type, new Map(names)])),
     serviceAccount: stored.service_account,
+    nextWay: stored.next_way === undefined ? undefined : nextWayOf(stored.next_way),
   };
 }
 

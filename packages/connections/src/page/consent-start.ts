@@ -35,7 +35,7 @@ const startDescription = [
   'The consent is finished within ten minutes, and a second start replaces the first.',
   'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
   'On a runtime that signs people in, only an admin of the organization may start it.',
-  'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the start; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
+  'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the start; left out, the connection keeps the playbooks it has. For a connection that is connected or broken and has another way chosen, the playbooks are set only when the sign-in finishes and the connection takes that way. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
 ].join(' ');
 
 export function defineStartConsent(services: ConsentServices) {

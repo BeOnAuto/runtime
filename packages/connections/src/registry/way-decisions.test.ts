@@ -1,112 +1,36 @@
 import type { AccountType, ProviderList } from '@on.auto/providers';
-import { providerListOf, providerOf, tracker } from '@on.auto/providers/testing';
-import { Option, Result } from 'effect';
+import { providerListOf } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
+import {
+  acted,
+  added,
+  aKey,
+  appKey,
+  asTheApp,
+  bothTypes,
+  decided,
+  keptAfter,
+  key,
+  linkOf,
+  ofTheConnection,
+  said,
+  signingIn,
+  signingInUnderItsOwnClient,
+  trackerWith,
+  type Choice,
+} from '../testing/way-choices.ts';
 import type { RecordedCredential } from './acting-fields.ts';
-import type { ConnectionAdded, RecordedConnectionEvent } from './connection-events.ts';
-import { registryDeciderOf } from './registry-decider.ts';
+import type { RecordedConnectionEvent } from './connection-events.ts';
 import { accountTypesTakenBy, wayOfTheConnection } from './what-connections-act-as.ts';
 
-const acted = { by: 'person:ada', at: '2026-10-15T14:00:00.000Z' };
-
-const ofTheConnection = { connection: 'connection-1' };
-
-const key: RecordedCredential = { kind: 'secret', permissions: 'delegated', name: 'Authorization', in: 'header' };
-
-const appKey: RecordedCredential = { ...key, permissions: 'application' };
-
-const issuer = 'https://auth.tracker.example.com';
-
-const signingIn: RecordedCredential = { kind: 'authorization', permissions: 'delegated', issuer, clients: ['dynamic'] };
-
-const asTheApp: RecordedCredential = { kind: 'client_credentials', permissions: 'application', issuer };
-
-function added(
-  provider: string | null,
-  credential: RecordedCredential,
-  ways?: readonly RecordedCredential[],
-): ConnectionAdded {
-  return {
-    type: 'connection_added',
-    data: {
-      ...ofTheConnection,
-      name: 'tracker',
-      server_type: 'mcp',
-      provider,
-      placeholders: provider === null ? null : { site: 'acme' },
-      entry: { url: 'https://acme.tracker.example.com/mcp' },
-      credential,
-      ...(ways === undefined ? {} : { ways }),
-      account_type: 'personal',
-      says: {},
-      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
-    },
-    context: acted,
-  };
-}
-
-function linkOf(token: string): RecordedConnectionEvent {
-  return {
-    type: 'connection_link_issued',
-    data: { ...ofTheConnection, token_sha256: token },
-    context: acted,
-  };
-}
-
-const connected: readonly RecordedConnectionEvent[] = [
-  { type: 'connection_approved', data: ofTheConnection, context: acted },
-  {
-    type: 'connection_connected',
-    data: { ...ofTheConnection, secret_id: 'secret-1', connected_by: { id: 'person:ada', name: 'Ada' } },
-    context: acted,
-  },
-  linkOf('c3d4'),
-];
-
-const [aKey, noCredential] = tracker.credentials;
-
-function trackerWith(...ways: readonly unknown[]): ProviderList {
-  return providerListOf(providerOf({ ...tracker, credentials: ways }));
-}
-
 const personalOnly = trackerWith({ ...aKey, account_types: ['personal'] }, { ...aKey, permissions: 'application' });
-
-const bothTypes = trackerWith(aKey, { ...aKey, permissions: 'application' }, noCredential);
-
-const said = { read: 'Read the issues.' };
-
-interface Choice {
-  readonly credential: RecordedCredential;
-  readonly account_type?: AccountType;
-  readonly token_sha256?: string;
-  readonly by?: string;
-}
 
 interface Case<Outcome> extends Choice {
   readonly name: string;
   readonly providers: ProviderList;
   readonly facts: readonly RecordedConnectionEvent[];
   readonly outcome: Outcome;
-}
-
-function registryAfter(providers: ProviderList, facts: readonly RecordedConnectionEvent[]) {
-  const decider = registryDeciderOf(providers);
-  return facts.reduce((state, fact) => decider.evolve(state, fact), decider.initialState);
-}
-
-function decided(providers: ProviderList, facts: readonly RecordedConnectionEvent[], choice: Choice) {
-  const command = {
-    type: 'choose_way',
-    ...ofTheConnection,
-    token_sha256: 'a1b2',
-    says: said,
-  } as const;
-  const decision = registryDeciderOf(providers).decide(
-    { ...command, ...acted, ...choice },
-    registryAfter(providers, facts),
-  );
-  return Result.isSuccess(decision) ? decision.success : decision.failure;
 }
 
 const fromTheProvider = { providers: bothTypes, facts: [added('tracker', key), linkOf('a1b2')] } as const;
@@ -178,14 +102,6 @@ const refused: readonly Case<Readonly<Record<string, unknown>>>[] = [
   },
   { name: 'a type of the app', ...fromTheProvider, credential: appKey, account_type: 'service', outcome: typeNotTaken },
   {
-    name: 'a connection connected since, through a newer link',
-    ...fromTheProvider,
-    facts: [...fromTheProvider.facts, ...connected],
-    credential: appKey,
-    token_sha256: 'c3d4',
-    outcome: { _tag: 'conflict' },
-  },
-  {
     name: 'another token',
     ...fromTheProvider,
     credential: appKey,
@@ -212,31 +128,6 @@ function chosen(credential: RecordedCredential, accountType?: AccountType): Reco
     context: acted,
   };
 }
-
-function keptAfter(providers: ProviderList, facts: readonly RecordedConnectionEvent[]) {
-  return Option.getOrThrow(Option.fromNullishOr(registryAfter(providers, facts).get('connection-1')));
-}
-
-const started = {
-  ...ofTheConnection,
-  state_sha256: 'd4e5',
-  verifier_secret_id: 'secret-3',
-  client_id: 'org-app',
-  client_source: 'own',
-  expires_at: '2026-10-15T14:10:00.000Z',
-  says: {},
-} as const;
-
-const signingInUnderItsOwnClient: readonly RecordedConnectionEvent[] = [
-  added('tracker', { ...signingIn, client_source: 'own' }),
-  linkOf('a1b2'),
-  {
-    type: 'connection_client_given',
-    data: { ...ofTheConnection, client_id: 'org-app', secret_id: 's-2' },
-    context: acted,
-  },
-  { type: 'connection_consent_started', data: started, context: acted },
-];
 
 describe('a connection whose way was chosen, as the stream folds it', () => {
   it('holds the credential and the account type chosen, the scopes of the way, and its link', () => {

@@ -6,6 +6,7 @@ import type { LinkUse } from './connection-commands.ts';
 import { connectionsKeptIn } from './connection-rows-read.ts';
 import { connectionRowsName } from './connection-rows.ts';
 import { runsUnderTheOrgsOAuthClient } from './connection.ts';
+import { asItConnects } from './kept-next-ways.ts';
 import {
   signingInClientOf,
   type KeptConnection,
@@ -60,7 +61,9 @@ export function linkedConnectionOf(
   { connection, token_sha256: tokenSha256 }: LinkUse,
 ): Result.Result<KeptWithLink, NotFound> {
   return Result.flatMap(keptConnectionOf(registry, connection), (kept): Result.Result<KeptWithLink, NotFound> =>
-    isOfTheToken(kept, tokenSha256) ? Result.succeed(kept) : Result.fail(unusableLinkOf(kept, tokenSha256)),
+    isOfTheToken(kept, tokenSha256)
+      ? Result.succeed(asItConnects(kept))
+      : Result.fail(unusableLinkOf(kept, tokenSha256)),
   );
 }
 

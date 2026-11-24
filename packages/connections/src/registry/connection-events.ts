@@ -84,6 +84,7 @@ const ConsentStartedNow = factOf(
     ...startedFields,
     scope: Schema.optionalKey(Schema.String),
     says: Schema.Record(Schema.String, Schema.String),
+    playbooks: Schema.optionalKey(Schema.NullOr(Schema.Array(Schema.String))),
   }),
   ActedContextSchema,
 );
@@ -97,6 +98,15 @@ const SigningSecretsRemovedSchema = Schema.Literals(['previous', 'all']);
 export const ConsentStartedSchema = readingEarlierShapes(ConsentStartedNow, [
   earlierShapeOf(ConsentStartedBefore, askingTheCredentialsScope),
 ]);
+
+const WayChosenDataSchema = Schema.Struct({
+  ...ofTheConnection,
+  credential: RecordedCredentialSchema,
+  account_type: Schema.optionalKey(AccountTypeSchema),
+  says: Schema.Record(Schema.String, Schema.String),
+  placeholders: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
+  base_url: Schema.optionalKey(Schema.NullOr(Schema.String)),
+});
 
 export const ConnectionEventSchema = Schema.Union([
   factOf(
@@ -124,18 +134,8 @@ export const ConnectionEventSchema = Schema.Union([
     ActedContextSchema,
   ),
   factOf('connection_request_declined', Schema.Struct(ofTheConnection), ActedContextSchema),
-  factOf(
-    'connection_way_chosen',
-    Schema.Struct({
-      ...ofTheConnection,
-      credential: RecordedCredentialSchema,
-      account_type: Schema.optionalKey(AccountTypeSchema),
-      says: Schema.Record(Schema.String, Schema.String),
-      placeholders: Schema.optionalKey(Schema.Record(Schema.String, Schema.String)),
-      base_url: Schema.optionalKey(Schema.NullOr(Schema.String)),
-    }),
-    ActedContextSchema,
-  ),
+  factOf('connection_way_chosen', WayChosenDataSchema, ActedContextSchema),
+  factOf('connection_next_way_chosen', WayChosenDataSchema, ActedContextSchema),
   factOf(
     'connection_link_issued',
     Schema.Struct({
@@ -248,6 +248,8 @@ export type ConnectionAdded = Extract<RecordedConnectionEvent, { readonly type: 
 export type ConnectionRequested = Extract<RecordedConnectionEvent, { readonly type: 'connection_requested' }>;
 
 export type WayChosen = Extract<RecordedConnectionEvent, { readonly type: 'connection_way_chosen' }>;
+
+export type NextWayChosen = Extract<RecordedConnectionEvent, { readonly type: 'connection_next_way_chosen' }>;
 
 export type LinkIssued = Extract<RecordedConnectionEvent, { readonly type: 'connection_link_issued' }>;
 

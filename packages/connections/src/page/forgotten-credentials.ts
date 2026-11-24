@@ -2,21 +2,15 @@ import { keptTokensIn, type KeptTokens } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { connectsThroughItsGateway, type RecordedConnection } from '../registry/connection.ts';
+import { connectsThroughItsGateway } from '../registry/connection.ts';
 import { appSecretsHeldBy } from '../registry/kept-app-credentials.ts';
 import { signingSecretsHeldBy } from '../registry/kept-signing.ts';
 import { clientSecretsHeldBy, heldClientOf, type KeptConnection } from '../registry/registry.ts';
-import { newerKeyEndedOf, replacedKeyEndedOf } from './connection-gateways.ts';
-import {
-  consentAskedOf,
-  namedOf,
-  ownClientOf,
-  releasedClientsForgottenOf,
-  secretForgottenOf,
-} from './consent-asking.ts';
+import { newerKeyEndedOf } from './connection-gateways.ts';
+import { consentAskedOf, namedOf, ownClientOf, secretForgottenOf } from './consent-asking.ts';
 import { unavailableWords, unrevokedWordsOf } from './consent-words.ts';
 
-type Forgetting = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve'>;
+export type Forgetting = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve'>;
 
 function revokedWith(kept: KeptConnection, tokens: KeptTokens, services: Forgetting): Effect.Effect<void> {
   const { connection } = kept;
@@ -75,28 +69,6 @@ function forgottenClientsOf(kept: KeptConnection, { secrets }: Pick<Forgetting, 
   return Effect.forEach(clientSecretsHeldBy(kept), (secretId) => secrets.forget(secretId), { discard: true });
 }
 
-function isTheSameClient(before: RecordedConnection, after: RecordedConnection): boolean {
-  const [was, is] = [before.credential, after.credential];
-  return was.issuer === is.issuer && was.client_id === is.client_id && was.client_source === is.client_source;
-}
-
-function tokensReplacedOf(before: KeptConnection, after: KeptConnection, services: Forgetting): Effect.Effect<void> {
-  if (connectsThroughItsGateway(before.connection)) {
-    return replacedKeyEndedOf(before, services);
-  }
-  return isTheSameClient(before.connection, after.connection)
-    ? secretForgottenOf(before, services)
-    : forgottenCredentialOf(before, services);
-}
-
-export function replacedCredentialOf(
-  before: KeptConnection,
-  after: KeptConnection,
-  services: Forgetting,
-): Effect.Effect<void> {
-  return Effect.andThen(tokensReplacedOf(before, after, services), releasedClientsForgottenOf(before, after, services));
-}
-
 export const forgottenOnRemoval = Effect.fnUntraced(function* (
   found: KeptConnection,
   removed: KeptConnection,
@@ -109,7 +81,6 @@ export const forgottenOnRemoval = Effect.fnUntraced(function* (
   yield* Effect.forEach(signingSecretsHeldBy(removed.signing), (secretId) => secrets.forget(secretId), {
     discard: true,
   });
-  if (removed.consent !== undefined) {
-    yield* secrets.forget(removed.consent.verifier_secret_id);
-  }
+  const consents = [removed.consent, removed.nextWay?.consent].filter((consent) => consent !== undefined);
+  yield* Effect.forEach(consents, ({ verifier_secret_id: verifier }) => secrets.forget(verifier), { discard: true });
 });

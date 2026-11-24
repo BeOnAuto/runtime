@@ -16,8 +16,8 @@ import {
   returnedOf,
   type Finishing,
 } from './consent-returns.ts';
-import { replacedCredentialOf } from './forgotten-credentials.ts';
 import { installationFinished, type InstallingServices, type Recording } from './installation-finish.ts';
+import { replacedWayOf } from './replaced-ways.ts';
 
 type OpenConsent = Effect.Success<ReturnType<typeof openConsentOf>>;
 
@@ -78,7 +78,7 @@ const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, se
   }
   const finished = yield* redeemedOf(kept, finishing, services);
   const { before, after } = yield* connectedWith(finished, { use, stateSha256, kept }, services);
-  yield* replacedCredentialOf(before, after, services);
+  yield* replacedWayOf(before, after, services);
   return connectedAnswerOf(after.connection);
 });
 

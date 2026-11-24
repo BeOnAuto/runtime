@@ -1,0 +1,21 @@
+{
+  "type": "connection_consent_started",
+  "data": {
+    "connection": "connection-1",
+    "state_sha256": "b8c9d0",
+    "verifier_secret_id": "secret-9",
+    "client_id": "auto-runtime",
+    "client_source": "registered",
+    "expires_at": "2026-10-29T10:10:00.000Z",
+    "scope": "mail.read",
+    "says": {},
+    "playbooks": [
+      "sales",
+      "support"
+    ]
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

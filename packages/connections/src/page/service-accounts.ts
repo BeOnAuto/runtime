@@ -14,11 +14,11 @@ export function defineCreateServiceAccount(services: ServiceAccounting) {
     name: 'create_service_account',
     title: 'Create service account',
     description: [
-      'Creates the service account that a connection acts as, where the connection was added with the way of a service account Auto creates, through its open link, and answers its email.',
+      'Creates the service account that a connection acts as, where the way the connection connects with through its open link is the way of a service account Auto creates, and answers its email.',
       'The person then gives that email access at the service before approving the connection.',
       'Asked again, it answers the same account and creates no other.',
       'Where Auto cannot create the account now, it answers unavailable and nothing is saved.',
-      'A connection that acts as no account Auto creates, or that is not pending, is refused as conflict.',
+      'A connection whose way acts as no account Auto creates is refused as conflict, and so is a connection that is connected or broken, unless another way was chosen for it through its link.',
       'On a runtime that signs people in, only an admin of the organization may create it.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/service-account' },

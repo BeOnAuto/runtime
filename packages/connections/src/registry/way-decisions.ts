@@ -1,4 +1,4 @@
-import { Conflict, InvalidInput, type NotFound } from '@on.auto/operations';
+import { InvalidInput, type Conflict, type NotFound } from '@on.auto/operations';
 import {
   accountTypeIssueOf,
   accountTypeWhereNoneIsGiven,
@@ -66,12 +66,6 @@ function wayNotOffered({ name, provider }: Pick<Connection, 'name' | 'provider'>
   });
 }
 
-function connectedAlready({ name, status }: Connection): Conflict {
-  return new Conflict({
-    detail: `The connection ${name} is ${status}, so how it connects can no longer be chosen. To connect it another way, remove it and add it again.`,
-  });
-}
-
 function accountTypeIssueFor(given: AccountType | undefined, taken: readonly AccountType[]): string | undefined {
   if (given === undefined) {
     return undefined;
@@ -90,11 +84,8 @@ export function wayChosenOf(
   kept: Pick<KeptConnection, 'connection' | 'ways'>,
   asked: WayAsked,
   providers: ProviderList,
-): Result.Result<OfferedWay, Conflict | InvalidInput> {
+): Result.Result<OfferedWay, InvalidInput> {
   const { connection } = kept;
-  if (connection.status !== 'pending') {
-    return Result.fail(connectedAlready(connection));
-  }
   const way = waysOfferedFor(kept, providers).find((offered) => isTheWayAsked(offered, asked.credential));
   if (way === undefined) {
     return Result.fail(wayNotOffered(connection));
@@ -128,10 +119,17 @@ function holdsItsValues({ placeholders, entry }: Connection, { placeholders: giv
   );
 }
 
-function wayChosen(connection: Connection, command: WayChoice, accountType: AccountType | undefined): ConnectionEvent {
+type ChoiceRecorded = 'connection_way_chosen' | 'connection_next_way_chosen';
+
+function wayChosen(
+  connection: Connection,
+  command: WayChoice,
+  accountType: AccountType | undefined,
+  type: ChoiceRecorded = 'connection_way_chosen',
+): ConnectionEvent {
   const { credential, says } = command;
   return {
-    type: 'connection_way_chosen',
+    type,
     data: {
       connection: connection.id,
       credential,
@@ -146,19 +144,37 @@ function keptAccountTypeOf({ account_type: kept }: Connection, { account_type: g
   return given ?? kept ?? undefined;
 }
 
+function chosenWhilePending(connection: Connection, command: WayChoice, way: OfferedWay) {
+  if (!isTheWayAsked(connection.credential, way)) {
+    return [wayChosen(connection, command, command.account_type ?? accountTypeWhereNoneIsGiven(accountTypesOf(way)))];
+  }
+  return holdsItsValues(connection, command)
+    ? keptWithItsWay(connection, command)
+    : [wayChosen(connection, command, keptAccountTypeOf(connection, command))];
+}
+
+function chosenForItsNextConnecting(connection: Connection, command: WayChoice, way: OfferedWay) {
+  const next = 'connection_next_way_chosen';
+  if (!isTheWayAsked(connection.credential, way)) {
+    const accountType = command.account_type ?? accountTypeWhereNoneIsGiven(accountTypesOf(way));
+    return [wayChosen(connection, command, accountType, next)];
+  }
+  const accountType = keptAccountTypeOf(connection, command);
+  if (!holdsItsValues(connection, command)) {
+    return [wayChosen(connection, command, accountType, next)];
+  }
+  return accountType === (connection.account_type ?? undefined)
+    ? []
+    : [wayChosen(connection, { ...command, credential: connection.credential }, accountType, next)];
+}
+
 function decideWayChoice(command: WayChoice & CommandMetadata, registry: Registry, providers: ProviderList): Decision {
   return Result.flatMap(linkedConnectionOf(registry, command), (kept) =>
-    Result.map(wayChosenOf(kept, command, providers), (way): readonly ConnectionEvent[] => {
-      const { connection } = kept;
-      if (!isTheWayAsked(connection.credential, way)) {
-        return [
-          wayChosen(connection, command, command.account_type ?? accountTypeWhereNoneIsGiven(accountTypesOf(way))),
-        ];
-      }
-      return holdsItsValues(connection, command)
-        ? keptWithItsWay(connection, command)
-        : [wayChosen(connection, command, keptAccountTypeOf(connection, command))];
-    }),
+    Result.map(wayChosenOf(kept, command, providers), (way): readonly ConnectionEvent[] =>
+      kept.connection.status === 'pending'
+        ? chosenWhilePending(kept.connection, command, way)
+        : chosenForItsNextConnecting(kept.connection, command, way),
+    ),
   );
 }
 

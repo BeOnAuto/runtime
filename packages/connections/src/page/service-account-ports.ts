@@ -54,7 +54,7 @@ function isRemovedHere({ connection }: KeptConnection): boolean {
   return connection.status !== 'removed' && actsAsAManagedServiceAccount(connection.credential);
 }
 
-export function serviceAccountRemovedBefore(
+function serviceAccountRemovedBefore(
   kept: KeptConnection,
   services: ServiceAccounting,
 ): Effect.Effect<void, Unavailable, OrgContext> {
@@ -71,11 +71,61 @@ export function serviceAccountRemovedBefore(
   );
 }
 
+function isTheSameAccount(left: Connection, right: Connection, providers: ProviderList): boolean {
+  return (
+    actsAsAManagedServiceAccount(left.credential) &&
+    actsAsAManagedServiceAccount(right.credential) &&
+    tokenEndpointOf(left, providers) === tokenEndpointOf(right, providers)
+  );
+}
+
+function nextWaysAccountRemovedBefore(
+  kept: KeptConnection,
+  services: ServiceAccounting,
+): Effect.Effect<void, Unavailable, OrgContext> {
+  const { connection, nextWay } = kept;
+  if (nextWay === undefined) {
+    return Effect.void;
+  }
+  const next = { ...connection, credential: nextWay.credential };
+  return isTheSameAccount(next, connection, services.providers)
+    ? Effect.void
+    : serviceAccountRemovedBefore({ ...kept, connection: next }, services);
+}
+
+export function chosenWaysAccountRemovedBefore(
+  kept: KeptConnection,
+  services: ServiceAccounting,
+): Effect.Effect<void, Unavailable, OrgContext> {
+  return kept.connection.status === 'pending'
+    ? serviceAccountRemovedBefore(kept, services)
+    : nextWaysAccountRemovedBefore(kept, services);
+}
+
+export function replacedServiceAccountRemovedOf(
+  before: KeptConnection,
+  after: KeptConnection,
+  services: ServiceAccounting,
+): Effect.Effect<void, never, OrgContext> {
+  return isTheSameAccount(before.connection, after.connection, services.providers)
+    ? Effect.void
+    : serviceAccountRemovedBefore(before, services).pipe(
+        Effect.catch(() =>
+          Effect.logError(exchangeWords.replacedAccountUnremoved).pipe(
+            Effect.annotateLogs({ token_endpoint: tokenEndpointOf(before.connection, services.providers) }),
+          ),
+        ),
+      );
+}
+
 export function endedBeforeRemoval(
   kept: KeptConnection,
   services: ServiceAccounting & Parameters<typeof keyEndedBeforeRemoval>[1],
 ): Effect.Effect<void, Unavailable, OrgContext> {
-  return Effect.andThen(keyEndedBeforeRemoval(kept, services), serviceAccountRemovedBefore(kept, services));
+  return Effect.andThen(
+    keyEndedBeforeRemoval(kept, services),
+    Effect.andThen(serviceAccountRemovedBefore(kept, services), nextWaysAccountRemovedBefore(kept, services)),
+  );
 }
 
 export function serviceAccountMadeFor(

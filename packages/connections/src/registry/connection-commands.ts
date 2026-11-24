@@ -50,7 +50,7 @@ interface Connecting extends LinkUse {
   readonly connected_by: RecordedCaller;
 }
 
-interface ConnectionApproval extends Connecting, PlaybooksChoice {
+export interface ConnectionApproval extends Connecting, PlaybooksChoice {
   readonly type: 'approve';
 }
 

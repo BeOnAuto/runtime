@@ -31,7 +31,7 @@ export function isASetting(event: RecordedConnectionEvent): event is Setting {
   return typesOfSettings.has(event.type);
 }
 
-function entryAt(entry: ConnectionEntry, baseUrl: string | null | undefined): ConnectionEntry {
+export function entryAt(entry: ConnectionEntry, baseUrl: string | null | undefined): ConnectionEntry {
   if (baseUrl === undefined) {
     return entry;
   }
@@ -39,7 +39,7 @@ function entryAt(entry: ConnectionEntry, baseUrl: string | null | undefined): Co
   return baseUrl === null ? elsewhere : { ...elsewhere, base_url: baseUrl };
 }
 
-function wayChosenAfter<Kept extends Settable>(kept: Kept, { data }: WayChosen): Kept {
+export function wayChosenAfter<Kept extends Settable>(kept: Kept, { data }: Pick<WayChosen, 'data'>): Kept {
   const { credential, account_type: accountType, says, placeholders, base_url: baseUrl } = data;
   const before = actsAsAManagedServiceAccount(credential) ? kept : withoutItsServiceAccount(kept);
   return {

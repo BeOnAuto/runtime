@@ -12,8 +12,8 @@ import {
   redeemedOf,
   type Finishing,
 } from './consent-returns.ts';
-import { replacedCredentialOf } from './forgotten-credentials.ts';
 import { installationsListedFor, installPageOf, type Listing } from './listed-installations.ts';
+import { replacedWayOf } from './replaced-ways.ts';
 
 export type InstallingServices = Parameters<typeof redeemedOf>[2] & Listing;
 
@@ -66,7 +66,7 @@ const connectedWith = Effect.fnUntraced(function* (
     client_source: clientSource,
     installation,
   });
-  yield* replacedCredentialOf(before, after, services);
+  yield* replacedWayOf(before, after, services);
   return connectionShown(after.connection, null);
 });
 

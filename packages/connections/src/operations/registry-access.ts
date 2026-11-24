@@ -16,6 +16,7 @@ import { tokenSha256Of, tokenSha256OfPage } from '../links/link-token.ts';
 import type {
   ClientGiving,
   ConnectionAddition,
+  ConnectionApproval,
   ConnectionCommandData,
   ConnectionReplacement,
   ConnectionRequest,
@@ -157,6 +158,7 @@ export const recordInRegistry = Effect.fnUntraced(function* (named: Named, data:
 });
 
 type Replacing =
+  | ConnectionApproval
   | CredentialGiving
   | WayChoice
   | ClientGiving

@@ -18,4 +18,6 @@ export const exchangeWords = {
     `Auto could not create the service account of the connection ${name}. ${tryLater}, or choose another way to connect it.`,
   accountUnremoved: (name: string) =>
     `Auto could not remove the service account of the connection ${name}, so nothing was changed. ${tryLater}.`,
+  replacedAccountUnremoved:
+    'The service account a connection acted as before it was connected another way was not removed; nothing here holds it any more',
 } as const;

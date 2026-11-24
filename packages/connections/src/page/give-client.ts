@@ -5,6 +5,7 @@ import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { shownConnection } from '../operations/shown-connections.ts';
+import { asItConnects } from '../registry/kept-next-ways.ts';
 import { clientGivenConnectionOf } from '../registry/oauth-client-decisions.ts';
 import { nextClientOf, releasedClientsForgottenOf } from './consent-asking.ts';
 import { ClientGivenSchema, GivingTheClientSchema, clientUnkeptOf } from './given-fields.ts';
@@ -43,7 +44,8 @@ export function defineGiveClient(services: ClientGiving) {
         secret_id: secretId,
       }).pipe(Effect.onError(() => secrets.forget(secretId)));
       yield* releasedClientsForgottenOf(before, after, services);
-      return { ...(yield* shownConnection(secrets, after)), ...nextClientOf(after) };
+      const connecting = asItConnects(after);
+      return { ...(yield* shownConnection(secrets, connecting)), ...nextClientOf(connecting) };
     }),
   });
 }

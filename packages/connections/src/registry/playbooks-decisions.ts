@@ -26,6 +26,10 @@ export function playbooksChosenOf(kept: KeptConnection, { playbooks }: Playbooks
   return playbooks === undefined ? [] : playbooksSetOf(kept, playbooks);
 }
 
+export function playbooksKeptOf({ playbooks }: PlaybooksChoice): PlaybooksChoice {
+  return playbooks === undefined ? {} : { playbooks: eachOnce(playbooks) };
+}
+
 function usedByNoPlaybook(name: string): Conflict {
   return new Conflict({ detail: `The connection ${name} is removed, so no playbook may use it` });
 }

@@ -7,15 +7,16 @@ import type {
   ConnectionConnected,
   ConsentStarted,
   LinkIssued,
+  NextWayChosen,
   RecordedConnectionEvent,
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, withItsInstallation, wordsOf, type RecordedConnection } from './connection.ts';
 import { appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
+import { evolvedWithItsNextWay, type NextWay } from './kept-next-ways.ts';
 import { isKeptRead, keptReadAfter, noReads, type KeptReads } from './kept-reads.ts';
 import { changesNothingButItsRequest, requestedAfter } from './kept-requests.ts';
 import { withoutItsServiceAccount, type KeptServiceAccount } from './kept-service-accounts.ts';
 import { isASetting, settingAfter } from './kept-settings.ts';
-import type { KeptSigning } from './kept-signing.ts';
 import { isOfItsKeptValues, withItsKeptValues } from './kept-values.ts';
 
 export interface OpenLink {
@@ -32,6 +33,7 @@ export interface StartedConsent {
   readonly scope: string | undefined;
   readonly started_at: string;
   readonly expires_at: string;
+  readonly playbooks: readonly string[] | null | undefined;
 }
 
 export interface GivenClient {
@@ -49,9 +51,10 @@ export interface KeptConnection extends KeptReads, KeptServiceAccount {
   readonly algorithm: string | undefined;
   readonly clientSecretId: string | undefined;
   readonly nextClient: GivenClient | undefined;
-  readonly signing: KeptSigning | undefined;
+  readonly signing: Parameters<typeof withItsKeptValues>[0]['signing'];
   readonly appSecretIds: AppSecretIds;
   readonly model: string | null;
+  readonly nextWay: NextWay | undefined;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -98,6 +101,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     signing: undefined,
     appSecretIds: {},
     model: null,
+    nextWay: undefined,
     ...noReads,
     serviceAccount: undefined,
   };
@@ -122,12 +126,21 @@ function withClient(kept: KeptConnection, { data }: ClientGiven): KeptConnection
 }
 
 function withConsent({ connection, ...kept }: KeptConnection, { data, context }: ConsentStarted): KeptConnection {
-  const { state_sha256, verifier_secret_id, client_id, client_source, expires_at, says } = data;
+  const { state_sha256, verifier_secret_id, client_id, client_source, expires_at, says, playbooks } = data;
   const scope = data.scope ?? connection.credential.scope;
   return {
     ...kept,
     connection: { ...connection, asked_scopes: scopesAddedTo(connection.asked_scopes, scope, says) },
-    consent: { state_sha256, verifier_secret_id, client_id, client_source, scope, started_at: context.at, expires_at },
+    consent: {
+      state_sha256,
+      verifier_secret_id,
+      client_id,
+      client_source,
+      scope,
+      started_at: context.at,
+      expires_at,
+      playbooks,
+    },
   };
 }
 
@@ -189,6 +202,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     signing: kept.signing,
     appSecretIds,
     model: kept.model,
+    nextWay: kept.nextWay,
     ...noReads,
     serviceAccount: kept.serviceAccount,
   };
@@ -211,9 +225,9 @@ function removed(kept: KeptConnection): KeptConnection {
   };
 }
 
-function evolvedConnection(
+function evolvedOnItsWay(
   kept: KeptConnection,
-  event: Exclude<RecordedConnectionEvent, ConnectionAdded>,
+  event: Exclude<RecordedConnectionEvent, ConnectionAdded | NextWayChosen>,
 ): KeptConnection {
   if (event.type === 'connection_link_issued') {
     return withLink(kept, event);
@@ -242,6 +256,8 @@ function evolvedConnection(
   return event.type === 'connection_broken' ? broken(kept, event) : removed(kept);
 }
 
+const evolvedConnection = evolvedWithItsNextWay(evolvedOnItsWay);
+
 function withConnection(registry: Registry, kept: KeptConnection): Registry {
   return new Map(registry).set(kept.connection.id, kept);
 }
@@ -267,8 +283,9 @@ export function signingInClientOf(kept: KeptConnection): GivenClient | undefined
   return kept.nextClient ?? heldClientOf(kept);
 }
 
-export function clientSecretsHeldBy({ clientSecretId, nextClient }: KeptConnection): readonly string[] {
-  return [clientSecretId, nextClient?.secret_id].filter((secretId) => secretId !== undefined);
+export function clientSecretsHeldBy({ clientSecretId, nextClient, nextWay }: KeptConnection): readonly string[] {
+  const held = [clientSecretId, nextClient?.secret_id, nextWay?.clientSecretId];
+  return [...new Set(held.filter((secretId) => secretId !== undefined))];
 }
 
 export function clientSecretsReleasedOf(before: KeptConnection, after: KeptConnection): readonly string[] {

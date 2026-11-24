@@ -21,11 +21,11 @@ export function serviceAccountUncreated({ name }: KeptConnection['connection']):
   });
 }
 
-export function managedServiceAccountRefusalOf({ connection }: KeptConnection): Conflict | undefined {
+export function managedServiceAccountRefusalOf({ connection, nextWay }: KeptConnection): Conflict | undefined {
   if (!actsAsAManagedServiceAccount(connection.credential)) {
     return actsAsNoManagedServiceAccount(connection);
   }
-  return connection.status === 'pending'
+  return connection.status === 'pending' || nextWay !== undefined
     ? undefined
     : new Conflict({
         detail: `The connection ${connection.name} is ${connection.status}, so its service account is already decided.`,
