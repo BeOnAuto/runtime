@@ -1,10 +1,10 @@
-import { messagesThrough, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { drive, messages, messagesThrough, providerListOf, providerOf, providersOf } from '@on.auto/providers/testing';
 import { describe, expect, it } from 'vitest';
 
 import { added, issuesIn } from '../testing/additions.ts';
 import { startedByAdminsOf } from '../testing/connection-starts.ts';
 import { filesAt } from '../testing/consents.ts';
-import { ada, grace, operationNamed, recordedAs } from '../testing/harness.ts';
+import { ada, connectionsManagedBy, grace, harness, operationNamed, recordedAs } from '../testing/harness.ts';
 import { pressed } from '../testing/presses.ts';
 import { connectedFiles, replacingFiles, replacingPolicy, type Replacing } from '../testing/replacements.ts';
 import { servedAs, sourceOver } from '../testing/served-connections.ts';
@@ -126,13 +126,21 @@ describe('Connect again, where only an admin connects the provider that replaces
     expect(heard.asked()).toEqual([['messages', grace.id]]);
   });
 
-  it('is offered by list_providers to an admin alone, beside the provider it replaces under its name now', async () => {
-    const replacing = replacingFiles();
-    const { starts } = startedByAdminsOf('messages', [grace.id]);
-    const ops = replacing.h.operationsWith({ providers: renamedBeside(replacing, 'files'), starts });
-    const listing = operationNamed(ops, 'list_providers');
+  it('is offered by list_providers to an admin alone, beside the provider it replaces under its name now, the host asked by the name it is listed under', async () => {
+    const asked: string[] = [];
+    const host = startedByAdminsOf('messages', []);
+    const h = harness({
+      providers: providersOf({ ...drive, aliases: ['files'] }, { ...messages, replaces: ['files'] }),
+      decidedBy: connectionsManagedBy('grace'),
+      startsRuledFor: (provider) => {
+        asked.push(provider);
+        return true;
+      },
+      starts: host.starts,
+    });
+    const listing = operationNamed(h.operations, 'list_providers');
 
-    const listings = await Promise.all([replacing.h.call(listing, grace), replacing.h.call(listing, ada)]);
+    const listings = await Promise.all([h.call(listing, grace), h.call(listing, ada)]);
 
     expect(listings).toMatchObject(
       [true, false].map((mayReconnect) => ({
@@ -141,5 +149,6 @@ describe('Connect again, where only an admin connects the provider that replaces
         },
       })),
     );
+    expect([new Set(asked), host.asked()]).toEqual([new Set(['messages']), []]);
   });
 });

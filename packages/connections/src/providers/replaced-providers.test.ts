@@ -1,10 +1,20 @@
-import { Effect } from 'effect';
+import { roleRefusalDetail, type CallerIdentity, type Outcome } from '@on.auto/operations';
+import { messages, providersOf, tracker } from '@on.auto/providers/testing';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { makeProviderOffering } from '../index.ts';
+import type { StartsRuled } from '../policy/connection-starts.ts';
 import { issuesIn } from '../testing/additions.ts';
-import { adminsAlone, startedByAdminsOf, startsNotSaid } from '../testing/connection-starts.ts';
-import { ada, connectionServicesWith, grace, operationNamed } from '../testing/harness.ts';
+import { startedByAdminsOf } from '../testing/connection-starts.ts';
+import {
+  ada,
+  connectionServicesWith,
+  connectionsManagedBy,
+  grace,
+  harness,
+  operationNamed,
+} from '../testing/harness.ts';
 import { replacingFiles, replacingPolicy } from '../testing/replacements.ts';
 
 const replacedHere = 'The provider files is replaced here by messages, which a connection is added from instead';
@@ -44,32 +54,70 @@ describe('a provider another provider of the list replaces', () => {
   });
 });
 
+const viewer: CallerIdentity = { ...ada, id: 'person:viewer', name: 'Viewer', permissions: ['org:read'] };
+
+const aKey: CallerIdentity = { ...ada, id: 'acme-key', name: 'acme-key' };
+
+const replacingTracker = providersOf(tracker, { ...messages, replaces: ['tracker'] });
+
+const replacingNone = providersOf(tracker, messages);
+
+const ruledForEvery: StartsRuled = () => true;
+
+const ruledForNone: StartsRuled = () => false;
+
+const ListedReconnectingSchema = Schema.Struct({
+  output: Schema.Struct({
+    providers: Schema.Array(
+      Schema.Struct({
+        name: Schema.String,
+        may_reconnect: Schema.optionalKey(Schema.Boolean),
+        reconnect_refusal: Schema.optionalKey(Schema.String),
+      }),
+    ),
+  }),
+});
+
+const reconnectingListed = (outcome: Outcome) =>
+  Schema.decodeUnknownSync(ListedReconnectingSchema)(outcome).output.providers;
+
+interface Listing {
+  readonly providers: ReturnType<typeof providersOf>;
+  readonly startsRuledFor?: StartsRuled;
+}
+
+async function listedTo(caller: CallerIdentity, listing: Listing): Promise<Outcome> {
+  const host = startedByAdminsOf('messages', []);
+  const h = harness({ ...listing, decidedBy: connectionsManagedBy('grace'), starts: host.starts });
+  const listed = await h.call(operationNamed(h.operations, 'list_providers'), caller);
+  expect(host.asked()).toEqual([]);
+  return listed;
+}
+
 describe('the provider that replaces another, as list_providers answers it to each caller', () => {
-  it('tells, where only an admin connects it, an admin they may reconnect the connections made from the one it replaces, and anyone else why not', async () => {
-    const { h, providers } = replacingFiles();
-    const listing = operationNamed(
-      h.operationsWith({ providers, starts: startedByAdminsOf('messages', [grace.id]).starts }),
-      'list_providers',
+  it.each([
+    ['an admin, whom the decision point lets manage connections', grace, { may_reconnect: true }],
+    ['an editor, whom it does not', ada, { may_reconnect: false, reconnect_refusal: roleRefusalDetail }],
+    ['a viewer, whom it does not', viewer, { may_reconnect: false, reconnect_refusal: roleRefusalDetail }],
+    ['a key, which reconnects no connection', aKey, { may_reconnect: false, reconnect_refusal: roleRefusalDetail }],
+  ] as const)(
+    'tells %s, where the host rules who connects it, from the decision point alone, the host asked nothing',
+    async (_, caller, said) => {
+      const listed = await listedTo(caller, { providers: replacingTracker, startsRuledFor: ruledForEvery });
+
+      expect(reconnectingListed(listed)).toEqual([{ name: 'tracker' }, { name: 'messages', ...said }]);
+    },
+  );
+
+  it.each([
+    ['the host rules no provider', { providers: replacingTracker, startsRuledFor: ruledForNone }],
+    ['the host composes no rule', { providers: replacingTracker }],
+    ['no provider replaces another', { providers: replacingNone, startsRuledFor: ruledForEvery }],
+  ] as const)('says nothing of who reconnects where %s', async (_, listing) => {
+    const listings = await Promise.all([grace, ada].map((caller) => listedTo(caller, listing)));
+
+    expect(listings.map((listed) => reconnectingListed(listed))).toEqual(
+      [0, 1].map(() => [{ name: 'tracker' }, { name: 'messages' }]),
     );
-
-    const [byAnAdmin, byAnother] = await Promise.all([h.call(listing, grace), h.call(listing, ada)]);
-
-    expect(byAnAdmin).toMatchObject({ output: { providers: [{ name: 'files' }, { may_reconnect: true }] } });
-    expect(JSON.stringify(byAnAdmin)).not.toContain('reconnect_refusal');
-    expect(byAnother).toMatchObject({
-      output: { providers: [{ name: 'files' }, { may_reconnect: false, reconnect_refusal: adminsAlone }] },
-    });
-  });
-
-  it('says nothing of who reconnects where whoever added a connection reconnects it, or where the host cannot say just now', async () => {
-    const { h, providers } = replacingFiles();
-    const listedBy = async (starts: Parameters<typeof h.operationsWith>[0]['starts']) => {
-      const outcome = await h.call(operationNamed(h.operationsWith({ providers, starts }), 'list_providers'), ada);
-      return JSON.stringify(outcome);
-    };
-
-    const listings = await Promise.all([listedBy(startedByAdminsOf('drive', []).starts), listedBy(startsNotSaid)]);
-
-    expect(listings.filter((listed) => listed.includes('may_reconnect'))).toEqual([]);
   });
 });

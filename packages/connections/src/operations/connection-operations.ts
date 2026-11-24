@@ -22,10 +22,11 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
   const page = pageOperationsOf(reading);
   const adding = defineAddConnection(services, page.approving.registration);
   const { removing, declining } = removalOperationsOf(services);
+  const reconnecting = defineReconnectConnection(services);
   return [
     adding,
     ...connectionReadsOf(reading, removing.registration),
-    defineReconnectConnection(services),
+    reconnecting,
     removing,
     declining,
     ...settingOperationsOf(services),
@@ -35,6 +36,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineListProviders(services, {
       adding: adding.registration,
       approving: page.approving.registration,
+      reconnecting: reconnecting.registration,
       chatting: model.chatting,
     }),
   ];

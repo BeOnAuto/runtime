@@ -5,17 +5,26 @@ export type ConnectionStart = 'anyone' | 'may take over' | { readonly refused: s
 
 export type ConnectionStarts = (provider: string) => Effect.Effect<ConnectionStart, Unavailable>;
 
+export type StartsRuled = (provider: string) => boolean;
+
 export interface StartsOfConnections {
   readonly starts?: ConnectionStarts | undefined;
+  readonly startsRuledFor?: StartsRuled | undefined;
 }
 
 const startedByAnyone: ConnectionStarts = () => Effect.succeed('anyone');
 
-export function startOf(
+const ruledForNone: StartsRuled = () => false;
+
+function startOf(
   { starts = startedByAnyone }: StartsOfConnections,
   provider: string,
 ): Effect.Effect<ConnectionStart, Unavailable> {
   return starts(provider);
+}
+
+export function isStartRuledFor({ startsRuledFor = ruledForNone }: StartsOfConnections, provider: string): boolean {
+  return startsRuledFor(provider);
 }
 
 export function admittedStartOf(
