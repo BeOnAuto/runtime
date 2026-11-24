@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.62.0](https://github.com/BeOnAuto/runtime/compare/v0.61.0...v0.62.0) (2026-11-24)
+
+
+### Features
+
+* **connections:** a connection installs the app whoever runs Auto registered, and GitHub offers it ([23aabcd](https://github.com/BeOnAuto/runtime/commit/23aabcde9d858f2537e62d1b72178a9e64b598a0))
+* **connections:** a reconnect may choose another way, and the way before serves until it connects ([ebf5960](https://github.com/BeOnAuto/runtime/commit/ebf596074b34e9cfb601647e87768829683b85d4))
+* **connections:** a sign-in takes only a client registered with the permissions of its way ([be1ce3d](https://github.com/BeOnAuto/runtime/commit/be1ce3dc6bda57cdde1f7a4f64e470de10b216c6))
+* **connections:** connect as a service account with no key, by a token exchange the runtime signs ([5ccaa13](https://github.com/BeOnAuto/runtime/commit/5ccaa136b9d00cc232a5f44250dcfac432effe56))
+* **connections:** mark a way whose app of Auto's still awaits the service's approval ([6eb92af](https://github.com/BeOnAuto/runtime/commit/6eb92af335863d01c355f8ca078d7badc13b68da))
+* **identity:** a runtime signs subject tokens for a token exchange ([3fcbfde](https://github.com/BeOnAuto/runtime/commit/3fcbfde2e04eb693de5d57f5e2b27e9bc25108b2))
+* **interaction:** a click on a card's button answers its request ([631a201](https://github.com/BeOnAuto/runtime/commit/631a201c921c0a691d7bd54712957fba9cfbe644))
+* **providers:** a whole Zoom account connects through an admin-managed app or the company's own app ([008aa91](https://github.com/BeOnAuto/runtime/commit/008aa91dbb4d9f528ddf58ccabd2af9e7c90e613))
+* **providers:** entries declare the icons of their service, and list_providers hands them on ([cf46b85](https://github.com/BeOnAuto/runtime/commit/cf46b85254f12ae2172655ab18c59969f00e608d))
+* **providers:** google apps connect as a service account without a key file ([732e962](https://github.com/BeOnAuto/runtime/commit/732e9629e6e803bb3c126705d692ebfa5a84be47))
+* **providers:** linear connects as the company's own OAuth application ([1341f1d](https://github.com/BeOnAuto/runtime/commit/1341f1df25dd599fbb78c84c0d69baad62f7938c))
+
+
+### Bug Fixes
+
+* **connections:** a way that exchanges a token is added with none of its own values ([b8ad0df](https://github.com/BeOnAuto/runtime/commit/b8ad0df819ecd36100010c27ec6f6dcc28f663b9))
+* **connections:** an addition that names no way takes the first choice in the order its page offers ([6f39672](https://github.com/BeOnAuto/runtime/commit/6f396727461feeca5fe24058d138a4e1d96d1b71))
+* **connections:** client credentials are asked for a token before they are kept ([014b302](https://github.com/BeOnAuto/runtime/commit/014b302079cdf53f76a45cbea7748bcd686c0676))
+* **providers:** the setup steps of Stripe, Atlassian, OneDrive and Outlook match their pages ([aaffe43](https://github.com/BeOnAuto/runtime/commit/aaffe437a1854748e92517207d4fc7a2ac4ab17a))
+* **workflow-engine:** a pool's close waits for the evaluation workers it replaced to end ([6576897](https://github.com/BeOnAuto/runtime/commit/65768979d6ec0493ffc4c6fb34610f216c795068))
+
+
+### Performance Improvements
+
+* **api:** a playbook's page reads its runs in its query, and only the screen shown asks again ([f3b6608](https://github.com/BeOnAuto/runtime/commit/f3b6608ce38ec99ff1eeab8d19d2901d2ca439ef))
+* **api:** a playbook's page reads the runs behind its goals' records in its one query ([c74ecb8](https://github.com/BeOnAuto/runtime/commit/c74ecb85ca4ee663f4a64746583d880959318cdf))
+* **connections:** a provider listing says who may reconnect from the roles the call carries ([51339b4](https://github.com/BeOnAuto/runtime/commit/51339b43ce1a74c6fcb01b926555793fa436a3b4))
+* **playbooks:** the Ledger's list of events reads as lines, contents unread ([125d3a0](https://github.com/BeOnAuto/runtime/commit/125d3a0de25f9a75da8fa32684dc12848079395a))
+
 ## [0.61.0](https://github.com/BeOnAuto/runtime/compare/v0.60.0...v0.61.0) (2026-11-23)
 
 
