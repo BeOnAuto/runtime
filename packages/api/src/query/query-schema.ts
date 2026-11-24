@@ -18,12 +18,24 @@ import { typesOfJsonSchema, type FieldsAdded, type TypesOfJsonSchema } from './s
 
 export type BoundInput = Readonly<Record<string, unknown>>;
 
+interface ReadFirst {
+  readonly operation: string;
+  readonly input: BoundInput;
+}
+
+export type ReadsFirst = Readonly<Record<string, unknown>>;
+
 export interface BoundRead {
   readonly field: string;
   readonly operation: string;
   readonly description: string;
   readonly binds: readonly string[];
-  readonly input: (item: BoundInput, playbook: string) => BoundInput | readonly BoundInput[] | undefined;
+  readonly first?: (item: BoundInput) => Readonly<Record<string, ReadFirst>>;
+  readonly input: (
+    item: BoundInput,
+    playbook: string,
+    first: ReadsFirst,
+  ) => BoundInput | readonly BoundInput[] | undefined;
   readonly many?: boolean;
 }
 
@@ -154,6 +166,27 @@ function readsOfAPlaybook(fields: Fields, edge: ReadEdge): GraphQLFieldConfigMap
   );
 }
 
+interface FirstAsked {
+  readonly fields: Fields;
+  readonly first: (item: BoundInput) => Readonly<Record<string, ReadFirst>>;
+  readonly item: BoundInput;
+  readonly playbook: string;
+  readonly context: unknown;
+}
+
+async function readFirst({ fields, first, item, playbook, context }: FirstAsked): Promise<ReadsFirst> {
+  const reads = readsOf(context);
+  const answered = await Promise.all(
+    Object.entries(first(item)).map(async ([name, asked]: readonly [string, ReadFirst]) => {
+      const registration = fields.playbookReads.find((each) => each.name === asked.operation);
+      if (registration === undefined) return [];
+      const answer: unknown = await reads.read({ registration, playbook, input: asked.input }).catch(() => null);
+      return [[name, answer ?? undefined] as const];
+    }),
+  );
+  return Object.fromEntries(answered.flat());
+}
+
 function boundFieldOf(fields: Fields, edge: ReadEdge, bound: BoundRead): readonly [string, ReadField][] {
   const registration = fields.playbookReads.find(({ name }) => name === bound.operation);
   if (registration === undefined) return [];
@@ -166,11 +199,13 @@ function boundFieldOf(fields: Fields, edge: ReadEdge, bound: BoundRead): readonl
         description: bound.description,
         args: argumentsOf(fields, registration, bound.binds),
         extensions: { reads: true },
-        resolve: (source, args, context) => {
+        resolve: async (source, args, context) => {
           const placed = boundIn(edge, source, context);
           if (placed === undefined) return null;
           const [playbook, item] = placed;
-          const input = bound.input(item, playbook);
+          const first =
+            bound.first === undefined ? {} : await readFirst({ fields, first: bound.first, item, playbook, context });
+          const input = bound.input(item, playbook, first);
           if (input === undefined) return null;
           const readOf = (each: BoundInput) =>
             readsOf(context).read({ registration, playbook, input: { ...given(args), ...each } });

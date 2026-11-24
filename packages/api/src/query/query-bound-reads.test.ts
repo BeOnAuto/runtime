@@ -192,3 +192,92 @@ describe('the reads bound to an item of an org’s read', () => {
     expect(printSchema(schema)).not.toContain('never');
   });
 });
+
+interface Note {
+  readonly name: string;
+  readonly text: string;
+}
+
+const NOTES: readonly Note[] = [
+  { name: 'n1', text: 'same' },
+  { name: 'n2', text: 'other' },
+  { name: 'n3', text: 'same' },
+];
+
+function notesLike(text: unknown, listed: unknown): readonly { readonly name: string }[] {
+  return listed === undefined ? [] : NOTES.filter((note) => note.text === text).map(({ name }) => ({ name }));
+}
+
+const readFirst = {
+  operation: 'latest_note',
+  scope: 'playbook' as const,
+  at: [],
+  reads: [
+    {
+      field: 'saying_the_same',
+      operation: 'get_note',
+      description: 'Each note that says what it says',
+      binds: ['name'],
+      first: () => ({
+        notes: { operation: 'list_notes', input: { limit: 5 } },
+        never: { operation: 'a_read_the_catalog_lacks', input: {} },
+      }),
+      input: (item: Readonly<Record<string, unknown>>, _playbook: string, first: Readonly<Record<string, unknown>>) =>
+        'never' in first ? [] : notesLike(item['text'], first['notes']),
+      many: true,
+    },
+  ],
+};
+
+const SAME = {
+  'latest_note@gamma': { name: 'n3', text: 'same' },
+  'list_notes@gamma': { notes: NOTES },
+  'get_note@gamma': { name: 'n1', text: 'same' },
+};
+
+function failingToList(): { readonly reads: readonly string[]; readonly reading: QueryReads } {
+  const reads: string[] = [];
+  const answers = new Map<string, Promise<unknown>>([['latest_note', Promise.resolve(SAME['latest_note@gamma'])]]);
+  const reading = new QueryReads((read) => {
+    reads.push(read.registration.name);
+    return answers.get(read.registration.name) ?? Promise.reject(new Error('down'));
+  });
+  return { reads, reading };
+}
+
+describe('a bound read whose input needs other reads of its playbook first', () => {
+  it('reads them as the query reads them itself, so its reads answer them once, and gives the input their answers', async () => {
+    const { reads, reading } = asked(SAME);
+
+    const answered = await graphql({
+      schema: querySchemaOf(catalog, [readFirst]).schema,
+      source: `{
+        latest_note(playbook: "gamma") { saying_the_same { text } }
+        list_notes(playbook: "gamma", limit: 5) { notes { name } }
+      }`,
+      contextValue: reading,
+    });
+
+    expect(answered.errors).toBeUndefined();
+    expect(
+      new Set(reads.filter(({ operation }) => operation === 'list_notes').map((read) => JSON.stringify(read))),
+    ).toEqual(new Set([JSON.stringify({ operation: 'list_notes', playbook: 'gamma', input: { limit: 5 } })]));
+    expect(reads.filter(({ operation }) => operation === 'get_note')).toEqual([
+      { operation: 'get_note', playbook: 'gamma', input: { name: 'n1' } },
+      { operation: 'get_note', playbook: 'gamma', input: { name: 'n3' } },
+    ]);
+  });
+
+  it('gives the input no answer for a read that failed', async () => {
+    const { reads, reading } = failingToList();
+
+    const answered = await graphql({
+      schema: querySchemaOf(catalog, [readFirst]).schema,
+      source: '{ latest_note(playbook: "gamma") { saying_the_same { text } } }',
+      contextValue: reading,
+    });
+
+    expect(answered).toEqual({ data: { latest_note: { saying_the_same: [] } } });
+    expect(reads).toEqual(['latest_note', 'list_notes']);
+  });
+});

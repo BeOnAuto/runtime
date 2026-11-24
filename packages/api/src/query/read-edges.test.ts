@@ -3,9 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { BoundInput } from './query-schema.ts';
 import { definitionsCalledIn, READ_EDGES } from './read-edges.ts';
 
-function boundBy(operation: string, field: string): (item: BoundInput, playbook?: string) => unknown {
-  const read = READ_EDGES.find((edge) => edge.operation === operation)?.reads?.find((each) => each.field === field);
-  return (item, playbook = 'sales') => read?.input(item, playbook);
+function readOf(operation: string, field: string) {
+  return READ_EDGES.find((edge) => edge.operation === operation)?.reads?.find((each) => each.field === field);
+}
+
+function boundBy(
+  operation: string,
+  field: string,
+): (item: BoundInput, playbook?: string, first?: Readonly<Record<string, unknown>>) => unknown {
+  const read = readOf(operation, field);
+  return (item, playbook = 'sales', first = {}) => read?.input(item, playbook, first);
 }
 
 const workflow = `
@@ -147,5 +154,119 @@ describe('the reads bound to a goal', () => {
     ['no mark without its run', { assessments: { in_flight: [{ marks: [{ milestone: 'received' }, 'r9'] }] } }, []],
   ] as const)('reads %s, whole', (_, item, input) => {
     expect(boundBy('get_playbook_goals', 'marked_by')(item)).toEqual(input);
+  });
+});
+
+const CAME_IN = '2026-11-20T10:00:00.000Z';
+
+const minutesAfter = (at: string, minutes: number) => new Date(Date.parse(at) + minutes * 60_000).toISOString();
+
+const ran = (run: string, name: string, minutes: number, within?: string) => ({
+  run_id: run,
+  name,
+  status: 'succeeded',
+  started_at: minutesAfter(CAME_IN, minutes),
+  ...(within === undefined ? {} : { within: { run_id: within, step: 'do/0/send' } }),
+});
+
+const refunds = (assessments: Readonly<Record<string, unknown>>): BoundInput => ({
+  id: 'refunds-decided',
+  milestones: [{ id: 'received' }, { id: 'decided' }],
+  contributions: [
+    { workflow: 'intake', marks: 'received' },
+    { workflow: 'decide', marks: 'decided' },
+    { workflow: 'notes' },
+  ],
+  assessments: { current: null, in_flight: [], closed: { latest: [] }, ...assessments },
+});
+
+const openSince = (thing: string, at: string, run?: string) => ({
+  per: { id: thing },
+  window: { opens: at },
+  marks: run === undefined ? [] : [{ milestone: 'received', at, run }],
+});
+
+const ended = (thing: string, opens: string, at: string) => ({ per: { id: thing }, window: { opens }, at });
+
+const NEAR = [1, -1, 2, -2, 3, -3, 4, -4, 4.5, -4.5].map((minutes, at) => ran(`near-${String(at)}`, 'intake', minutes));
+
+const LISTED = [
+  ...NEAR,
+  ran('far', 'intake', 30),
+  ran('decided', 'decide', 20),
+  ran('sent', 'send-email', 21, 'decided'),
+  ran('decided-before', 'decide', -10),
+];
+
+const runsBehind = (goal: BoundInput, first: Readonly<Record<string, unknown>>) =>
+  boundBy('get_playbook_goals', 'runs_behind')(goal, 'refunds', first);
+
+const theRuns = (...runs: readonly string[]) => runs.map((run) => ({ run_id: run }));
+
+const NEAREST = Array.from({ length: 8 }, (_, at) => `near-${String(at)}`);
+
+describe('the runs behind the things of a goal', () => {
+  it('reads first the latest runs of the playbook and the first page of the goal’s results', () => {
+    expect(readOf('get_playbook_goals', 'runs_behind')?.first?.(refunds({}))).toEqual({
+      runs: { operation: 'list_runs', input: { limit: 100 } },
+      results: { operation: 'list_goal_results', input: { goal: 'refunds-decided' } },
+    });
+    expect(readOf('get_playbook_goals', 'runs_behind')?.first?.({})).toEqual({
+      runs: { operation: 'list_runs', input: { limit: 100 } },
+    });
+  });
+
+  it('reads the runs that marked an open thing, the eight started nearest when it came in, the runs that answered it and the runs their steps started, each once', () => {
+    const goal = refunds({ in_flight: [openSince('req-1', CAME_IN, 'marking')] });
+
+    expect(runsBehind(goal, { runs: { runs: LISTED } })).toEqual(theRuns('marking', ...NEAREST, 'decided', 'sent'));
+  });
+
+  it('reads those of a thing that ended, between it coming in and its result, and of one among the goal’s results', () => {
+    const goal = refunds({ closed: { latest: [ended('req-0', CAME_IN, minutesAfter(CAME_IN, 25))] } });
+    const results = { items: [ended('req-9', minutesAfter(CAME_IN, 30), minutesAfter(CAME_IN, 40))] };
+
+    expect(runsBehind(goal, { runs: { runs: LISTED }, results })).toEqual(
+      theRuns(...NEAREST, 'decided', 'sent', 'far'),
+    );
+  });
+});
+
+describe('the runs behind the things of a goal, where the runs say little', () => {
+  it('reads only the marking runs, earliest mark first, where the runs could not be listed', () => {
+    const goal = refunds({
+      current: {
+        per: { id: 'req-1' },
+        marks: [
+          { milestone: 'decided', at: minutesAfter(CAME_IN, 9), run: 'later' },
+          { milestone: 'received', at: CAME_IN, run: 'marking' },
+          { milestone: 'noted', at: CAME_IN },
+        ],
+      },
+    });
+
+    expect(runsBehind(goal, {})).toEqual(theRuns('marking', 'later'));
+  });
+
+  it('passes over a run listed with no id or no start', () => {
+    const goal = refunds({ in_flight: [openSince('req-1', CAME_IN)] });
+    const runs = [{ run_id: 'unstarted', name: 'intake' }, { started_at: CAME_IN }, ran('near', 'intake', 1)];
+
+    expect(runsBehind(goal, { runs: { runs } })).toEqual(theRuns('near'));
+  });
+
+  it('reads none where the runs listed carry their output, as the records are read from the list', () => {
+    const goal = refunds({ in_flight: [openSince('req-1', CAME_IN, 'marking')] });
+
+    expect(runsBehind(goal, { runs: { runs: [{ ...ran('whole', 'intake', 1), output: {} }] } })).toEqual([]);
+  });
+
+  it.each([
+    ['no things', refunds({})],
+    ['a goal that says nothing of its things', { id: 'g' }],
+    ['a thing with no id', refunds({ in_flight: [{ window: { opens: CAME_IN } }] })],
+    ['a thing with no moment it came in', refunds({ in_flight: [{ per: { id: 'req-2' } }] })],
+  ])('reads none for %s', (_, goal) => {
+    expect(runsBehind(goal, { runs: { runs: LISTED } })).toEqual([]);
   });
 });

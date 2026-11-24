@@ -2965,6 +2965,11 @@ type GoalRead {
   Each run that marked a thing of the goal still open, read whole, once each, as get_run reads it
   """
   marked_by: [RunRead]
+
+  """
+  Each run behind a thing of the goal, open or among its first page of results, read whole, once each: the runs that marked it, the runs started nearest when it came in, and the runs of the workflows that mark its last milestone with the runs their steps started
+  """
+  runs_behind: [RunRead]
 }
 
 union GoalReadWindow = GoalReadWindow1 | GoalReadWindow2

@@ -2,6 +2,7 @@ import { Predicate } from 'effect';
 import { parse } from 'yaml';
 
 import { PLAYBOOKS_LISTED, type BoundInput, type BoundRead, type ReadEdge } from './query-schema.ts';
+import { runsBehindTheThings } from './runs-behind.ts';
 
 function textAt(item: BoundInput, field: string): string | undefined {
   const value = item[field];
@@ -216,6 +217,22 @@ export const READ_EDGES: readonly ReadEdge[] = [
         description: 'Each run that marked a thing of the goal still open, read whole, once each, as get_run reads it',
         binds: ['run_id'],
         input: runsMarkingWhatIsOpen,
+        many: true,
+      },
+      {
+        field: 'runs_behind',
+        operation: 'get_run',
+        description:
+          'Each run behind a thing of the goal, open or among its first page of results, read whole, once each: the runs that marked it, the runs started nearest when it came in, and the runs of the workflows that mark its last milestone with the runs their steps started',
+        binds: ['run_id'],
+        first: (item) => {
+          const goal = textAt(item, 'id');
+          return {
+            runs: { operation: 'list_runs', input: { limit: 100 } },
+            ...(goal === undefined ? {} : { results: { operation: 'list_goal_results', input: { goal } } }),
+          };
+        },
+        input: (item, _playbook, first) => runsBehindTheThings(item, first),
         many: true,
       },
     ],

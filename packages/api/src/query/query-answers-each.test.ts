@@ -65,3 +65,64 @@ describe('a query whose reads of one level answer at different times', () => {
     expect(happened.indexOf('list_notes asked')).toBeLessThan(happened.indexOf('latest_note answered'));
   });
 });
+
+const listedNotes = (_item: unknown, _playbook: string, first: Readonly<Record<string, unknown>>) => {
+  const listed = first['notes'];
+  const notes: readonly unknown[] =
+    typeof listed === 'object' && listed !== null && 'notes' in listed && Array.isArray(listed.notes)
+      ? listed.notes
+      : [];
+  return notes.flatMap((note) =>
+    typeof note === 'object' && note !== null && 'name' in note && typeof note.name === 'string'
+      ? [{ name: note.name }]
+      : [],
+  );
+};
+
+const eachNoteListed = {
+  operation: 'latest_note',
+  scope: 'playbook' as const,
+  at: [],
+  reads: [
+    {
+      field: 'listed',
+      operation: 'get_note',
+      description: 'Each note listed, read whole',
+      binds: ['name'],
+      first: () => ({ notes: { operation: 'list_notes', input: { limit: 5 } } }),
+      input: listedNotes,
+      many: true,
+    },
+  ],
+};
+
+function noting(): { readonly asked: readonly string[]; readonly answers: ReadsAnswered } {
+  const asked: string[] = [];
+  const answers: ReadsAnswered = (reads) =>
+    reads.map((read) => {
+      asked.push(`${read.registration.name}@${String(read.playbook)}`);
+      return Promise.resolve(ANSWERS[read.registration.name] ?? succeeded({ name: 'n1', text: 'one' }));
+    });
+  return { asked, answers };
+}
+
+describe('a query whose bound read needs another read first', () => {
+  it('answers that read once where the query asks it too', async () => {
+    const { asked, answers } = noting();
+
+    const answered = await queryAnswered(
+      queryServingOf(makeCatalog(notebookOperations), [eachNoteListed]),
+      {
+        query: `{
+          latest_note(playbook: "gamma") { listed { name } }
+          list_notes(playbook: "gamma", limit: 5) { notes { name } }
+        }`,
+      },
+      answers,
+    );
+
+    expect(answered.status).toBe(200);
+    expect(asked.filter((read) => read === 'list_notes@gamma')).toHaveLength(1);
+    expect(asked).toContain('get_note@gamma');
+  });
+});
