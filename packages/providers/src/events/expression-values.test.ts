@@ -1,7 +1,7 @@
 import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { valueIn, type Arrival } from './arrival-readings.ts';
+import { valueIn, type Arrival } from './arrival-values.ts';
 
 interface RequestParts {
   readonly headers?: Readonly<Record<string, string>>;

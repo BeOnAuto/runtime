@@ -16,6 +16,7 @@ export interface InteractionWork {
   readonly deliveredAt: string | null;
   readonly refusedReplies: readonly string[];
   readonly refusedOthers: number;
+  readonly clicksTaken: readonly string[];
 }
 
 const nothingWorked: InteractionWork = {
@@ -24,6 +25,7 @@ const nothingWorked: InteractionWork = {
   deliveredAt: null,
   refusedReplies: [],
   refusedOthers: 0,
+  clicksTaken: [],
 };
 
 function workedAfter(work: InteractionWork, recorded: RecordedWork): InteractionWork {
@@ -41,6 +43,9 @@ function workedAfter(work: InteractionWork, recorded: RecordedWork): Interaction
   }
   if (fact === undefined) {
     return work;
+  }
+  if (fact.type === 'answer_set') {
+    return { ...work, clicksTaken: [...work.clicksTaken, fact.data.click.id] };
   }
   const ended = { ...work, inFlight: null };
   return fact.type === 'delivery_succeeded' ? { ...ended, deliveredAt: recorded.context.at } : ended;
@@ -145,5 +150,23 @@ export function replyRule(replyId: string, refusal?: ReplyRefusal): WorkRule {
       return answeredAlready;
     }
     return refusal === undefined ? undefined : refusalRefused(refusal, cancel !== undefined, worked);
+  };
+}
+
+const clickSeen = new Conflict({ detail: 'The run has taken this click already, so it records it once' });
+
+const clickedWhileCancelling = new Conflict({
+  detail: 'The run is being cancelled, so it records no click and tells nobody',
+});
+
+export function clickRule(clickId: string): WorkRule {
+  return (run) => {
+    if (run.cancel !== undefined) {
+      return clickedWhileCancelling;
+    }
+    if (run.answer !== null) {
+      return answeredAlready;
+    }
+    return interactionWorkOf(run.work).clicksTaken.includes(clickId) ? clickSeen : undefined;
   };
 }

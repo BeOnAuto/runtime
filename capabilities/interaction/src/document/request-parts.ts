@@ -4,7 +4,7 @@ import { Result } from 'effect';
 
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';
-import { bodyOf } from './render-parts.ts';
+import { bodyHoldsAButton, bodyOf } from './render-parts.ts';
 import { fromOf, replyOf } from './reply-parts.ts';
 import { assembledRequest, type CheckedParts } from './request-assembly.ts';
 import { routeIn } from './route-parts.ts';
@@ -25,6 +25,7 @@ function partsOf(
   const input = contractOf(written.input, 'input', lines);
   const output = contractOf(written.output, 'output', lines);
   const inputSchema = Result.isSuccess(input) ? input.success.schema?.document : undefined;
+  const body = bodyOf(written, parts, lines, inputSchema);
   return {
     route: routeIn(written, reading, inputSchema),
     expires: expiresOf(asked.expires, lines),
@@ -32,7 +33,7 @@ function partsOf(
     output,
     to: toOf(asked.to, lines, inputSchema),
     from: fromOf(written.from, lines, inputSchema),
-    body: bodyOf(written, parts, lines, inputSchema),
+    body,
     reply: Result.isFailure(output)
       ? Result.succeed(null)
       : replyOf(
@@ -40,6 +41,7 @@ function partsOf(
             reply: written.reply,
             answerSchema: output.success.schema?.document,
             readsReplies: written.replies !== undefined,
+            answeredByButtons: bodyHoldsAButton(Result.isSuccess(body) ? body.success.render?.card : undefined),
           },
           lines,
         ),

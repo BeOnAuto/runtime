@@ -16,14 +16,23 @@ export interface RepliesRoute {
 const routeRowFrom = Schema.decodeUnknownSync(
   Schema.Struct({
     delivery: Schema.fromJsonString(DeliverySchema),
-    replies: Schema.fromJsonString(RepliesSchema),
-    tell: Schema.fromJsonString(TellingRouteSchema),
+    replies: Schema.NullOr(Schema.fromJsonString(RepliesSchema)),
+    tell: Schema.NullOr(Schema.fromJsonString(TellingRouteSchema)),
   }),
 );
 
+function noReadingOf(tool: string): Replies {
+  return { tool, with: {}, read: { list: '', order: 'oldest_first', each: { id: '', sender: '', text: '' } } };
+}
+
 export function routeOfRequest({ row }: KeptRequest): RepliesRoute {
   const { delivery, replies, tell } = routeRowFrom(row);
-  return { server: delivery.server, delivering: delivery.tool, replies, telling: tell };
+  return {
+    server: delivery.server,
+    delivering: delivery.tool,
+    replies: replies ?? noReadingOf(delivery.tool),
+    telling: tell ?? { when: 'none' },
+  };
 }
 
 export function tellsTakenAndRefused(request: KeptRequest): boolean {

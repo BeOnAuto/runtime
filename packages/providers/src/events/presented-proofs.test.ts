@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { eventDestinationOf } from '../reading/provider-list.ts';
 import { ofEachSubscription, ofTheApp, overASocket, trackerOverASocket } from '../testing/event-destinations.ts';
 import { providersOf } from '../testing/fixture-providers.ts';
-import type { Arrival } from './arrival-readings.ts';
+import type { Arrival } from './arrival-values.ts';
 import type { Destination } from './destination-fields.ts';
 import { provesWhatIsReadAt } from './event-proofs.ts';
 import { presentedProofOf, type PresentedProof } from './presented-proofs.ts';

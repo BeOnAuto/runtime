@@ -81,13 +81,20 @@ function limitedFor(conversations: Conversations, signedInThrough: ClientSource 
   return applies ? conversations : rest;
 }
 
+export type ConversationsOfAProvider = Conversations & { readonly clicks?: true };
+
 export function conversationsOf(
   list: ProviderList,
   provider: string | null,
   signedInThrough?: ClientSource,
-): Conversations | undefined {
-  const conversations = providerFoundBy(list, provider)?.entry.conversations;
-  return conversations === undefined ? undefined : limitedFor(conversations, signedInThrough);
+): ConversationsOfAProvider | undefined {
+  const entry = providerFoundBy(list, provider)?.entry;
+  const conversations = entry?.conversations;
+  if (conversations === undefined) {
+    return undefined;
+  }
+  const clicks = entry?.events?.destinations.some(({ filter }) => filter?.click !== undefined) === true;
+  return { ...limitedFor(conversations, signedInThrough), ...(clicks ? { clicks: true as const } : {}) };
 }
 
 function nameNowIn(list: ProviderList, name: string): string {

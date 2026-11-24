@@ -11,7 +11,7 @@ export function requestCheck(
   ports: RequestCheckPorts,
 ): (document: RequestDocument, place: PlaybookAddress) => Effect.Effect<void, InvalidInput> {
   const tells = tellCheck(ports);
-  const cards = cardCheck(ports.tools);
+  const cards = cardCheck(ports);
   return (document, place) =>
     Effect.andThen(firstMessageCheck(document), Effect.andThen(tells(document, place), cards(document, place)));
 }

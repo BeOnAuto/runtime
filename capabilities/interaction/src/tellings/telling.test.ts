@@ -14,7 +14,7 @@ import {
 } from '../testing/index.ts';
 import { flatReplies } from '../testing/reading-documents.ts';
 import type { DeliverBlock, Replies } from '../tool-blocks/tool-block-schemas.ts';
-import { resolvedTelling } from './telling-routes.ts';
+import { clickTelling, resolvedTelling } from './telling-routes.ts';
 import { tellings } from './telling-rows.ts';
 
 const ended = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
@@ -212,6 +212,30 @@ describe('the telling a request is asked with', () => {
       { when: 'none' },
       { when: 'all' },
     ]);
+  });
+});
+
+describe('the telling of a card with buttons and no replies', () => {
+  it('tells a person who may not answer, in the thread, and says nothing where the provider says nothing', () => {
+    expect(clickTelling(chatConversations)).toMatchObject({ when: 'refusals', line: reply, tellsOthers: true });
+    expect(clickTelling()).toEqual({ when: 'none' });
+  });
+});
+
+describe('the way a request is drawn again', () => {
+  it('is the provider’s, whatever word the function writes, even none', () => {
+    const update = {
+      tool: 'update_message',
+      with: { channel: '{{ sent.conversation }}', ts: '{{ sent.id }}', blocks: '{{ rendered }}' },
+      sent: '/ts',
+    };
+    const redrawing = { ...chatConversations, update };
+
+    expect([
+      resolvedTelling(deliver, replies, redrawing).update,
+      resolvedTelling(deliver, { ...replies, tell: 'none' }, redrawing),
+      resolvedTelling(deliver, { ...replies, tell: ownLine }, redrawing).update,
+    ]).toEqual([update, { when: 'none', automatic, update }, update]);
   });
 });
 

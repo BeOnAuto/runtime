@@ -1,29 +1,17 @@
-import { valueAt } from '@on.auto/definitions/tool-blocks';
 import { Schema } from 'effect';
 
+import {
+  applies,
+  declaredValueIn,
+  holds,
+  holdsSomething,
+  textIn,
+  valueIn,
+  type Arrival,
+  type Conditions,
+} from './arrival-values.ts';
 import type { Destination } from './destination-fields.ts';
 import { eventTimeOf } from './event-times.ts';
-import {
-  messageReferenceOf,
-  requestReferenceOf,
-  type MessageReference,
-  type RequestReference,
-} from './runtime-expressions.ts';
-
-interface RequestArrival {
-  readonly transport: 'request';
-  readonly headers: Readonly<Record<string, string>>;
-  readonly query: Readonly<Record<string, string>>;
-  readonly body?: Schema.Json;
-}
-
-interface MessageArrival {
-  readonly transport: 'message';
-  readonly headers?: Schema.Json;
-  readonly payload: Schema.Json;
-}
-
-export type Arrival = RequestArrival | MessageArrival;
 
 interface ArrivalHandshake {
   readonly challenge?: string;
@@ -38,10 +26,20 @@ interface DeliveredReply {
   readonly time?: string | number;
 }
 
+interface DeliveredClick {
+  readonly account: string;
+  readonly id: string;
+  readonly sender: string;
+  readonly to: string;
+  readonly action: string;
+  readonly time?: string | number;
+}
+
 interface ArrivalWake {
   readonly subscription?: string;
   readonly conversation?: string;
   readonly reply?: DeliveredReply;
+  readonly click?: DeliveredClick;
 }
 
 interface ArrivalConnection {
@@ -66,76 +64,11 @@ export interface ArrivalReading {
   readonly event?: ArrivalEvent;
 }
 
-type Conditions = Readonly<Record<string, readonly (string | null)[]>>;
-
 type Filter = NonNullable<Destination['filter']>;
 
 type DeclaredReply = NonNullable<Filter['reply']>;
 
-export function headerIn(headers: Readonly<Record<string, string>>, name: string): string | undefined {
-  const named = name.toLowerCase();
-  const values = Object.entries(headers).flatMap(([field, value]: readonly [string, string]) =>
-    field.toLowerCase() === named ? [value] : [],
-  );
-  return values.length === 0 ? undefined : values.join(', ');
-}
-
-function inTheRequest({ headers, query, body }: RequestArrival, reference: RequestReference): unknown {
-  if (reference.source === 'body') {
-    return valueAt(body, reference.pointer);
-  }
-  if (reference.source === 'header') {
-    return headerIn(headers, reference.name);
-  }
-  return Object.hasOwn(query, reference.name) ? query[reference.name] : undefined;
-}
-
-function inTheMessage({ headers, payload }: MessageArrival, { source, pointer }: MessageReference): unknown {
-  return valueAt(source === 'header' ? headers : payload, pointer);
-}
-
-export function valueIn(arrival: Arrival, expression: string): unknown {
-  if (arrival.transport === 'request') {
-    const reference = requestReferenceOf(expression);
-    return reference === undefined ? undefined : inTheRequest(arrival, reference);
-  }
-  const reference = messageReferenceOf(expression);
-  return reference === undefined ? undefined : inTheMessage(arrival, reference);
-}
-
-export function declaredValueIn(arrival: Arrival, expression: string | undefined): unknown {
-  return expression === undefined ? undefined : valueIn(arrival, expression);
-}
-
-export function textIn(arrival: Arrival, expression: string | undefined): string | undefined {
-  const value = declaredValueIn(arrival, expression);
-  return typeof value === 'string' && value !== '' ? value : undefined;
-}
-
-function holdsSomething(arrival: Arrival, expression: string | undefined): boolean {
-  return (declaredValueIn(arrival, expression) ?? null) !== null;
-}
-
-function isOneOf(value: unknown, values: readonly (string | null)[]): boolean {
-  return (value ?? null) === null ? values.includes(null) : typeof value === 'string' && values.includes(value);
-}
-
-export function holds(arrival: Arrival, when: Conditions): boolean {
-  const conditions = Object.entries(when);
-  return (
-    conditions.length > 0 &&
-    conditions.every(([expression, values]: readonly [string, readonly (string | null)[]]) =>
-      isOneOf(valueIn(arrival, expression), values),
-    )
-  );
-}
-
-export function applies(arrival: Arrival, declared: string | Conditions | undefined): boolean {
-  if (declared === undefined) {
-    return false;
-  }
-  return typeof declared === 'string' ? holdsSomething(arrival, declared) : holds(arrival, declared);
-}
+type DeclaredClick = NonNullable<Filter['click']>;
 
 function timeIn(arrival: Arrival, expression: string | undefined): Pick<DeliveredReply, 'time'> {
   const time = declaredValueIn(arrival, expression);
@@ -155,6 +88,27 @@ function replyIn(arrival: Arrival, reply: DeclaredReply, account: string | undef
     : { account, id, sender, text, to, ...timeIn(arrival, reply.time) };
 }
 
+function clickAccountIn(arrival: Arrival, click: DeclaredClick | undefined): string | undefined {
+  return click === undefined || !holds(arrival, click.when) ? undefined : textIn(arrival, click.account);
+}
+
+function clickIn(arrival: Arrival, click: DeclaredClick, account: string | undefined): ArrivalWake | undefined {
+  if (account === undefined || !holds(arrival, click.when)) {
+    return undefined;
+  }
+  const conversation = textIn(arrival, click.conversation);
+  const id = textIn(arrival, click.id);
+  const sender = textIn(arrival, click.sender);
+  const to = textIn(arrival, click.to);
+  const action = textIn(arrival, click.action);
+  if (conversation === undefined || id === undefined || sender === undefined || to === undefined) {
+    return undefined;
+  }
+  return action === undefined
+    ? undefined
+    : { conversation, click: { account, id, sender, to, action, ...timeIn(arrival, click.time) } };
+}
+
 function namedIn(arrival: Arrival, filter: Filter): Omit<ArrivalWake, 'reply'> {
   const subscription = textIn(arrival, filter.subscription);
   const conversation = textIn(arrival, filter.conversation);
@@ -165,6 +119,10 @@ function namedIn(arrival: Arrival, filter: Filter): Omit<ArrivalWake, 'reply'> {
 }
 
 function wakeIn(arrival: Arrival, filter: Filter | undefined, account: string | undefined): ArrivalWake | undefined {
+  const clicked = filter?.click === undefined ? undefined : clickIn(arrival, filter.click, account);
+  if (clicked !== undefined) {
+    return clicked;
+  }
   if (filter === undefined || !holds(arrival, filter.when) || holdsSomething(arrival, filter.automatic)) {
     return undefined;
   }
@@ -176,8 +134,12 @@ function wakeIn(arrival: Arrival, filter: Filter | undefined, account: string | 
   return reply === undefined ? named : { ...named, reply };
 }
 
-function connectionIn(arrival: Arrival, connection: Destination['connection']): ArrivalConnection | undefined {
-  const account = textIn(arrival, connection?.account);
+function connectionIn(
+  arrival: Arrival,
+  connection: Destination['connection'],
+  clicked: string | undefined,
+): ArrivalConnection | undefined {
+  const account = textIn(arrival, connection?.account) ?? clicked;
   const user = textIn(arrival, connection?.user);
   if (account === undefined && user === undefined) {
     return undefined;
@@ -280,7 +242,7 @@ function eventIn(arrival: Arrival, mappings: Destination['events'], holding: Hol
 
 export function arrivalReadingOf(destination: Destination, arrival: Arrival): ArrivalReading {
   const handshake = handshakeIn(arrival, destination.handshake);
-  const connection = connectionIn(arrival, destination.connection);
+  const connection = connectionIn(arrival, destination.connection, clickAccountIn(arrival, destination.filter?.click));
   const wake = wakeIn(arrival, destination.filter, connection?.account);
   const event = eventIn(arrival, destination.events, holds);
   return {
@@ -294,4 +256,8 @@ export function arrivalReadingOf(destination: Destination, arrival: Arrival): Ar
 export function listedEventOf({ events }: Pick<Destination, 'events'>, item: Schema.Json): ArrivalEvent | undefined {
   const event = eventIn({ transport: 'message', payload: item }, events, holdsOrListsEveryItem);
   return event === undefined ? undefined : { ...event, id: `${encodeURIComponent(event.type)}/${event.id}` };
+}
+
+export function listedValueIn(item: Schema.Json, expression: string): unknown {
+  return valueIn({ transport: 'message', payload: item }, expression);
 }

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { answerInteraction } from '../requests/answer-interaction.ts';
 import { askedRunId, askedThroughChat, type InteractionHarness } from '../testing/index.ts';
 import type { DeliveryEvent } from './run-facts.ts';
-import { deliveryRule, interactionWorkOf, replyBounds, replyRule } from './work-rules.ts';
+import { clickRule, deliveryRule, interactionWorkOf, replyBounds, replyRule } from './work-rules.ts';
 
 const address = { org: 'acme', playbook: 'alpha', id: askedRunId };
 
@@ -181,6 +181,46 @@ describe('the answers of someone a request does not wait on', () => {
   });
 });
 
+function setting(id: string): Work {
+  return {
+    type: 'work',
+    fact: {
+      type: 'answer_set',
+      data: { click: { id, sender: 'ada' }, action: 'auto-answer:1', parts: [{ at: '/choice', value: 'approve' }] },
+    },
+  };
+}
+
+describe('the clicks a request takes', () => {
+  it('are each recorded once, and none once the run took an answer', async () => {
+    const { playbook } = await askedThroughChat();
+    const record = recording(playbook);
+
+    expect([
+      await record(setting('c-1'), clickRule('c-1')),
+      await record(setting('c-1'), clickRule('c-1')),
+      await record(setting('c-2'), clickRule('c-2')),
+      await record(taking('r-1'), replyRule('r-1')),
+      await record(setting('c-3'), clickRule('c-3')),
+    ]).toEqual([
+      Result.void,
+      Result.fail(new Conflict({ detail: 'The run has taken this click already, so it records it once' })),
+      Result.void,
+      Result.void,
+      Result.fail(new Conflict({ detail: 'The run took an answer already, so it takes no further reply' })),
+    ]);
+  });
+
+  it('are none once a cancel is asked', async () => {
+    const { playbook } = await askedThroughChat();
+    await playbook.cancel(askedRunId);
+
+    expect(await recording(playbook)(setting('c-1'), clickRule('c-1'))).toEqual(
+      Result.fail(new Conflict({ detail: 'The run is being cancelled, so it records no click and tells nobody' })),
+    );
+  });
+});
+
 describe('the work of a request as its capability reads it', () => {
   const at = '2026-10-07T09:00:00.000Z';
 
@@ -204,7 +244,14 @@ describe('the work of a request as its capability reads it', () => {
           context,
         },
       ]),
-    ).toEqual({ lastAttempt: 1, inFlight: null, deliveredAt: at, refusedReplies: [], refusedOthers: 0 });
+    ).toEqual({
+      lastAttempt: 1,
+      inFlight: null,
+      deliveredAt: at,
+      refusedReplies: [],
+      refusedOthers: 0,
+      clicksTaken: [],
+    });
   });
 
   it('refuses work of its own in a shape no reader of it knows, as any unreadable fact of the run', () => {

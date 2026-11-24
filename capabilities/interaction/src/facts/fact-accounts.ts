@@ -4,7 +4,7 @@ import { callFieldsShown, keptAnswerOf, keptArgumentsOf } from '@on.auto/tool-se
 import type { Schema } from 'effect';
 
 import type { DeliveredAs, RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
-import { deliveryEnded, deliveryStarted, replyRefused } from './fact-words.ts';
+import { answerPartsSet, deliveryEnded, deliveryStarted, replyRefused } from './fact-words.ts';
 import type { RecordedFactNamed } from './run-facts.ts';
 
 function named(text: string): string {
@@ -73,4 +73,14 @@ export function replyRefusedAccount(event: RecordedFactNamed<'reply_refused'>): 
     ...(issues === undefined ? {} : issuesShown(issues)),
   };
   return { type: event.type, summary: replyRefused(event), data };
+}
+
+export function answerPartsSetAccount(event: RecordedFactNamed<'answer_set'>): PresentedFact {
+  const { click, action, parts } = event.data;
+  const data: Readonly<Record<string, Schema.Json>> = {
+    click: { id: named(click.id), sender: named(click.sender) },
+    action: named(action),
+    parts: parts.map(({ at }) => named(at)),
+  };
+  return { type: event.type, summary: answerPartsSet(event), data };
 }

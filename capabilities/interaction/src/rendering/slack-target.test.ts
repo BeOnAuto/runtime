@@ -1,6 +1,7 @@
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { answerButtonsOf } from './answer-buttons.ts';
 import type { RenderState } from './rendered-message.ts';
 import { slackMessageOf } from './slack-target.ts';
 import { isList, isRecord } from './written-values.ts';
@@ -120,5 +121,116 @@ describe('a Button written in a card', () => {
     expect(issuesOf(card)).toEqual([
       'Slack cannot show a button in actions here: write only text, image, divider, fields, table, chart and link buttons',
     ]);
+  });
+});
+
+const answerButtons = {
+  approve: {
+    type: 'Button',
+    props: { label: 'Approve', style: 'primary', once: true, sets: [{ at: '/choice', value: 'approve' }] },
+  },
+  reject: { type: 'Button', props: { label: 'Reject', sets: [{ at: '/choice', value: 'reject' }] } },
+};
+
+function answerCard() {
+  return cardOf(answerButtons);
+}
+
+function answerCardWith(note: Readonly<Record<string, unknown>>) {
+  return {
+    root: 'card',
+    elements: {
+      card: { type: 'Card', props: { title: 'Orders' }, children: ['actions', 'note'] },
+      actions: { type: 'Actions', children: ['approve', 'reject'] },
+      ...answerButtons,
+      note: { type: 'Text', ...note },
+    },
+  };
+}
+
+function actionIdsOf(card: unknown, drawn: Partial<RenderState> = {}): readonly string[] {
+  const rendered = slackMessageOf(card, { ...state, ...drawn });
+  return Result.isSuccess(rendered) ? (JSON.stringify(rendered.success.payload).match(/auto-answer:\w+/gu) ?? []) : [];
+}
+
+describe('a Button that sets parts of the answer, rendered for Slack', () => {
+  it('shows a button for each, named by what it sets, and keeps what each sets apart from the message', () => {
+    const rendered = Result.getOrThrow(slackMessageOf(answerCard(), state));
+
+    expect(rendered.buttons).toMatchObject([
+      { sets: [{ at: '/choice', value: 'approve' }], once: true },
+      { sets: [{ at: '/choice', value: 'reject' }] },
+    ]);
+    expect(JSON.stringify(rendered.payload)).not.toContain('"value"');
+    expect(JSON.stringify(rendered.payload)).toContain('"style":"primary"');
+  });
+
+  it('names a button by its label and what it sets, so a card drawn again names it the same', () => {
+    expect(actionIdsOf(answerCard())).toEqual(actionIdsOf(answerCard(), { answer: { choice: 'x' } }));
+  });
+
+  it('shows no button where the request is over, whatever the card says', () => {
+    expect(actionIdsOf(answerCard(), { finished: 'answered' })).toEqual([]);
+    expect(slackMessageOf('Hello', { ...state, finished: 'answered' })).toEqual(
+      Result.fail(['The body is not a card: write `root` and `elements`']),
+    );
+    expect(slackMessageOf({ root: 'card', elements: [] }, { ...state, finished: 'answered' })).toEqual(
+      Result.fail(['The body is not a card: write `root` and `elements`']),
+    );
+  });
+});
+
+describe('a Button that sets parts of the answer, as the answer is given', () => {
+  it('shows no button with once where a place it sets is decided, nor a row left with none', () => {
+    const decided = { answered: { choice: { by: 'ada', at: 'then' } } };
+
+    expect(actionIdsOf(answerCard())).toHaveLength(2);
+    expect(actionIdsOf(answerCard(), decided)).toHaveLength(1);
+  });
+
+  it('reads the answer so far and who set each part', () => {
+    const card = answerCardWith({ props: { content: { $template: 'By ${/answered/choice/by}: ${/answer/choice}' } } });
+    const answered = { choice: { by: 'ada', at: 't' } };
+
+    expect(
+      Result.getOrThrow(slackMessageOf(card, { ...state, answer: { choice: 'approve' }, answered })).text,
+    ).toContain('By ada: approve');
+  });
+
+  it('shows an element only where its visible condition holds', () => {
+    const card = answerCardWith({ props: { content: 'Decided' }, visible: { $state: '/answered/choice/by' } });
+    const answered = { choice: { by: 'ada', at: 't' } };
+
+    expect([
+      Result.getOrThrow(slackMessageOf(card, state)).text,
+      Result.getOrThrow(slackMessageOf(card, { ...state, answered })).text,
+    ]).toEqual([expect.not.stringContaining('Decided'), expect.stringContaining('Decided')]);
+  });
+});
+
+function button(id: string, value: string) {
+  return { type: 'button' as const, id, label: 'Go', value };
+}
+
+describe('the buttons of a built card', () => {
+  it('are only those whose id and what they set the run made, and each once', () => {
+    const sets = JSON.stringify({ sets: [{ at: '/a', value: 1 }], once: false });
+    const card = {
+      type: 'card' as const,
+      children: [
+        {
+          type: 'actions' as const,
+          children: [
+            button('auto-answer:1', sets),
+            button('auto-answer:1', sets),
+            button('auto-answer:2', 'forged'),
+            button('other', sets),
+          ],
+        },
+        { type: 'divider' as const },
+      ],
+    };
+
+    expect(answerButtonsOf(card)).toEqual([{ id: 'auto-answer:1', label: 'Go', sets: [{ at: '/a', value: 1 }] }]);
   });
 });

@@ -38,7 +38,7 @@ export type ToolPorts = Pick<
 
 export const fakeRequestBytes = 1_048_576;
 
-export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply' | 'reactions'> {
+export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply' | 'reactions' | 'edits'> {
   readonly calls: () => readonly OneCall[];
   readonly answerNext: (...answers: readonly FakeAnswer[]) => void;
   readonly disallow: (tool: string) => void;
@@ -192,6 +192,7 @@ export function fakeTools(
     calls: () => [...calls],
     posted: board.posted,
     reactions: board.reactions,
+    edits: board.edits,
     reply: board.reply,
     answerNext: (...answers) => {
       queued.push(...answers);

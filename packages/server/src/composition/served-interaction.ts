@@ -4,6 +4,7 @@ import { requestsSetAside, thingsAskedAbout, type AskedAbout } from '@on.auto/go
 import {
   conversationsDue,
   answerInteraction,
+  clickDelivery,
   listInteractions,
   listInteractionsAbout,
   makeInteractionFunctionAdapter,
@@ -11,6 +12,7 @@ import {
   replyDelivery,
   requestsAskingAbout,
   requestsDue,
+  type ClickDelivery,
   type ReplyDelivery,
   type RequestsDue,
 } from '@on.auto/interaction';
@@ -25,6 +27,7 @@ import { runtimeLedger } from './runtime-ledger.ts';
 interface RecordedInteraction {
   readonly dueWork: readonly RequestsDue[];
   readonly delivered: ReplyDelivery;
+  readonly clicked: ClickDelivery;
 }
 
 export interface ServedInteraction {
@@ -69,6 +72,7 @@ export function interactionServedBy(
     recordedBy: (record) => ({
       dueWork: [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
       delivered: replyDelivery({ ledger, tools, record }),
+      clicked: clickDelivery({ ledger, tools, record }),
     }),
     askedAbout: askedAboutServed,
   };

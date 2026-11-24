@@ -48,15 +48,21 @@ function presented({ type, data }: InteractionFact) {
 describe('the facts of a delivery and of a reply, as the playbook shows them', () => {
   it('are named as they are recorded, as the interaction capability declares them', () => {
     expect(
-      ['delivery_started', 'delivery_succeeded', 'delivery_failed', 'delivery_refused', 'reply_refused'].map((type) =>
-        storedTypesOf(type),
-      ),
+      [
+        'delivery_started',
+        'delivery_succeeded',
+        'delivery_failed',
+        'delivery_refused',
+        'reply_refused',
+        'answer_set',
+      ].map((type) => storedTypesOf(type)),
     ).toEqual([
       ['delivery_started'],
       ['delivery_succeeded'],
       ['delivery_failed'],
       ['delivery_refused'],
       ['reply_refused'],
+      ['answer_set'],
     ]);
   });
 });
@@ -251,6 +257,41 @@ describe('a reply the run refused', () => {
           issue_count: 1,
           issues: [{ pointer: '/answer/note', detail: 'Too long' }],
         },
+      },
+    ]);
+  });
+});
+
+describe('the parts of an answer a click set', () => {
+  it('says how many parts it set and which, and who clicked', () => {
+    const click = { id: '1699.5', sender: 'ada' };
+
+    expect([
+      ...presented({
+        type: 'answer_set',
+        data: { click, action: 'auto-answer:1', parts: [{ at: '/choice', value: 'approve' }] },
+      }),
+      ...presented({
+        type: 'answer_set',
+        data: {
+          click,
+          action: 'auto-answer:2',
+          parts: [
+            { at: '/decisions/a', value: 'approve' },
+            { at: '/decisions/b', value: 'approve' },
+          ],
+        },
+      }),
+    ]).toEqual([
+      {
+        type: 'answer_set',
+        summary: 'A click on a button of the request set one part of its answer.',
+        data: { click, action: 'auto-answer:1', parts: ['/choice'] },
+      },
+      {
+        type: 'answer_set',
+        summary: 'A click on a button of the request set 2 parts of its answer.',
+        data: { click, action: 'auto-answer:2', parts: ['/decisions/a', '/decisions/b'] },
       },
     ]);
   });

@@ -50,6 +50,7 @@ export interface Refused {
   readonly issues: readonly Issue[];
   readonly open: number;
   readonly namesItsMessage: boolean;
+  readonly click?: true;
 }
 
 function ambiguousWords({ open, namesItsMessage }: Refused): string {
@@ -70,7 +71,8 @@ export function tellingWords(refused: Refused): string {
     return ambiguousWords(refused);
   }
   if (because === 'not_the_answerer') {
-    return "This request is waiting for someone else's answer, so Auto didn't take this reply.";
+    const taken = refused.click === true ? 'click' : 'reply';
+    return `This request is waiting for someone else's answer, so Auto didn't take this ${taken}.`;
   }
   return because === 'invalid'
     ? `Auto couldn't take that answer: ${whatIsWrong(issues)} ${replyWith(rule)}`
@@ -89,3 +91,10 @@ export function wordsTakenOf(rule: ReplyRule, answer: Readonly<Record<string, un
 export function takenWords(words: readonly string[]): string {
   return words.length === 0 ? 'Auto recorded your answer.' : `Auto recorded your answer: ${listed.format(words)}.`;
 }
+
+export const decidedWords = {
+  chosen: (label: string, by: string): string => `${label}, by ${by}`,
+  answeredBy: (by: string): string => `Answered by ${by}`,
+  answered: 'Answered',
+  closed: 'Closed without an answer',
+} as const;

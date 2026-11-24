@@ -17,7 +17,16 @@ export {
   type ReplyDelivery,
   type ReplyOutcome,
 } from './wakes/delivered-replies.ts';
-export { replyAwaited, type ReplyAwaited } from './wakes/named-requests.ts';
+export { clickDelivery } from './clicks/click-delivery.ts';
+export type {
+  ClickBecause,
+  ClickDelivery,
+  ClickOutcome,
+  DeliveredClick,
+  DeliveredClicks,
+  PerformedClick,
+} from './clicks/click-intake.ts';
+export { clickAwaited, replyAwaited, type ReplyAwaited } from './wakes/named-requests.ts';
 export {
   requestPlaceFacts,
   requestPlaceOf,

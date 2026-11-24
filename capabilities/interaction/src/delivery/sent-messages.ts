@@ -64,7 +64,8 @@ function keyOf(
 }
 
 function repliesReadFor(record: DeliveringRecord): Replies | undefined {
-  return record.answer_schema === undefined || record.reply === undefined ? undefined : record.replies;
+  const answeredByReply = record.reply !== undefined || record.buttons !== undefined;
+  return record.answer_schema === undefined || !answeredByReply ? undefined : record.replies;
 }
 
 interface KeyedDelivery {

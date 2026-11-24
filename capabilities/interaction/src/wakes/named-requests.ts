@@ -45,9 +45,11 @@ function rowSentAs(parts: Pick<DeliveryParts, 'ledger'>, { playbook, conversatio
   });
 }
 
-function candidateOf(placed: PlaybookProjectedRow, connection: string): Candidate | undefined {
+export type Waited = 'reply' | 'click';
+
+function candidateOf(placed: PlaybookProjectedRow, connection: string, waited: Waited): Candidate | undefined {
   const row = requestRowFrom(placed.row);
-  if (row.conversation === null) {
+  if (waited === 'reply' && row.conversation === null) {
     return undefined;
   }
   const request = keptRequestOf(placed, row);
@@ -67,10 +69,11 @@ function candidateSentAs(
   parts: Pick<DeliveryParts, 'ledger'>,
   place: PlaceOfTheReplies,
   id: string,
+  waited: Waited,
 ): Effect.Effect<Candidate | undefined> {
   return Effect.map(rowSentAs(parts, place, id), (rows) => {
     const [placed] = placedOf(rows);
-    return placed === undefined ? undefined : candidateOf(placed, place.connection);
+    return placed === undefined ? undefined : candidateOf(placed, place.connection, waited);
   });
 }
 
@@ -86,8 +89,13 @@ function namedOf(
   });
 }
 
-function namedBy(parts: DeliveryParts, place: PlaceOfTheReplies, id: string): Effect.Effect<readonly NamedRequest[]> {
-  return Effect.flatMap(candidateSentAs(parts, place, id), (candidate) =>
+function namedBy(
+  parts: DeliveryParts,
+  place: PlaceOfTheReplies,
+  id: string,
+  waited: Waited,
+): Effect.Effect<readonly NamedRequest[]> {
+  return Effect.flatMap(candidateSentAs(parts, place, id, waited), (candidate) =>
     candidate === undefined
       ? Effect.succeed([])
       : Effect.map(namedOf(parts, place.playbook, candidate), (named: NamedRequest) => [named]),
@@ -122,9 +130,9 @@ function typingFor(
   return Effect.map(repliesSeenBy(parts.ledger, { ...playbook, id: request.runId }), (seen) => !seen(reply.id));
 }
 
-export function replyAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited {
+function awaitedOf(parts: Pick<DeliveryParts, 'ledger'>, waited: Waited): ReplyAwaited {
   return (place, reply) =>
-    Effect.flatMap(candidateSentAs(parts, place, reply.to), (candidate) =>
+    Effect.flatMap(candidateSentAs(parts, place, reply.to, waited), (candidate) =>
       candidate === undefined
         ? Effect.succeed(notAwaited)
         : Effect.map(typingFor(parts, place.playbook, candidate, reply), (typing) => ({
@@ -135,13 +143,22 @@ export function replyAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited
     );
 }
 
+export function replyAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited {
+  return awaitedOf(parts, 'reply');
+}
+
+export function clickAwaited(parts: Pick<DeliveryParts, 'ledger'>): ReplyAwaited {
+  return awaitedOf(parts, 'click');
+}
+
 export function requestsNamed(
   parts: DeliveryParts,
   place: PlaceOfTheReplies,
   ids: readonly string[],
+  waited: Waited = 'reply',
 ): Effect.Effect<readonly NamedRequest[]> {
   return Effect.map(
-    Effect.forEach([...new Set(ids)], (id) => namedBy(parts, place, id)),
+    Effect.forEach([...new Set(ids)], (id) => namedBy(parts, place, id, waited)),
     (named: readonly (readonly NamedRequest[])[]) => named.flat(),
   );
 }

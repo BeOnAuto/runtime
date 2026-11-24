@@ -50,3 +50,87 @@ elements:
     type: LinkButton
     props: { label: Open the report, url: { $state: /input/reportUrl }, style: primary }
 `;
+
+export const slackAskExample = `---
+description: Ask the owner to approve or reject the logo and the palette of a brand
+to: '{{ input.channel }}'
+from: '{{ input.owner }}'
+expires: P2D
+render: slack
+deliver:
+  server: chat
+  tool: post_message
+  with: { channel: '{{ to }}', blocks: '{{ rendered }}', text: '{{ message }}' }
+  sent: { conversation: /channel, id: /ts }
+replies:
+  tool: thread_replies
+  with: { channel: '{{ sent.conversation }}', ts: '{{ sent.id }}', oldest: '{{ since | default: "0" }}' }
+  read:
+    list: /messages
+    order: oldest_first
+    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }
+input:
+  schema:
+    type: object
+    required: [channel, owner, brand]
+    properties:
+      channel: { type: string }
+      owner: { type: string }
+      brand: { type: string }
+output:
+  schema:
+    type: object
+    required: [logo, palette]
+    properties:
+      logo: { type: string, enum: [approve, reject] }
+      palette: { type: string, enum: [approve, reject] }
+---
+root: card
+elements:
+  card:
+    type: Card
+    props: { title: { $template: 'Brand review for \${/input/brand}' }, subtitle: Approve or reject each part }
+    children: [logo, palette, everything, footnote]
+  logo:
+    type: Section
+    children: [logoName, logoRow]
+  logoName:
+    type: Text
+    props: { content: The logo }
+  logoRow:
+    type: Actions
+    children: [approveLogo, rejectLogo]
+  approveLogo:
+    type: Button
+    props: { label: Approve, style: primary, once: true, sets: [{ at: /logo, value: approve }] }
+  rejectLogo:
+    type: Button
+    props: { label: Reject, once: true, sets: [{ at: /logo, value: reject }] }
+  palette:
+    type: Section
+    children: [paletteName, paletteRow]
+  paletteName:
+    type: Text
+    props: { content: The palette }
+  paletteRow:
+    type: Actions
+    children: [approvePalette, rejectPalette]
+  approvePalette:
+    type: Button
+    props: { label: Approve, style: primary, once: true, sets: [{ at: /palette, value: approve }] }
+  rejectPalette:
+    type: Button
+    props: { label: Reject, once: true, sets: [{ at: /palette, value: reject }] }
+  everything:
+    type: Actions
+    children: [approveAll]
+  approveAll:
+    type: Button
+    props:
+      label: Approve all
+      once: true
+      sets: [{ at: /logo, value: approve }, { at: /palette, value: approve }]
+  footnote:
+    type: Text
+    props: { content: Click a button, or reply in the thread., style: muted }
+`;

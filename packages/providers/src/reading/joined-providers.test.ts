@@ -130,6 +130,24 @@ describe('a provider whoever runs the runtime adds whose service sends', () => {
     ]).toEqual([[], [refused], [refused], true]);
   });
 
+  it('is refused a click its deliveries carry, as it is refused a reply', () => {
+    const click = {
+      when: { '$request.body#/type': ['block_actions'] },
+      conversation: '$request.body#/channel',
+      to: '$request.body#/message',
+      sender: '$request.body#/user',
+      action: '$request.body#/action',
+      id: '$request.body#/id',
+    };
+
+    expect(sending({ ...ofTheApp, filter: { ...ofTheApp.filter, click } })).toEqual([
+      [
+        '/events/destinations/0/filter/click',
+        'Expected no click: only an entry the runtime ships declares one, since a click a delivery carries can answer a request, and a provider whoever runs the runtime adds only makes Auto read',
+      ],
+    ]);
+  });
+
   it('is refused the events its service reports, which only an entry the runtime ships declares, as a shipped entry is not', () => {
     const reporting = { ...notes, events: { types: postTypes, destinations: [mapping(ofTheApp, aPost)] } };
 

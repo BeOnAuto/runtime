@@ -1,4 +1,5 @@
-import { applies, declaredValueIn, holds, isItsOwn, textIn, valueIn, type Arrival } from './arrival-readings.ts';
+import { isItsOwn } from './arrival-readings.ts';
+import { applies, declaredValueIn, holds, textIn, valueIn, type Arrival } from './arrival-values.ts';
 import type { Destination } from './destination-fields.ts';
 import { eventTimeOf } from './event-times.ts';
 

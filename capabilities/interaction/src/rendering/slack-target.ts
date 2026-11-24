@@ -1,7 +1,7 @@
 import { toCard } from '@json-render/chat';
-import type { CardElement } from 'chat';
 import { Result } from 'effect';
 
+import { slackComponents } from './answer-buttons.ts';
 import type { ReadonlyDeep } from './readonly-deep.ts';
 import { attempted } from './render-failures.ts';
 import type { RenderedMessage, RenderState } from './rendered-message.ts';
@@ -35,11 +35,18 @@ export function slackMessageOf(
   written: unknown,
   state: RenderState,
 ): Result.Result<RenderedMessage, readonly string[]> {
+  const { finished, ...shown } = state;
   const rewritten = withStyledLinksAsButtons(written);
   if (!isWrittenCard(rewritten)) {
     return Result.fail(['The body is not a card: write `root` and `elements`']);
   }
-  const writtenCard = { ...rewritten, state: { ...state } };
-  const attemptedCard = attempted(() => toCard(writtenCard, { limits: slackLimits }));
-  return Result.flatMap(attemptedCard, (built: ReadonlyDeep<CardElement>) => slackMessageOfCard(built));
+  const writtenCard = { ...rewritten, state: shown };
+  const attemptedCard = attempted(() => toCard(writtenCard, { limits: slackLimits, components: slackComponents }));
+  return Result.flatMap(attemptedCard, (built: ReadonlyDeep<ReturnType<typeof toCard>>) =>
+    slackMessageOfCard(built, {
+      answer: shown.answer ?? {},
+      answered: shown.answered ?? {},
+      ...(finished === undefined ? {} : { over: finished }),
+    }),
+  );
 }

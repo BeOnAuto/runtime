@@ -104,6 +104,7 @@ const reserved = [
   'delivery_failed',
   'delivery_refused',
   'reply_refused',
+  'answer_set',
   'interaction_requested',
   'telling_started',
   'telling_succeeded',

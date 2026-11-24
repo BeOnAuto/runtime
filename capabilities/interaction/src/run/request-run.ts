@@ -19,9 +19,9 @@ import { interactionBounds } from './run-bounds.ts';
 function partOf(
   ports: InteractionPorts,
   playbook: PlaybookAddress,
-  { route }: RequestDocument,
+  { route, render }: RequestDocument,
 ): Effect.Effect<ProvidedPart> {
-  if (route?.replies === undefined) {
+  if (route === undefined || (route.replies === undefined && render === undefined)) {
     return Effect.succeed({});
   }
   const { server } = route.deliver;

@@ -21,7 +21,7 @@ import {
   type ToldAs,
   type ToolAccess,
 } from '@on.auto/tool-servers';
-import { conversationCallIdKey } from '@on.auto/tool-servers/policy';
+import { conversationCallIdKey, takesAnswerKey } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect } from 'effect';
 
 import type { TellingCall } from './telling-calls.ts';
@@ -77,7 +77,10 @@ export function told({ ledger, tools }: TellingParts, telling: Telling, callId =
     ...playbook,
     reference: { server, tool: made.tool },
     input: made.input,
-    meta: { [conversationCallIdKey]: callId },
+    meta:
+      made.about === 'drawn'
+        ? { [conversationCallIdKey]: callId, [takesAnswerKey]: true }
+        : { [conversationCallIdKey]: callId },
   };
   return Effect.gen(function* () {
     const { fields, called: calling } = yield* tools.preparedCall(call);

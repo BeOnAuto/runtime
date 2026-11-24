@@ -166,6 +166,8 @@ Give `handshake` only where the service checks the address before it sends.
 | `subscription` | No       | Where a delivery names the registration's id. It does not narrow what Auto reads                                                                                                                                                                  |
 | `automatic`    | No       | Where a delivery holds something only when an app, not a person, posted the message it is about. Auto then reads nothing                                                                                                                          |
 
+A provider that ships with the runtime may also declare, in `filter`, `reply`, where a delivery carries a person's reply, and `click`, where it carries a click on a button of a message the connection sent: `when`, `conversation`, `to`, `sender`, `action`, `id` and, optionally, `time`. A provider added in the configuration file is refused both, since it only tells Auto to read.
+
 ## Where a delivery holds a value
 
 A header or a field of a delivery is written as a runtime expression of OpenAPI:

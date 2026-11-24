@@ -3,6 +3,7 @@ import { Predicate, Result, type Schema } from 'effect';
 
 import { cardBodyIssues } from '../card-bodies/card-body-issues.ts';
 import { readCardBody } from '../card-bodies/card-body-reading.ts';
+import { cardHoldsAButton } from '../rendering/button-issues.ts';
 import { isRenderTargetName, renderTargetNames } from '../rendering/render-targets.ts';
 import { forAnAgent } from '../tool-blocks/tool-block-schemas.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
@@ -43,14 +44,16 @@ function wayIssues({ deliver }: InteractionFrontMatter, lines: SourceLines): rea
 function renderedBodyOf(
   render: string,
   parts: DocumentParts,
-  inputSchema: Schema.JsonObject | undefined,
-  takesAnswer: boolean,
+  schemas: { readonly input: Schema.JsonObject | undefined; readonly output: Schema.JsonObject | undefined },
 ): Checked<RequestBody> {
   if (!isRenderTargetName(render)) {
     return Result.fail([]);
   }
   return Result.flatMap(readCardBody(parts), ({ card, lines: bodyLines }) => {
-    const issues = cardBodyIssues(render, card, bodyLines, { inputSchema, takesAnswer });
+    const issues = cardBodyIssues(render, card, bodyLines, {
+      inputSchema: schemas.input,
+      outputSchema: schemas.output,
+    });
     return issues.length > 0 ? Result.fail(issues) : Result.succeed({ render: { target: render, card } });
   });
 }
@@ -66,7 +69,11 @@ export function bodyOf(
     return Result.map(messageOf(parts, inputSchema), (message) => ({ message }));
   }
   const refused = [...targetIssues(render, lines), ...wayIssues(written, lines)];
-  const body = renderedBodyOf(render, parts, inputSchema, written.output?.schema !== undefined);
+  const body = renderedBodyOf(render, parts, { input: inputSchema, output: written.output?.schema });
   const found = [...refused, ...(Result.isFailure(body) ? body.failure : [])];
   return found.length > 0 ? Result.fail(found) : body;
+}
+
+export function bodyHoldsAButton(card?: Schema.Json): boolean {
+  return cardHoldsAButton(card);
 }

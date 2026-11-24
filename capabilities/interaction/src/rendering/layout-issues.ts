@@ -1,3 +1,4 @@
+import { cardHoldsAButton } from './button-issues.ts';
 import type { CardIssue } from './card-issues.ts';
 import { pointerTo } from './json-pointers.ts';
 import { entriesOf, hasKey, isList, isRecord } from './written-values.ts';
@@ -24,7 +25,7 @@ const longWords =
   'A long text hides its point: split it into a lead, Fields and a body, as the guide\'s "Lay the card out" says';
 const boldWords = 'Only the question is bold: keep one bold Text and make the others plain';
 const primaryWords =
-  'One button stands out: keep primary on the link the reader most likely needs and leave the others plain';
+  'One button of a row stands out: keep primary on the button the reader most likely needs and leave the others plain';
 const replyWords = 'A reader answers by replying: add a muted Text that says exactly what to reply';
 
 function propsOf(element: Written): Written {
@@ -57,21 +58,24 @@ function repeatedIdsOf(elements: Written): ReadonlySet<string> {
   return reached;
 }
 
-function primaryLinkPointersOf(elements: Written): readonly string[] {
-  const repeated = repeatedIdsOf(elements);
-  return entriesOf(elements).flatMap(([id, element]) =>
-    isRecord(element) &&
-    element['type'] === 'LinkButton' &&
-    propsOf(element)['style'] === 'primary' &&
-    !repeated.has(id)
+function isStyledPrimary(element: unknown): element is Written {
+  const type = isRecord(element) ? element['type'] : undefined;
+  return isRecord(element) && (type === 'LinkButton' || type === 'Button') && propsOf(element)['style'] === 'primary';
+}
+
+function primaryPointersOfGroup(elements: Written, group: Written): readonly string[] {
+  return childIdsOf(group).flatMap((id) => {
+    const child = hasKey(elements, id) ? elements[id] : undefined;
+    return isStyledPrimary(child) && !hasKey(child, 'repeat')
       ? [pointerTo(pointerTo(pointerTo('/elements', id), 'props'), 'style')]
-      : [],
-  );
+      : [];
+  });
 }
 
 function primaryIssues(elements: Written): readonly CardIssue[] {
-  return primaryLinkPointersOf(elements)
-    .slice(1)
+  return Object.values(elements)
+    .filter((element): element is Written => isRecord(element) && element['type'] === 'Actions')
+    .flatMap((group) => primaryPointersOfGroup(elements, group).slice(1))
     .map((pointer) => ({ pointer, detail: primaryWords }));
 }
 
@@ -117,8 +121,10 @@ function mayBeMuted({ props }: TextElement): boolean {
   return props['style'] === 'muted' || isRecord(props['style']);
 }
 
-function replyIssues(texts: readonly TextElement[], rootPointer: string): readonly CardIssue[] {
-  return texts.some((text) => mayBeMuted(text)) ? [] : [{ pointer: rootPointer, detail: replyWords }];
+function replyIssues(texts: readonly TextElement[], card: unknown, rootPointer: string): readonly CardIssue[] {
+  return texts.some((text) => mayBeMuted(text)) || cardHoldsAButton(card)
+    ? []
+    : [{ pointer: rootPointer, detail: replyWords }];
 }
 
 function rootIssues(element: Written, pointer: string): readonly CardIssue[] {
@@ -144,6 +150,6 @@ export function layoutIssues(card: unknown, takesAnswer: boolean): readonly Card
     ...texts.flatMap((text) => contentIssues(text)),
     ...boldIssues(texts),
     ...primaryIssues(elements),
-    ...(takesAnswer ? replyIssues(texts, rootPointer) : []),
+    ...(takesAnswer ? replyIssues(texts, card, rootPointer) : []),
   ];
 }

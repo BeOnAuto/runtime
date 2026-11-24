@@ -15,11 +15,13 @@ export {
   tracker,
 } from './fixture-providers.ts';
 export {
+  aClickOverASocket,
   appLevelToken,
   cardMoved,
   ofEachSubscription,
   ofTheApp,
   overASocket,
+  overASocketCarryingClicks,
   overASocketCarryingReplies,
   overTheBoardsSocket,
   throughItsTools,

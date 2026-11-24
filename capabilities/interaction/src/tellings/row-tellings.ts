@@ -2,7 +2,7 @@ import { runCorrelationIn } from '@on.auto/definitions';
 import { renderClock } from '@on.auto/definitions/template';
 import { Effect, Schema } from 'effect';
 
-import type { RequestAddress } from '../delivery/attempt-end.ts';
+import { drawnCallOf, type RunAddress } from '../clicks/drawn-calls.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { DeliverySchema, requestRowFrom, type OpenRequestRow } from '../requests/request-rows.ts';
 import type { DeliveryParts } from '../schedule/delivery-parts.ts';
@@ -14,11 +14,11 @@ const decodeDelivery = Schema.decodeUnknownSync(Schema.fromJsonString(DeliverySc
 
 const toldAll = { set: { telling_due_at: null }, when: [] };
 
-export interface FiledRequest extends RequestAddress {
+export interface FiledRequest extends RunAddress {
   readonly filedIn: Telling['filedIn'];
 }
 
-function playbookOf({ org, playbook }: RequestAddress) {
+function playbookOf({ org, playbook }: RunAddress) {
   return { org, playbook };
 }
 
@@ -28,7 +28,10 @@ function callsMade(parts: DeliveryParts, address: FiledRequest, row: OpenRequest
     const withItsWords = yield* rowTellingItsWords(parts, address, row);
     const { server } = decodeDelivery(row.delivery);
     const rendering = { clock: yield* renderClock, mostBytes: parts.tools.mostRequestBytesTo(server) };
-    const { cause, conversation, calls } = dueCallsOf(withItsWords, rendering);
+    const due = dueCallsOf(withItsWords, rendering);
+    const { cause, conversation } = due;
+    const drawn = yield* drawnCallOf(parts, address, row, true);
+    const calls = drawn === undefined ? due.calls : [drawn, ...due.calls];
     const tellingOf = (call: DueCalls['calls'][number]): Telling => ({
       playbook: playbookOf(address),
       filedIn: address.filedIn,

@@ -16,7 +16,7 @@ An interaction function is a definition of the type `interaction`. It takes one 
 
 Use one where a person must decide or supply something, or a service must act. It is not for reading what a tool marked reads returns, which is a lookup function's work, and no model reads the answer: judging or wording it is a reasoning function's.
 
-A message to a person can be a card, with fields, a table, a chart and link buttons, instead of a text: write `render` in the front matter, and read the guide [`render-slack`](render-slack.md) first.
+A message to a person can be a card, with fields, a table, a chart, link buttons and answer buttons, instead of a text: write `render` in the front matter, and read the guide [`render-slack`](render-slack.md) first.
 
 A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.
 
@@ -575,7 +575,7 @@ The run's history shows, in order:
    - `delivery_failed`, with `because` (`tool_error`, `arguments_refused`, `server_failure`, `timed_out`, `too_large` for an answer larger than one call may take, `tool_not_offered` or `lost`), its words, and the wait a server asked for as `retry_after_ms`.
    - `delivery_refused`, with `because` `too_large` or `unworkable`.
 3. The answer as `request_answered`, with the answer, the claim and, for a reply, its identity.
-4. Each refused reply as `reply_refused`, with the reply's identity and never its words.
+4. Each refused reply as `reply_refused`, with the reply's identity and never its words, and each click as `answer_set`.
 5. The run's end.
 
 A function with `call` shows its call as `tool_call_started` and `tool_call_answered`, or `tool_call_failed` when the tool never returned a result.

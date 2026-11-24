@@ -25,6 +25,16 @@ export interface KeptRequest {
   readonly answerSchema: Schema.JsonObject;
 }
 
+const clickMarker = 'click:';
+
+export function clickIdentity(clickId: string): string {
+  return `${clickMarker}${clickId}`;
+}
+
+export function isClickIdentity(replyId: string): boolean {
+  return replyId.startsWith(clickMarker);
+}
+
 export interface Reply {
   readonly id: string;
   readonly sender: string;

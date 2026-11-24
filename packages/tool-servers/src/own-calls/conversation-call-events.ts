@@ -67,9 +67,9 @@ const theConversation = {
 
 const ToldAsSchema = Schema.Struct({ conversation: Schema.String, id: Schema.String });
 
-const TellingAboutSchema = Schema.Literals(['taken', 'refused', 'ended']);
+const TellingAboutSchema = Schema.Literals(['taken', 'refused', 'ended', 'drawn']);
 
-const TellingFormSchema = Schema.Literals(['line', 'mark']);
+const TellingFormSchema = Schema.Literals(['line', 'mark', 'update']);
 
 const readArguments = {
   arguments_bytes: optionalOf(sentFields.arguments_bytes),

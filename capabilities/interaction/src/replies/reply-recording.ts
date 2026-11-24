@@ -6,7 +6,7 @@ import { Effect } from 'effect';
 import { saidOfARefusal, type ReplyRefusal } from '../facts/run-facts.ts';
 import { toldUnknowingly, type TellingsReader } from '../tellings/own-messages.ts';
 import { lineCallOf, type TellingCall } from '../tellings/telling-calls.ts';
-import type { KeptRequest, Reply } from './reply-taking.ts';
+import { isClickIdentity, type KeptRequest, type Reply } from './reply-taking.ts';
 import { routeOfRequest } from './request-routes.ts';
 import { answeredAlreadyWords, tellingWords } from './telling-words.ts';
 
@@ -119,7 +119,8 @@ export function refusalTellingOf(
   const { request, reply, because, issues, open } = refusal;
   const route = routeOfRequest(request);
   const namesItsMessage = route.replies.read.each.to !== undefined;
-  const message = tellingWords({ rule: request.rule, because, issues, open, namesItsMessage });
+  const click = isClickIdentity(reply.id) ? { click: true as const } : {};
+  const message = tellingWords({ rule: request.rule, because, issues, open, namesItsMessage, ...click });
   return Effect.gen(function* () {
     const rendering = { clock: yield* renderClock, mostBytes: tools.mostRequestBytesTo(route.server) };
     const said = { to: request.row.party, sent: request.sent, reply, message };

@@ -145,6 +145,21 @@ export const aReplyOverASocket = {
 
 export const overASocketCarryingReplies = carrying(overASocket, aReplyOverASocket);
 
+export const aClickOverASocket = {
+  when: { '$message.payload#/type': ['interactive'] },
+  conversation: '$message.payload#/payload/channel/id',
+  to: '$message.payload#/payload/container/message_ts',
+  sender: '$message.payload#/payload/user/id',
+  action: '$message.payload#/payload/actions/0/action_id',
+  id: '$message.payload#/payload/actions/0/action_ts',
+  time: '$message.payload#/payload/actions/0/action_ts',
+};
+
+export const overASocketCarryingClicks = {
+  ...overASocket,
+  filter: { ...overASocket.filter, reply: aReplyOverASocket, click: aClickOverASocket },
+};
+
 export const cardMoved = {
   type: 'com.example.boards.card.moved',
   title: 'A card is moved',

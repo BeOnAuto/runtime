@@ -1,4 +1,5 @@
 import type {
+  SlackButtonElement,
   SlackCardChild,
   SlackCardElement,
   SlackChartDefinition,
@@ -9,11 +10,12 @@ import { cardToBlockKit, cardToFallbackText } from '@chat-adapter/slack/blocks';
 import type { CardChild, CardElement, ChartDefinition } from 'chat';
 import { Result, type Schema } from 'effect';
 
+import { answerButtonMarker, answerButtonsOf, withDecidedRows, type Shown } from './answer-buttons.ts';
 import { jsonOf } from './json-values.ts';
 import type { ReadonlyDeep } from './readonly-deep.ts';
 import { attempted } from './render-failures.ts';
 import type { RenderedMessage } from './rendered-message.ts';
-import { slackShows } from './slack-limits.ts';
+import { slackPerson, slackShows } from './slack-limits.ts';
 import { styledLinkMarker } from './styled-links.ts';
 
 type Child = ReadonlyDeep<CardChild>;
@@ -44,9 +46,17 @@ function styledLinkOf(button: BuiltButton): Result.Result<SlackLinkButtonElement
   });
 }
 
+function answerButtonOf(button: BuiltButton): SlackButtonElement {
+  const { id, label, style } = button;
+  return { type: 'button', id, label, ...(style === undefined ? {} : { style }) };
+}
+
 function linkButtonsOf(children: ReadonlyDeep<CardChild & { type: 'actions' }>['children']) {
   return Result.all(
-    children.map((button): Result.Result<SlackLinkButtonElement, Issues> => {
+    children.map((button): Result.Result<SlackLinkButtonElement | SlackButtonElement, Issues> => {
+      if (button.type === 'button' && button.id.startsWith(answerButtonMarker)) {
+        return Result.succeed(answerButtonOf(button));
+      }
       if (button.type === 'button' && isStyledLinkButton(button)) {
         return styledLinkOf(button);
       }
@@ -176,16 +186,29 @@ export function slackCardOf(card: ReadonlyDeep<CardElement>): Result.Result<Slac
   });
 }
 
-export function slackMessageOfCard(card: ReadonlyDeep<CardElement>): Result.Result<RenderedMessage, Issues> {
-  const slackCard = slackCardOf(card);
-  if (Result.isFailure(slackCard)) {
-    return Result.fail(slackCard.failure);
+function buttonsOf(card: ReadonlyDeep<CardElement>): Pick<RenderedMessage, 'buttons'> {
+  const buttons = answerButtonsOf(card);
+  return buttons.length === 0 ? {} : { buttons };
+}
+
+export function slackMessageOfCard(
+  card: ReadonlyDeep<CardElement>,
+  shown: Shown,
+): Result.Result<RenderedMessage, Issues> {
+  const both = Result.all([
+    slackCardOf(withDecidedRows(card, shown, (id) => id)),
+    slackCardOf(withDecidedRows(card, shown, slackPerson)),
+  ]);
+  if (Result.isFailure(both)) {
+    return Result.fail(both.failure);
   }
-  const blocks = attempted(() => cardToBlockKit(slackCard.success));
+  const [plain, named] = both.success;
+  const blocks = attempted(() => cardToBlockKit(named));
   return Result.flatMap(blocks, (made: readonly unknown[]) =>
     Result.map(jsonOf(made, 'The Block Kit message'), (payload: Schema.Json) => ({
       payload,
-      text: cardToFallbackText(slackCard.success),
+      text: cardToFallbackText(plain),
+      ...buttonsOf(card),
     })),
   );
 }

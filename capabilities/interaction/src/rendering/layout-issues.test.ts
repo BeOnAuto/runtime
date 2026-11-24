@@ -11,7 +11,7 @@ const longWords =
   'A long text hides its point: split it into a lead, Fields and a body, as the guide\'s "Lay the card out" says';
 const boldWords = 'Only the question is bold: keep one bold Text and make the others plain';
 const primaryWords =
-  'One button stands out: keep primary on the link the reader most likely needs and leave the others plain';
+  'One button of a row stands out: keep primary on the button the reader most likely needs and leave the others plain';
 const replyWords = 'A reader answers by replying: add a muted Text that says exactly what to reply';
 
 type Elements = Readonly<Record<string, unknown>>;
@@ -152,26 +152,57 @@ function linkButton(style?: unknown) {
   };
 }
 
-describe('the links of a card', () => {
-  it('refuses a second primary link and each after it, and accepts one', () => {
-    expect(detailsOf(cardOf({ a: linkButton('primary'), b: linkButton() }))).toEqual([]);
-    expect(detailsOf(cardOf({ a: linkButton('primary'), b: linkButton('primary'), c: linkButton('primary') }))).toEqual(
-      ['/elements/b/props/style: ' + primaryWords, '/elements/c/props/style: ' + primaryWords],
-    );
+function rowOf(...buttons: readonly (readonly [string, unknown])[]) {
+  return {
+    ...Object.fromEntries(buttons),
+    row: { type: 'Actions', children: buttons.map(([id]) => id) },
+  };
+}
+
+function answerButton(style?: unknown) {
+  return {
+    type: 'Button',
+    props: { label: 'Yes', sets: [{ at: '/choice', value: 'yes' }], ...(style === undefined ? {} : { style }) },
+  };
+}
+
+describe('the buttons of a row', () => {
+  it('refuse a second primary button and each after it, and accept one', () => {
+    const one = rowOf(['a', linkButton('primary')], ['b', linkButton()]);
+    const three = rowOf(['a', linkButton('primary')], ['b', answerButton('primary')], ['c', linkButton('primary')]);
+
+    expect(detailsOf(cardOf(one))).toEqual([]);
+    expect(detailsOf(cardOf(three))).toEqual([
+      '/elements/b/props/style: ' + primaryWords,
+      '/elements/c/props/style: ' + primaryWords,
+    ]);
   });
 
-  it('counts only a literal primary on a LinkButton outside what is repeated', () => {
-    const repeated = { ...linkButton('primary'), repeat: { statePath: '/input/links' } };
+  it('count each row apart, so a row repeated for each item has one primary button each', () => {
     const card = cardOf({
-      a: linkButton('primary'),
-      danger: linkButton('danger'),
-      reading: linkButton({ $state: '/input/style' }),
-      list: { type: 'Section', repeat: { statePath: '/input/items' }, children: ['inner'] },
-      inner: linkButton('primary'),
-      again: repeated,
-      text: textOf('Plain words', 'primary'),
-      bare: { type: 'LinkButton' },
+      first: { type: 'Section', repeat: { statePath: '/input/items' }, children: ['row'] },
+      row: { type: 'Actions', children: ['yes', 'no'] },
+      yes: answerButton('primary'),
+      no: answerButton('danger'),
+      other: { type: 'Actions', children: ['again', 'last', 'missing', 7] },
+      again: answerButton('primary'),
+      last: answerButton(),
     });
+
+    expect(detailsOf(card)).toEqual([]);
+  });
+
+  it('count a literal primary only, and not a button that is repeated itself', () => {
+    const repeated = { ...linkButton('primary'), repeat: { statePath: '/input/links' } };
+    const card = cardOf(
+      rowOf(
+        ['a', linkButton('primary')],
+        ['reading', linkButton({ $state: '/input/style' })],
+        ['again', repeated],
+        ['text', textOf('Plain words', 'primary')],
+        ['bare', { type: 'LinkButton' }],
+      ),
+    );
 
     expect(detailsOf(card)).toEqual([]);
   });
@@ -183,6 +214,16 @@ describe('the reply a card that takes an answer tells the reader', () => {
 
     expect(detailsOf(card, true)).toEqual(['/elements/card: ' + replyWords]);
     expect(detailsOf(card, false)).toEqual([]);
+  });
+
+  it('accepts a card with a Button, whose click answers, with no muted Text', () => {
+    const card = cardOf({
+      a: textOf('Approve?', 'bold'),
+      buttons: { type: 'Actions', children: ['yes'] },
+      yes: answerButton(),
+    });
+
+    expect(detailsOf(card, true)).toEqual([]);
   });
 
   it('accepts a muted Text, or a style it cannot know, or a muted Text that is repeated', () => {

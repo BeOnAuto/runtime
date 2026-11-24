@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 
 import type { CallRendering } from '../readings/call-rendering.ts';
+import { isClickIdentity } from '../replies/reply-taking.ts';
 import type { OpenRequestRow } from '../requests/request-rows.ts';
 import { endingFrom } from './ending-rows.ts';
 import { endingWords, isPlacedByTheRequest, namingTheRequest } from './ending-words.ts';
@@ -32,7 +33,7 @@ function takenCalls(telling: TellingRoute, place: Place, taken: unknown): DueCal
   const { fact, reply, words } = takenFrom(taken);
   const said = { ...place.toldTo, reply, message: takenMessageOf({ fact, reply, words }) };
   return made(place, fact, [
-    markCallOf(telling, said, place.rendering),
+    isClickIdentity(reply.id) ? undefined : markCallOf(telling, said, place.rendering),
     lineCallOf(telling, 'taken', said, place.rendering),
   ]);
 }

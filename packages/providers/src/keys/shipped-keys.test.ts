@@ -56,7 +56,7 @@ const shownOfEachKey = [
     '^github_pat_.+$',
   ],
   ['profound', 'Profound API key', 'https://platform.tryprofound.com', '/', undefined, undefined],
-  ['slack-bot', 'Slack bot token', 'https://api.slack.com', '/apps', 'xoxb-…', '^xoxb-.+$'],
+  ['slack-bot', 'Slack bot token', 'https://api.slack.com', '/apps', 'xoxb-…', String.raw`^x?o?x?e?\.?xoxb-.+$`],
   ['stripe', 'API key', 'https://dashboard.stripe.com', '/apikeys', undefined, undefined],
 ];
 

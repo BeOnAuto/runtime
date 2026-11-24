@@ -3,7 +3,7 @@ import { stringFormats } from '@on.auto/json-schema';
 import { isBoundedPart } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { listedEventOf, valueIn, type ArrivalEvent } from '../events/arrival-readings.ts';
+import { listedEventOf, listedValueIn, type ArrivalEvent } from '../events/arrival-readings.ts';
 import { placesTheMark } from '../events/event-calls.ts';
 import { failedBecause } from '../subscriptions/subscription-failed.ts';
 import type { SubscriptionKey } from '../subscriptions/subscription-ports.ts';
@@ -42,7 +42,7 @@ function cursorOfAnItem({ read, events = [] }: Polled, item: Schema.Json): strin
     return cursorText(valueAt(item, read.cursor));
   }
   const id = events[0]?.id[0];
-  return id === undefined ? undefined : cursorText(valueIn({ transport: 'message', payload: item }, id));
+  return id === undefined ? undefined : cursorText(listedValueIn(item, id));
 }
 
 export interface Listed {

@@ -8,7 +8,7 @@ Decide what the reader must know, decide or do. Build the card around that one t
 2. Lead: one plain Text, only for a reason or a consequence the title cannot carry.
 3. Facts: one Fields block of two to six pairs, the one the reader acts on first.
 4. Body: what the reader must read, look at or compare, in that order: a Text of input prose, an Image, up to two Charts, one Table.
-5. Ask, when the card asks something: a Divider, one bold Text with the question, then the replies. It comes after everything the reader needs to answer. When the title is the question and nothing sits between, skip the Divider and the bold Text.
+5. Ask, when the card asks something: a Divider, one bold Text with the question, then the buttons or the replies. It comes after everything the reader needs to answer. When the title is the question and nothing sits between, skip the Divider and the bold Text.
 6. Links: one Actions row.
 7. Footnote: one muted Text. When the reader need do nothing, it says so.
 
@@ -21,7 +21,7 @@ Decide what the reader must know, decide or do. Build the card around that one t
 - A picture the reader must judge: an Image whose alt says what it shows.
 - A link: a LinkButton labelled with what it opens, never an address or a link in a Text. Give the one link the reader most likely needs \`style: primary\`, which shows it in colour, and leave the others plain. Use \`style: danger\` only for a link to something that cannot be undone. Links from an input list: repeated LinkButtons.
 
-**Replies.** The reader answers by replying in the thread, so say exactly what to reply. For yes or no, one muted Text is enough. For several answers, write one Field per answer, its label the exact word to reply and its value what happens next, then one muted Text that says to reply with one of them. Show an answer that takes a note as the word, then what to add.
+**Answers.** When the answer is one of a few fixed words, give each word a Button in one Actions row under the ask, so the reader clicks and types nothing. Give the answer the reader most likely wants \`style: primary\`, one for each row, and use \`style: danger\` only for an answer that cannot be undone. For a list of items, repeat a Section that holds a Text and one row of Buttons for each item, and make each Button set a place that names the item, such as \`{ $template: '/decisions/\${id}' }\`. For "Approve all", write one Button that sets every part, which needs the parts written out, one place for each. A reader may also reply in the thread, so end the card with one muted Text that says what to reply, unless the buttons are all the reader needs. The runtime writes the line of a row whose buttons are used, so the card needs no text for it. Where an answer takes a note, the reader replies: show it as the word, then what to add.
 
 **Emphasis.** The title is the entry point. Only the ask is bold, so a card that asks nothing has no bold Text. Only the footnote and the reply instructions are muted. Use a Divider only before the ask, or between two groups the reader handles separately. Use a Section to repeat a group once for each input item.
 
@@ -42,5 +42,6 @@ Decide what the reader must know, decide or do. Build the card around that one t
 - Do the title and subtitle alone say what this is and what is needed?
 - Is at most one Text bold, and is it the ask?
 - Does the card read right with no items and with a very long text?
-- Can the reader tell exactly what to reply, or that nothing is needed?
+- Can the reader tell exactly what to click or reply, or that nothing is needed?
+- Does each row of buttons have one primary button at most?
 `;

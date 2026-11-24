@@ -3,6 +3,7 @@ import { interactionBounds } from '../run/run-bounds.ts';
 import { layoutGuide } from './layout-guide.ts';
 import { renderTargetNames, renderTargetOf, type RenderTargetName } from './render-targets.ts';
 import type { CatalogEntry } from './slack-catalog.ts';
+import { slackAskExample } from './slack-example.ts';
 import { entriesOf, hasKey, isList, isRecord } from './written-values.ts';
 
 type Target = ReturnType<typeof renderTargetOf>;
@@ -100,9 +101,9 @@ function componentSectionOf(name: string, { description, takesChildren, props }:
   return [`### ${name}`, '', `${description} ${children}`, '', ...propLinesOf(props)].join('\n');
 }
 
-function componentsOf({ catalog, interactive }: Target): string {
+function componentsOf({ catalog, interactive, answering }: Target): string {
   return namedEntriesOf(catalog)
-    .filter(([name]) => !hasKey(interactive, name))
+    .filter(([name]) => !hasKey(interactive, name) || answering.includes(name))
     .map(([name, entry]) => componentSectionOf(name, entry))
     .join('\n\n');
 }
@@ -167,7 +168,7 @@ function shapesOf(): string {
 function introductionOf(name: RenderTargetName, { label, renderedAs, example }: Target): string {
   return `# Cards for ${label}
 
-A message to a person can be a card with text, fields, a table, a chart and link buttons. Write \`render: ${name}\` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into ${renderedAs} and offers it to \`deliver.with\` as \`rendered\`. This guide holds everything about the card. The \`interaction-function\` guide holds the other keys of the function: \`to\`, \`expires\`, \`deliver\`, \`replies\`, \`input\` and \`output\`.
+A message to a person can be a card with text, fields, a table, a chart, link buttons and, where the function takes an answer, buttons that answer it. Write \`render: ${name}\` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into ${renderedAs} and offers it to \`deliver.with\` as \`rendered\`. This guide holds everything about the card. The \`interaction-function\` guide holds the other keys of the function: \`to\`, \`expires\`, \`deliver\`, \`replies\`, \`input\` and \`output\`.
 
 ${layoutGuide}
 ## An example
@@ -179,6 +180,15 @@ This function tells a team how the week's orders went. It takes no answer, so it
 ${example.trimEnd()}
 \`\`\`
 
+## An example that asks
+
+This function asks the owner to approve or reject two parts of a brand. The reader clicks a button or replies in the thread. A click sets the part its button names, a decided part loses its buttons, and the request ends when every part the answer needs is set.
+
+<!-- prettier-ignore -->
+\`\`\`markdown
+${slackAskExample.trimEnd()}
+\`\`\`
+
 ${shapesOf()}
 ## In the front matter
 
@@ -186,7 +196,7 @@ ${shapesOf()}
 - \`render: ${name}\` is the only value that renders. It is refused with \`call\`, with no \`deliver\`, and with \`deliver: agent\`, since an agent reads text.
 - \`deliver.with\` must read \`rendered\`, and a function with no \`render\` must not. In it, \`rendered\` is ${renderedAs} and \`message\` is the plain text of the same card. \`'{{ rendered }}'\` alone is sent as the list; among other text it is refused.
 - \`deliver\` names the tool of a connection that sends a message with blocks, as the \`interaction-function\` guide sets out. Read what the tool takes with \`introspect\` first.
-- A card asks a question like any request: add \`output\` and \`replies\` as the \`interaction-function\` guide sets out. The reader answers by replying, since a click is no answer, so end the card with a \`Text\` that says how to reply.
+- A card asks a question like any request: add \`output\` and \`replies\` as the \`interaction-function\` guide sets out. The reader answers by clicking a Button, as "Buttons that answer" sets out, or by replying in the thread, so end the card with a \`Text\` that says how to reply unless the buttons are all the reader needs. A function whose card holds a Button needs no reply rule.
 - List in \`input.schema.required\` every field the card reads, so a request that lacks one is refused when it starts.
 `;
 }
@@ -202,15 +212,28 @@ A prop may read the run instead of holding a value:
 - \`{ $template: 'Due \${/input/date}' }\` fills each \`\${path}\` into the text.
 - \`repeat: { statePath: /input/items }\` on an element, beside \`props\` and \`children\`, shows its \`children\` once for each item of the list. In those children, \`{ $item: <field> }\` is that item's field.
 - A path starts with \`/input\`, the run's input, \`/today\`, the UTC day such as \`2026-11-01\`, or \`/now\`, the moment of the request in ISO 8601. They are fixed when the request is made, so every attempt sends the same card.
+- In a function that takes an answer, \`/answer\` is the answer so far and \`/answered\` says who set each part and when, as "Buttons that answer" sets out. An element may carry \`visible: { $state: /answered/logo/by }\`, which shows it only where the path holds something, or \`visible: { $state: /answered/logo/by, not: true }\`, which shows it only where it holds nothing.
 - \`$bindState\` and \`$bindItem\` take an answer from the reader, which a message cannot: they are refused.
+`;
+}
+
+function buttonsOf(): string {
+  return `## Buttons that answer
+
+A \`Button\` is allowed only in a function with \`output.schema\`, under \`Actions\`, which may sit inside a repeated \`Section\`. Its \`sets\` is a list of parts of the answer: each \`at\` is a place in the answer as a JSON Pointer, such as \`/choice\` or \`/decisions/brand-core\`, and each \`value\` is what a click puts there. Both may use \`$state\`, \`$template\` and, inside a \`repeat\`, \`$item\`, so a Button repeated for each item of an input list sets that item's own part. One Button may set several parts. Write no \`id\` or \`value\` on the Button: the run names it and keeps what it sets, so a click names only the button.
+
+- Each click applies its parts to the answer so far, and a later click on a part replaces it while the request is open. The request is answered when the answer so far fits \`output.schema\`, as a reply that answers it would end it. Until then it stays open. A reply in the thread still answers.
+- Only the person the request waits on may click, as only they may reply. A click of anyone else is not taken, and they are told so in the thread.
+- After each click, and when the request ends, the message is drawn again. The card may read \`/answer/<place>\`, the answer so far, and \`/answered/<place>/by\` and \`/answered/<place>/at\`, who set a part and when, as in \`visible: { $state: /answered/logo/by }\`. A Button with \`once: true\` is drawn only while a place it sets has no part. When the request is over, no Button is drawn, whatever the card says. A row of Buttons left with none, because their places are set or the request is over, is replaced by one muted line the runtime writes, which names the Button chosen and who chose it, written as a mention of the person, as in \`Approve, by <@U0123>\`, says \`Answered\` where no Button matches or several people chose, and says \`Closed without an answer\` where the request ended unanswered, so the card writes no text for it; a row that still has a Button keeps only its live Buttons.
+- When it is saved, a Button is refused in a function with no \`output.schema\`, with a place the schema does not name, with a value the schema refuses at its place, or in a card whose buttons can set no answer the schema takes, where its places and values are written out.
 `;
 }
 
 function refusedWhenOf(name: RenderTargetName): string {
   return `## What is refused when
 
-- When the function is saved: a \`render\` that is not \`${name}\`; a body that is not YAML, or not a mapping of \`root\` and \`elements\`; an element that is not a mapping, has a \`type\` not listed above, or has \`children\` that are not ids under \`elements\`; a path that does not start with \`/input\`, \`/today\` or \`/now\`, or names a property \`input.schema\` does not allow; props that do not fit the type, in an element with no expression and no \`repeat\`; a LinkButton \`style\` that is not \`primary\` or \`danger\`.
-- When it is saved, for layout: a function that sends through a connection that shows cards and writes no \`render\`, and a card that breaks the rules of "Lay the card out" in what it writes literally: a Card with no title or fewer than two children, a Text that holds a link, two or more \`Label: value\` lines or more than 600 characters, more than one bold Text, more than one LinkButton with \`style: primary\`, or no muted Text in a function that takes an answer. A prop that reads the input is not judged.
+- When the function is saved: a \`render\` that is not \`${name}\`; a body that is not YAML, or not a mapping of \`root\` and \`elements\`; an element that is not a mapping, has a \`type\` not listed above, or has \`children\` that are not ids under \`elements\`; a path that does not start with \`/input\`, \`/today\` or \`/now\`, or \`/answer\` or \`/answered\` in a function that takes an answer, or names a property \`input.schema\` does not allow; props that do not fit the type, in an element with no expression and no \`repeat\`; a LinkButton \`style\` that is not \`primary\` or \`danger\`.
+- When it is saved, for layout: a function that sends through a connection that shows cards and writes no \`render\`, and a card that breaks the rules of "Lay the card out" in what it writes literally: a Card with no title or fewer than two children, a Text that holds a link, two or more \`Label: value\` lines or more than 600 characters, more than one bold Text, more than one LinkButton or Button with \`style: primary\` in a row of Actions, or no muted Text in a function that takes an answer and has no Button. A prop that reads the input is not judged.
 - When it runs: a card that cannot be made ends the run \`invalid_input\` with an issue for each problem, such as a root that is not a \`Card\`, a value read from the input that does not fit its prop, a row with the wrong number of cells, a series with the wrong number of values, a \`Field\` outside \`Fields\`, an empty card, or a limit passed. Text or blocks over the limits end it \`conflict\`, kind \`unworkable\`.
 `;
 }
@@ -225,6 +248,7 @@ Write \`type\` as one of these. Each prop is shown as it is written in YAML: \`[
 
 ${componentsOf(target)}
 `,
+    buttonsOf(),
     `## Refused\n\n${refusalsOf(target)}\n`,
     `## Limits\n\n${limitsOf(target)}\n`,
     refusedWhenOf(name),

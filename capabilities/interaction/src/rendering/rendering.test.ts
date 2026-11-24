@@ -6,6 +6,8 @@ import { jsonOf } from './json-values.ts';
 import { slackCardOf, slackMessageOfCard } from './slack-cards.ts';
 import { stateReadsOf } from './state-reads.ts';
 
+const nothingShown = { answer: {}, answered: {} };
+
 describe('a value read as JSON', () => {
   it('is kept when it is plain JSON', () => {
     expect(jsonOf({ a: [1, 'b', null] }, 'The value')).toEqual(Result.succeed({ a: [1, 'b', null] }));
@@ -221,9 +223,14 @@ describe('a card Slack cannot show', () => {
       ]),
     );
   });
+});
 
+describe('a card Slack can show', () => {
   it('comes with its blocks and its fallback text', () => {
-    const message = slackMessageOfCard({ type: 'card', title: 'T', children: [{ type: 'text', content: 'Hi' }] });
+    const message = slackMessageOfCard(
+      { type: 'card', title: 'T', children: [{ type: 'text', content: 'Hi' }] },
+      nothingShown,
+    );
 
     expect(message).toEqual(
       Result.succeed({
@@ -237,7 +244,10 @@ describe('a card Slack cannot show', () => {
   });
 
   it('is refused with the issues of the card it cannot show', () => {
-    const message = slackMessageOfCard({ type: 'card', children: [{ type: 'text_input', id: 'a', label: 'A' }] });
+    const message = slackMessageOfCard(
+      { type: 'card', children: [{ type: 'text_input', id: 'a', label: 'A' }] },
+      nothingShown,
+    );
 
     expect(Result.isFailure(message)).toBe(true);
   });

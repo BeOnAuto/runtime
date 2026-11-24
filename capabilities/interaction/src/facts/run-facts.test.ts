@@ -125,10 +125,25 @@ const deliveredReplies: readonly (typeof InteractionRunFactSchema.Type)[] = [
   },
 ];
 
+const clicksTaken: readonly (typeof InteractionRunFactSchema.Type)[] = [
+  {
+    type: 'answer_set',
+    data: {
+      click: { id: '1699.5', sender: 'sender-1' },
+      action: 'auto-answer:1a2b3c',
+      parts: [
+        { at: '/decisions/brand-core', value: 'approve' },
+        { at: '/decisions/launch', value: 'reject' },
+      ],
+    },
+    context: onTheRun,
+  },
+];
+
 describe('the facts an interaction function records on its run', () => {
   recordedFactsBehaviour({
     schema: InteractionRunFactSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': readingRecorded, '0.63.0': deliveredReplies },
+    releases: { '0.46.0': baseline, '0.57.0': readingRecorded, '0.63.0': [...deliveredReplies, ...clicksTaken] },
   });
 });

@@ -28,6 +28,9 @@ const noAppSecret =
 const onlyMakesAutoRead =
   "Expected no reply: remove it, because a webhook from this service only tells Auto to read the replies now. The function's own replies says how they are read";
 
+const noClickToAnswer =
+  "Expected no click: remove it, because a webhook from this service only tells Auto to read the replies now. The function's own replies says how they are read";
+
 function startsNoWorkflow(field: string): string {
   return `Expected no ${field}: remove them, because a webhook from this service only tells Auto to read the replies now. It cannot start a workflow`;
 }
@@ -82,7 +85,7 @@ const places = {
   filter: {
     named: 'filter',
     takes: ['when', 'subscription', 'conversation', 'automatic'],
-    refusedOtherwise: ['reply'],
+    refusedOtherwise: ['reply', 'click'],
   },
   handshake: { named: 'handshake', takes: ['when', 'challenge', 'response', 'signed'] },
 } as const satisfies Readonly<Record<string, Place>>;
@@ -156,6 +159,7 @@ function filterIssuesOf(destination: JsonObject, path: Path): readonly Issue[] {
   }
   return [
     ...(filter['reply'] === undefined ? [] : [{ path: [...path, 'filter', 'reply'], issue: onlyMakesAutoRead }]),
+    ...(filter['click'] === undefined ? [] : [{ path: [...path, 'filter', 'click'], issue: noClickToAnswer }]),
     ...unknownKeysIn(filter, [...path, 'filter'], places.filter),
   ];
 }

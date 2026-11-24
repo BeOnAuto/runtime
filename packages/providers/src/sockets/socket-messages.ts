@@ -1,6 +1,6 @@
 import { JsonPointer, Option, Schema } from 'effect';
 
-import { valueIn, type Arrival } from '../events/arrival-readings.ts';
+import { valueIn, type Arrival } from '../events/arrival-values.ts';
 import type { Destination } from '../events/destination-fields.ts';
 import { messageReferenceOf } from '../events/runtime-expressions.ts';
 

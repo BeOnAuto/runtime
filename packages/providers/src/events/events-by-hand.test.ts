@@ -94,6 +94,12 @@ describe('events given by hand, declaring the events a service reports', () => {
 });
 
 describe('events given by hand, read before their form is', () => {
+  it('refuse a click at its place whatever it holds', () => {
+    expect(placesRefusedBy({ ...throughItsTools, filter: { ...throughItsTools.filter, click: { id: '$x' } } })).toEqual(
+      [`${byHand}/filter/click`],
+    );
+  });
+
   it('refuse a reply, or a field of another way of sending, at its place whatever it holds', () => {
     expect(placesRefusedBy({ ...throughItsTools, filter: { ...throughItsTools.filter, reply: { id: '$x' } } })).toEqual(
       [`${byHand}/filter/reply`],

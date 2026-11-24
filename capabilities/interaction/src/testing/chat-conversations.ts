@@ -21,3 +21,18 @@ export const chatConversations: ConversationTools = {
     with: { channel: '{{ sent.conversation }}', timestamp: '{{ reply.id }}', name: 'white_check_mark' },
   },
 };
+
+export const redrawingConversations: ConversationTools = {
+  ...chatConversations,
+  clicks: true,
+  update: {
+    tool: 'update_message',
+    with: {
+      channel: '{{ sent.conversation }}',
+      ts: '{{ sent.id }}',
+      text: '{{ message }}',
+      blocks: '{{ rendered }}',
+    },
+    sent: '/ts',
+  },
+};

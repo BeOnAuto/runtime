@@ -15,9 +15,9 @@ const keptRowFrom = Schema.decodeUnknownSync(
   Schema.Struct({
     sent_conversation: Schema.String,
     sent_id: Schema.String,
-    reading: Schema.String,
-    reply: Schema.fromJsonString(ReplyRuleSchema),
-    answer_schema: Schema.fromJsonString(Schema.JsonObject),
+    reading: Schema.NullOr(Schema.String),
+    reply: Schema.NullOr(Schema.fromJsonString(ReplyRuleSchema)),
+    answer_schema: Schema.NullOr(Schema.fromJsonString(Schema.JsonObject)),
   }),
 );
 
@@ -35,9 +35,9 @@ export function keptRequestOf(placed: PlaybookProjectedRow, stored: OpenRequestR
     runId: placed.key,
     row: stored,
     sent: { conversation: kept.sent_conversation, id: kept.sent_id },
-    reading: kept.reading,
-    rule: kept.reply,
-    answerSchema: kept.answer_schema,
+    reading: kept.reading ?? '',
+    rule: kept.reply ?? {},
+    answerSchema: kept.answer_schema ?? {},
   };
 }
 

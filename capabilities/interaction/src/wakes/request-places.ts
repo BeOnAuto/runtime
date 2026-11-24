@@ -4,6 +4,7 @@ import { Effect, Option, Schema } from 'effect';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowOf, type OpenRequestRow } from '../requests/request-rows.ts';
 import { requestRecordOf } from '../run/request-record.ts';
+import { TellingRouteSchema } from '../tellings/telling-routes.ts';
 
 export interface WaitingPlace {
   readonly connection: string;
@@ -68,9 +69,16 @@ function providedIn(parts: PlaceParts, playbook: PlaybookAddress, request: strin
   );
 }
 
+const decodeTell = Schema.decodeUnknownOption(Schema.fromJsonString(TellingRouteSchema));
+
+function awaitsAClick({ tell }: OpenRequestRow): boolean {
+  return Option.getOrUndefined(decodeTell(tell))?.update !== undefined;
+}
+
 function waitingIn(row: OpenRequestRow, connection: string): WaitingPlace | undefined {
   const { sent_conversation: conversation, conversation: readIn, expires_at: until } = row;
-  return row.open && conversation !== null && readIn !== null ? { connection, conversation, until } : undefined;
+  const waits = readIn !== null || awaitsAClick(row);
+  return row.open && conversation !== null && waits ? { connection, conversation, until } : undefined;
 }
 
 function placeOf(request: string, { provider, connection }: Provided, row: OpenRequestRow): RequestPlace {

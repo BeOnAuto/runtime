@@ -6,7 +6,7 @@ description: 'How to write a message to Slack as a card: the components and thei
 
 # Cards for Slack
 
-A message to a person can be a card with text, fields, a table, a chart and link buttons. Write `render: slack` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into the list of Slack blocks and offers it to `deliver.with` as `rendered`. This guide holds everything about the card. The `interaction-function` guide holds the other keys of the function: `to`, `expires`, `deliver`, `replies`, `input` and `output`.
+A message to a person can be a card with text, fields, a table, a chart, link buttons and, where the function takes an answer, buttons that answer it. Write `render: slack` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into the list of Slack blocks and offers it to `deliver.with` as `rendered`. This guide holds everything about the card. The `interaction-function` guide holds the other keys of the function: `to`, `expires`, `deliver`, `replies`, `input` and `output`.
 
 ## Lay the card out
 
@@ -18,7 +18,7 @@ Decide what the reader must know, decide or do. Build the card around that one t
 2. Lead: one plain Text, only for a reason or a consequence the title cannot carry.
 3. Facts: one Fields block of two to six pairs, the one the reader acts on first.
 4. Body: what the reader must read, look at or compare, in that order: a Text of input prose, an Image, up to two Charts, one Table.
-5. Ask, when the card asks something: a Divider, one bold Text with the question, then the replies. It comes after everything the reader needs to answer. When the title is the question and nothing sits between, skip the Divider and the bold Text.
+5. Ask, when the card asks something: a Divider, one bold Text with the question, then the buttons or the replies. It comes after everything the reader needs to answer. When the title is the question and nothing sits between, skip the Divider and the bold Text.
 6. Links: one Actions row.
 7. Footnote: one muted Text. When the reader need do nothing, it says so.
 
@@ -31,7 +31,7 @@ Decide what the reader must know, decide or do. Build the card around that one t
 - A picture the reader must judge: an Image whose alt says what it shows.
 - A link: a LinkButton labelled with what it opens, never an address or a link in a Text. Give the one link the reader most likely needs `style: primary`, which shows it in colour, and leave the others plain. Use `style: danger` only for a link to something that cannot be undone. Links from an input list: repeated LinkButtons.
 
-**Replies.** The reader answers by replying in the thread, so say exactly what to reply. For yes or no, one muted Text is enough. For several answers, write one Field per answer, its label the exact word to reply and its value what happens next, then one muted Text that says to reply with one of them. Show an answer that takes a note as the word, then what to add.
+**Answers.** When the answer is one of a few fixed words, give each word a Button in one Actions row under the ask, so the reader clicks and types nothing. Give the answer the reader most likely wants `style: primary`, one for each row, and use `style: danger` only for an answer that cannot be undone. For a list of items, repeat a Section that holds a Text and one row of Buttons for each item, and make each Button set a place that names the item, such as `{ $template: '/decisions/${id}' }`. For "Approve all", write one Button that sets every part, which needs the parts written out, one place for each. A reader may also reply in the thread, so end the card with one muted Text that says what to reply, unless the buttons are all the reader needs. The runtime writes the line of a row whose buttons are used, so the card needs no text for it. Where an answer takes a note, the reader replies: show it as the word, then what to add.
 
 **Emphasis.** The title is the entry point. Only the ask is bold, so a card that asks nothing has no bold Text. Only the footnote and the reply instructions are muted. Use a Divider only before the ask, or between two groups the reader handles separately. Use a Section to repeat a group once for each input item.
 
@@ -52,7 +52,8 @@ Decide what the reader must know, decide or do. Build the card around that one t
 - Do the title and subtitle alone say what this is and what is needed?
 - Is at most one Text bold, and is it the ask?
 - Does the card read right with no items and with a very long text?
-- Can the reader tell exactly what to reply, or that nothing is needed?
+- Can the reader tell exactly what to click or reply, or that nothing is needed?
+- Does each row of buttons have one primary button at most?
 
 ## An example
 
@@ -113,6 +114,96 @@ elements:
     props: { label: Open the report, url: { $state: /input/reportUrl }, style: primary }
 ```
 
+## An example that asks
+
+This function asks the owner to approve or reject two parts of a brand. The reader clicks a button or replies in the thread. A click sets the part its button names, a decided part loses its buttons, and the request ends when every part the answer needs is set.
+
+<!-- prettier-ignore -->
+```markdown
+---
+description: Ask the owner to approve or reject the logo and the palette of a brand
+to: '{{ input.channel }}'
+from: '{{ input.owner }}'
+expires: P2D
+render: slack
+deliver:
+  server: chat
+  tool: post_message
+  with: { channel: '{{ to }}', blocks: '{{ rendered }}', text: '{{ message }}' }
+  sent: { conversation: /channel, id: /ts }
+replies:
+  tool: thread_replies
+  with: { channel: '{{ sent.conversation }}', ts: '{{ sent.id }}', oldest: '{{ since | default: "0" }}' }
+  read:
+    list: /messages
+    order: oldest_first
+    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }
+input:
+  schema:
+    type: object
+    required: [channel, owner, brand]
+    properties:
+      channel: { type: string }
+      owner: { type: string }
+      brand: { type: string }
+output:
+  schema:
+    type: object
+    required: [logo, palette]
+    properties:
+      logo: { type: string, enum: [approve, reject] }
+      palette: { type: string, enum: [approve, reject] }
+---
+root: card
+elements:
+  card:
+    type: Card
+    props: { title: { $template: 'Brand review for ${/input/brand}' }, subtitle: Approve or reject each part }
+    children: [logo, palette, everything, footnote]
+  logo:
+    type: Section
+    children: [logoName, logoRow]
+  logoName:
+    type: Text
+    props: { content: The logo }
+  logoRow:
+    type: Actions
+    children: [approveLogo, rejectLogo]
+  approveLogo:
+    type: Button
+    props: { label: Approve, style: primary, once: true, sets: [{ at: /logo, value: approve }] }
+  rejectLogo:
+    type: Button
+    props: { label: Reject, once: true, sets: [{ at: /logo, value: reject }] }
+  palette:
+    type: Section
+    children: [paletteName, paletteRow]
+  paletteName:
+    type: Text
+    props: { content: The palette }
+  paletteRow:
+    type: Actions
+    children: [approvePalette, rejectPalette]
+  approvePalette:
+    type: Button
+    props: { label: Approve, style: primary, once: true, sets: [{ at: /palette, value: approve }] }
+  rejectPalette:
+    type: Button
+    props: { label: Reject, once: true, sets: [{ at: /palette, value: reject }] }
+  everything:
+    type: Actions
+    children: [approveAll]
+  approveAll:
+    type: Button
+    props:
+      label: Approve all
+      once: true
+      sets: [{ at: /logo, value: approve }, { at: /palette, value: approve }]
+  footnote:
+    type: Text
+    props: { content: Click a button, or reply in the thread., style: muted }
+```
+
 ## Shapes
 
 These three skeletons show how the zones fall for different messages, and none is a pattern to copy.
@@ -160,7 +251,7 @@ Card (title, subtitle)
 - `render: slack` is the only value that renders. It is refused with `call`, with no `deliver`, and with `deliver: agent`, since an agent reads text.
 - `deliver.with` must read `rendered`, and a function with no `render` must not. In it, `rendered` is the list of Slack blocks and `message` is the plain text of the same card. `'{{ rendered }}'` alone is sent as the list; among other text it is refused.
 - `deliver` names the tool of a connection that sends a message with blocks, as the `interaction-function` guide sets out. Read what the tool takes with `introspect` first.
-- A card asks a question like any request: add `output` and `replies` as the `interaction-function` guide sets out. The reader answers by replying, since a click is no answer, so end the card with a `Text` that says how to reply.
+- A card asks a question like any request: add `output` and `replies` as the `interaction-function` guide sets out. The reader answers by clicking a Button, as "Buttons that answer" sets out, or by replying in the thread, so end the card with a `Text` that says how to reply unless the buttons are all the reader needs. A function whose card holds a Button needs no reply rule.
 - List in `input.schema.required` every field the card reads, so a request that lacks one is refused when it starts.
 
 ## The card
@@ -173,6 +264,7 @@ A prop may read the run instead of holding a value:
 - `{ $template: 'Due ${/input/date}' }` fills each `${path}` into the text.
 - `repeat: { statePath: /input/items }` on an element, beside `props` and `children`, shows its `children` once for each item of the list. In those children, `{ $item: <field> }` is that item's field.
 - A path starts with `/input`, the run's input, `/today`, the UTC day such as `2026-11-01`, or `/now`, the moment of the request in ISO 8601. They are fixed when the request is made, so every attempt sends the same card.
+- In a function that takes an answer, `/answer` is the answer so far and `/answered` says who set each part and when, as "Buttons that answer" sets out. An element may carry `visible: { $state: /answered/logo/by }`, which shows it only where the path holds something, or `visible: { $state: /answered/logo/by, not: true }`, which shows it only where it holds nothing.
 - `$bindState` and `$bindItem` take an answer from the reader, which a message cannot: they are refused.
 
 ## Components
@@ -248,6 +340,15 @@ Row of Button and LinkButton elements. Takes `children`, a list of element ids.
 
 - No props: write `props: {}` or leave it out.
 
+### Button
+
+Button that sets parts of the answer when it is clicked. A function that takes no answer cannot have one. No `children`.
+
+- `label`, required: `non-empty text`
+- `style`, optional: `primary | danger`
+- `once`, optional: `boolean`
+- `sets`, required: `[{ at: text, value: undefined }] (1 or more)`
+
 ### LinkButton
 
 Button that opens a URL. No `children`.
@@ -256,9 +357,18 @@ Button that opens a URL. No `children`.
 - `url`, required: `URL`
 - `style`, optional: `primary | danger`
 
+## Buttons that answer
+
+A `Button` is allowed only in a function with `output.schema`, under `Actions`, which may sit inside a repeated `Section`. Its `sets` is a list of parts of the answer: each `at` is a place in the answer as a JSON Pointer, such as `/choice` or `/decisions/brand-core`, and each `value` is what a click puts there. Both may use `$state`, `$template` and, inside a `repeat`, `$item`, so a Button repeated for each item of an input list sets that item's own part. One Button may set several parts. Write no `id` or `value` on the Button: the run names it and keeps what it sets, so a click names only the button.
+
+- Each click applies its parts to the answer so far, and a later click on a part replaces it while the request is open. The request is answered when the answer so far fits `output.schema`, as a reply that answers it would end it. Until then it stays open. A reply in the thread still answers.
+- Only the person the request waits on may click, as only they may reply. A click of anyone else is not taken, and they are told so in the thread.
+- After each click, and when the request ends, the message is drawn again. The card may read `/answer/<place>`, the answer so far, and `/answered/<place>/by` and `/answered/<place>/at`, who set a part and when, as in `visible: { $state: /answered/logo/by }`. A Button with `once: true` is drawn only while a place it sets has no part. When the request is over, no Button is drawn, whatever the card says. A row of Buttons left with none, because their places are set or the request is over, is replaced by one muted line the runtime writes, which names the Button chosen and who chose it, written as a mention of the person, as in `Approve, by <@U0123>`, says `Answered` where no Button matches or several people chose, and says `Closed without an answer` where the request ended unanswered, so the card writes no text for it; a row that still has a Button keeps only its live Buttons.
+- When it is saved, a Button is refused in a function with no `output.schema`, with a place the schema does not name, with a value the schema refuses at its place, or in a card whose buttons can set no answer the schema takes, where its places and values are written out.
+
 ## Refused
 
-- `Button`: A click is not taken as an answer, so remove the Button; to send the reader somewhere, write a LinkButton with a label and a url.
+- `Button`: A Button sets part of the answer, so give the function an output.schema; to send the reader somewhere, write a LinkButton with a label and a url.
 - Anything else a Slack message cannot show. The run names the element and says to write only text, image, divider, fields, table, chart and link buttons.
 
 ## Limits
@@ -277,8 +387,8 @@ Button that opens a URL. No `children`.
 
 ## What is refused when
 
-- When the function is saved: a `render` that is not `slack`; a body that is not YAML, or not a mapping of `root` and `elements`; an element that is not a mapping, has a `type` not listed above, or has `children` that are not ids under `elements`; a path that does not start with `/input`, `/today` or `/now`, or names a property `input.schema` does not allow; props that do not fit the type, in an element with no expression and no `repeat`; a LinkButton `style` that is not `primary` or `danger`.
-- When it is saved, for layout: a function that sends through a connection that shows cards and writes no `render`, and a card that breaks the rules of "Lay the card out" in what it writes literally: a Card with no title or fewer than two children, a Text that holds a link, two or more `Label: value` lines or more than 600 characters, more than one bold Text, more than one LinkButton with `style: primary`, or no muted Text in a function that takes an answer. A prop that reads the input is not judged.
+- When the function is saved: a `render` that is not `slack`; a body that is not YAML, or not a mapping of `root` and `elements`; an element that is not a mapping, has a `type` not listed above, or has `children` that are not ids under `elements`; a path that does not start with `/input`, `/today` or `/now`, or `/answer` or `/answered` in a function that takes an answer, or names a property `input.schema` does not allow; props that do not fit the type, in an element with no expression and no `repeat`; a LinkButton `style` that is not `primary` or `danger`.
+- When it is saved, for layout: a function that sends through a connection that shows cards and writes no `render`, and a card that breaks the rules of "Lay the card out" in what it writes literally: a Card with no title or fewer than two children, a Text that holds a link, two or more `Label: value` lines or more than 600 characters, more than one bold Text, more than one LinkButton or Button with `style: primary` in a row of Actions, or no muted Text in a function that takes an answer and has no Button. A prop that reads the input is not judged.
 - When it runs: a card that cannot be made ends the run `invalid_input` with an issue for each problem, such as a root that is not a `Card`, a value read from the input that does not fit its prop, a row with the wrong number of cells, a series with the wrong number of values, a `Field` outside `Fields`, an empty card, or a limit passed. Text or blocks over the limits end it `conflict`, kind `unworkable`.
 
 </div>

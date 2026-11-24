@@ -177,3 +177,10 @@ describe('the read limits of the providers', () => {
     ]);
   });
 });
+
+describe('the providers that shipped, as to the clicks they deliver', () => {
+  it('say so for the Slack bot, which draws a message again as well, and for no provider that declares no click', () => {
+    expect(conversationsOf(shipped, 'slack-bot')).toMatchObject({ clicks: true, update: { tool: 'chat_update' } });
+    expect(conversationsOf(shipped, 'github')?.clicks).toBeUndefined();
+  });
+});

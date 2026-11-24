@@ -14,12 +14,15 @@ const LineSchema = Schema.Struct({
 
 const MarkSchema = Schema.Struct({ tool: Schema.String, with: Templates });
 
+const UpdateSchema = Schema.Struct({ tool: Schema.String, with: Templates, sent: Schema.String });
+
 const ReadLimitSchema = Schema.Struct({ quota: Schema.Int, windowSeconds: Schema.Int });
 
 export const TellingRouteSchema = Schema.Struct({
   when: Schema.Literals(tellWords),
   line: Schema.optionalKey(LineSchema),
   mark: Schema.optionalKey(MarkSchema),
+  update: Schema.optionalKey(UpdateSchema),
   automatic: Schema.optionalKey(Schema.String),
   tellsOthers: Schema.optionalKey(Schema.Boolean),
   readLimit: Schema.optionalKey(ReadLimitSchema),
@@ -39,6 +42,12 @@ export interface ConversationTools {
     readonly sent: string;
   };
   readonly react?: { readonly tool: string; readonly with: Readonly<Record<string, Schema.Json>> };
+  readonly update?: {
+    readonly tool: string;
+    readonly with: Readonly<Record<string, Schema.Json>>;
+    readonly sent: string;
+  };
+  readonly clicks?: true;
   readonly automatic?: string;
   readonly read_limit?: { readonly quota: number; readonly window_seconds: number };
 }
@@ -71,18 +80,30 @@ function readAs(part: ConversationTools | undefined): Pick<TellingRoute, 'automa
 
 function ofTheProvider(
   part: ConversationTools | undefined,
-): Pick<TellingRoute, 'mark' | 'automatic' | 'readLimit' | 'tellsOthers'> {
+): Pick<TellingRoute, 'mark' | 'update' | 'automatic' | 'readLimit' | 'tellsOthers'> {
   return {
     ...(part?.react === undefined ? {} : { mark: part.react }),
+    ...(part?.update === undefined ? {} : { update: part.update }),
     ...readAs(part),
     ...(part?.tell === 'all' ? { tellsOthers: true } : {}),
   };
 }
 
+function silentTelling(part: ConversationTools | undefined): TellingRoute {
+  return { ...toldNothing, ...readAs(part), ...(part?.update === undefined ? {} : { update: part.update }) };
+}
+
+export function clickTelling(part?: ConversationTools): TellingRoute {
+  if (part === undefined) {
+    return silentTelling(part);
+  }
+  return { ...ofTheProvider(part), when: 'refusals', line: part.reply, tellsOthers: true };
+}
+
 export function resolvedTelling(deliver: DeliverBlock, replies: Replies, part?: ConversationTools): TellingRoute {
   const { tell } = replies;
   if (tell === 'none') {
-    return { ...toldNothing, ...readAs(part) };
+    return silentTelling(part);
   }
   if (typeof tell === 'object') {
     const line = lineOf(tell, deliver);

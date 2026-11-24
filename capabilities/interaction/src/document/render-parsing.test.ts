@@ -124,9 +124,8 @@ describe('the body of a request with render, at save', () => {
 
     expect(problemsOf(renderedDocument({ card }))).toEqual([
       expect.stringMatching(
-        /^Line 30, \/elements\/body\/type: Button is interactive\. A click is not taken as an answer/u,
+        /^Line 30, \/elements\/body\/type: Button is interactive\. A Button sets part of the answer, so give the function an output\.schema/u,
       ),
-      expect.stringMatching(/^Line 31, \/elements\/body\/props\/id: This does not fit a Button/u),
     ]);
   });
 });

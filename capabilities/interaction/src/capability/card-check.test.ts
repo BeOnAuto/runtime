@@ -1,7 +1,10 @@
 import type { ToolServer } from '@on.auto/tool-servers';
-import { Effect } from 'effect';
+import { Effect, Struct } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { ConversationTools } from '../tellings/telling-routes.ts';
+import { redrawingConversations } from '../testing/chat-conversations.ts';
+import { quietRowsDocument } from '../testing/clicked-cards.ts';
 import {
   agentDelivery,
   approvalDocument,
@@ -73,5 +76,57 @@ describe('a request sent through a connection that shows cards, when it is saved
     const source = callDocument({ tool: 'post_message', read: null, with: [], output: ['output:', '  schema: {}'] });
 
     expect(await playbook.define('posting', source)).toMatchObject({ status: 'succeeded' });
+  });
+});
+
+const withoutSent = quietRowsDocument.replace('  sent:\n    conversation: /channel\n    id: /ts\n', '');
+
+const updating = redrawingConversations;
+
+const notUpdating: ConversationTools = Struct.omit(updating, ['update']);
+
+const notClicking: ConversationTools = Struct.omit(updating, ['clicks']);
+
+const savedThrough = (conversations: ConversationTools, source: string) =>
+  interactionHarness({ tools: toolsListing(serverNamed('chat', 'slack')), conversations }).define('ask-owner', source);
+
+function containing(words: string): unknown {
+  return expect.stringContaining(words);
+}
+
+function refusedWith(...words: readonly string[]) {
+  return {
+    status: 'rejected',
+    reason: 'invalid_input',
+    detail: 'The interaction function definition has a problem',
+    issues: [{ pointer: '/source', detail: containing(words[0] ?? '') }],
+  };
+}
+
+describe('a card with buttons, when it is saved', () => {
+  it('is saved where its message can be found again, drawn again and clicked', async () => {
+    expect(await savedThrough(updating, quietRowsDocument)).toMatchObject({ status: 'succeeded' });
+  });
+
+  it('is refused where deliver names no sent, with the words that say to write it', async () => {
+    expect(await savedThrough(updating, withoutSent)).toEqual(
+      refusedWith('A card with buttons finds its message again'),
+    );
+  });
+
+  it('is refused where its connection says nothing of how a message is drawn again', async () => {
+    expect(await savedThrough(notUpdating, quietRowsDocument)).toEqual(refusedWith('Nothing says how a message sent'));
+  });
+
+  it('is refused where its connection says nothing of a click reaching Auto', async () => {
+    expect(await savedThrough(notClicking, quietRowsDocument)).toEqual(
+      refusedWith('Nothing says that a click on a message sent'),
+    );
+  });
+
+  it('is saved where its server is not one the playbook is served, as it is found out when it runs', async () => {
+    const playbook = interactionHarness({ tools: toolsListing(serverNamed('mail', 'slack')) });
+
+    expect(await playbook.define('ask-owner', quietRowsDocument)).toMatchObject({ status: 'succeeded' });
   });
 });

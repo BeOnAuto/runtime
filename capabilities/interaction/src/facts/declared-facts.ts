@@ -2,6 +2,7 @@ import { declaredFact, type CapabilityFacts } from '@on.auto/definitions';
 import { conversationCallPresenter } from '@on.auto/tool-servers';
 
 import {
+  answerPartsSetAccount,
   failedAccount,
   refusedAccount,
   replyRefusedAccount,
@@ -9,6 +10,7 @@ import {
   succeededAccount,
 } from './fact-accounts.ts';
 import {
+  AnswerSetFactSchema,
   DeliveryFailedFactSchema,
   DeliveryRefusedFactSchema,
   DeliveryStartedFactSchema,
@@ -23,6 +25,7 @@ export const interactionFacts: CapabilityFacts = {
     declaredFact('delivery_failed', DeliveryFailedFactSchema, failedAccount),
     declaredFact('delivery_refused', DeliveryRefusedFactSchema, (fact) => refusedAccount(fact)),
     declaredFact('reply_refused', ReplyRefusedFactSchema, (fact) => replyRefusedAccount(fact)),
+    declaredFact('answer_set', AnswerSetFactSchema, (fact) => answerPartsSetAccount(fact)),
   ],
   streams: [conversationCallPresenter],
 };

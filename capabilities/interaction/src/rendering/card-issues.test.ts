@@ -108,11 +108,11 @@ describe('the style of a LinkButton', () => {
 });
 
 describe('the check of the interactive components of a card for slack', () => {
-  it('refuses a Button, for a click is not an answer, and points to a LinkButton', () => {
+  it('refuses a Button where the function takes no answer, and points to a LinkButton', () => {
     const card = withElements({
       card: { type: 'Card', props: { title: 'Pick' }, children: ['actions'] },
       actions: { type: 'Actions', children: ['yes', 'guide'] },
-      yes: { type: 'Button', props: { id: 'yes', label: 'Yes' } },
+      yes: { type: 'Button', props: { label: 'Yes', sets: [{ at: '/choice', value: 'yes' }] } },
       guide: { type: 'LinkButton', props: { label: 'Guide', url: 'https://example.com' } },
     });
 
@@ -210,5 +210,82 @@ describe('the check of the props of an element for slack', () => {
     });
 
     expect(cardIssues('slack', card)).toEqual([]);
+  });
+});
+
+function buttonCard(props?: unknown, extra: Readonly<Record<string, unknown>> = {}) {
+  return withElements({
+    card: { type: 'Card', props: { title: 'Pick' }, children: ['actions'] },
+    actions: { type: 'Actions', children: ['yes'] },
+    yes: { type: 'Button', props },
+    ...extra,
+  });
+}
+
+const yes = { label: 'Yes', sets: [{ at: '/choice', value: 'yes' }] };
+
+function detailsOf(props: unknown): readonly string[] {
+  return cardIssues('slack', buttonCard(props), true).map(({ pointer }) => pointer);
+}
+
+describe('the check of a Button where the function takes an answer', () => {
+  it('finds nothing in a Button that sets a place, with a style or an expression for a place and a value', () => {
+    expect([
+      detailsOf(yes),
+      detailsOf({ ...yes, style: 'danger', once: true }),
+      detailsOf({ ...yes, style: { $state: '/input/style' } }),
+      detailsOf({
+        label: { $state: '/input/label' },
+        sets: [{ at: { $template: '/a/${id}' }, value: { $item: 'x' } }],
+      }),
+    ]).toEqual([[], [], [], []]);
+  });
+
+  it('is judged on a Button alone', () => {
+    expect(cardIssues('slack', buttonCard({ label: 'Go' }, { yes: { type: 'Divider' } }), true)).toEqual([]);
+  });
+});
+
+describe('the check of the sets of a Button where the function takes an answer', () => {
+  it('is refused for sets that are none, empty, or not a mapping', () => {
+    expect([
+      detailsOf({ label: 'Yes' }),
+      detailsOf({ label: 'Yes', sets: [] }),
+      detailsOf({ label: 'Yes', sets: 'yes' }),
+      detailsOf({ label: 'Yes', sets: ['yes'] }),
+    ]).toEqual([
+      ['/elements/yes/props/sets'],
+      ['/elements/yes/props/sets'],
+      ['/elements/yes/props/sets'],
+      ['/elements/yes/props/sets/0'],
+    ]);
+  });
+
+  it('is refused for a place that is no pointer, a missing value, and no label', () => {
+    expect([
+      detailsOf({ label: 'Yes', sets: [{ at: 'choice', value: 'yes' }] }),
+      detailsOf({ label: 'Yes', sets: [{ at: '/choice' }] }),
+      detailsOf({ sets: yes.sets }),
+      detailsOf({ label: '', sets: yes.sets }),
+    ]).toEqual([
+      ['/elements/yes/props/sets/0/at'],
+      ['/elements/yes/props/sets/0'],
+      ['/elements/yes/props/label'],
+      ['/elements/yes/props/label'],
+    ]);
+  });
+
+  it('is refused for a style that is neither primary nor danger, and for an id or a value of its own', () => {
+    expect([detailsOf({ ...yes, style: 'default' }), detailsOf({ ...yes, id: 'yes', value: 'x' })]).toEqual([
+      ['/elements/yes/props/style'],
+      ['/elements/yes/props/id', '/elements/yes/props/value'],
+    ]);
+  });
+
+  it('is judged with no props as having none', () => {
+    expect(cardIssues('slack', buttonCard(), true).map(({ pointer }) => pointer)).toEqual([
+      '/elements/yes/props/label',
+      '/elements/yes/props/sets',
+    ]);
   });
 });

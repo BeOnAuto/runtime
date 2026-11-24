@@ -23,7 +23,9 @@ export interface EndingColumns {
 
 function tellsTheEnding(row: Ended): boolean {
   const telling = Option.getOrUndefined(tellingOfRow(row.tell));
-  return row.sent_id !== null && telling !== undefined && tellsALine(telling, 'ended');
+  return (
+    row.sent_id !== null && telling !== undefined && (tellsALine(telling, 'ended') || telling.update !== undefined)
+  );
 }
 
 export function endingColumnsOf(row: Ended, ending: Ending, at: string): EndingColumns | undefined {

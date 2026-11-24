@@ -1,7 +1,7 @@
 import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { Arrival } from '../events/arrival-readings.ts';
+import type { Arrival } from '../events/arrival-values.ts';
 import type { Destination } from '../events/destination-fields.ts';
 import { acknowledgementOf, messageArrivalOf } from './socket-messages.ts';
 

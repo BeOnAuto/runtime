@@ -1,12 +1,12 @@
-import { standardComponentDefinitions } from '@json-render/chat';
 import type { Result } from 'effect';
 
+import { slackComponents } from './answer-buttons.ts';
 import type { ChatRendering } from './chat-rendering.ts';
 import type { RenderedMessage, RenderState } from './rendered-message.ts';
 import { slackCatalog, type CatalogEntry } from './slack-catalog.ts';
 import { slackChat } from './slack-chat.ts';
 import { slackExample } from './slack-example.ts';
-import { slackLimitList, slackShows } from './slack-limits.ts';
+import { slackLimitList, slackPerson, slackShows } from './slack-limits.ts';
 import { slackMessageOf } from './slack-target.ts';
 
 interface PropsParse {
@@ -32,8 +32,10 @@ interface RenderTarget {
   readonly components: Readonly<Record<string, ComponentDefinition>>;
   readonly catalog: Readonly<Record<string, CatalogEntry>>;
   readonly interactive: Readonly<Record<string, string>>;
+  readonly answering: readonly string[];
   readonly limits: readonly RenderLimit[];
   readonly shows: string;
+  readonly person: (id: string) => string;
   readonly example: string;
   readonly render: (card: unknown, state: RenderState) => Result.Result<RenderedMessage, readonly string[]>;
   readonly chat: ChatRendering;
@@ -43,14 +45,16 @@ const renderTargets = {
   slack: {
     label: 'Slack',
     renderedAs: 'the list of Slack blocks',
-    components: standardComponentDefinitions,
+    components: slackComponents,
     catalog: slackCatalog,
     interactive: {
       Button:
-        'A click is not taken as an answer, so remove the Button; to send the reader somewhere, write a LinkButton with a label and a url',
+        'A Button sets part of the answer, so give the function an output.schema; to send the reader somewhere, write a LinkButton with a label and a url',
     },
+    answering: ['Button'],
     limits: slackLimitList,
     shows: slackShows,
+    person: slackPerson,
     example: slackExample,
     render: slackMessageOf,
     chat: slackChat,

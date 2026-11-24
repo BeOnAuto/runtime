@@ -90,7 +90,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     sent_id: null,
     sent_at: null,
     answerer: request.answerer ?? null,
-    reply: jsonOf(request.reply),
+    reply: jsonOf(request.reply ?? ('buttons' in request ? {} : undefined)),
     reply_refusals: 0,
     refusals_told: 0,
     tell: tellingOf(request),
@@ -158,7 +158,7 @@ function attemptEnded(
 
 function worked(row: OpenRequestRow, message: ProjectedMessage): ProjectedRow | undefined {
   const fact = interactionFactOf(message);
-  if (fact === undefined) {
+  if (fact === undefined || fact.type === 'answer_set') {
     return undefined;
   }
   if (fact.type === 'delivery_started') {

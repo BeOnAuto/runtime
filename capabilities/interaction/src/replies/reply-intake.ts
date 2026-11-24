@@ -42,7 +42,7 @@ function howItArrived({ delivered }: Arrival) {
   return delivered === undefined ? {} : { delivered };
 }
 
-interface Taking {
+export interface Taking {
   readonly request: KeptRequest;
   readonly reply: Reply;
   readonly answer: Schema.Json;
@@ -60,7 +60,11 @@ function toldTaken(intake: Intake, state: IntakeState, request: KeptRequest, mad
   }));
 }
 
-function taken(intake: Intake, state: IntakeState, { request, reply, answer }: Taking): Effect.Effect<IntakeState> {
+export function taken(
+  intake: Intake,
+  state: IntakeState,
+  { request, reply, answer }: Taking,
+): Effect.Effect<IntakeState> {
   const given = { answer, reply: answeredReplyOf(reply), ...howItArrived(intake.arrival) };
   const work = { type: 'answer', answer: given } as const;
   return recordedReplyWork(placeOf(intake, request), request, reply, { work }).pipe(
@@ -69,7 +73,7 @@ function taken(intake: Intake, state: IntakeState, { request, reply, answer }: T
   );
 }
 
-interface Refusal {
+export interface Refusal {
   readonly request: KeptRequest;
   readonly reply: Reply;
   readonly because: ReplyRefusal;
@@ -109,7 +113,7 @@ function tellingOf(request: KeptRequest, call: Telling['call'], made: RecordedRe
   };
 }
 
-function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
+export function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   const { request, reply } = refusal;
   return Effect.gen(function* () {
     const open = intake.candidates.filter(({ runId }) => !state.answered.has(runId)).length;

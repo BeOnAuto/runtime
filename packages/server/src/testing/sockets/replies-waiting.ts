@@ -1,4 +1,4 @@
-import { playbooksWaitingIn, replyAwaited, replyDelivery } from '@on.auto/interaction';
+import { clickDelivery, playbooksWaitingIn, replyAwaited, replyDelivery } from '@on.auto/interaction';
 import {
   chatConversations,
   chatHarness,
@@ -78,6 +78,7 @@ export async function repliesWaiting(...answers: readonly Effect.Effect<CalledOn
     waitingIn: playbooksWaitingIn({ ledger }),
     awaited: replyAwaited({ ledger }),
     delivered: replyDelivery({ ledger, tools: playbook.chat, record: playbook.record }),
+    clicked: clickDelivery({ ledger, tools: playbook.chat, record: playbook.record }),
     tools: statuses.tools,
   };
   return { playbook, thread: Option.getOrThrow(Option.fromNullishOr(request)).ts, replies, statuses };

@@ -13,3 +13,11 @@ export const slackLimitList = [
 export const slackLimits = Object.fromEntries(slackLimitList.map(({ key, most }) => [key, most]));
 
 export const slackShows = 'text, image, divider, fields, table, chart and link buttons';
+
+const slackMemberId = /^[UW][A-Z0-9]+$/u;
+
+export function slackPerson(id: string): string {
+  return slackMemberId.test(id)
+    ? `<@${id}>`
+    : id.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}

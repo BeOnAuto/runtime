@@ -6,6 +6,8 @@ import { ArgumentsSchema, argumentIssuesOver, issuesOf, noLines, toolIssues, typ
 
 const variablesRead = 'to, sent.conversation, sent.id, message, reply.id and reply.to';
 
+const updateVariablesRead = 'sent.conversation, sent.id, message and rendered';
+
 const writtenAsDeliverIs = `written as the arguments of a function's deliver are, each a Liquid template over ${variablesRead}`;
 
 const ReplySchema = Schema.Struct({
@@ -25,6 +27,18 @@ const ReactSchema = Schema.Struct({
     description: "The tool that marks a person's message with a reaction, named as the server lists it",
   }),
   with: ArgumentsSchema.annotate({ description: `Its arguments, ${writtenAsDeliverIs}` }),
+});
+
+const UpdateSchema = Schema.Struct({
+  tool: Schema.String.annotate({
+    description: 'The tool that changes a message the connection sent, named as the server lists it',
+  }),
+  with: ArgumentsSchema.annotate({
+    description: `Its arguments, written as the arguments of a function's deliver are, each a Liquid template over ${updateVariablesRead}: message is the text of the card and rendered the blocks it is drawn as`,
+  }),
+  sent: Schema.String.annotate({
+    description: 'A JSON Pointer into what the tool answered, to the id of the message it changed',
+  }),
 });
 
 const TypingSchema = Schema.Struct({
@@ -65,6 +79,11 @@ export const ConversationsSchema = Schema.Struct({
   }),
   reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
   react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),
+  update: Schema.optionalKey(
+    UpdateSchema.annotate({
+      description: 'How a message the connection sent is drawn again, as a card that shows who has answered it',
+    }),
+  ),
   typing: Schema.optionalKey(
     TypingSchema.annotate({ description: 'How the provider shows a person that Auto is working on their reply' }),
   ),
@@ -91,6 +110,13 @@ export const conversationTemplates: TemplateSet = {
     message: 'A line',
     reply: { id: '1699.2', to: '1699.1' },
   },
+  structured: 'sent',
+};
+
+const updateTemplates: TemplateSet = {
+  names: ['sent.conversation', 'sent.id', 'message', 'rendered'],
+  what: 'a template of an update',
+  sample: { sent: { conversation: 'C0123', id: '1699.1' }, message: 'A line', rendered: [] },
   structured: 'sent',
 };
 
@@ -153,7 +179,7 @@ export function conversationIssuesOf(
   if (conversations === undefined) {
     return [];
   }
-  const { reply, react, typing, automatic } = conversations;
+  const { reply, react, typing, automatic, update } = conversations;
   return issuesOf([
     ...toolIssues('/conversations/reply/tool', reply.tool),
     ...argumentIssues('/conversations/reply/with', reply.with),
@@ -166,6 +192,13 @@ export function conversationIssuesOf(
       : [
           ...toolIssues('/conversations/react/tool', react.tool),
           ...argumentIssues('/conversations/react/with', react.with),
+        ]),
+    ...(update === undefined
+      ? []
+      : [
+          ...toolIssues('/conversations/update/tool', update.tool),
+          ...argumentIssuesOver(updateTemplates, '/conversations/update/with', update.with),
+          ...pointerIssues(noLines, [['/conversations/update/sent', update.sent]]),
         ]),
     ...typingIssues(typing, codes),
   ]);

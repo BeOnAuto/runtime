@@ -1,4 +1,4 @@
-import { declaredValueIn, headerIn, textIn, type Arrival } from './arrival-readings.ts';
+import { declaredValueIn, headerIn, textIn, type Arrival } from './arrival-values.ts';
 import type { Destination } from './destination-fields.ts';
 
 export interface PresentedProof {

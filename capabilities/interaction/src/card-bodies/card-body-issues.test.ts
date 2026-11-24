@@ -20,8 +20,15 @@ function readingCard(path: string): Schema.Json {
   };
 }
 
+const answerSchema: Schema.JsonObject = {
+  type: 'object',
+  required: ['choice'],
+  properties: { choice: { type: 'string', enum: ['approve', 'reject'] } },
+};
+
 function issuesOf(card: Schema.Json, inputSchema?: Schema.JsonObject, takesAnswer = false): readonly string[] {
-  return cardBodyIssues('slack', card, lines, { inputSchema, takesAnswer }).map(
+  const outputSchema = takesAnswer ? answerSchema : undefined;
+  return cardBodyIssues('slack', card, lines, { inputSchema, outputSchema }).map(
     ({ line, pointer, detail }) => `${line} ${pointer}: ${detail}`,
   );
 }
@@ -103,6 +110,39 @@ describe('the paths the card of a request with render reads', () => {
 
     expect(issuesOf(card)).toEqual([
       '9 /elements/card/props/title/$template: Reads /user/name, which a request does not have; start the path with /input, /today or /now',
+    ]);
+  });
+});
+
+describe('the card of a request that takes an answer', () => {
+  it('may read the answer so far and who set each part, which a request with no answer may not', () => {
+    const reads = (path: string) =>
+      issuesOf(readingCard(path), undefined, true).filter((issue) => issue.includes('Reads'));
+
+    expect(reads('/answer/choice')).toEqual([]);
+    expect(reads('/answered/choice/by')).toEqual([]);
+    expect(issuesOf(readingCard('/answer/choice'))).toEqual([
+      '9 /elements/card/props/title/$state: Reads /answer/choice, which a request does not have; start the path with /input, /today or /now',
+    ]);
+    expect(reads('/user/name')).toEqual([
+      '9 /elements/card/props/title/$state: Reads /user/name, which a request does not have; start the path with /input, /today or /now, /answer or /answered',
+    ]);
+  });
+
+  it('is refused for a Button that sets a place the answer does not have, at the place it was written', () => {
+    const card = {
+      root: 'card',
+      elements: {
+        card: { type: 'Card', props: { title: 'Pick' }, children: ['ask', 'row'] },
+        ask: { type: 'Text', props: { content: 'Approve?', style: 'bold' } },
+        row: { type: 'Actions', children: ['yes'] },
+        yes: { type: 'Button', props: { label: 'Yes', sets: [{ at: '/choise', value: 'approve' }] } },
+      },
+    };
+
+    expect(issuesOf(card, undefined, true)).toEqual([
+      '4 /elements/yes/props/sets/0/at: The answer has no place /choise: set a place the output schema names',
+      '4 /elements/yes/props/sets/0: No button sets /choice, which the answer needs, so the buttons of this card cannot answer it: add a button that sets it',
     ]);
   });
 });

@@ -36,6 +36,27 @@ const DeliveredReplySchema = Schema.Struct({
     "Where a delivery holds the person's reply, so that Auto takes the reply as it arrives, without reading the conversation first. Only an entry that ships with the runtime can declare it: in a provider added in the configuration file it is refused.",
 });
 
+const DeliveredClickSchema = Schema.Struct({
+  when: ConditionsSchema.annotate({ description: 'The arrivals that are a click, as filter.when names an arrival' }),
+  account: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'Where a delivery names the account a click happened in, where connection.account does not',
+    }),
+  ),
+  conversation: Schema.String.annotate({
+    description: 'Where a delivery names the conversation of the clicked message',
+  }),
+  to: Schema.String.annotate({ description: 'Where a delivery names the message clicked, as sent.id names it' }),
+  sender: Schema.String.annotate({ description: 'Where a delivery names who clicked' }),
+  action: Schema.String.annotate({ description: 'Where a delivery names the id of the button clicked' }),
+  id: Schema.String.annotate({ description: 'Where a delivery holds an identity unique to the click' }),
+  time: Schema.optionalKey(
+    Schema.String.annotate({ description: 'Where a delivery says when the click happened, as a reply names its time' }),
+  ),
+}).annotate({
+  description: 'Where a delivery holds a click on a button of a message the connection sent',
+});
+
 export const FilterSchema = Schema.Struct({
   when: ConditionsSchema.annotate({
     description:
@@ -60,6 +81,7 @@ export const FilterSchema = Schema.Struct({
     }),
   ),
   reply: Schema.optionalKey(DeliveredReplySchema),
+  click: Schema.optionalKey(DeliveredClickSchema),
 }).annotate({ description: 'Which arrivals make Auto read the conversations that wait, through the reading it does' });
 
 const ExpressionSchema = Schema.String;

@@ -1,9 +1,20 @@
 import { RequestRecordSchema } from '@on.auto/definitions';
 import { Option, Schema } from 'effect';
 
+import { PartSchema } from '../rendering/answer-buttons.ts';
 import { ReplyRuleSchema } from '../replies/reply-rule.ts';
 import { TellingRouteSchema } from '../tellings/telling-routes.ts';
 import { RepliesSchema, DeliverBlockSchema } from '../tool-blocks/tool-block-schemas.ts';
+
+const RedrawSchema = Schema.Struct({
+  target: Schema.Literal('slack'),
+  card: Schema.Json,
+  input: Schema.Json,
+  today: Schema.String,
+  now: Schema.String,
+});
+
+export type Redraw = typeof RedrawSchema.Type;
 
 const InteractionRequestSchema = Schema.Struct({
   ...RequestRecordSchema.fields,
@@ -13,6 +24,8 @@ const InteractionRequestSchema = Schema.Struct({
   tell: Schema.optionalKey(TellingRouteSchema),
   provider: Schema.optionalKey(Schema.String),
   rendered: Schema.optionalKey(Schema.Json),
+  buttons: Schema.optionalKey(Schema.Record(Schema.String, Schema.Array(PartSchema))),
+  redraw: Schema.optionalKey(RedrawSchema),
 });
 
 export type RequestRecord = typeof InteractionRequestSchema.Type;

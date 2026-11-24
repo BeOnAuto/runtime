@@ -8,7 +8,7 @@ import { Effect, Result, Schema } from 'effect';
 
 import type { RenderedBody } from '../document/interaction-document.ts';
 import { renderedCard } from '../rendering/card-rendering.ts';
-import type { RenderState } from '../rendering/rendered-message.ts';
+import type { RenderedMessage, RenderState } from '../rendering/rendered-message.ts';
 import { interactionBounds } from './run-bounds.ts';
 
 export interface RenderedPart {
@@ -80,6 +80,7 @@ export const messagePart = { pointer: '', what: 'The message', mostBytes: intera
 export interface RenderedRequest {
   readonly message: string;
   readonly rendered: Schema.Json;
+  readonly buttons?: Readonly<Record<string, NonNullable<RenderedMessage['buttons']>[number]['sets']>>;
 }
 
 function unrenderable(issues: readonly string[]): InvalidInput {
@@ -94,7 +95,7 @@ export function renderedRequest(
   state: RenderState,
 ): Effect.Effect<RenderedRequest, Conflict | InvalidInput> {
   return Result.match(renderedCard(target, card, state), {
-    onSuccess: ({ payload, text }) => {
+    onSuccess: ({ payload, text, buttons = [] }) => {
       if (Buffer.byteLength(text, 'utf8') > interactionBounds.messageBytes) {
         return Effect.fail(
           unworkable(
@@ -111,7 +112,11 @@ export function renderedRequest(
               `The rendered message takes ${bytes} bytes, more than the ${interactionBounds.renderedBytes} a request may hold; show less of the input`,
             ),
           )
-        : Effect.succeed({ message: text, rendered: payload });
+        : Effect.succeed({
+            message: text,
+            rendered: payload,
+            ...(buttons.length === 0 ? {} : { buttons: Object.fromEntries(buttons.map(({ id, sets }) => [id, sets])) }),
+          });
     },
     onFailure: (issues) => Effect.fail(unrenderable(issues)),
   });

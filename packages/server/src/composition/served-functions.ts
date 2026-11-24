@@ -43,7 +43,7 @@ async function forecasterServedOn(
 
 interface WakingParts extends Pick<SocketsServing, 'opens'> {
   readonly projections: Pick<SocketsServing, 'store'>;
-  readonly recorded: Pick<SocketsServing, 'delivered'>;
+  readonly recorded: Pick<SocketsServing, 'delivered' | 'clicked'>;
   readonly subscriptions: ReturnType<Awaited<ReturnType<typeof toolUsersServedBy>>['subscriptionsOver']>;
   readonly tools: Pick<SocketsServing, 'secrets'> & {
     readonly now?: SocketsServing['now'];
@@ -55,7 +55,7 @@ interface WakingParts extends Pick<SocketsServing, 'opens'> {
 function wakeUpsOf(
   runtime: ServingRuntime,
   settings: ServedSettings,
-  { subscriptions, tools, computation, projections: { store }, opens, recorded: { delivered } }: WakingParts,
+  { subscriptions, tools, computation, projections: { store }, opens, recorded: { delivered, clicked } }: WakingParts,
 ): readonly ReturnType<typeof socketsOfTheServer>[] {
   const following = subscriptions.wakeUpsOver({ streams: store.database.store });
   const sockets = {
@@ -64,6 +64,7 @@ function wakeUpsOf(
     secrets: tools.secrets,
     identities: subscriptions.identities,
     delivered,
+    clicked,
     tools: subscriptions.tools,
     filters: computation.pool.evaluations.filters,
     now: tools.now ?? Date.now,

@@ -79,7 +79,7 @@ export function takenColumnsOf(
   id: string,
 ): TakenColumns {
   const taken: Taken = { fact: id, reply, words: wordsAnsweredOf(kept.reply, data) };
-  const tells = lastTakenFormOf(tellingKept(kept)) !== undefined;
+  const tells = lastTakenFormOf(tellingKept(kept)) !== undefined || tellingKept(kept)?.update !== undefined;
   return { taken: JSON.stringify(taken), telling_due_at: tells ? Date.parse(context.at) : null };
 }
 

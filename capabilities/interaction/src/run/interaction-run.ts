@@ -1,10 +1,12 @@
-import { momentVariables } from '@on.auto/definitions/tool-blocks';
+import { Buffer } from 'node:buffer';
+
+import { momentVariables, unworkable } from '@on.auto/definitions/tool-blocks';
 import type { Conflict, InvalidInput } from '@on.auto/operations';
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { RequestDocument } from '../document/interaction-document.ts';
-import { resolvedTelling, type ConversationTools } from '../tellings/telling-routes.ts';
-import type { RequestRecord } from './request-record.ts';
+import { clickTelling, resolvedTelling, type ConversationTools } from '../tellings/telling-routes.ts';
+import type { Redraw, RequestRecord } from './request-record.ts';
 import {
   checkedAnswerer,
   checkedParty,
@@ -13,7 +15,9 @@ import {
   renderedPart,
   renderedRequest,
   toPart,
+  type RenderedRequest,
 } from './request-rendering.ts';
+import { interactionBounds } from './run-bounds.ts';
 
 type Variables = Readonly<Record<string, Schema.Json>>;
 
@@ -41,13 +45,43 @@ function messageOf(
   document: RequestDocument,
   variables: Variables,
   { input, now }: { readonly input: Schema.Json; readonly now: string },
-): Effect.Effect<Pick<RequestRecord, 'message' | 'rendered'>, Conflict | InvalidInput> {
+): Effect.Effect<Pick<RequestRecord, 'message' | 'rendered' | 'buttons' | 'redraw'>, Conflict | InvalidInput> {
   if (document.render === undefined) {
     return Effect.map(renderedPart({ ...messagePart, template: document.message }, variables), (message) => ({
       message,
     }));
   }
-  return renderedRequest(document.render, { input, today: now.slice(0, 10), now });
+  const { target, card } = document.render;
+  const state = { input, today: now.slice(0, 10), now };
+  return Effect.flatMap(renderedRequest(document.render, state), (request) =>
+    request.buttons === undefined ? Effect.succeed(request) : withRedraw(request, { target, card, ...state }),
+  );
+}
+
+function withRedraw(
+  request: RenderedRequest,
+  redraw: Redraw,
+): Effect.Effect<RenderedRequest & { readonly redraw: Redraw }, Conflict> {
+  const bytes = Buffer.byteLength(JSON.stringify(redraw), 'utf8');
+  return bytes > interactionBounds.renderedBytes
+    ? Effect.fail(
+        unworkable(
+          '',
+          `The card and the input it reads take ${bytes} bytes, more than the ${interactionBounds.renderedBytes} a request with buttons may hold; show less of the input`,
+        ),
+      )
+    : Effect.succeed({ ...request, redraw });
+}
+
+function tellingOf(
+  route: RequestDocument['route'],
+  buttons: RequestRecord['buttons'],
+  part: ConversationTools | undefined,
+): Pick<RequestRecord, 'replies' | 'tell'> {
+  if (route?.replies !== undefined) {
+    return { replies: route.replies, tell: resolvedTelling(route.deliver, route.replies, part) };
+  }
+  return buttons === undefined ? {} : { tell: clickTelling(part) };
 }
 
 export function requestOf(
@@ -74,9 +108,7 @@ export function requestOf(
       expires_at: new Date(at + document.expiresMs).toISOString(),
       requested_at: now,
       ...(route === undefined ? {} : { deliver: route.deliver }),
-      ...(route?.replies === undefined
-        ? {}
-        : { replies: route.replies, tell: resolvedTelling(route.deliver, route.replies, part) }),
+      ...tellingOf(route, message.buttons, part),
       ...(provider === undefined ? {} : { provider }),
     };
   });

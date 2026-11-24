@@ -1,6 +1,6 @@
 import { SlackBlockError } from '@chat-adapter/slack/blocks';
 import { standardComponentDefinitions } from '@json-render/chat';
-import { Result } from 'effect';
+import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { problemsOf, renderedDocumentOf } from '../testing/route-documents.ts';
@@ -73,6 +73,8 @@ const description =
 
 const example = /```markdown\n([\s\S]*?)\n```/u.exec(guide)?.[1] ?? '';
 
+const askingExample = /An example that asks[\s\S]*?```markdown\n([\s\S]*?)\n```/u.exec(guide)?.[1] ?? '';
+
 describe('the guide of a render target', () => {
   it('names each component of the catalog the target takes', () => {
     const named = Object.keys(standardComponentDefinitions).filter((name) => name !== 'Button');
@@ -95,8 +97,10 @@ describe('the guide of a render target', () => {
 
 describe('the refusals and limits of the guide of a render target', () => {
   it('refuses the interactive components with what to write instead, and gives no section to them', () => {
-    expect(guide).not.toContain('### Button');
-    expect(guide).toContain('- `Button`: A click is not taken as an answer, so remove the Button; to send the reader');
+    expect(guide).toContain('### Button\n');
+    expect(guide).toContain(
+      '- `Button`: A Button sets part of the answer, so give the function an output.schema; to send the reader',
+    );
     expect(guide).toContain('write only text, image, divider, fields, table, chart and link buttons');
   });
 
@@ -112,7 +116,7 @@ describe('the refusals and limits of the guide of a render target', () => {
   });
 
   it('is short enough to read in one call', () => {
-    expect(Buffer.byteLength(guide)).toBeLessThan(14_000);
+    expect(Buffer.byteLength(guide)).toBeLessThan(22_000);
   });
 });
 
@@ -165,6 +169,37 @@ describe('the example of the guide of a render target', () => {
 
     expect(text).toContain('Orders, week of 2026-10-05');
     expect(text).toContain('Northwind');
+  });
+});
+
+describe('the example that asks, in the guide of a render target', () => {
+  it('holds a function that is saved as written', () => {
+    expect(problemsOf(askingExample)).toEqual([]);
+  });
+
+  it('holds a card whose buttons are drawn, and whose decided part loses its buttons', () => {
+    const { render } = renderedDocumentOf(askingExample);
+    const state = { input: { brand: 'Acme' }, today: '2026-10-07', now: '2026-10-07T09:00:00Z' };
+    const drawn = (answered: Schema.Json) =>
+      Result.getOrThrow(renderedCard(render.target, render.card, { ...state, answered }));
+
+    const shown = (answered: Schema.Json) => JSON.stringify(drawn(answered).payload).match(/auto-answer:/gu)?.length;
+
+    expect(drawn({}).buttons?.map(({ sets }) => sets.length)).toEqual([1, 1, 1, 1, 2]);
+    expect([shown({}), shown({ logo: { by: 'U1', at: 'then' } })]).toEqual([5, 3]);
+    expect(drawn({}).text).toContain('Brand review for Acme');
+  });
+});
+
+describe('how a render target writes a person', () => {
+  it('is a mention for a member id of Slack, and escaped text for anything else', () => {
+    const { person } = renderTargetOf('slack');
+
+    expect([person('U0123ABC'), person('W0123'), person('a<b>&c')]).toEqual([
+      '<@U0123ABC>',
+      '<@W0123>',
+      'a&lt;b&gt;&amp;c',
+    ]);
   });
 });
 

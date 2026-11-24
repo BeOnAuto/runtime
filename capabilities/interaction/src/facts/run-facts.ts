@@ -67,7 +67,14 @@ const DeliveryRefusedSchema = Schema.Struct({
   duration_ms: Schema.Int,
 });
 
-const ReplyRefusalSchema = Schema.Literals(['not_an_answer', 'invalid', 'too_long', 'ambiguous', 'not_the_answerer']);
+const ReplyRefusalSchema = Schema.Literals([
+  'not_an_answer',
+  'invalid',
+  'too_long',
+  'ambiguous',
+  'not_the_answerer',
+  'unknown_button',
+]);
 
 const ReplyRefusedSchema = Schema.Struct({
   server: Schema.String,
@@ -79,12 +86,19 @@ const ReplyRefusedSchema = Schema.Struct({
   delivered: Schema.optionalKey(Schema.Literal(true)),
 });
 
+const AnswerSetSchema = Schema.Struct({
+  click: Schema.Struct({ id: Schema.String, sender: Schema.String }),
+  action: Schema.String,
+  parts: Schema.Array(Schema.Struct({ at: Schema.String, value: Schema.Json })).check(Schema.isMinLength(1)),
+});
+
 export const InteractionRunFactSchema = Schema.Union([
   factOf('delivery_started', DeliveryStartedSchema, RunContextSchema, argumentsHeld),
   factOf('delivery_succeeded', DeliverySucceededSchema, RunContextSchema, resultHeld),
   factOf('delivery_failed', DeliveryFailedSchema, RunContextSchema, resultHeld),
   factOf('delivery_refused', DeliveryRefusedSchema, RunContextSchema),
   factOf('reply_refused', ReplyRefusedSchema, RunContextSchema),
+  factOf('answer_set', AnswerSetSchema, RunContextSchema),
 ]);
 
 export const [
@@ -93,6 +107,7 @@ export const [
   DeliveryFailedFactSchema,
   DeliveryRefusedFactSchema,
   ReplyRefusedFactSchema,
+  AnswerSetFactSchema,
 ] = InteractionRunFactSchema.members;
 
 export type RecordedInteractionFact = typeof InteractionRunFactSchema.Type;
@@ -115,6 +130,8 @@ export type DeliveryStarted = FactNamed<'delivery_started'>;
 export type DeliveryEnded = FactNamed<'delivery_succeeded' | 'delivery_failed' | 'delivery_refused'>;
 
 export type ReplyRefused = FactNamed<'reply_refused'>;
+
+export type AnswerSet = FactNamed<'answer_set'>;
 
 export type ReplyRefusal = typeof ReplyRefusalSchema.Type;
 

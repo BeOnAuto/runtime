@@ -5,7 +5,7 @@ import {
   cardMoved,
   ledgers,
   overASocket,
-  overASocketCarryingReplies,
+  overASocketCarryingClicks,
   overTheBoardsSocket,
   providersOf,
   trackerOverASocket,
@@ -71,7 +71,7 @@ export const socketProviders = providersOf(
     ...trackerOverASocket,
     name: 'chats',
     title: 'Chats',
-    events: { destinations: [overASocketCarryingReplies] },
+    events: { destinations: [overASocketCarryingClicks] },
     conversations: chatsConversations,
   },
   {

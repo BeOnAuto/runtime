@@ -23,7 +23,7 @@ import {
   type SocketMember,
   type WantedSocket,
 } from './socket-registries.ts';
-import { repliesTakenBy, type CarriedReply, type ArrivalParts } from './socket-replies.ts';
+import { clickedBy, repliesTakenBy, type CarriedReply, type ArrivalParts } from './socket-replies.ts';
 
 type ArrivalEvent = NonNullable<ArrivalReading['event']>;
 
@@ -195,7 +195,14 @@ class SocketSet {
     if (wake?.conversation === undefined) {
       return Effect.void;
     }
-    const { conversation, reply } = wake;
+    const { conversation, reply, click } = wake;
+    if (click !== undefined) {
+      return Effect.flatMap(Clock.currentTimeMillis, (now) =>
+        Effect.forEach(members, (member) => clickedBy(this.#parts.replies)(member, { conversation, click, now }), {
+          discard: true,
+        }),
+      );
+    }
     if (reply === undefined) {
       return this.#wokenEach(members, conversation);
     }

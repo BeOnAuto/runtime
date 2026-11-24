@@ -28,17 +28,18 @@ export interface Answering {
   readonly reply: WrittenRule | undefined;
   readonly answerSchema: Schema.JsonObject | undefined;
   readonly readsReplies: boolean;
+  readonly answeredByButtons: boolean;
 }
 
 export function replyOf(
-  { reply, answerSchema, readsReplies }: Answering,
+  { reply, answerSchema, readsReplies, answeredByButtons }: Answering,
   lines: SourceLines,
 ): Checked<ReplyRule | null> {
   const checked = Result.mapError(checkedRule(reply, answerSchema), (issues) =>
     issues.map(({ pointer, detail }) => issueAt(lines, pointer, detail)),
   );
   return Result.flatMap(checked, (rule) =>
-    rule === null && readsReplies && answerSchema !== undefined
+    rule === null && readsReplies && answerSchema !== undefined && !answeredByButtons
       ? Result.fail([issueAt(lines, '/replies', ruleNeeded)])
       : Result.succeed(rule),
   );

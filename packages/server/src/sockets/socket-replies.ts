@@ -1,5 +1,8 @@
 import type {
+  ClickDelivery,
   ConnectionWake,
+  PerformedClick,
+  DeliveredClick,
   DeliveredReply,
   PlaybooksWaiting,
   ReplyAwaited,
@@ -16,6 +19,7 @@ export interface SocketReplies {
   readonly waitingIn: PlaybooksWaiting;
   readonly awaited: ReplyAwaited;
   readonly delivered: ReplyDelivery;
+  readonly clicked: ClickDelivery;
   readonly tools: StatusTools;
 }
 
@@ -31,6 +35,14 @@ interface RepliesTaking extends Pick<ArrivalParts, 'replies'> {
 
 type ReadReply = NonNullable<NonNullable<ArrivalReading['wake']>['reply']>;
 
+type ReadClick = NonNullable<NonNullable<ArrivalReading['wake']>['click']>;
+
+export interface CarriedClick {
+  readonly conversation: string;
+  readonly click: ReadClick;
+  readonly now: number;
+}
+
 export interface CarriedReply {
   readonly conversation: string;
   readonly reply: ReadReply;
@@ -40,6 +52,7 @@ export interface CarriedReply {
 type Statuses = ReturnType<typeof replyStatusesOf>;
 
 const replyWords = {
+  unclicked: 'A click that arrived over a socket could not be taken, and is lost',
   untaken:
     'A reply that arrived over a socket could not be taken as it arrived, so the reading of its conversation takes it',
 } as const;
@@ -105,4 +118,70 @@ function takenBy(replies: SocketReplies, statuses: Statuses) {
 export function repliesTakenBy({ replies, registries, context }: RepliesTaking) {
   const statuses = replyStatusesOf({ tools: replies.tools, providers: registries.providers, context });
   return { taken: takenBy(replies, statuses), stop: statuses.stop };
+}
+
+function deliveredClickOf({ click, now }: CarriedClick): DeliveredClick {
+  const { id, sender, to, action, time } = click;
+  return { id, sender, to, action, time: millisecondsSinceTheEpochOf(time) ?? now };
+}
+
+type Verdict = Pick<PerformedClick, 'outcome' | 'because'>;
+
+const notTakenWords: Readonly<Record<string, string>> = {
+  account: 'A click that arrived over a socket is of another account than its connection, so it was not taken',
+  nobody: 'A click that arrived over a socket is on a message no request waits on, so it was not taken',
+  no_request:
+    'A click that arrived over a socket is on a message no request of the playbook was sent as, so it was not taken',
+  closed: 'A click that arrived over a socket is on a request that is answered or ended, so it was not taken',
+  unrecorded: 'A click that arrived over a socket could not be recorded, so it was not taken',
+};
+
+function reasonOf({ outcome, because }: Verdict): string | undefined {
+  if (outcome === 'unrecorded') {
+    return 'unrecorded';
+  }
+  return because === 'no_request' || because === 'closed' ? because : undefined;
+}
+
+function notTaken(member: SocketMember, reason: string): Effect.Effect<void> {
+  return Effect.logWarning(notTakenWords[reason]).pipe(
+    Effect.annotateLogs({ org: member.org, connection: member.holder.connection, reason }),
+  );
+}
+
+export function clickedBy(replies: SocketReplies) {
+  return (member: SocketMember, carried: CarriedClick): Effect.Effect<void> => {
+    const { org, holder } = member;
+    if (holder.account !== carried.click.account) {
+      return notTaken(member, 'account');
+    }
+    const { conversation } = carried;
+    return Effect.flatMap(replies.waitingIn(org, conversation), (playbooks) =>
+      playbooks.length === 0
+        ? notTaken(member, 'nobody')
+        : Effect.forEach(
+            playbooks,
+            (playbook) =>
+              Effect.flatMap(
+                replies.clicked(
+                  { playbook, connection: holder.name, conversation, clicks: [deliveredClickOf(carried)] },
+                  carried.now,
+                ),
+                (performed) =>
+                  Effect.forEach(
+                    performed.flatMap((each) => reasonOf(each) ?? []),
+                    (reason) => notTaken(member, reason),
+                    { discard: true },
+                  ),
+              ),
+            { discard: true },
+          ),
+    ).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning(replyWords.unclicked, cause).pipe(
+          Effect.annotateLogs({ org, connection: holder.connection }),
+        ),
+      ),
+    );
+  };
 }

@@ -1,3 +1,4 @@
+import { buttonIssues } from './button-issues.ts';
 import { expressionsIn } from './expressions.ts';
 import { pointerTo } from './json-pointers.ts';
 import { renderTargetOf, type RenderTargetName } from './render-targets.ts';
@@ -42,9 +43,11 @@ function topLevelIssues(card: Written): readonly CardIssue[] {
   return issues;
 }
 
-function typeIssues(target: Target, pointer: string, type: unknown): readonly CardIssue[] {
+function typeIssues(target: Target, pointer: string, type: unknown, takesAnswer: boolean): readonly CardIssue[] {
   const at = pointerTo(pointer, 'type');
-  const remedy = typeof type === 'string' && hasKey(target.interactive, type) ? target.interactive[type] : undefined;
+  const answersByButton = takesAnswer && type === 'Button';
+  const refused = typeof type === 'string' && hasKey(target.interactive, type) && !answersByButton;
+  const remedy = refused ? target.interactive[type] : undefined;
   if (remedy !== undefined) {
     return [{ pointer: at, detail: `${String(type)} is interactive. ${remedy}` }];
   }
@@ -109,7 +112,7 @@ function propsFitIssues(target: Target, element: Written, pointer: string): read
   }));
 }
 
-function propsIssues(target: Target, element: Written, pointer: string): readonly CardIssue[] {
+function propsIssues(target: Target, element: Written, pointer: string, takesAnswer: boolean): readonly CardIssue[] {
   const { props } = element;
   const propsPointer = pointerTo(pointer, 'props');
   if (props !== undefined && !isRecord(props)) {
@@ -117,31 +120,38 @@ function propsIssues(target: Target, element: Written, pointer: string): readonl
   }
   return [
     ...bindingIssues(propsPointer, props),
-    ...propsFitIssues(target, element, pointer),
+    ...(element['type'] === 'Button' ? [] : propsFitIssues(target, element, pointer)),
     ...linkStyleIssues(element, pointer),
+    ...(takesAnswer ? buttonIssues(element, pointer) : []),
   ];
 }
 
-function elementIssues(target: Target, elements: Written, id: string, element: unknown): readonly CardIssue[] {
+interface Judging {
+  readonly target: Target;
+  readonly elements: Written;
+  readonly takesAnswer: boolean;
+}
+
+function elementIssues({ target, elements, takesAnswer }: Judging, id: string, element: unknown): readonly CardIssue[] {
   const pointer = pointerTo('/elements', id);
   if (!isRecord(element)) {
     return [{ pointer, detail: 'Write the element as a mapping with `type`, `props` and `children`' }];
   }
   return [
-    ...typeIssues(target, pointer, element['type']),
+    ...typeIssues(target, pointer, element['type'], takesAnswer),
     ...childIssues(elements, pointer, element['children']),
-    ...propsIssues(target, element, pointer),
+    ...propsIssues(target, element, pointer, takesAnswer),
   ];
 }
 
-export function cardIssues(targetName: RenderTargetName, written: unknown): readonly CardIssue[] {
+export function cardIssues(targetName: RenderTargetName, written: unknown, takesAnswer = false): readonly CardIssue[] {
   if (!isRecord(written)) {
     return [{ pointer: '', detail: 'Write the body as a mapping with `root` and `elements`' }];
   }
   const target = renderTargetOf(targetName);
   const { elements } = written;
   const elementIssuesOfAll = isRecord(elements)
-    ? entriesOf(elements).flatMap(([id, element]) => elementIssues(target, elements, id, element))
+    ? entriesOf(elements).flatMap(([id, element]) => elementIssues({ target, elements, takesAnswer }, id, element))
     : [];
   return [...topLevelIssues(written), ...elementIssuesOfAll];
 }

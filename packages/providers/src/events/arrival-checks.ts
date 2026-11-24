@@ -1,3 +1,4 @@
+import { clickIssuesOf } from './click-checks.ts';
 import {
   arrangesNoSubscription,
   subscribesForEachPlace,
@@ -12,31 +13,17 @@ import {
   notWrittenOutWhole,
   textIssues,
 } from './event-calls.ts';
-import { provesTheBody, provesTheBodyAndATime } from './event-proofs.ts';
+import { provesTheBody } from './event-proofs.ts';
+import {
+  conditionIssuesOf,
+  expressionIssuesAt,
+  provesAReply,
+  replyPlaceOf,
+  type Conditions,
+  type Path,
+} from './expression-issues.ts';
 import { pathOf } from './json-texts.ts';
-import { expressionIssueOf, inEveryPlaceOf, type ExpressionPlace } from './runtime-expressions.ts';
-
-type Path = readonly (string | number)[];
-
-function expressionIssuesAt(
-  path: Path,
-  expression: string | undefined,
-  place: ExpressionPlace,
-): readonly DestinationIssue[] {
-  const issue = expression === undefined ? undefined : expressionIssueOf(expression, place);
-  return issue === undefined ? [] : [{ path, issue }];
-}
-
-const noConditions = 'Expected at least one runtime expression with the values it may equal';
-
-type Conditions = Readonly<Record<string, readonly (string | null)[]>>;
-
-function conditionIssuesOf(path: Path, when: Conditions, place: ExpressionPlace): readonly DestinationIssue[] {
-  const expressions = Object.keys(when);
-  return expressions.length === 0
-    ? [{ path, issue: noConditions }]
-    : expressions.flatMap((expression) => expressionIssuesAt([...path, expression], expression, place));
-}
+import { inEveryPlaceOf, type ExpressionPlace } from './runtime-expressions.ts';
 
 const namesNoSubscription =
   'Expected subscription only in the filter of a destination per subscription, whose arrivals name the subscription Auto made';
@@ -61,20 +48,6 @@ function filterIssuesOf(destination: Destination): readonly DestinationIssue[] {
 type DeliveredReply = NonNullable<NonNullable<Destination['filter']>['reply']>;
 
 const placesOfAReply: readonly (keyof DeliveredReply)[] = ['id', 'sender', 'text', 'to', 'time', 'changed'];
-
-function replyPlaceOf(destination: Destination): ExpressionPlace {
-  return transportOf(destination) === 'request'
-    ? {
-        transport: 'request',
-        sources: ['body'],
-        because: 'since a reply is read from the body alone, which the proof covers',
-      }
-    : { transport: 'message', sources: ['payload'], because: "since a reply is read from the message's payload alone" };
-}
-
-function provesAReply({ type, verify }: Destination): boolean {
-  return type === 'websocket' || (verify !== undefined && provesTheBodyAndATime(verify));
-}
 
 const unproven =
   'Expected reply only on a websocket, or on a webhook whose verify proves every byte of the body and a time, as standard-webhooks does, and as hmac does where it signs {payload} and a timestamp. A secret or a signed token in a header proves who sent a delivery but not that its body is theirs, and nothing proves what a queue holds, so such a destination can only tell Auto to read the replies now';
@@ -281,6 +254,7 @@ export function arrivalIssuesOf(destination: Destination): readonly DestinationI
   return [
     ...filterIssuesOf(destination),
     ...replyIssuesOf(destination),
+    ...clickIssuesOf(destination),
     ...eventIssuesOf(destination),
     ...chatIssuesOf(destination),
     ...handshakeIssuesOf(destination),

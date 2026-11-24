@@ -13,7 +13,8 @@ import {
   whoItActsAs,
 } from '../testing/event-destinations.ts';
 import { providersOf } from '../testing/fixture-providers.ts';
-import { arrivalReadingOf, type Arrival, type ArrivalReading } from './arrival-readings.ts';
+import { arrivalReadingOf, type ArrivalReading } from './arrival-readings.ts';
+import type { Arrival } from './arrival-values.ts';
 import { millisecondsSinceTheEpochOf } from './event-times.ts';
 
 type Fields = Readonly<Record<string, Schema.Json>>;

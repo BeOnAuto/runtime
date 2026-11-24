@@ -5,7 +5,7 @@ import { eventDestinationOf } from '../reading/provider-list.ts';
 import { aMention, chatOverASocket, overASocketWithAChat } from '../testing/chat-destinations.ts';
 import { without } from '../testing/event-destinations.ts';
 import { providersOf } from '../testing/fixture-providers.ts';
-import type { Arrival } from './arrival-readings.ts';
+import type { Arrival } from './arrival-values.ts';
 import { chatMessageIn, type ChatMessage } from './chat-arrivals.ts';
 
 type Fields = Readonly<Record<string, Schema.Json>>;

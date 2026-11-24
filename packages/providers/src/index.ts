@@ -32,7 +32,8 @@ export {
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
 export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provider-names.ts';
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
-export { arrivalReadingOf, type Arrival, type ArrivalReading } from './events/arrival-readings.ts';
+export { arrivalReadingOf, type ArrivalReading } from './events/arrival-readings.ts';
+export type { Arrival } from './events/arrival-values.ts';
 export { chatMessageIn, type ChatMessage } from './events/chat-arrivals.ts';
 export { millisecondsSinceTheEpochOf } from './events/event-times.ts';
 export { typingShownBy, typingShownThrough } from './events/typing-calls.ts';

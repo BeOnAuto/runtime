@@ -193,6 +193,7 @@ describe('a reply that arrives over a socket before the account of its connectio
       waitingIn: () => Effect.die(new Error('the ledger is down')),
       awaited: () => Effect.die('a reply was asked about'),
       delivered: () => Effect.die('a reply was delivered'),
+      clicked: () => Effect.die('a click was delivered'),
       tools: statusesAnswering(Effect.die('a working status was shown')).tools,
     };
     waiting.server.takesRepliesBy(failing);

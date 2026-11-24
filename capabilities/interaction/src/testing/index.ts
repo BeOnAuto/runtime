@@ -54,3 +54,4 @@ export { chatProjections } from './chat-projections.ts';
 export { wakesHeard, type HeardWake, type WakesHeard } from './wakes-heard.ts';
 export { readOnce, theChannel } from './woken-conversations.ts';
 export { chatConversations, noConversations } from './chat-conversations.ts';
+export { actionOf, clickedRun, clickingIn, quietRowsDocument, rowsInputValue, type Clicking } from './clicked-cards.ts';

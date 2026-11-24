@@ -49,6 +49,7 @@ const noRequestWaits: SocketReplies = {
   waitingIn: Function.constant(Effect.succeed([])),
   awaited: Function.constant(Effect.die('a reply was asked about')),
   delivered: Function.constant(Effect.die('a reply was delivered')),
+  clicked: Function.constant(Effect.die('a click was delivered')),
   tools: {
     callOnce: Function.constant(Effect.die('a working status was shown')),
     mostRequestBytesTo: Function.constant(1_048_576),

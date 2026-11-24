@@ -9,8 +9,21 @@ export interface CatalogEntry {
 
 const { LinkButton } = standardComponentDefinitions;
 
+const AnswerButton = {
+  description:
+    'Button that sets parts of the answer when it is clicked. A function that takes no answer cannot have one.',
+  slots: [],
+  props: z.object({
+    label: z.string().min(1),
+    style: z.enum(['primary', 'danger']).optional(),
+    once: z.boolean().optional(),
+    sets: z.array(z.object({ at: z.string(), value: z.json() })).min(1),
+  }),
+};
+
 const writableDefinitions = {
   ...standardComponentDefinitions,
+  Button: AnswerButton,
   LinkButton: {
     ...LinkButton,
     props: LinkButton.props.extend({ style: z.enum(['primary', 'danger']).optional() }),
