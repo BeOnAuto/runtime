@@ -2960,6 +2960,11 @@ type GoalRead {
     """The next_cursor of the page before, to read on after it"""
     cursor: String
   ): ListGoalResultsAnswer
+
+  """
+  Each run that marked a thing of the goal still open, read whole, once each, as get_run reads it
+  """
+  marked_by: [RunRead]
 }
 
 union GoalReadWindow = GoalReadWindow1 | GoalReadWindow2

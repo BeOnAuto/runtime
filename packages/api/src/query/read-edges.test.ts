@@ -123,11 +123,29 @@ describe('the reads bound to a line of activity', () => {
   });
 });
 
+function marked(...runs: readonly string[]): BoundInput {
+  return { marks: runs.map((run) => ({ milestone: 'received', run })) };
+}
+
 describe('the reads bound to a goal', () => {
   it.each([
     [{ id: 'orders' }, { goal: 'orders' }],
     [{}, undefined],
   ] as const)('reads the results of the goal %j', (item, input) => {
     expect(boundBy('get_playbook_goals', 'results')(item)).toEqual(input);
+  });
+
+  it.each([
+    [
+      'each run that marked a thing still open, once',
+      { assessments: { current: marked('r1'), in_flight: [marked('r2', 'r1'), marked('r3')] } },
+      [{ run_id: 'r1' }, { run_id: 'r2' }, { run_id: 'r3' }],
+    ],
+    ['none where nothing is open', { assessments: { current: null, in_flight: [] } }, []],
+    ['none where the goal says nothing of its things', {}, []],
+    ['none where its marks are not a list', { assessments: { current: { marks: 'r1' } } }, []],
+    ['no mark without its run', { assessments: { in_flight: [{ marks: [{ milestone: 'received' }, 'r9'] }] } }, []],
+  ] as const)('reads %s, whole', (_, item, input) => {
+    expect(boundBy('get_playbook_goals', 'marked_by')(item)).toEqual(input);
   });
 });

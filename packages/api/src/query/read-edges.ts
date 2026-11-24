@@ -143,6 +143,30 @@ function readsOfARun(runOf: (item: BoundInput) => string | undefined, whole: boo
 
 const theRunId = (item: BoundInput) => textAt(item, 'run_id');
 
+function listed(value: unknown): readonly unknown[] {
+  const items: readonly unknown[] = Array.isArray(value) ? value : [];
+  return items;
+}
+
+function runsMarking(thing: unknown): readonly string[] {
+  const marks = Predicate.hasProperty(thing, 'marks') ? listed(thing.marks) : [];
+  return marks.flatMap((mark) => {
+    const run = Predicate.isObject(mark) ? textAt({ ...mark }, 'run') : undefined;
+    return run === undefined ? [] : [run];
+  });
+}
+
+function runsMarkingWhatIsOpen(goal: BoundInput): readonly BoundInput[] {
+  const assessments = goal['assessments'];
+  const open: readonly unknown[] = Predicate.isObject(assessments)
+    ? [
+        Predicate.hasProperty(assessments, 'current') ? assessments.current : undefined,
+        ...(Predicate.hasProperty(assessments, 'in_flight') ? listed(assessments.in_flight) : []),
+      ]
+    : [];
+  return [...new Set(open.flatMap((thing) => runsMarking(thing)))].map((run) => ({ run_id: run }));
+}
+
 export const READ_EDGES: readonly ReadEdge[] = [
   PLAYBOOKS_LISTED,
   { operation: 'list_definitions', scope: 'playbook', at: ['definitions'], reads: [theDefinitionWhole, itsRuns] },
@@ -185,6 +209,14 @@ export const READ_EDGES: readonly ReadEdge[] = [
           const goal = textAt(item, 'id');
           return goal === undefined ? undefined : { goal };
         },
+      },
+      {
+        field: 'marked_by',
+        operation: 'get_run',
+        description: 'Each run that marked a thing of the goal still open, read whole, once each, as get_run reads it',
+        binds: ['run_id'],
+        input: runsMarkingWhatIsOpen,
+        many: true,
       },
     ],
   },
