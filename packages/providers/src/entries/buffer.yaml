@@ -3,6 +3,11 @@ title: Buffer
 description: Read the channels, posts, ideas and post metrics of every Buffer organization the person who connects belongs to, and schedule or publish posts and save ideas, as that person, through Buffer's MCP server. It connects with an API key, since Buffer's sign-in takes the apps Buffer lists alone.
 summary: Lets your playbooks read channels and posts in Buffer, and schedule or publish posts.
 website: https://developers.buffer.com/guides/integrations/mcp.html
+icons:
+  - src: icons/buffer.svg
+    theme: light
+  - src: icons/buffer-dark.svg
+    theme: dark
 type: mcp
 url: https://mcp.buffer.com/mcp
 credentials:

@@ -285,6 +285,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
           description,
           ...(summary === undefined ? {} : { summary }),
           website,
+          ...(provider.icons === undefined ? {} : { icons: provider.icons }),
           type,
           credentials: ways,
           placeholders: listedPlaceholdersOf(provider.entry.placeholders),

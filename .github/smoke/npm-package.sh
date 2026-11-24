@@ -45,7 +45,7 @@ show_what_failed() {
 }
 trap 'show_what_failed "$?" "$LINENO" "$BASH_COMMAND"' ERR
 tarball="$(ls "$repository"/dist/on.auto-runtime-*.tgz)"
-export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1 PORT="$port"
+export XDG_CACHE_HOME="$RUNNER_TEMP/cache" npm_config_cache="$RUNNER_TEMP/npm-cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1 PORT="$port"
 npm install --prefix "$RUNNER_TEMP/installed" --no-audit --no-fund "$tarball" > npm-install.log 2>&1
 node "$(dirname "${BASH_SOURCE[0]}")/native-add-ons.ts" "$RUNNER_TEMP/installed/node_modules"
 runtime() {

@@ -22192,6 +22192,46 @@
                   ],
                   "additionalProperties": false,
                   "$defs": {
+                    "ProviderIcon": {
+                      "type": "object",
+                      "properties": {
+                        "src": {
+                          "type": "string",
+                          "description": "The image, as a data URI."
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "enum": [
+                            "image/svg+xml",
+                            "image/png",
+                            "image/jpeg",
+                            "image/webp"
+                          ],
+                          "description": "The image's file type, such as image/png."
+                        },
+                        "sizes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "pattern": "^(?:any|[1-9]\\d{0,3}x[1-9]\\d{0,3})$"
+                          },
+                          "description": "The sizes the image is made for, such as 48x48, or any for an image that scales."
+                        },
+                        "theme": {
+                          "type": "string",
+                          "enum": [
+                            "light",
+                            "dark"
+                          ],
+                          "description": "light for an image made for a light background, dark for one made for a dark background. Left out when the image suits both."
+                        }
+                      },
+                      "required": [
+                        "src",
+                        "mimeType"
+                      ],
+                      "additionalProperties": false
+                    },
                     "Provider": {
                       "type": "object",
                       "properties": {
@@ -22213,6 +22253,13 @@
                         "website": {
                           "type": "string",
                           "description": "Where a person reads about the server and makes a credential"
+                        },
+                        "icons": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/$defs/ProviderIcon"
+                          },
+                          "description": "Images of the service's logo, to show beside its name. Left out when the service has none."
                         },
                         "type": {
                           "type": "string",

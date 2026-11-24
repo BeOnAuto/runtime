@@ -3,6 +3,8 @@ title: Google Slides
 description: Read Google Slides presentations and update them.
 summary: Lets your playbooks read and update Google Slides presentations.
 website: https://developers.google.com/workspace/slides/api/reference/rest
+icons:
+  - src: icons/google-slides.svg
 type: openapi
 document: documents/google-slides.openapi.json
 credentials:

@@ -3,6 +3,7 @@ import { shippedFilesInMemory } from '@on.auto/shipped-files/testing';
 import { Result, Schema, SchemaIssue } from 'effect';
 
 import { ProviderEntrySchema } from '../entry/provider-entry.ts';
+import type { Provider } from '../reading/provider-list.ts';
 import { readProviders } from '../reading/shipped-providers.ts';
 import { tracker } from './fixture-providers.ts';
 
@@ -34,23 +35,38 @@ export function decodedEntry(entry: unknown) {
 
 export interface EntryFolder {
   readonly read: () => Promise<string>;
+  readonly icons: () => Promise<string>;
 }
 
 const entries: ShippedFile = { package: '@acme/shipped', path: 'entries' };
 
 const folder = shippedFileName(entries);
 
-export function entryFolderWith(files: Readonly<Record<string, string>>): EntryFolder {
+type Content = string | Readonly<Uint8Array>;
+
+function iconsOf({ entry, icons = [] }: Provider): string {
+  const each = icons.map(
+    ({ src, mimeType, theme = 'any' }) => `${mimeType} ${theme} ${src.slice(0, src.indexOf(','))}`,
+  );
+  return `${entry.name}: ${each.join(', ')}`;
+}
+
+export function entryFolderWith(files: Readonly<Record<string, Content>>): EntryFolder {
   const shipped = shippedFilesInMemory({
     [entries.package]: Object.fromEntries(
-      Object.entries(files).map(([name, text]: readonly [string, string]) => [shippedFileIn(entries, name).path, text]),
+      Object.entries(files).map(([name, content]: readonly [string, Content]) => [
+        shippedFileIn(entries, name).path,
+        content,
+      ]),
     ),
   });
+  const readAs = async (said: (providers: readonly Provider[]) => string) =>
+    Result.match(await readProviders(shipped, entries), {
+      onSuccess: ({ providers }) => said(providers),
+      onFailure: ({ message }: { readonly message: string }) => message.replaceAll(folder, '<entries>'),
+    });
   return {
-    read: async () =>
-      Result.match(await readProviders(shipped, entries), {
-        onSuccess: ({ providers }) => providers.map(({ entry, address }) => `${entry.name} ${address}`).join('; '),
-        onFailure: ({ message }: { readonly message: string }) => message.replaceAll(folder, '<entries>'),
-      }),
+    read: () => readAs((providers) => providers.map(({ entry, address }) => `${entry.name} ${address}`).join('; ')),
+    icons: () => readAs((providers) => providers.map((provider) => iconsOf(provider)).join('; ')),
   };
 }

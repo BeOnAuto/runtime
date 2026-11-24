@@ -3,6 +3,11 @@ title: PostHog
 description: Query PostHog's product and web analytics, session replays, error tracking, logs and data warehouse, and create and change insights, dashboards, feature flags, experiments and surveys, in the projects the person who connects reaches, as that person, through PostHog's MCP server.
 summary: Lets your playbooks query PostHog analytics and change insights, dashboards, feature flags, experiments and surveys.
 website: https://posthog.com/docs/model-context-protocol
+icons:
+  - src: icons/posthog.svg
+    theme: light
+  - src: icons/posthog-dark.svg
+    theme: dark
 type: mcp
 url: https://mcp.posthog.com/mcp?mode=tools
 credentials:

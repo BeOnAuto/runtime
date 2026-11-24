@@ -3,6 +3,8 @@ title: Zoom
 description: Read, create and update Zoom meetings, read past meetings and their participants, recordings, transcript details and AI summaries, and read and send Team Chat messages, as the account that signs in or, through an app for the whole Zoom account, for the user each call names. No file is fetched.
 summary: Lets your playbooks read meetings, recordings and Team Chat in Zoom, create meetings and send chat messages.
 website: https://developers.zoom.us/docs/integrations/oauth/
+icons:
+  - src: icons/zoom.svg
 type: openapi
 document: documents/zoom.openapi.json
 request_id: x-zm-trackingid

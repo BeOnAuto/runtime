@@ -3,6 +3,11 @@ title: Notion
 description: Search Notion and the sources connected to it, read pages and databases, and create, update, move and comment on them, in the workspace the person who connects chooses, as that person, through Notion's MCP server.
 summary: Lets your playbooks search, read and update pages and databases in Notion.
 website: https://developers.notion.com/guides/mcp/get-started-with-mcp
+icons:
+  - src: icons/notion.svg
+    theme: light
+  - src: icons/notion-dark.svg
+    theme: dark
 type: mcp
 url: https://mcp.notion.com/mcp
 credentials:

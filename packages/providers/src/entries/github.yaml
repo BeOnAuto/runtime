@@ -3,6 +3,11 @@ title: GitHub
 description: Read repositories, files and commits, and read, open and update issues and pull requests and their comments and reviews on GitHub, through GitHub's MCP server.
 summary: Lets your playbooks read repositories and work with issues and pull requests on GitHub.
 website: https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/customize-copilot/extend-copilot-with-tools-and-context/set-up-the-github-mcp-server
+icons:
+  - src: icons/github.svg
+    theme: light
+  - src: icons/github-dark.svg
+    theme: dark
 type: mcp
 url: https://api.githubcopilot.com/mcp/
 headers:

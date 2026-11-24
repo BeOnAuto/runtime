@@ -3,6 +3,8 @@ title: LinkedIn
 description: Read who you are at LinkedIn, create posts of text alone or with an article, delete them, and comment on and react to posts, as yourself, through the LinkedIn API; no post is read, since LinkedIn grants reading posts to the apps it approves alone.
 summary: Lets your playbooks create and delete posts on LinkedIn, and comment on and react to posts.
 website: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin
+icons:
+  - src: icons/linkedin.png
 type: openapi
 document: documents/linkedin.openapi.json
 headers:

@@ -3,6 +3,8 @@ title: Google Ads
 description: Query Google Ads accounts with its query language, list the customers and report fields you can reach, and create or change campaign budgets, campaigns, ad groups and ad group criteria such as keywords.
 summary: Lets your playbooks report on Google Ads accounts and change campaigns, budgets and ad groups.
 website: https://developers.google.com/google-ads/api/docs/get-started/introduction
+icons:
+  - src: icons/google-ads.svg
 type: openapi
 document: documents/google-ads.openapi.json
 headers:

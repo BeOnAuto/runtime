@@ -30,6 +30,7 @@ export {
   entryProse,
   type ProviderEntry,
 } from './entry/provider-entry.ts';
+export { IconMediaTypeSchema, IconSizesSchema, IconThemeSchema } from './entry/entry-icons.ts';
 export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts';
 export { aliasesTakenIn, providerNamesOf, type AliasTaken } from './entry/provider-names.ts';
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';

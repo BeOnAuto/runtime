@@ -6750,6 +6750,11 @@ type Provider {
   website: String!
 
   """
+  Images of the service's logo, to show beside its name. Left out when the service has none.
+  """
+  icons: [ProviderIcon!]
+
+  """
   mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text
   """
   type: String!
@@ -6768,6 +6773,24 @@ type Provider {
 
   """Why this caller may not, where may_reconnect is false"""
   reconnect_refusal: String
+}
+
+type ProviderIcon {
+  """The image, as a data URI."""
+  src: String!
+
+  """The image's file type, such as image/png."""
+  mimeType: String!
+
+  """
+  The sizes the image is made for, such as 48x48, or any for an image that scales.
+  """
+  sizes: [String!]
+
+  """
+  light for an image made for a light background, dark for one made for a dark background. Left out when the image suits both.
+  """
+  theme: String
 }
 
 """A way a credential reaches the server"""

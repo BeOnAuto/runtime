@@ -3,6 +3,8 @@ title: Google Analytics Admin
 description: Read Google Analytics accounts, properties, data streams, custom dimensions, custom metrics and key events, and run data access reports.
 summary: Lets your playbooks read how your Google Analytics accounts and properties are set up.
 website: https://developers.google.com/analytics/devguides/config/admin/v1
+icons:
+  - src: icons/google-analytics.svg
 type: openapi
 document: documents/google-analytics-admin.openapi.json
 marks:

@@ -17,10 +17,12 @@ import {
 import { isPinnableUrl, shippedDocumentOf, type ShippedDocument } from '@on.auto/tool-servers';
 import { Data, Option, Result, Schema, SchemaIssue, type StandardSchema } from 'effect';
 
-import { ProviderEntrySchema, type ProviderEntry } from '../entry/provider-entry.ts';
+import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { aliasesTakenIn } from '../entry/provider-names.ts';
+import { ShippedProviderEntrySchema, type ShippedProviderEntry } from '../entry/shipped-entry.ts';
 import { isAddress } from '../entry/templates.ts';
 import { addressOf, byName, type Provider, type ProviderList } from './provider-list.ts';
+import { iconsBesideTheEntries } from './shipped-icons.ts';
 
 export class ProvidersInvalid extends Data.TaggedError('providers_invalid')<{ readonly message: string }> {}
 
@@ -60,7 +62,10 @@ const entryYaml: YamlKind = {
   emptyIsMapping: false,
 };
 
-const decodeEntry = Schema.decodeUnknownResult(ProviderEntrySchema, { errors: 'all', onExcessProperty: 'error' });
+const decodeEntry = Schema.decodeUnknownResult(ShippedProviderEntrySchema, {
+  errors: 'all',
+  onExcessProperty: 'error',
+});
 
 const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
 
@@ -194,15 +199,28 @@ async function documentOfTheEntry(entry: ProviderEntry, entries: Entries): Promi
       );
 }
 
-async function providerOf(entry: ProviderEntry, file: string, entries: Entries): Promise<Read<ProviderRead>> {
+async function providerOf(
+  { icons: declared, ...entry }: ShippedProviderEntry,
+  file: string,
+  entries: Entries,
+): Promise<Read<ProviderRead>> {
   const named = `${entry.name}.yaml`;
   if (file !== named) {
     return Result.fail([{ pointer: '/name', detail: `Expected the name the file is named for, as in ${named}` }]);
   }
-  return Result.map(await documentOfTheEntry(entry, entries), ({ server, shipped }): ProviderRead => ({
-    provider: { entry, address: addressOf(entry, server) },
-    ...(shipped === undefined ? {} : { shipped }),
-  }));
+  const [document, icons] = await Promise.all([
+    documentOfTheEntry(entry, entries),
+    iconsBesideTheEntries(entries, declared),
+  ]);
+  return Result.match(document, {
+    onFailure: (problems): Read<ProviderRead> =>
+      Result.fail([...problems, ...Result.getFailure(icons).pipe(Option.getOrElse((): readonly Problem[] => []))]),
+    onSuccess: ({ server, shipped }) =>
+      Result.map(icons, (listed): ProviderRead => ({
+        provider: { entry, address: addressOf(entry, server), ...(listed.length === 0 ? {} : { icons: listed }) },
+        ...(shipped === undefined ? {} : { shipped }),
+      })),
+  });
 }
 
 interface LocatedRead extends ProviderRead {

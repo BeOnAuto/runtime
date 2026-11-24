@@ -1,3 +1,4 @@
+import type { Provider } from '@on.auto/providers';
 import { providerListOf, providerOf } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 
@@ -17,8 +18,8 @@ const providersOf = Schema.decodeUnknownSync(
   Schema.Struct({ output: Schema.Struct({ providers: Schema.Array(Schema.Record(Schema.String, Schema.Unknown)) }) }),
 );
 
-export async function providersListedOf(entry: unknown) {
-  const h = harness({ providers: providerListOf(providerOf(entry)) });
+export async function providersListedOf(entry: unknown, icons?: Provider['icons']) {
+  const h = harness({ providers: providerListOf({ ...providerOf(entry), ...(icons === undefined ? {} : { icons }) }) });
   return providersOf(await h.call(operationNamed(h.operations, 'list_providers'), ada)).output.providers;
 }
 

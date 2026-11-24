@@ -3,6 +3,8 @@ title: Search Ads 360
 description: Run Search Ads 360 reports with its query language, and list the accounts, report fields and custom columns you can read.
 summary: Lets your playbooks run Search Ads 360 reports.
 website: https://developers.google.com/search-ads/reporting/overview
+icons:
+  - src: icons/search-ads-360.svg
 type: openapi
 document: documents/search-ads-360.openapi.json
 headers:

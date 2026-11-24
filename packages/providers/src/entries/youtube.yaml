@@ -3,6 +3,8 @@ title: YouTube
 description: Read a YouTube channel's details, its videos and their statistics, and its playlists and their items.
 summary: Lets your playbooks read a YouTube channel's videos, playlists and statistics.
 website: https://developers.google.com/youtube/v3
+icons:
+  - src: icons/youtube.svg
 type: openapi
 document: documents/youtube.openapi.json
 credentials:

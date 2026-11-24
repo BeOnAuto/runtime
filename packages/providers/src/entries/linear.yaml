@@ -3,6 +3,8 @@ title: Linear
 description: Find, create and update Linear issues, projects and comments through Linear's MCP server, as the account that signs in or as your company's own application, which sees public teams and the private teams it was added to.
 summary: Lets your playbooks find, create and update issues, projects and comments in Linear.
 website: https://linear.app/docs/mcp
+icons:
+  - src: icons/linear.svg
 type: mcp
 url: https://mcp.linear.app/mcp
 marks:

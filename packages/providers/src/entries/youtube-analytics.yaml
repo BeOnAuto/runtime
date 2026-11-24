@@ -3,6 +3,8 @@ title: YouTube Analytics
 description: "Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue. As your company's own app it reports as a content owner: set ids to contentOwner== followed by the owner's ID, and filter by channel."
 summary: Lets your playbooks run YouTube Analytics reports on views, watch time, audience and revenue.
 website: https://developers.google.com/youtube/analytics
+icons:
+  - src: icons/youtube.svg
 type: openapi
 document: documents/youtube-analytics.openapi.json
 credentials:

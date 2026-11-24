@@ -3,6 +3,7 @@ import type { ClientSource, ShippedDocument } from '@on.auto/tool-servers';
 import { Option, Order, Result } from 'effect';
 
 import type { Conversations } from '../entry/conversation-parts.ts';
+import type { ListedIcon } from '../entry/entry-icons.ts';
 import { isADocumentBesideTheEntries } from '../entry/entry-values.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { providerNamesOf } from '../entry/provider-names.ts';
@@ -12,6 +13,7 @@ import type { Destination as EventDestination } from '../events/destination-fiel
 export interface Provider {
   readonly entry: ProviderEntry;
   readonly address: string;
+  readonly icons?: readonly ListedIcon[];
 }
 
 export interface ProviderList {

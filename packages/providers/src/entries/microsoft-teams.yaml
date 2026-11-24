@@ -3,6 +3,8 @@ title: Microsoft Teams
 description: List the Microsoft Teams teams the person is in and their channels, send channel messages, list chats, and read and send chat messages, as the person who connects, through Microsoft Graph. It reads no channel's messages, whose scope always needs an administrator's consent.
 summary: Lets your playbooks list teams and channels, send channel messages, and read and send chat messages in Microsoft Teams.
 website: https://learn.microsoft.com/en-us/graph/auth-v2-user
+icons:
+  - src: icons/microsoft-teams.png
 type: openapi
 document: documents/microsoft-teams.openapi.json
 request_id: request-id

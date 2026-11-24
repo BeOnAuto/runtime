@@ -3,6 +3,11 @@ title: X
 description: Read who you are at X, create, edit and delete posts, and read a user's posts, their mentions and the posts of the last seven days a search matches, as yourself, through the X API, under your organization's own OAuth client, which X bills for each call.
 summary: Lets your playbooks read posts and mentions on X, and create and delete posts.
 website: https://docs.x.com/fundamentals/developer-apps
+icons:
+  - src: icons/x.svg
+    theme: light
+  - src: icons/x-dark.svg
+    theme: dark
 type: openapi
 document: documents/x.openapi.json
 request_id: x-transaction-id

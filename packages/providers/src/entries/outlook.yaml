@@ -3,6 +3,8 @@ title: Outlook
 description: List, search and read Outlook mail and mail folders, send mail, reply and make drafts, and read the calendar between two dates and read, create, update and cancel events, in one mailbox, through Microsoft Graph.
 summary: Lets your playbooks read and send mail and manage calendar events in Outlook.
 website: https://learn.microsoft.com/en-us/graph/auth-v2-user
+icons:
+  - src: icons/outlook.png
 type: openapi
 document: documents/outlook.openapi.json
 request_id: request-id

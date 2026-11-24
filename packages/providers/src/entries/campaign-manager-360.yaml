@@ -3,6 +3,8 @@ title: Campaign Manager 360
 description: Create, run and list Campaign Manager 360 reports and their files, query dimension values and compatible fields, and read user profiles, campaigns, advertisers, placements, ads, creatives and sites. A report file's content is a download a call does not fetch.
 summary: Lets your playbooks run Campaign Manager 360 reports and read campaigns, placements and ads.
 website: https://developers.google.com/doubleclick-advertisers/getting_started
+icons:
+  - src: icons/campaign-manager-360.svg
 type: openapi
 document: documents/campaign-manager-360.openapi.json
 marks:

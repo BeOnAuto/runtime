@@ -3,6 +3,11 @@ title: Atlassian
 description: Search and read Jira work items and Confluence pages, and create, update and comment on them, through Atlassian's MCP server, as the person or the service account that connects and with its permissions.
 summary: Lets your playbooks search, read, create and update Jira work items and Confluence pages.
 website: https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/
+icons:
+  - src: icons/atlassian.svg
+    theme: light
+  - src: icons/atlassian-dark.svg
+    theme: dark
 type: mcp
 url: https://mcp.atlassian.com/v2/mcp?tools=all
 credentials:

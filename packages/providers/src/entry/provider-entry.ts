@@ -176,8 +176,8 @@ function testIssuesOf({ credentials, marks: marked }: ProviderEntry): readonly E
   );
 }
 
-export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
-  Schema.makeFilter((entry: ProviderEntry) => [
+function entryIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
+  return [
     ...nameIssuesOf(entry),
     ...aliasIssuesOf(entry),
     ...websiteIssuesOf(entry),
@@ -193,8 +193,14 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
     ...replacedIssuesOf(entry),
-  ]),
-);
+  ];
+}
+
+export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(Schema.makeFilter(entryIssuesOf));
+
+export const providerEntryFields = ProviderEntryFieldsSchema.fields;
+
+export const providerEntryIssues = Schema.makeFilter(entryIssuesOf);
 
 const documentByItsAddress =
   "Expected the https URL of the OpenAPI document, or an http URL on a loopback address: a provider whoever runs the runtime adds names its document by its address, since the documents beside the entries are the runtime's own";

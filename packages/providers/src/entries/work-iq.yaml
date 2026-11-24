@@ -3,6 +3,8 @@ title: Microsoft 365 Work IQ
 description: Read and search Outlook mail and calendar events and the rest of the person's Microsoft 365 data through Microsoft's Work IQ MCP server, as the person who connects, and send, move and change them where the tenant's Work IQ policy allows, which by default it does not.
 summary: Lets your playbooks read and search Outlook mail, calendar events and other Microsoft 365 data through Work IQ.
 website: https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/mcp/overview
+icons:
+  - src: icons/microsoft-365.png
 type: mcp
 url: https://workiq.svc.cloud.microsoft/mcp
 credentials:

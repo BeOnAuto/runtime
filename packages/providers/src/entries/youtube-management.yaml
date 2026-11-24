@@ -3,6 +3,8 @@ title: YouTube management
 description: Read the comments on a YouTube channel's videos and their replies, and update a video's title, description, tags, category, language, privacy, publish time, licence, embedding, audience, synthetic media label, recording date and translations, clearing what a call leaves out of a part it sends.
 summary: Lets your playbooks read comments on a channel's videos and update video details.
 website: https://developers.google.com/youtube/v3
+icons:
+  - src: icons/youtube.svg
 type: openapi
 document: documents/youtube-management.openapi.json
 credentials:

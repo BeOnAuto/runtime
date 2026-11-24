@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 
 import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
 import { ChatCredentialField, MaySetModelField } from '../registry/connection.ts';
+import { ListedIconSchema } from './listed-icons.ts';
 
 const ListedScopesSchema = Schema.Array(
   Schema.Struct({
@@ -225,6 +226,11 @@ const ProviderSchema = Schema.Struct({
     }),
   ),
   website: Schema.String.annotate({ description: 'Where a person reads about the server and makes a credential' }),
+  icons: Schema.optionalKey(
+    Schema.Array(ListedIconSchema).annotate({
+      description: "Images of the service's logo, to show beside its name. Left out when the service has none.",
+    }),
+  ),
   type: ConnectionTypeSchema,
   credentials: Schema.Array(ListedWaySchema),
   placeholders: Schema.Array(ListedPlaceholderSchema),

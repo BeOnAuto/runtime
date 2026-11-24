@@ -3,6 +3,8 @@ title: Display & Video 360 Reports
 description: Create, run, list and remove Display & Video 360 report queries, and read their reports and status, through the Bid Manager API. A report's file sits in Cloud Storage, which a call does not fetch.
 summary: Lets your playbooks create and run Display & Video 360 reports.
 website: https://developers.google.com/bid-manager/guides/get-started/overview
+icons:
+  - src: icons/display-video-360.svg
 type: openapi
 document: documents/display-video-360-reports.openapi.json
 credentials:

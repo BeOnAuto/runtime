@@ -3,6 +3,8 @@ title: Stripe
 description: Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who signs in or with an agent API key of the account. Stripe holds certain writes, such as refunds and payouts, until a person confirms or approves them.
 summary: Lets your playbooks read and change your Stripe data, including moving money.
 website: https://docs.stripe.com/mcp
+icons:
+  - src: icons/stripe.svg
 type: mcp
 url: https://mcp.stripe.com
 handles_money: true
