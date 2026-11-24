@@ -116,8 +116,8 @@ function canonical(value: unknown): unknown {
     : value;
 }
 
-function keyOf({ name, credential }: ProviderAddition): string {
-  return `${name}, ${credential.kind}`;
+function keyOf({ name, credential, permissions }: ProviderAddition): string {
+  return [name, credential.kind, permissions].filter(Boolean).join(', ');
 }
 
 async function toolsOf(addition: ProviderAddition): Promise<Digests> {

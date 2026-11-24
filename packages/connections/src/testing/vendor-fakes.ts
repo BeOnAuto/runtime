@@ -1,6 +1,6 @@
 import type { Outcome } from '@on.auto/operations';
 import type { Placeholder, ProviderEntry } from '@on.auto/providers';
-import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
+import type { ConsentClientOptions, PermissionsStated, RegisteredClient } from '@on.auto/tool-servers';
 import {
   consentedAt,
   inProcessFetch,
@@ -56,6 +56,7 @@ export function examplesOf({ placeholders = {} }: ProviderEntry): Readonly<Recor
 export interface AtTheVendor {
   readonly providers: NonNullable<HarnessOptions['providers']>;
   readonly registeredIssuer: string | undefined;
+  readonly registeredPermissions?: PermissionsStated | undefined;
   readonly asking?: (address: string) => void;
 }
 
@@ -135,10 +136,15 @@ export function servedAsTheVendor(vendor: Vendor): FakeMcpServer {
   return consentFake(vendor.metadata);
 }
 
-function registeredAtTheVendor(issuer: string, { metadata }: Vendor): RegisteredClient {
+function registeredAtTheVendor(
+  issuer: string,
+  { metadata }: Vendor,
+  permissions: PermissionsStated | undefined,
+): RegisteredClient {
+  const stated = permissions === undefined ? {} : { permissions };
   return metadata.takesPublicClientsAlone === true
-    ? registeredAt(issuer, { credential: { kind: 'public' } })
-    : registeredAt(issuer);
+    ? registeredAt(issuer, { ...stated, credential: { kind: 'public' } })
+    : registeredAt(issuer, stated);
 }
 
 const urlOrigin = /https?:\/\/[^/\s"'{}:]+/gu;
@@ -156,14 +162,15 @@ function hostsAtTheVendor(fakeOrigin: string, written: string): string[] {
 export function harnessAtTheVendor(
   fake: FakeMcpServer,
   vendor: Vendor,
-  { providers, registeredIssuer, asking = Function.constVoid }: AtTheVendor,
+  { providers, registeredIssuer, registeredPermissions, asking = Function.constVoid }: AtTheVendor,
 ): Harness {
   return consentHarnessAt(fake, {
     providers,
     policy: connectionPolicyOf({ allowed_hosts: hostsAtTheVendor(fake.origin, JSON.stringify([vendor, providers])) }),
     consenting: {
       fetch: answeredAsTheVendor(fake, vendor, asking),
-      registeredClients: registeredIssuer === undefined ? [] : [registeredAtTheVendor(registeredIssuer, vendor)],
+      registeredClients:
+        registeredIssuer === undefined ? [] : [registeredAtTheVendor(registeredIssuer, vendor, registeredPermissions)],
     },
   });
 }

@@ -1,0 +1,23 @@
+{
+  "type": "connection_way_chosen",
+  "data": {
+    "connection": "connection-1",
+    "credential": {
+      "kind": "client_credentials",
+      "permissions": "application",
+      "issuer": "https://login.meetings.example.com",
+      "parameters": {
+        "grant_type": "account_credentials",
+        "account_id": "acct-7f3a"
+      }
+    },
+    "says": {},
+    "placeholders": {
+      "account_id": "acct-7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "adobe-analytics, authorization": {
+  "adobe-analytics, authorization, delegated": {
     "findCalculatedMetrics": "023c8cdbd65793887bf0c1cdd266c431eedc6753fbda54a89b0cc9ff07842cd4",
     "getDateRanges_1": "2c98192bc27e9aa860dc288f3f298fe9988c9c8511510d017c8402812f7b2031",
     "dimensions_getDimensions": "bb5eb907e755d9a01966641054186e8c9f28fd4631bf0512606a3c50b2649211",
@@ -13,7 +13,7 @@
     "getCurrentUser": "e0f6d26dc5e88ea9846eb23b7f43a664b91df3f2af35b4a0290db3be5ba1d92b",
     "getSuites_1": "a3f649bbdf256c10225e6eab9f9076c89967710774ffc7da83b6461ff807652b"
   },
-  "adobe-analytics, client_credentials": {
+  "adobe-analytics, client_credentials, application": {
     "findCalculatedMetrics": "023c8cdbd65793887bf0c1cdd266c431eedc6753fbda54a89b0cc9ff07842cd4",
     "getDateRanges_1": "2c98192bc27e9aa860dc288f3f298fe9988c9c8511510d017c8402812f7b2031",
     "dimensions_getDimensions": "bb5eb907e755d9a01966641054186e8c9f28fd4631bf0512606a3c50b2649211",
@@ -27,7 +27,7 @@
     "getCurrentUser": "e0f6d26dc5e88ea9846eb23b7f43a664b91df3f2af35b4a0290db3be5ba1d92b",
     "getSuites_1": "a3f649bbdf256c10225e6eab9f9076c89967710774ffc7da83b6461ff807652b"
   },
-  "amazon-ads, authorization": {
+  "amazon-ads, authorization, delegated": {
     "QueryAdvertiserAccount": "40346295781a0890b56a449291d50a3b00d2e06f3d416d1e93836ce02b8e8d92",
     "QueryCampaign": "cdc3bd14c65e541f61c4ff47d0f97c04806dbdcede9d64487d12617e3ed6b1ff",
     "QueryAdGroup": "654f9697a5bcf0ab0560262044174c793f57df80bc16248ad4d0d76b4684f001",
@@ -40,7 +40,7 @@
     "AdsApiv1RetrieveReport": "63336edaa0709a530581aae5ac3efe06a58a2223d677cdf3068c6c322931d7b7",
     "QueryRecommendation": "7fb8f55d9feb95f0e3bdbcecaa6fe76605ad1219fa04749787e5b3ba05688295"
   },
-  "campaign-manager-360, authorization": {
+  "campaign-manager-360, authorization, delegated": {
     "dfareporting.userProfiles.list": "d93efcce2a4bff32bb396eac4ec98cd4f248c9567c83a83953c22071769a3c6e",
     "dfareporting.userProfiles.get": "9f82608fb9d01ccaf4dd59dbfcf39a545d849e896777b8e2a153528ce216e872",
     "dfareporting.reports.list": "82e3a0a1ac6c358bcd99e32999ab866faa6f017ffc067488d29270b3b7bd1da0",
@@ -60,7 +60,7 @@
     "dfareporting.creatives.list": "c0a67c4db69460517eeefe9269847994ee3233cdb79aec493db554fac9490ca6",
     "dfareporting.sites.list": "776d54ff247bf161f7fdbe6ceaa8127c02200d78862aec27db849dddb4c94e0e"
   },
-  "campaign-manager-360, jwt_bearer": {
+  "campaign-manager-360, jwt_bearer, application": {
     "dfareporting.userProfiles.list": "d93efcce2a4bff32bb396eac4ec98cd4f248c9567c83a83953c22071769a3c6e",
     "dfareporting.userProfiles.get": "9f82608fb9d01ccaf4dd59dbfcf39a545d849e896777b8e2a153528ce216e872",
     "dfareporting.reports.list": "82e3a0a1ac6c358bcd99e32999ab866faa6f017ffc067488d29270b3b7bd1da0",
@@ -80,7 +80,7 @@
     "dfareporting.creatives.list": "c0a67c4db69460517eeefe9269847994ee3233cdb79aec493db554fac9490ca6",
     "dfareporting.sites.list": "776d54ff247bf161f7fdbe6ceaa8127c02200d78862aec27db849dddb4c94e0e"
   },
-  "campaign-manager-360, token_exchange": {
+  "campaign-manager-360, token_exchange, application": {
     "dfareporting.userProfiles.list": "d93efcce2a4bff32bb396eac4ec98cd4f248c9567c83a83953c22071769a3c6e",
     "dfareporting.userProfiles.get": "9f82608fb9d01ccaf4dd59dbfcf39a545d849e896777b8e2a153528ce216e872",
     "dfareporting.reports.list": "82e3a0a1ac6c358bcd99e32999ab866faa6f017ffc067488d29270b3b7bd1da0",
@@ -100,7 +100,7 @@
     "dfareporting.creatives.list": "c0a67c4db69460517eeefe9269847994ee3233cdb79aec493db554fac9490ca6",
     "dfareporting.sites.list": "776d54ff247bf161f7fdbe6ceaa8127c02200d78862aec27db849dddb4c94e0e"
   },
-  "display-video-360, authorization": {
+  "display-video-360, authorization, delegated": {
     "displayvideo.partners.list": "2ee35749d20afe1f3b8ae8439ecb623308ca0d22c8855b68858026ea20712132",
     "displayvideo.advertisers.list": "a05bf7c633b08d2544d9339550cd7d92aacfd9c6b6398698964ff950e5e2a0ca",
     "displayvideo.advertisers.get": "d25b87787e46de1af8bca67757ce5f1802d86b2ba064f6c77a57350077253ffd",
@@ -116,7 +116,7 @@
     "displayvideo.advertisers.adGroups.list": "35d0d7eaf6475b6f5a5e6518df8b2d5b7b7ad5aa0fd728087afe38020137a13e",
     "displayvideo.advertisers.creatives.list": "f821ed7dfd483508d75ed901436496d45e285cfd42774e21ddb00ba1644307a2"
   },
-  "display-video-360, jwt_bearer": {
+  "display-video-360, jwt_bearer, application": {
     "displayvideo.partners.list": "2ee35749d20afe1f3b8ae8439ecb623308ca0d22c8855b68858026ea20712132",
     "displayvideo.advertisers.list": "a05bf7c633b08d2544d9339550cd7d92aacfd9c6b6398698964ff950e5e2a0ca",
     "displayvideo.advertisers.get": "d25b87787e46de1af8bca67757ce5f1802d86b2ba064f6c77a57350077253ffd",
@@ -132,7 +132,7 @@
     "displayvideo.advertisers.adGroups.list": "35d0d7eaf6475b6f5a5e6518df8b2d5b7b7ad5aa0fd728087afe38020137a13e",
     "displayvideo.advertisers.creatives.list": "f821ed7dfd483508d75ed901436496d45e285cfd42774e21ddb00ba1644307a2"
   },
-  "display-video-360, token_exchange": {
+  "display-video-360, token_exchange, application": {
     "displayvideo.partners.list": "2ee35749d20afe1f3b8ae8439ecb623308ca0d22c8855b68858026ea20712132",
     "displayvideo.advertisers.list": "a05bf7c633b08d2544d9339550cd7d92aacfd9c6b6398698964ff950e5e2a0ca",
     "displayvideo.advertisers.get": "d25b87787e46de1af8bca67757ce5f1802d86b2ba064f6c77a57350077253ffd",
@@ -148,7 +148,7 @@
     "displayvideo.advertisers.adGroups.list": "35d0d7eaf6475b6f5a5e6518df8b2d5b7b7ad5aa0fd728087afe38020137a13e",
     "displayvideo.advertisers.creatives.list": "f821ed7dfd483508d75ed901436496d45e285cfd42774e21ddb00ba1644307a2"
   },
-  "display-video-360-reports, authorization": {
+  "display-video-360-reports, authorization, delegated": {
     "doubleclickbidmanager.queries.list": "b8051f54cd12f1263d2edbc6984843fffc963a66bbfe0a869aec72f1d37210ae",
     "doubleclickbidmanager.queries.create": "545cb032f771cb196d16082fe4bc5b710e338a8aa1a4027b0a6ab4ceec3b59d6",
     "doubleclickbidmanager.queries.get": "ed2163890e059e7b0d2d558643d9d49638a4852e46d95c5d36bdd59deaf619b7",
@@ -157,7 +157,7 @@
     "doubleclickbidmanager.queries.reports.list": "7f8e37db6ca254fc2cf402acf8a9d6f3ef9db32d577cea5fd3eb9d2206f63179",
     "doubleclickbidmanager.queries.reports.get": "1812f5a3a5af7a2de000f4fda60fb6df62b2f0bb635e155a1adee9bdafbd09a0"
   },
-  "display-video-360-reports, token_exchange": {
+  "display-video-360-reports, token_exchange, application": {
     "doubleclickbidmanager.queries.list": "b8051f54cd12f1263d2edbc6984843fffc963a66bbfe0a869aec72f1d37210ae",
     "doubleclickbidmanager.queries.create": "545cb032f771cb196d16082fe4bc5b710e338a8aa1a4027b0a6ab4ceec3b59d6",
     "doubleclickbidmanager.queries.get": "ed2163890e059e7b0d2d558643d9d49638a4852e46d95c5d36bdd59deaf619b7",
@@ -166,7 +166,7 @@
     "doubleclickbidmanager.queries.reports.list": "7f8e37db6ca254fc2cf402acf8a9d6f3ef9db32d577cea5fd3eb9d2206f63179",
     "doubleclickbidmanager.queries.reports.get": "1812f5a3a5af7a2de000f4fda60fb6df62b2f0bb635e155a1adee9bdafbd09a0"
   },
-  "gmail, authorization": {
+  "gmail, authorization, delegated": {
     "gmail.users.threads.list": "4149acdbce7e5f5b0e13addafd790da7dc4dbdbdd1277784128b5b02dab9880e",
     "gmail.users.threads.get": "c28d8af423f1a4254d66e577b29f1e5c5a887eae15299b549be186cbf818e4b3",
     "gmail.users.messages.list": "d20e0dd1e2d774c70ab22eccebd84b245770650783fda4ba72405044268899fd",
@@ -174,7 +174,7 @@
     "gmail.users.drafts.list": "df29bef27b72fb53b96d3978afefbc2e6ee8a879245a5182b4d04cd3a6605123",
     "gmail.users.labels.list": "4f19702b8d37b89107c447a7adca3b7b2b3b3e9ea667caf9c70e24909391bd18"
   },
-  "gmail, jwt_bearer": {
+  "gmail, jwt_bearer, application": {
     "gmail.users.threads.list": "4149acdbce7e5f5b0e13addafd790da7dc4dbdbdd1277784128b5b02dab9880e",
     "gmail.users.threads.get": "c28d8af423f1a4254d66e577b29f1e5c5a887eae15299b549be186cbf818e4b3",
     "gmail.users.messages.list": "d20e0dd1e2d774c70ab22eccebd84b245770650783fda4ba72405044268899fd",
@@ -182,7 +182,7 @@
     "gmail.users.drafts.list": "df29bef27b72fb53b96d3978afefbc2e6ee8a879245a5182b4d04cd3a6605123",
     "gmail.users.labels.list": "4f19702b8d37b89107c447a7adca3b7b2b3b3e9ea667caf9c70e24909391bd18"
   },
-  "google-ads, authorization": {
+  "google-ads, authorization, delegated": {
     "googleads.customers.listAccessibleCustomers": "fb477ed5bb29dff8c0796e86dca056fc631f5e3c18345a8c77a12391d8434458",
     "googleads.customers.googleAds.search": "456182f98ed7ffe6f1086629f5b4f35914b00c89aa481e179024eb116f398a40",
     "googleads.customers.googleAds.searchStream": "6a9265a539b3f07f17a70fc22f90c2827ed4e6a36b21857705ba0f31df606338",
@@ -194,7 +194,7 @@
     "googleads.customers.adGroups.mutate": "3386636ea63e05ecb9c7334e7e95f6774fd4c83d52a5f62ee59c85a5eb4ba853",
     "googleads.customers.adGroupCriteria.mutate": "d4c4b566be8e5c31ac27d55b7334a968584d78a41e5b4b1070749bfbc74badbb"
   },
-  "google-ads, jwt_bearer": {
+  "google-ads, jwt_bearer, application": {
     "googleads.customers.listAccessibleCustomers": "fb477ed5bb29dff8c0796e86dca056fc631f5e3c18345a8c77a12391d8434458",
     "googleads.customers.googleAds.search": "456182f98ed7ffe6f1086629f5b4f35914b00c89aa481e179024eb116f398a40",
     "googleads.customers.googleAds.searchStream": "6a9265a539b3f07f17a70fc22f90c2827ed4e6a36b21857705ba0f31df606338",
@@ -206,7 +206,7 @@
     "googleads.customers.adGroups.mutate": "3386636ea63e05ecb9c7334e7e95f6774fd4c83d52a5f62ee59c85a5eb4ba853",
     "googleads.customers.adGroupCriteria.mutate": "d4c4b566be8e5c31ac27d55b7334a968584d78a41e5b4b1070749bfbc74badbb"
   },
-  "google-ads, token_exchange": {
+  "google-ads, token_exchange, application": {
     "googleads.customers.listAccessibleCustomers": "fb477ed5bb29dff8c0796e86dca056fc631f5e3c18345a8c77a12391d8434458",
     "googleads.customers.googleAds.search": "456182f98ed7ffe6f1086629f5b4f35914b00c89aa481e179024eb116f398a40",
     "googleads.customers.googleAds.searchStream": "6a9265a539b3f07f17a70fc22f90c2827ed4e6a36b21857705ba0f31df606338",
@@ -218,7 +218,7 @@
     "googleads.customers.adGroups.mutate": "3386636ea63e05ecb9c7334e7e95f6774fd4c83d52a5f62ee59c85a5eb4ba853",
     "googleads.customers.adGroupCriteria.mutate": "d4c4b566be8e5c31ac27d55b7334a968584d78a41e5b4b1070749bfbc74badbb"
   },
-  "google-analytics, authorization": {
+  "google-analytics, authorization, delegated": {
     "analyticsdata.properties.runReport": "dfd01a17fc44f971c49f10aa68a15ca0e35e5976b2237841e6248309ac81661b",
     "analyticsdata.properties.runPivotReport": "10a6f5fee62c16f0ac4b4a25b85d5d957cb66ece726734422232a1dc5725b6f3",
     "analyticsdata.properties.batchRunReports": "b39f37e997b84f38ff598453b671691ab64ec058b892a949b6de580e2f89fe28",
@@ -231,7 +231,7 @@
     "analyticsdata.properties.audienceExports.get": "41e2040ceb706ca46196ac3c9e8600f48af5163a46da0c73e7714b69091b6796",
     "analyticsdata.properties.audienceExports.query": "e6d815968dabc31ad321fbd7d44900f0780665a56b6115c3c7d4714085e3ff5f"
   },
-  "google-analytics, jwt_bearer": {
+  "google-analytics, jwt_bearer, application": {
     "analyticsdata.properties.runReport": "dfd01a17fc44f971c49f10aa68a15ca0e35e5976b2237841e6248309ac81661b",
     "analyticsdata.properties.runPivotReport": "10a6f5fee62c16f0ac4b4a25b85d5d957cb66ece726734422232a1dc5725b6f3",
     "analyticsdata.properties.batchRunReports": "b39f37e997b84f38ff598453b671691ab64ec058b892a949b6de580e2f89fe28",
@@ -244,7 +244,7 @@
     "analyticsdata.properties.audienceExports.get": "41e2040ceb706ca46196ac3c9e8600f48af5163a46da0c73e7714b69091b6796",
     "analyticsdata.properties.audienceExports.query": "e6d815968dabc31ad321fbd7d44900f0780665a56b6115c3c7d4714085e3ff5f"
   },
-  "google-analytics, token_exchange": {
+  "google-analytics, token_exchange, application": {
     "analyticsdata.properties.runReport": "dfd01a17fc44f971c49f10aa68a15ca0e35e5976b2237841e6248309ac81661b",
     "analyticsdata.properties.runPivotReport": "10a6f5fee62c16f0ac4b4a25b85d5d957cb66ece726734422232a1dc5725b6f3",
     "analyticsdata.properties.batchRunReports": "b39f37e997b84f38ff598453b671691ab64ec058b892a949b6de580e2f89fe28",
@@ -257,7 +257,7 @@
     "analyticsdata.properties.audienceExports.get": "41e2040ceb706ca46196ac3c9e8600f48af5163a46da0c73e7714b69091b6796",
     "analyticsdata.properties.audienceExports.query": "e6d815968dabc31ad321fbd7d44900f0780665a56b6115c3c7d4714085e3ff5f"
   },
-  "google-analytics-admin, authorization": {
+  "google-analytics-admin, authorization, delegated": {
     "analyticsadmin.accountSummaries.list": "c0ea4bd4982635202aafa47bcb82c14165fa67dd3aa91f6713475571d2587f40",
     "analyticsadmin.accounts.list": "f7da709341a1f69e5cded07b5656dc925a4bd6eefebda302bc058a27398775c3",
     "analyticsadmin.properties.list": "56c4ed90eb4d981f91e3400ab32743f3c467d270b93c35070416f38b655bdf9a",
@@ -268,7 +268,7 @@
     "analyticsadmin.properties.keyEvents.list": "197cb696a3693ce67cb40bd231c2a1a048d36c984004623b5071221658b5c455",
     "analyticsadmin.properties.runAccessReport": "739d90bbc54a83e34dc609241ac7de27b6d956bb8e3f086941a8397d72cbc407"
   },
-  "google-analytics-admin, jwt_bearer": {
+  "google-analytics-admin, jwt_bearer, application": {
     "analyticsadmin.accountSummaries.list": "c0ea4bd4982635202aafa47bcb82c14165fa67dd3aa91f6713475571d2587f40",
     "analyticsadmin.accounts.list": "f7da709341a1f69e5cded07b5656dc925a4bd6eefebda302bc058a27398775c3",
     "analyticsadmin.properties.list": "56c4ed90eb4d981f91e3400ab32743f3c467d270b93c35070416f38b655bdf9a",
@@ -279,7 +279,7 @@
     "analyticsadmin.properties.keyEvents.list": "197cb696a3693ce67cb40bd231c2a1a048d36c984004623b5071221658b5c455",
     "analyticsadmin.properties.runAccessReport": "739d90bbc54a83e34dc609241ac7de27b6d956bb8e3f086941a8397d72cbc407"
   },
-  "google-analytics-admin, token_exchange": {
+  "google-analytics-admin, token_exchange, application": {
     "analyticsadmin.accountSummaries.list": "c0ea4bd4982635202aafa47bcb82c14165fa67dd3aa91f6713475571d2587f40",
     "analyticsadmin.accounts.list": "f7da709341a1f69e5cded07b5656dc925a4bd6eefebda302bc058a27398775c3",
     "analyticsadmin.properties.list": "56c4ed90eb4d981f91e3400ab32743f3c467d270b93c35070416f38b655bdf9a",
@@ -290,19 +290,19 @@
     "analyticsadmin.properties.keyEvents.list": "197cb696a3693ce67cb40bd231c2a1a048d36c984004623b5071221658b5c455",
     "analyticsadmin.properties.runAccessReport": "739d90bbc54a83e34dc609241ac7de27b6d956bb8e3f086941a8397d72cbc407"
   },
-  "google-docs, authorization": {
+  "google-docs, authorization, delegated": {
     "docs.documents.get": "c0e313d3244f0c263219e0c224fd39b359550728145bef7e07e69ab23a18ab22",
     "docs.documents.batchUpdate": "eae6c5b014d9cd169f8458971400804194639d3bf2e0add620bd6aeb2065bcf1"
   },
-  "google-docs, jwt_bearer": {
+  "google-docs, jwt_bearer, application": {
     "docs.documents.get": "c0e313d3244f0c263219e0c224fd39b359550728145bef7e07e69ab23a18ab22",
     "docs.documents.batchUpdate": "eae6c5b014d9cd169f8458971400804194639d3bf2e0add620bd6aeb2065bcf1"
   },
-  "google-docs, token_exchange": {
+  "google-docs, token_exchange, application": {
     "docs.documents.get": "c0e313d3244f0c263219e0c224fd39b359550728145bef7e07e69ab23a18ab22",
     "docs.documents.batchUpdate": "eae6c5b014d9cd169f8458971400804194639d3bf2e0add620bd6aeb2065bcf1"
   },
-  "google-drive, authorization": {
+  "google-drive, authorization, delegated": {
     "drive.files.list": "7edbdb55d82decebb43f0f82444f8cef4dfec1adc87e2dbff6b2dbd419eab61a",
     "drive.files.create": "fb9fdd5622e2e2aaa6154600a206d422f717a10e7697c55298d1c5cc53de1846",
     "drive.files.get": "882e4456657097fe6c956398f89b01b712280e229a91a1c347bd277459cf6a88",
@@ -312,7 +312,7 @@
     "drive.files.copy": "ca99342ccee0543c01594ed8b4e5ded9b44d46d94295d6e7ad7eab9591bdf6e5",
     "drive.files.generateIds": "47b457715828363af7cbc0e0b96974a41f719b004c4cc5dc3be8367e5eab3ba4"
   },
-  "google-drive, token_exchange": {
+  "google-drive, token_exchange, application": {
     "drive.files.list": "7edbdb55d82decebb43f0f82444f8cef4dfec1adc87e2dbff6b2dbd419eab61a",
     "drive.files.create": "fb9fdd5622e2e2aaa6154600a206d422f717a10e7697c55298d1c5cc53de1846",
     "drive.files.get": "882e4456657097fe6c956398f89b01b712280e229a91a1c347bd277459cf6a88",
@@ -322,7 +322,7 @@
     "drive.files.copy": "ca99342ccee0543c01594ed8b4e5ded9b44d46d94295d6e7ad7eab9591bdf6e5",
     "drive.files.generateIds": "47b457715828363af7cbc0e0b96974a41f719b004c4cc5dc3be8367e5eab3ba4"
   },
-  "google-search-console, authorization": {
+  "google-search-console, authorization, delegated": {
     "webmasters.searchanalytics.query": "ee25c1d8af5af9f4404efc49ae484b8cebc0e77c38f48935ac1f2976ee1d877d",
     "webmasters.sites.list": "c3a50dca882d23d28d8e4f110d002baed98f48f7ddee277074e54193c127cf62",
     "webmasters.sites.get": "fa2962794ae0beb296cd8351f69abec9f6dc8e7f8e4c003a22582b6775fefb6c",
@@ -331,7 +331,7 @@
     "webmasters.sitemaps.list": "bebc65d680896e738da35855ead12c08c411bc2433154829679e744d8c81efdb",
     "searchconsole.urlInspection.index.inspect": "20d5208c08fc4b98d96306d2aec838f1f0f922e7f3a342132f6a8cca7deb2c90"
   },
-  "google-search-console, token_exchange": {
+  "google-search-console, token_exchange, application": {
     "webmasters.searchanalytics.query": "ee25c1d8af5af9f4404efc49ae484b8cebc0e77c38f48935ac1f2976ee1d877d",
     "webmasters.sites.list": "c3a50dca882d23d28d8e4f110d002baed98f48f7ddee277074e54193c127cf62",
     "webmasters.sites.get": "fa2962794ae0beb296cd8351f69abec9f6dc8e7f8e4c003a22582b6775fefb6c",
@@ -340,7 +340,7 @@
     "webmasters.sitemaps.list": "bebc65d680896e738da35855ead12c08c411bc2433154829679e744d8c81efdb",
     "searchconsole.urlInspection.index.inspect": "20d5208c08fc4b98d96306d2aec838f1f0f922e7f3a342132f6a8cca7deb2c90"
   },
-  "google-sheets, authorization": {
+  "google-sheets, authorization, delegated": {
     "sheets.spreadsheets.get": "43b4d9416b3a949703f95ac953134b958a2b9ca0007ef7460d6fdc5bb3e3446a",
     "sheets.spreadsheets.values.get": "8a93501d3c019cc13c5941812995fe58b0bceef6b4dd8cdd7371a888ad36567c",
     "sheets.spreadsheets.values.update": "d89b9a9dc4dbcc955179a13a0f53f919046390a58a963c9ea154e51bd175460f",
@@ -348,7 +348,7 @@
     "sheets.spreadsheets.values.batchUpdate": "2616f375f9eecc6c1bf58699ce81462ce2210201ddb6f34d00941162edd1aee0",
     "sheets.spreadsheets.batchUpdate": "434ae2cd05e4a257a8a6ecbac1d354fd05a42de67ee755fee7673dcc544f4b25"
   },
-  "google-sheets, jwt_bearer": {
+  "google-sheets, jwt_bearer, application": {
     "sheets.spreadsheets.get": "43b4d9416b3a949703f95ac953134b958a2b9ca0007ef7460d6fdc5bb3e3446a",
     "sheets.spreadsheets.values.get": "8a93501d3c019cc13c5941812995fe58b0bceef6b4dd8cdd7371a888ad36567c",
     "sheets.spreadsheets.values.update": "d89b9a9dc4dbcc955179a13a0f53f919046390a58a963c9ea154e51bd175460f",
@@ -356,7 +356,7 @@
     "sheets.spreadsheets.values.batchUpdate": "2616f375f9eecc6c1bf58699ce81462ce2210201ddb6f34d00941162edd1aee0",
     "sheets.spreadsheets.batchUpdate": "434ae2cd05e4a257a8a6ecbac1d354fd05a42de67ee755fee7673dcc544f4b25"
   },
-  "google-sheets, token_exchange": {
+  "google-sheets, token_exchange, application": {
     "sheets.spreadsheets.get": "43b4d9416b3a949703f95ac953134b958a2b9ca0007ef7460d6fdc5bb3e3446a",
     "sheets.spreadsheets.values.get": "8a93501d3c019cc13c5941812995fe58b0bceef6b4dd8cdd7371a888ad36567c",
     "sheets.spreadsheets.values.update": "d89b9a9dc4dbcc955179a13a0f53f919046390a58a963c9ea154e51bd175460f",
@@ -364,26 +364,26 @@
     "sheets.spreadsheets.values.batchUpdate": "2616f375f9eecc6c1bf58699ce81462ce2210201ddb6f34d00941162edd1aee0",
     "sheets.spreadsheets.batchUpdate": "434ae2cd05e4a257a8a6ecbac1d354fd05a42de67ee755fee7673dcc544f4b25"
   },
-  "google-slides, authorization": {
+  "google-slides, authorization, delegated": {
     "slides.presentations.get": "963911f976459f8cc97db8d271805f86f0045532869f0d484a1f6f074801a1e2",
     "slides.presentations.batchUpdate": "b67060520a82ce8a141513164cd95f5780e67673458bec5993880bddc14558fa"
   },
-  "google-slides, jwt_bearer": {
+  "google-slides, jwt_bearer, application": {
     "slides.presentations.get": "963911f976459f8cc97db8d271805f86f0045532869f0d484a1f6f074801a1e2",
     "slides.presentations.batchUpdate": "b67060520a82ce8a141513164cd95f5780e67673458bec5993880bddc14558fa"
   },
-  "google-slides, token_exchange": {
+  "google-slides, token_exchange, application": {
     "slides.presentations.get": "963911f976459f8cc97db8d271805f86f0045532869f0d484a1f6f074801a1e2",
     "slides.presentations.batchUpdate": "b67060520a82ce8a141513164cd95f5780e67673458bec5993880bddc14558fa"
   },
-  "linkedin, authorization": {
+  "linkedin, authorization, delegated": {
     "get_userinfo": "59b7b7186fba2be50d2de28e4db427aa04df126fa2576dd4ba9ee77c426f7e11",
     "create_post": "5bce1b9cb3e2d15315407281356b9fdbbfb1e271be8790800e33c7a52a105c41",
     "delete_post": "a083e80875d3b3d70bb765451918272b125d402942d7353d8819718e200a10b3",
     "create_comment": "5d01b25fec42713c0f31a3900c7010a6bc72eada9e69259c6381c01b829faf63",
     "create_reaction": "4eac82173e36c9fe9da94cc9e0cd9664e8f3db7f68b5e017031f26d62830bfda"
   },
-  "microsoft-teams, authorization": {
+  "microsoft-teams, authorization, delegated": {
     "me.ListJoinedTeams": "2036ce5f6eb052a9028896531271347d51e077f1217cea87403076f9380bf3ca",
     "teams.ListChannels": "607247a3da19e620775f748bfda3aee5756069a8484f76bb60ea137b4c167200",
     "me.ListChats": "0ef9951729ca5c29842ea5e404967d4bafe9a668fd50dd30cb30a9c7d39409d2",
@@ -391,7 +391,7 @@
     "chats.CreateMessages": "1f58afd4d29dd266c449649b1491ee3c854da7a24f7157cb5fd7df9252853b57",
     "teams.channels.CreateMessages": "e37d1a5f42012cbb8e143fff1c57b8dbf4c5e567bccb8aaeabca6b0fdedc1f82"
   },
-  "onedrive, authorization": {
+  "onedrive, authorization, delegated": {
     "me.GetDrive": "4a6ddf80a01e4b78120f8b718de49004dcd859132912986224ae5249e2b39c59",
     "drives.drive.search": "c7ef007cb09ef8f58d952899890d217f46e6f223b50d156456602bbb845c5d11",
     "drives.items.ListChildren": "961ddac872ecae0d0ceb443d02906d17ce300a264b00782bed2876de80afb23d",
@@ -405,7 +405,7 @@
     "drives.drive.items.driveItem.workbook.worksheets.add": "51f56bba206f4ddf421d4a57a494cec98a8a45c31f56734672dd02b745668cc0",
     "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add": "98aadf8aede7dfa632cdb6fa9be2d83f05196aa621af5870c48d0368a7f40a8a"
   },
-  "onedrive, client_credentials": {
+  "onedrive, client_credentials, application": {
     "me.GetDrive": "4a6ddf80a01e4b78120f8b718de49004dcd859132912986224ae5249e2b39c59",
     "drives.drive.search": "c7ef007cb09ef8f58d952899890d217f46e6f223b50d156456602bbb845c5d11",
     "drives.items.ListChildren": "961ddac872ecae0d0ceb443d02906d17ce300a264b00782bed2876de80afb23d",
@@ -419,7 +419,7 @@
     "drives.drive.items.driveItem.workbook.worksheets.add": "51f56bba206f4ddf421d4a57a494cec98a8a45c31f56734672dd02b745668cc0",
     "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add": "98aadf8aede7dfa632cdb6fa9be2d83f05196aa621af5870c48d0368a7f40a8a"
   },
-  "outlook, authorization": {
+  "outlook, authorization, delegated": {
     "me.ListMessages": "ed86d4744237b85b43245a1dc5f7111f1cfffd7bc985f4da61d574bdb4d734e4",
     "me.CreateMessages": "66c9f3dbba17f8e8df6153cb91a215c9b3e1cdacc742c88e34cee2e3f5096009",
     "me.GetMessages": "cf57b02b43eee946cb9362b0e0a57392256130937a1c6e869872c4da1622155b",
@@ -433,7 +433,7 @@
     "me.messages.message.reply": "fd7371271f07b7dc502cc82c831b0263db084ff783020f009accffe1e162a39f",
     "me.events.event.cancel": "f92ff79b1fd9e15373d5406be5603726bb98399882276b5544f2905ca67ab4b0"
   },
-  "outlook, client_credentials": {
+  "outlook, client_credentials, application": {
     "me.ListMessages": "ed86d4744237b85b43245a1dc5f7111f1cfffd7bc985f4da61d574bdb4d734e4",
     "me.CreateMessages": "66c9f3dbba17f8e8df6153cb91a215c9b3e1cdacc742c88e34cee2e3f5096009",
     "me.GetMessages": "cf57b02b43eee946cb9362b0e0a57392256130937a1c6e869872c4da1622155b",
@@ -447,7 +447,7 @@
     "me.messages.message.reply": "fd7371271f07b7dc502cc82c831b0263db084ff783020f009accffe1e162a39f",
     "me.events.event.cancel": "f92ff79b1fd9e15373d5406be5603726bb98399882276b5544f2905ca67ab4b0"
   },
-  "search-ads-360, authorization": {
+  "search-ads-360, authorization, delegated": {
     "searchads360.customers.searchAds360.search": "b9ba8abf35da68f73818f027699ab82dadecab86ddefd1fe4c38fc8953c2b7db",
     "searchads360.customers.listAccessibleCustomers": "4067a6e824efe6c9f906409047a466ce3ab775c97c37b9a30737a453c3a359c4",
     "searchads360.searchAds360Fields.search": "6a007c5732d975469c02887876eb61d8071220304f25ec3e4bb48d54d5eb9369",
@@ -455,7 +455,7 @@
     "searchads360.customers.customColumns.list": "58ba7b3f98c97b1eff4a0dbf57717eff47b6894f89f9f052f73451ae66e7cb20",
     "searchads360.customers.customColumns.get": "199d49f70fdc4b961c752592f002a94bde8d0c4c4f5c73b7eb8ab861832def01"
   },
-  "search-ads-360, token_exchange": {
+  "search-ads-360, token_exchange, application": {
     "searchads360.customers.searchAds360.search": "b9ba8abf35da68f73818f027699ab82dadecab86ddefd1fe4c38fc8953c2b7db",
     "searchads360.customers.listAccessibleCustomers": "4067a6e824efe6c9f906409047a466ce3ab775c97c37b9a30737a453c3a359c4",
     "searchads360.searchAds360Fields.search": "6a007c5732d975469c02887876eb61d8071220304f25ec3e4bb48d54d5eb9369",
@@ -463,7 +463,7 @@
     "searchads360.customers.customColumns.list": "58ba7b3f98c97b1eff4a0dbf57717eff47b6894f89f9f052f73451ae66e7cb20",
     "searchads360.customers.customColumns.get": "199d49f70fdc4b961c752592f002a94bde8d0c4c4f5c73b7eb8ab861832def01"
   },
-  "slack-bot, secret": {
+  "slack-bot, secret, application": {
     "auth_test": "c0cf459e0128e88721253d0cd0082f518c73de4fa5c5f2c5562af4ccff0c0da2",
     "conversations_list": "7a8d02adf90c3694a9131fee21dcfe47b52702902e9d0be53ea92b7f5414a38c",
     "conversations_info": "42bb26e45ed063b6ca104ba2be88faf137241e643ffabd3659b8536d283eb8e6",
@@ -478,7 +478,7 @@
     "assistant_threads_setStatus": "b0800cd40bf15f8ef88b6d0d0ac4e7a022fe2080405b25e5c9c49a97ad09568e",
     "chat_postEphemeral": "314b4b741177273e2ef8d9d9380d51e2c76afe693168fcd2405c9fc55061c968"
   },
-  "x, authorization": {
+  "x, authorization, delegated": {
     "getUsersMe": "aea1f81165013a83795a325ec6ff057a17f4ed94d84ed31c8fb2184b57c0fb08",
     "createPosts": "8a8bace4fbca3109749939ce60c40210b37ed431a2a767749fa22a0c10fcb45f",
     "deletePosts": "09784e1679d02d77db078e6c340989ef2703655f4deec39856530366b5c5269d",
@@ -486,24 +486,41 @@
     "getUsersMentions": "c93052e0469ddb9aa3e76022a4c81f14f1dfca6ad8ab0f6bd01797fec4622cd2",
     "searchPostsRecent": "f77dd1f269460a54d154a23d244a237d249d79905beb97016a6c62363f8626f2"
   },
-  "youtube, authorization": {
+  "youtube, authorization, delegated": {
     "youtube.channels.list": "1ab51c43a2a140886276a53d0dc5a75583decaec4c2287200e5613295221e1b9",
     "youtube.playlists.list": "cf5dc5dfc543963a7367e8044cf9ecc6be183965d769cd2314575be0545a56e6",
     "youtube.playlistItems.list": "56019ca6f298f11289b80c48f279bf6a400f510a9df4ab2d9a847cfdb78fd0d7",
     "youtube.videos.list": "93e1198ce06fd93a1d65086e6741ea8eceb8cd38818e98f0e2db5d766920b3da"
   },
-  "youtube-analytics, authorization": {
+  "youtube-analytics, authorization, delegated": {
     "youtubeAnalytics.reports.query": "481743b8b7e156c17b5405e854ed83848913fd36304c44416cb0106e20786c13"
   },
-  "youtube-analytics, jwt_bearer": {
+  "youtube-analytics, jwt_bearer, application": {
     "youtubeAnalytics.reports.query": "481743b8b7e156c17b5405e854ed83848913fd36304c44416cb0106e20786c13"
   },
-  "youtube-management, authorization": {
+  "youtube-management, authorization, delegated": {
     "youtube.commentThreads.list": "8a2a775bab47894b34531bf9508825033caa0e8945938ce102d0aad4e66b4543",
     "youtube.comments.list": "e3820b6611eaa72066dcbcea2193e8b8381f5e473381e4fdaef07a9732ee2ccb",
     "youtube.videos.update": "3fd77222810c9cc5c1d2e9ed9c65401aa9281fbb33a978e8bdd6123e6736533b"
   },
-  "zoom, authorization": {
+  "zoom, authorization, application": {
+    "user": "c8a51f1bedb2227d20bf52c46b3618b660bbdcd959e017efd7c07cec13013366",
+    "meetings": "58f08e1ad1d9eb3242f3a012aa384ddbe88092118fec656f61e9c78e03363396",
+    "meetingCreate": "b016916429c44226f46d162d38ab42ae894fd36686e20e9e55a3d00eb179d6aa",
+    "meeting": "bfd420dac5e9ade1d8a13d059adfca9fa5ac71d18a9852fed13a7385e1d55b26",
+    "meetingUpdate": "23b66f035770c5a879c9243759a701abc5544c4ab980502c383a9bdf633dddd6",
+    "pastMeetingDetails": "83d809fb81a3a85ab0c5fc24731acf9e10c97cd85c28f9007d9ac87e09a17a2f",
+    "pastMeetingParticipants": "5dbfacc12ca63761aae7b98f3cc1e016c2166697e0e013709c37d909fddf84a7",
+    "recordingsList": "0911646511c0451b83b0760bd4e27135c318a33e6b9cda8bf27fae669f9f9436",
+    "recordingGet": "22d1ebc1ec590ac1dae265b1cc8afb6e9d00301a9e3fd030a111cad7aff0888d",
+    "GetMeetingTranscript": "54854c7b8f67524cb101b63364fc807e70e6aa2a2db58e19a4c824a8cc5be368",
+    "Getameetingsummary": "bf964c5d4a078a7fc83e081a68d11e0f63fae64c09fa7c13aab49b78bebf9a3f",
+    "getChannels": "7a3e247a829aba686fd645db1776e89948c97c7eb27ae644f58d9b24e42cbcd7",
+    "getChatMessages": "5a1e3f474300065a2fdf915ddd116a4f1ac3d89a9b385f78c7afc2845085f122",
+    "sendaChatMessage": "6407a7d46595aec869edcea9b9acbc50f607a4927d41aa6f9749c64763e7c796",
+    "retrieveThread": "c521159fca1c10649270d4864a136613bded1cf4e4f319431500340d19ed2d11"
+  },
+  "zoom, authorization, delegated": {
     "user": "5dc5b91c0350f7c36143b9ca1a98bea1e24caaead7d64b2ac44bb06e91237efd",
     "meetings": "6dbdb1dbcb99ac94fd2b0029e0ce171c17c2376645948149d13c17c3d7d036ea",
     "meetingCreate": "5bf2962aaa69404c6d1047699e7f23b6b9da2301e59613d887db5f89bf9fa823",
@@ -519,5 +536,22 @@
     "getChatMessages": "9bc16f47be2022d91baaf6cc2129caa5e3b2054bcab98ea993561aafdd3475b6",
     "sendaChatMessage": "e492c7a30510d02c82b4a3fa6449c50a715444b113a9285ec7b319c943fb5840",
     "retrieveThread": "a095d7770b0118c16ab0041ab1e3f58faa224686c7059886c9c0d58b5a93fde9"
+  },
+  "zoom, client_credentials, application": {
+    "user": "c8a51f1bedb2227d20bf52c46b3618b660bbdcd959e017efd7c07cec13013366",
+    "meetings": "58f08e1ad1d9eb3242f3a012aa384ddbe88092118fec656f61e9c78e03363396",
+    "meetingCreate": "b016916429c44226f46d162d38ab42ae894fd36686e20e9e55a3d00eb179d6aa",
+    "meeting": "bfd420dac5e9ade1d8a13d059adfca9fa5ac71d18a9852fed13a7385e1d55b26",
+    "meetingUpdate": "23b66f035770c5a879c9243759a701abc5544c4ab980502c383a9bdf633dddd6",
+    "pastMeetingDetails": "83d809fb81a3a85ab0c5fc24731acf9e10c97cd85c28f9007d9ac87e09a17a2f",
+    "pastMeetingParticipants": "5dbfacc12ca63761aae7b98f3cc1e016c2166697e0e013709c37d909fddf84a7",
+    "recordingsList": "0911646511c0451b83b0760bd4e27135c318a33e6b9cda8bf27fae669f9f9436",
+    "recordingGet": "22d1ebc1ec590ac1dae265b1cc8afb6e9d00301a9e3fd030a111cad7aff0888d",
+    "GetMeetingTranscript": "54854c7b8f67524cb101b63364fc807e70e6aa2a2db58e19a4c824a8cc5be368",
+    "Getameetingsummary": "bf964c5d4a078a7fc83e081a68d11e0f63fae64c09fa7c13aab49b78bebf9a3f",
+    "getChannels": "7a3e247a829aba686fd645db1776e89948c97c7eb27ae644f58d9b24e42cbcd7",
+    "getChatMessages": "5a1e3f474300065a2fdf915ddd116a4f1ac3d89a9b385f78c7afc2845085f122",
+    "sendaChatMessage": "6407a7d46595aec869edcea9b9acbc50f607a4927d41aa6f9749c64763e7c796",
+    "retrieveThread": "c521159fca1c10649270d4864a136613bded1cf4e4f319431500340d19ed2d11"
   }
 }

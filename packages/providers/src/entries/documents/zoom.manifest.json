@@ -9,7 +9,7 @@
   "info": {
     "title": "Zoom meetings, recordings, users and Team Chat",
     "version": "2",
-    "description": "Fifteen operations of a user-managed app, translated from Zoom's Users, Meetings and Team Chat API documents, with the user who connected written as me and an oauth2 scheme in place of the vendor's bearer scheme."
+    "description": "Fifteen operations, translated from Zoom's Users, Meetings and Team Chat API documents, with the user each one is for kept as its userId parameter and an oauth2 scheme in place of the vendor's bearer scheme."
   },
   "operations": [
     "user",
@@ -27,13 +27,6 @@
     "meetingCreate",
     "meetingUpdate",
     "sendaChatMessage"
-  ],
-  "path_values": [
-    {
-      "parameter": "userId",
-      "value": "me",
-      "because": "A user-level app passes me for the user who connected, and any other value fails as an invalid token"
-    }
   ],
   "left_out_parameters": [
     {

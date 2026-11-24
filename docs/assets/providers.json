@@ -2393,7 +2393,7 @@
     {
       "name": "zoom",
       "title": "Zoom",
-      "description": "Read your Zoom meetings, past meetings and their participants, cloud recordings, transcript details and AI summaries, and Team Chat channels, messages and threads, and create and update meetings and send chat messages, as yourself. A recording's or transcript's file is not fetched.",
+      "description": "Read, create and update Zoom meetings, read past meetings and their participants, recordings, transcript details and AI summaries, and read and send Team Chat messages, as the account that signs in or, through an app for the whole Zoom account, for the user each call names. No file is fetched.",
       "website": "https://developers.zoom.us/docs/integrations/oauth/",
       "server": {
         "type": "openapi",
@@ -2408,6 +2408,18 @@
           "scopes": [],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "authorization",
+          "description": "Auto's Zoom app. A Zoom admin signs in once and allows it for the company's whole Zoom account. Each call names the user it is for. It asks for no values.",
+          "scopes": [],
+          "more": [],
+          "own_client": false
+        },
+        {
+          "kind": "client_credentials",
+          "description": "The account ID, client ID and client secret of a Server-to-Server OAuth app your company builds at Zoom.",
+          "scopes": []
         }
       ],
       "placeholders": [],

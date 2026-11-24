@@ -70,6 +70,7 @@ describe('the tools every shipped document offers, by the way of each provider',
       ['outlook', 1],
       ['search-ads-360', 1],
       ['youtube-analytics', 1],
+      ['zoom', 2],
     ]);
   });
 });

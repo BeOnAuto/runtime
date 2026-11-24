@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Schema } from 'effect';
+import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { permissionsOf } from '../entry/account-types.ts';
+import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { manifestIn, manifestNamesIn, type DocumentManifest } from '../translating/document-manifests.ts';
-import { documentsBesideTheEntries, providersShippedRoots } from './shipped-providers.ts';
+import { documentsBesideTheEntries, providersShippedRoots, readProviders } from './shipped-providers.ts';
 
 const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 
@@ -100,5 +102,35 @@ describe('the manifests beside the entries', () => {
 
   it('each have their document beside them, whose operations are those they keep, all requiring the one scheme they name', () => {
     expect(manifests.map(({ name }) => heldBy(name))).toEqual(manifests.map(({ manifest }) => namedBy(manifest)));
+  });
+});
+
+const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
+
+const decodePaths = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ paths: Schema.Record(Schema.String, Schema.Unknown) })),
+);
+
+function pathsOfTheDocumentOf({ document = '' }: ProviderEntry): readonly string[] {
+  return Object.keys(decodePaths(readFileSync(new URL(`../entries/${document}`, import.meta.url), 'utf8')).paths);
+}
+
+function pathValuesOf(entry: ProviderEntry) {
+  return entry.credentials.flatMap((way) =>
+    Object.keys(way.path_values ?? {}).map((parameter) => [
+      entry.name,
+      way.kind,
+      permissionsOf(way),
+      parameter,
+      pathsOfTheDocumentOf(entry).some((path) => path.includes(`{${parameter}}`)),
+    ]),
+  );
+}
+
+describe('the path values of the ways of the shipped providers', () => {
+  it('fix a parameter its document keeps in its paths, on the way that states it alone, so every other way offers it', () => {
+    expect(shipped.providers.flatMap(({ entry }) => pathValuesOf(entry))).toEqual([
+      ['zoom', 'authorization', 'delegated', 'userId', true],
+    ]);
   });
 });

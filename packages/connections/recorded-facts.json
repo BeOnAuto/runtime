@@ -48,6 +48,8 @@
   "src/registry/0.74.0/connection_added.json": "7accff73360df4b51e31bc676ffbbeaa136be3003468f04ae50e2cf8e0824242",
   "src/registry/0.74.0/connection_next_way_chosen.json": "933450cd4b5a83722878e2aaf512e8dfe9f42d59246a6b4eb10176e3710d93a9",
   "src/registry/0.74.0/connection_way_chosen.json": "23dd156745c845888b247e7510f912531127f9debb5f9bee2bc99049eec16946",
+  "src/registry/0.75.0/connection_added.json": "20f587d035d6b3b152d5732181d929a0aa080b5d41c53af18b1fea6e46e0e4e0",
+  "src/registry/0.75.0/connection_way_chosen.json": "5e98052a3b56cc75bc805f8ac0ca72d4fb85204cdc705ad9e1cb3e321201db7c",
   "src/subscriptions/0.64.0/event_subscription_failed.json": "cbd835b0905ae0c1e829a75a4f3fbe826c59ab63b99a792c3d789a5061ace78a",
   "src/subscriptions/0.64.0/event_subscription_made.json": "c9e50c241889eee23c197fb52977ff944d8c1150084410327cd498262e302770",
   "src/subscriptions/0.64.0/event_subscription_removed.json": "25607b688406a95f66de1bbf44714309a90c18c58b275afe822fbc2751e34b8e",

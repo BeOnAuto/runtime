@@ -169,7 +169,7 @@ const waysWithoutAClient = {
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered', 'secret offered'],
   x: [underTheOrgsOAuthClientAlone],
-  zoom: [underTheOrgsOAuthClientAlone],
+  zoom: [underTheOrgsOAuthClientAlone, 'client_credentials offered'],
 };
 
 const waysWithAClient = {
@@ -194,7 +194,7 @@ const waysWithAClient = {
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered', 'secret offered'],
   x: [underTheOrgsOAuthClientAlone],
-  zoom: ['authorization offered'],
+  zoom: ['authorization offered', 'client_credentials offered'],
 };
 
 describe('the ways of the providers a server lists', () => {

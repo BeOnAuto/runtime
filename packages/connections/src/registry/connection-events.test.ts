@@ -11,12 +11,14 @@ import {
   identifiedByTheRuntime,
   identifiedInItsAccount,
   placeNamed,
+  playbooksSet,
   signingSecrets,
 } from '../testing/event-facts.ts';
 import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
 import {
   actingAsTheApp,
   addedAsAServiceAccount,
+  extensionGrantFacts,
   leftToThePage,
   wayChosenWithItsValues,
 } from '../testing/way-value-facts.ts';
@@ -222,14 +224,6 @@ const describedKey: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
-const playbooksSet: readonly (typeof ConnectionEventSchema.Type)[] = [
-  {
-    type: 'connection_playbooks_set',
-    data: { ...ofTheConnection, playbooks: ['sales', 'support'] },
-    context: acted,
-  },
-];
-
 const documentText = JSON.stringify({
   openapi: '3.1.0',
   info: { title: 'Ledgers', version: '1' },
@@ -283,6 +277,7 @@ describe('the facts of the registry of connections', () => {
       '0.72.0': [...wayChosenWithItsValues, ...issuedWithNoEnd, ...placeNamed, ...addedAsAServiceAccount, ...modelSet],
       '0.73.0': actingAsTheApp,
       '0.74.0': leftToThePage,
+      '0.75.0': extensionGrantFacts,
     },
   });
 });

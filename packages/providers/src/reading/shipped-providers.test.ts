@@ -187,7 +187,7 @@ const waysOfTheShipped = [
   ['youtube', ['authorization'], []],
   ['youtube-analytics', ['authorization', 'jwt_bearer'], []],
   ['youtube-management', ['authorization'], []],
-  ['zoom', ['authorization'], []],
+  ['zoom', ['authorization', 'authorization', 'client_credentials'], []],
 ];
 
 describe('the ways of the shipped providers', () => {

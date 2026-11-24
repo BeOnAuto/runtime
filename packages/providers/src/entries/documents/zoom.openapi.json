@@ -3,7 +3,7 @@
   "info": {
     "title": "Zoom meetings, recordings, users and Team Chat",
     "version": "2",
-    "description": "Fifteen operations of a user-managed app, translated from Zoom's Users, Meetings and Team Chat API documents, with the user who connected written as me and an oauth2 scheme in place of the vendor's bearer scheme."
+    "description": "Fifteen operations, translated from Zoom's Users, Meetings and Team Chat API documents, with the user each one is for kept as its userId parameter and an oauth2 scheme in place of the vendor's bearer scheme."
   },
   "servers": [
     {
@@ -16,13 +16,22 @@
     }
   ],
   "paths": {
-    "/users/me": {
+    "/users/{userId}": {
       "get": {
         "tags": ["Users"],
         "summary": "Get a user",
         "description": "View a user's information on a Zoom account. For user-managed apps, pass [the `me` value](https://developers.zoom.us/docs/api/rest/using-zoom-apis/#the-me-keyword) instead of the `userId` parameter. \r\n**Note:** The `user_info:read` scope is only available when you pass the `me` value for the `$userId` value. \r\n\r\nUsers who have not activated their account will have a `pending` status. These users' `created_at` timestamp will also display the time at which the API call was made, **not** the account's creation date. \n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `user:read`,`user:write`,`user:read:admin`,`user:write:admin`,`user_profile`,`user_info:read`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `user:read:user`,`user:read:user:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `LIGHT`",
         "operationId": "user",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The user's user ID or email address. For user-level apps, pass the `me` value.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "login_type",
             "in": "query",
@@ -467,13 +476,23 @@
         ]
       }
     },
-    "/users/me/meetings": {
+    "/users/{userId}/meetings": {
       "get": {
         "tags": ["Meetings"],
         "summary": "List meetings",
         "description": "List a meeting host user's scheduled meetings. For user-level apps, pass [the `me` value](/docs/api/rest/using-zoom-apis/#the-me-keyword) instead of the `userId` parameter.\n\n**Prerequisites:**\n* This API **only** supports scheduled meetings. This API does not return information about instant meetings.\n* This API only returns a user's [unexpired meetings](https://support.zoom.us/hc/en-us/articles/201362373-Meeting-ID#h_c73f9b08-c1c0-4a1a-b538-e01ebb98e844).\n* When `type` is set to `upcoming`, `upcoming_meetings`, or `previous_meetings`, only a maximum of 6 months of meeting data will be returned. \n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `meeting:read:admin`,`meeting:read`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `meeting:read:list_meetings`,`meeting:read:list_meetings:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "meetings",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The user's user ID or email address. For user-level apps, pass the `me` value.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "30R7kT7bTIKSNUFEuH_Qlg"
+            }
+          },
           {
             "name": "type",
             "in": "query",
@@ -709,7 +728,18 @@
         "summary": "Create a meeting",
         "description": "[Creates a meeting](https://support.zoom.us/hc/en-us/articles/201362413-Scheduling-meetings) for a user. For user-level apps, pass [the `me` value](/docs/api/using-zoom-apis/#the-me-keyword) instead of the `userId` parameter.\n\n**Prerequisites:**\n* A meeting's `start_url` value is the URL a host or an alternative host can use to start a meeting. The `start_url` value's expiration time is **two hours** for all regular users.\n* For `custCreate` meeting hosts - users created with the `custCreate` parameter via the [**Create users**](/docs/api/users/#tag/users/POST/users) API - the expiration time of the `start_url` parameter is **90 days** from the generation of the `start_url`.\n* For security reasons, the recommended way to programmatically get the updated `start_url` value after expiry is to call the [**Get a meeting**](/docs/api/meetings/#tag/meetings/GET/meetings/{meetingId}) API. Refer to the `start_url` value in the response.\n* **100 requests per day**. The rate limit is applied against the `userId` of the **meeting host** used to make the request.\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `meeting:write:admin`,`meeting:write`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `meeting:write:meeting`,`meeting:write:meeting:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `LIGHT`",
         "operationId": "meetingCreate",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The user's user ID or email address. For user-level apps, pass the `me` value.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "30R7kT7bTIKSNUFEuH_Qlg"
+            }
+          }
+        ],
         "requestBody": {
           "description": "The meeting object.",
           "content": {
@@ -4959,13 +4989,22 @@
         ]
       }
     },
-    "/users/me/recordings": {
+    "/users/{userId}/recordings": {
       "get": {
         "tags": ["Cloud Recording"],
         "summary": "List all recordings",
         "description": "Lists all [cloud recordings](https://support.zoom.us/hc/en-us/articles/203741855-Cloud-Recording) for a user.  \n\nFor user-level apps, pass the [`me` value](https://developers.zoom.us/docs/api/rest/using-zoom-apis/#the-me-keyword) instead of the `userId` parameter.  To access a user's passcode protected cloud recording, send the user's [OAuth access token](https://developers.zoom.us/docs/integrations/oauth/) as a bearer token in the authorization header.  \n\nExample:  `curl -H \"Authorization: Bearer <ACCESS_TOKEN>\" https://{{base-domain}}/rec/archive/download/xyz`  \n\n**Prerequisites:**  \n* Must have a Pro or a higher plan.  \n* Must enable Cloud Recording on the user's account. Learn more about [enabling cloud recordings](https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0063923) and [managing cloud recording settings](https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0065362).\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `recording:read:admin`,`recording:read`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `cloud_recording:read:list_user_recordings`,`cloud_recording:read:list_user_recordings:master`,`cloud_recording:read:list_user_recordings:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "recordingsList",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The user's ID or email address. For user-level apps, pass the `me` value.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "page_size",
             "in": "query",
@@ -6097,13 +6136,23 @@
         ]
       }
     },
-    "/chat/users/me/channels": {
+    "/chat/users/{userId}/channels": {
       "get": {
         "tags": ["Chat Channels"],
         "summary": "List user's channels",
         "description": "Generates a list of user's chat channels. For user-level apps, pass [the `me` value](https://marketplace.zoom.us/docs/api-reference/using-zoom-apis#mekeyword) instead of the `userId` parameter.Zoom chat [channels](https://support.zoom.us/hc/en-us/articles/200912909-Getting-Started-With-Channels-Group-Messaging-) allow users to communicate through chat in private or public groups.\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `chat_channel:read`,`chat_channel:write`,`chat_channel:read:admin`,`chat_channel:write:admin`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `team_chat:read:list_user_channels`,`team_chat:read:list_user_channels:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "getChannels",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The user's unique identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "v4iyWT1LTfy8QvPG4GTvdg"
+            }
+          },
           {
             "name": "page_size",
             "in": "query",
@@ -6248,13 +6297,23 @@
         ]
       }
     },
-    "/chat/users/me/messages": {
+    "/chat/users/{userId}/messages": {
       "get": {
         "tags": ["Chat Messages"],
         "summary": "List user's chat messages",
         "description": "Returns a list of chat messages and shared files between a user and an individual contact, or a chat channel. For user-level apps, pass [the `me` value](https://developers.zoom.us/docs/api/rest/using-zoom-apis/#the-me-keyword) instead of the `userId` parameter.  \n\n**Note:** For an [account-level OAuth app](https://developers.zoom.us/docs/integrations/create/), this API can only be used on behalf of a [user assigned to a role](https://support.zoom.us/hc/en-us/articles/115001078646-Using-role-management) with the **Edit** permission for **Chat Messages**. \n\n\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `chat_message:read`,`chat_message:write`,`chat_message:read:admin`,`chat_message:write:admin`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `team_chat:read:list_user_messages`,`team_chat:read:list_user_messages:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "getChatMessages",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The unique identifier of the user.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "v4iyWT1LTfy8QvPG4GTvdg"
+            }
+          },
           {
             "name": "to_contact",
             "in": "query",
@@ -6745,7 +6804,18 @@
         "summary": "Send a chat message",
         "description": "Sends chat messages to a user in your contact list or to a [channel](https://support.zoom.us/hc/en-us/articles/200912909-Getting-Started-With-Channels-Group-Messaging-) of which you are a member.  \nFor user-level apps, pass [the `me` value](https://marketplace.zoom.us/docs/api-reference/using-zoom-apis#mekeyword) instead of the `userId` parameter.\n\n- To send a message to a contact, provide the contact's email address in the `to_contact` field.  \n- To send a message to a channel, provide the channel's ID in the `to_channel` parameter.\n\n\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `chat_message:write`,`chat_message:write:admin`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `team_chat:write:user_message`,`team_chat:write:user_message:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "sendaChatMessage",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The unique identifier of the user.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "v4iyWT1LTfy8QvPG4GTvdg"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -6916,13 +6986,23 @@
         ]
       }
     },
-    "/chat/users/me/messages/{messageId}/thread": {
+    "/chat/users/{userId}/messages/{messageId}/thread": {
       "get": {
         "tags": ["Chat Messages"],
         "summary": "Retrieve a thread",
         "description": "Retrieves all messages under a thread. For user-level apps, pass the `me` value instead of the `userId` parameter.\n\n**[Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `chat_message:read`,`chat_message:read:admin`\n\n**[Granular Scopes](https://developers.zoom.us/docs/integrations/oauth-scopes-overview/):** `team_chat:read:thread_message`,`team_chat:read:thread_message:admin`\n\n**[Rate Limit Label](https://marketplace.zoom.us/docs/api-reference/rate-limits#rate-limits):** `MEDIUM`",
         "operationId": "retrieveThread",
         "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "The unique identifier of the user.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "v4iyWT1LTfy8QvPG4GTvdg"
+            }
+          },
           {
             "name": "messageId",
             "in": "path",

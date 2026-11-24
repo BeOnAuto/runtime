@@ -1,6 +1,6 @@
 name: zoom
 title: Zoom
-description: Read your Zoom meetings, past meetings and their participants, cloud recordings, transcript details and AI summaries, and Team Chat channels, messages and threads, and create and update meetings and send chat messages, as yourself. A recording's or transcript's file is not fetched.
+description: Read, create and update Zoom meetings, read past meetings and their participants, recordings, transcript details and AI summaries, and read and send Team Chat messages, as the account that signs in or, through an app for the whole Zoom account, for the user each call names. No file is fetched.
 summary: Lets your playbooks read meetings, recordings and Team Chat in Zoom, create meetings and send chat messages.
 website: https://developers.zoom.us/docs/integrations/oauth/
 type: openapi
@@ -14,4 +14,68 @@ credentials:
     token_endpoint: https://zoom.us/oauth/token
     revocation_endpoint: https://zoom.us/oauth/revoke
     clients: [registered]
+    path_values:
+      userId: me
     description: Sign in to Zoom and allow access to your meetings, recordings and Team Chat.
+  - kind: authorization
+    permissions: application
+    issuer: https://zoom.us
+    authorization_endpoint: https://zoom.us/oauth/authorize
+    token_endpoint: https://zoom.us/oauth/token
+    revocation_endpoint: https://zoom.us/oauth/revoke
+    clients: [registered]
+    limitation: It must be allowed by a Zoom admin. It works on your company's whole Zoom account.
+    description: >-
+      Auto's Zoom app. A Zoom admin signs in once and allows it for the company's whole Zoom account. Each call names
+      the user it is for. It asks for no values.
+  - kind: client_credentials
+    issuer: https://zoom.us
+    parameters:
+      grant_type: account_credentials
+      account_id: '{account_id}'
+    placeholders:
+      account_id:
+        title: Account ID
+        description: The Account ID Zoom shows under App credentials on the app's page.
+        pattern: '^[A-Za-z0-9_-]+$'
+        example: aBcD1eFgH2iJkL3mNoP4qR
+    key_page: https://marketplace.zoom.us/
+    key_page_title: Open the Zoom App Marketplace
+    steps:
+      key_page:
+        title: Create the app at Zoom
+        instructions: |-
+          First, a Zoom administrator lets you build this kind of app: under **User Management**, **Roles**, **Role Settings**, **Advanced features**, they select **View** and **Edit** for **Server-to-Server OAuth app**.
+
+          - Select **Developers**, then **Build an app**.
+          - Select **Server-to-Server OAuth app**, then **Create**.
+          - Under **Information**, add a short description, a company name and a contact.
+      pages:
+        - title: Add its scopes and activate it
+          page: https://marketplace.zoom.us/
+          page_title: Open the Zoom App Marketplace
+          instructions: |-
+            - Under **Scopes**, select **Add Scopes** and add each of these:
+              - `user:read:user:admin`
+              - `meeting:read:list_meetings:admin`
+              - `meeting:read:meeting:admin`
+              - `meeting:write:meeting:admin`
+              - `meeting:update:meeting:admin`
+              - `meeting:read:past_meeting:admin`
+              - `meeting:read:list_past_participants:admin`
+              - `meeting:read:summary:admin`
+              - `cloud_recording:read:list_user_recordings:admin`
+              - `cloud_recording:read:list_recording_files:admin`
+              - `cloud_recording:read:meeting_transcript:admin`
+              - `team_chat:read:list_user_channels:admin`
+              - `team_chat:read:list_user_messages:admin`
+              - `team_chat:read:thread_message:admin`
+              - `team_chat:write:user_message:admin`
+            - Under **Activation**, activate the app.
+
+            The app keeps the permissions of the person who built it. If their role changes, transfer the app to another owner in Zoom.
+      key:
+        title: Enter the app's details here
+        instructions: Zoom shows all three under **App credentials**.
+    limitation: "It can't act as one person: it works on your company's whole Zoom account."
+    description: The account ID, client ID and client secret of a Server-to-Server OAuth app your company builds at Zoom.

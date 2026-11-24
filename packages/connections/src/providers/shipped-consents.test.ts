@@ -1,6 +1,6 @@
 import { readProviders, providersShippedRoots, requestOriginsOf } from '@on.auto/providers';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { keptTokensIn } from '@on.auto/tool-servers';
+import { keptTokensIn, type PermissionsStated } from '@on.auto/tool-servers';
 import { clockAt, inProcessFetch, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Redacted, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -33,13 +33,14 @@ interface WayOfConsent {
   readonly scope: string | undefined;
   readonly clients: readonly string[];
   readonly oauthClient: boolean;
+  readonly permissions: PermissionsStated;
   readonly vendor: VendorOfTheWay | undefined;
   readonly requestOrigins: readonly string[];
 }
 
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
   entry.credentials.flatMap(
-    ({ kind, issuer, scope, clients = ['registered'], oauth_client: oauthClient, installation }) =>
+    ({ kind, issuer, scope, clients = ['registered'], oauth_client: oauthClient, installation, permissions }) =>
       kind === 'authorization' && issuer !== undefined && installation === undefined
         ? [
             {
@@ -49,6 +50,7 @@ const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entr
               scope,
               clients,
               oauthClient: oauthClient === 'required',
+              permissions: permissions ?? 'delegated',
               vendor: vendorsOfTheShippedWays[entry.name],
               requestOrigins: requestOriginsOf(entry),
             },
@@ -70,6 +72,7 @@ const connectedOf = Schema.decodeUnknownSync(
       id: Schema.String,
       status: Schema.String,
       granted_scope: Schema.NullOr(Schema.String),
+      permissions: Schema.NullOr(Schema.String),
       credential: Schema.Struct({ client_source: Schema.String }),
     }),
   }),
@@ -88,13 +91,17 @@ function parametersAsked(
   return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
 }
 
-async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: WayOfConsent, registered: boolean) {
+async function consentOf(
+  { name, placeholders, issuer, oauthClient, permissions, vendor }: WayOfConsent,
+  registered: boolean,
+) {
   const theVendor = Option.getOrThrow(Option.fromNullishOr(vendor));
   const fake = servedAsTheVendor(theVendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, theVendor, {
     providers: shipped,
     registeredIssuer: registered ? issuer : undefined,
+    registeredPermissions: permissions,
   });
   const { asked, finished } = await consentedAtTheVendor(
     h,
@@ -102,7 +109,7 @@ async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: Wa
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
-  const { status, granted_scope: grantedScope, credential } = connectedOf(finished).output;
+  const { status, granted_scope: grantedScope, credential, permissions: actingAs } = connectedOf(finished).output;
   return {
     provider: name,
     authorization_endpoint: `${asked.origin}${asked.pathname}`.replace(fake.origin, '<the fake>'),
@@ -115,11 +122,16 @@ async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: Wa
     client_sources: facts.flatMap((fact) =>
       Option.toArray(Option.map(startedSourceOf(fact), ({ data }) => data.client_source)),
     ),
-    connected: { status, granted_scope: grantedScope, client_source: credential.client_source },
+    connected: {
+      status,
+      granted_scope: grantedScope,
+      client_source: credential.client_source,
+      permissions: actingAs,
+    },
   };
 }
 
-function consentExpectedOf({ name, scope, vendor, requestOrigins }: WayOfConsent, source: string) {
+function consentExpectedOf({ name, scope, permissions, vendor, requestOrigins }: WayOfConsent, source: string) {
   const {
     asked = scope ?? null,
     resource,
@@ -138,7 +150,12 @@ function consentExpectedOf({ name, scope, vendor, requestOrigins }: WayOfConsent
       : { code_challenge: true, code_challenge_method: 'S256' }),
     parameters,
     client_sources: [source],
-    connected: { status: 'connected', granted_scope: metadata.grantedScope ?? asked, client_source: source },
+    connected: {
+      status: 'connected',
+      granted_scope: metadata.grantedScope ?? asked,
+      client_source: source,
+      permissions,
+    },
   };
 }
 
@@ -184,6 +201,7 @@ const providersTakingConsent = [
   'youtube',
   'youtube-analytics',
   'youtube-management',
+  'zoom',
   'zoom',
 ];
 

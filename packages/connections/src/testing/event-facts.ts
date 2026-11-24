@@ -67,6 +67,14 @@ export const identifiedInItsAccount: readonly (typeof ConnectionEventSchema.Type
   },
 ];
 
+export const playbooksSet: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_playbooks_set',
+    data: { connection: 'connection-1', playbooks: ['sales', 'support'] },
+    context: { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' },
+  },
+];
+
 export const signingSecrets: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_signing_secret_set',

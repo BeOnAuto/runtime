@@ -228,3 +228,38 @@ export const leftToThePage: readonly (typeof ConnectionEventSchema.Type)[] = [
     context: acted,
   },
 ];
+
+const grantedForTheAccount = {
+  kind: 'client_credentials',
+  permissions: 'application',
+  issuer: 'https://login.meetings.example.com',
+  parameters: { grant_type: 'account_credentials', account_id: 'acct-7f3a' },
+} as const;
+
+export const extensionGrantFacts: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'meetings',
+      server_type: 'openapi',
+      provider: 'meetings',
+      placeholders: { account_id: 'acct-7f3a' },
+      entry: { document: 'https://meetings.example.com/openapi.json' },
+      credential: grantedForTheAccount,
+      says: {},
+      added_by: { id: 'person:ada', name: 'Ada Lovelace' },
+    },
+    context: acted,
+  },
+  {
+    type: 'connection_way_chosen',
+    data: {
+      ...ofTheConnection,
+      credential: grantedForTheAccount,
+      says: {},
+      placeholders: { account_id: 'acct-7f3a' },
+    },
+    context: acted,
+  },
+];
