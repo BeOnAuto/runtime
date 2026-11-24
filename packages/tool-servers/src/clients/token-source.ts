@@ -11,6 +11,7 @@ import {
 import type { SubjectTokensOfACall } from '@on.auto/operations';
 import { Option, Redacted } from 'effect';
 
+import { mintCheckedOf, type AssertionChecked } from '../assertions/assertion-checks.ts';
 import type { AssertedTokens } from '../assertions/requested-tokens.ts';
 import { assertedTokensOf, type Assertion } from '../assertions/signed-assertions.ts';
 import type { ConsentServed, TokenServing } from '../consent/consent-client.ts';
@@ -142,7 +143,10 @@ function askedAfter(asking: Asking, { response }: UnauthorizedContext): Asking {
   };
 }
 
-function authOptionsOf({ serverUrl, fetch }: TokenSourceOptions, { scope, resourceMetadataUrl }: Asking) {
+function authOptionsOf(
+  { serverUrl, fetch }: Pick<TokenSourceOptions, 'serverUrl' | 'fetch'>,
+  { scope, resourceMetadataUrl }: Asking,
+) {
   return {
     serverUrl,
     fetchFn: fetch,
@@ -151,9 +155,13 @@ function authOptionsOf({ serverUrl, fetch }: TokenSourceOptions, { scope, resour
   };
 }
 
+export type TokenTarget = Pick<TokenSourceOptions, 'serverUrl' | 'discovery'>;
+
+type Minting = TokenTarget & Pick<TokenSourceOptions, 'fetch' | 'now' | 'subjectTokens' | 'org'>;
+
 async function credentialsTokensOf(
   settings: ClientMintingAuth,
-  options: TokenSourceOptions,
+  options: TokenTarget & Pick<TokenSourceOptions, 'fetch'>,
   asking: Asking,
 ): Promise<AssertedTokens> {
   const provider = providerOf(settings, options.discovery);
@@ -182,7 +190,7 @@ function assertionOf(settings: ClientMintingAuth, { scope }: Asking): Assertion 
   };
 }
 
-function tokensOf(settings: MintingAuth, options: TokenSourceOptions, asking: Asking): Promise<AssertedTokens> {
+function tokensOf(settings: MintingAuth, options: Minting, asking: Asking): Promise<AssertedTokens> {
   if (settings.grant === 'token_exchange') {
     return exchangedTokensOf(settings, asking.scope, options);
   }
@@ -191,11 +199,22 @@ function tokensOf(settings: MintingAuth, options: TokenSourceOptions, asking: As
     : credentialsTokensOf(settings, options, asking);
 }
 
+function askedFirstBy({ scope }: Pick<MintingAuth, 'scope'>): Asking {
+  return { scope: scope ?? undefined, resourceMetadataUrl: undefined };
+}
+
+export function clientTokensCheckedOf(
+  settings: ClientMintingAuth,
+  minting: TokenTarget & Pick<TokenSourceOptions, 'fetch' | 'now'>,
+): Promise<AssertionChecked> {
+  return mintCheckedOf((fetch) => tokensOf(settings, { ...minting, fetch }, askedFirstBy(settings)), minting.fetch);
+}
+
 export function tokenSource(settings: MintingAuth, options: TokenSourceOptions): TokenSource {
   const { server, now, minted } = options;
   let held: Held | undefined;
   let minting: Promise<string> | undefined;
-  let asking: Asking = { scope: settings.scope ?? undefined, resourceMetadataUrl: undefined };
+  let asking = askedFirstBy(settings);
   const mint = async (): Promise<string> => {
     const tokens = await tokensOf(settings, options, asking);
     minted(server, tokens.access_token);

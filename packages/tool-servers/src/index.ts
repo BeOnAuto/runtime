@@ -212,6 +212,7 @@ export { TokenRequestSchema, type TokenRequest } from './assertions/token-reques
 export { isUnderTheIssuer, tokenRequestIssuesOf } from './assertions/token-request-checks.ts';
 export type { Assertion } from './assertions/signed-assertions.ts';
 export { assertionCheckedOf, type AssertionChecked } from './assertions/assertion-checks.ts';
+export { connectionTokensCheckedOf, type ConnectionTokensChecked } from './org-servers/connection-token-checks.ts';
 export type { SubjectTokens } from './exchange/subject-tokens.ts';
 export {
   ImpersonationSchema,

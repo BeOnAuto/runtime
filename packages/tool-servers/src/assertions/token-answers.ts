@@ -7,7 +7,7 @@ import { AssertionRefused } from './assertion-refused.ts';
 import { mostAnswerBytes, type AssertedTokens } from './requested-tokens.ts';
 import { TokenRequestFailed } from './token-request-failed.ts';
 
-const statusesOfARefusal: ReadonlySet<number> = new Set([400, 401]);
+export const statusesOfARefusal: ReadonlySet<number> = new Set([400, 401]);
 
 const rateLimited = 429;
 

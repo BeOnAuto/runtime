@@ -1,9 +1,21 @@
+import {
+  AuthorizationServerMismatchError,
+  IssuerMismatchError,
+  OAuthError,
+  OAuthErrorCode,
+  type FetchLike,
+} from '@modelcontextprotocol/client';
 import { Redacted } from 'effect';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { fakeMcpInProcess, inProcessFetch, type ClientRegistration, type FakeMcpServer } from '../testing/index.ts';
 import { rsaKeys } from '../testing/token-sources.ts';
-import { assertionCheckedOf } from './assertion-checks.ts';
+import {
+  assertionCheckedOf,
+  descriptionShownOf,
+  mintCheckedOf,
+  mostDescriptionCharacters,
+} from './assertion-checks.ts';
 import type { Assertion } from './signed-assertions.ts';
 
 const robot = 'robot@acme.example.com';
@@ -103,5 +115,86 @@ describe('the check of a signed assertion the authorization server answers with 
       { kind: 'unanswered', call: { step: 'token', host, answer: { status: 400, retryAfterMs: null } } },
       { kind: 'unanswered', call: { step: 'token', host, answer: { failed: 'unreadable' } } },
     ]);
+  });
+});
+
+const theTokenEndpoint = 'https://login.example.com/acme/token';
+
+function failingAfterTheToken(thrown: unknown) {
+  return async (fetch: FetchLike): Promise<never> => {
+    await fetch(theTokenEndpoint);
+    throw thrown;
+  };
+}
+
+function checkedAfter(thrown: unknown, status = 401) {
+  return mintCheckedOf(failingAfterTheToken(thrown), () => Promise.resolve(new Response(null, { status })));
+}
+
+const hostsAsked = ['login.example.com'];
+
+const theIssuer = 'https://login.example.com/acme';
+
+describe('the check of a token the MCP client asks for', () => {
+  it('is refused with the code the authorization server answers, and its description on one line where it gives one', async () => {
+    expect(
+      await Promise.all([
+        checkedAfter(new OAuthError(OAuthErrorCode.InvalidClient, 'Invalid client secret.\r\n  Trace ID: 0f3c ')),
+        checkedAfter(OAuthError.fromResponse({ error: 'unauthorized_client' })),
+      ]),
+    ).toEqual([
+      { kind: 'refused', code: 'invalid_client', description: 'Invalid client secret. Trace ID: 0f3c' },
+      { kind: 'refused', code: 'unauthorized_client' },
+    ]);
+  });
+
+  it('is unreached where the authorization server says to try later, answers a code that is not one, or answers it with a status of no refusal', async () => {
+    const invalidClient = new OAuthError(OAuthErrorCode.InvalidClient, 'Invalid client secret.');
+    expect(
+      await Promise.all([
+        checkedAfter(new OAuthError(OAuthErrorCode.ServerError, 'HTTP 503: Invalid OAuth error response')),
+        checkedAfter(new OAuthError(OAuthErrorCode.TemporarilyUnavailable, 'Down for maintenance'), 400),
+        checkedAfter(new OAuthError('not a code', 'Refused')),
+        checkedAfter(invalidClient, 429),
+        checkedAfter(invalidClient, 503),
+        mintCheckedOf(() => Promise.reject(invalidClient), inProcessFetch),
+      ]),
+    ).toEqual([
+      ...Array.from({ length: 5 }, () => ({ kind: 'unreached', hosts: hostsAsked })),
+      { kind: 'unreached', hosts: [] },
+    ]);
+  });
+
+  it('is the conflict of an issuer its metadata names, or of an authorization server its server names', async () => {
+    expect(
+      await Promise.all([
+        checkedAfter(new IssuerMismatchError('metadata', theIssuer, 'https://elsewhere.example.com')),
+        checkedAfter(new AuthorizationServerMismatchError(theIssuer, 'https://elsewhere.example.com')),
+      ]),
+    ).toEqual([
+      {
+        kind: 'conflicting',
+        refusal: { refused: 'another_issuer', named: 'https://elsewhere.example.com', by: 'authorization_server' },
+      },
+      {
+        kind: 'conflicting',
+        refusal: { refused: 'another_issuer', named: 'https://elsewhere.example.com', by: 'server' },
+      },
+    ]);
+  });
+});
+
+describe('the description of a refusal', () => {
+  it.each([
+    ['cut to the most characters shown', 'Invalid client secret', 7, { description: 'Invalid' }],
+    ['shown whole within them', 'Invalid', 7, { description: 'Invalid' }],
+    ['left out where it is only blanks', ' \r\n ', 7, {}],
+    ['left out where it only repeats the code', 'invalid_client', 20, {}],
+  ] as const)('is %s', (_, message, most, shown) => {
+    expect(descriptionShownOf({ code: 'invalid_client', message }, most)).toEqual(shown);
+  });
+
+  it('shows at most 300 characters by default', () => {
+    expect(mostDescriptionCharacters).toBe(300);
   });
 });

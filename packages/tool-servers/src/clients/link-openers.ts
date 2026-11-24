@@ -3,7 +3,7 @@ import type { FetchOfACall } from '@on.auto/operations';
 import { timerOf, type Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { apiClient, type ApiOpening } from '../openapi/api-client.ts';
-import type { LinkedServerSettings } from '../openapi/described-api.ts';
+import type { DescribedApiSettings, LinkedServerSettings } from '../openapi/described-api.ts';
 import { openHttp } from './http-client.ts';
 import {
   boundedReport,
@@ -18,9 +18,9 @@ import type { StdioOpening } from './stdio-client.ts';
 import {
   tokenSource,
   type ConsentTokenSources,
-  type Discovery,
   type TokenSource,
   type TokenSourceOptions,
+  type TokenTarget,
 } from './token-source.ts';
 
 export interface LinkOptions {
@@ -40,10 +40,8 @@ export interface LinkOptions {
 
 type Timer = ReturnType<typeof timerOf>;
 
-interface Remote {
+interface Remote extends TokenTarget {
   readonly settings: Extract<LinkedServerSettings, { readonly auth: unknown }>;
-  readonly serverUrl: string;
-  readonly discovery: Discovery;
 }
 
 interface Linking extends LinkOptions {
@@ -106,16 +104,22 @@ function linkingOf(linkOptions: LinkOptions): Linking {
   return { ...linkOptions, timer: linkOptions.timer ?? timerOf(linkOptions.timing) };
 }
 
-export function tokensOfTheLink(settings: LinkedServerSettings, linkOptions: LinkOptions): TokenSource | undefined {
-  const options = linkingOf(linkOptions);
-  if (settings.type === 'stdio') {
-    return undefined;
-  }
+type Targeted =
+  | Pick<Extract<Remote['settings'], { readonly type: 'mcp' }>, 'type' | 'url' | 'auth'>
+  | { readonly type: 'openapi'; readonly api: Pick<DescribedApiSettings['api'], 'baseUrl'> };
+
+export function tokenTargetOf(settings: Targeted): TokenTarget {
   if (settings.type === 'openapi') {
-    return tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
+    return { serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' };
   }
   const discovery = isDiscoveredAtTheIssuer(settings.auth) ? 'from_the_issuer' : 'from_the_server';
-  return tokensOf({ settings, serverUrl: settings.url, discovery }, options);
+  return { serverUrl: settings.url, discovery };
+}
+
+export function tokensOfTheLink(settings: LinkedServerSettings, linkOptions: LinkOptions): TokenSource | undefined {
+  return settings.type === 'stdio'
+    ? undefined
+    : tokensOf({ settings, ...tokenTargetOf(settings) }, linkingOf(linkOptions));
 }
 
 export function openerOf(

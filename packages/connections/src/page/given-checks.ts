@@ -1,8 +1,9 @@
-import { Unavailable, type InvalidInput, type OrgContext } from '@on.auto/operations';
+import { Unavailable, type Conflict, type InvalidInput, type OrgContext, type OrgReader } from '@on.auto/operations';
 import type { EventDestination } from '@on.auto/providers';
 import { Effect, Redacted } from 'effect';
 
 import type { ConnectionServices } from '../operations/connection-services.ts';
+import { clientCredentialsChecked, type ClientCredentialChecking } from './client-credential-checks.ts';
 import { unavailableWords } from './consent-words.ts';
 import { appCredentialPointerOf, type GivenAppCredential } from './given-apps.ts';
 import { refused, refusedByTheService } from './given-fields.ts';
@@ -18,7 +19,9 @@ export interface SocketChecks {
   readonly openedOnce: (opening: AppCredentialOpening) => Effect.Effect<ValueChecked>;
 }
 
-export type CheckingServices = TestingServices & Pick<ConnectionServices, 'sockets'>;
+export type CheckingServices = TestingServices & ClientCredentialChecking & Pick<ConnectionServices, 'sockets'>;
+
+type ClientChecking = Parameters<typeof clientCredentialsChecked>;
 
 interface Checked {
   readonly pointer: string;
@@ -65,10 +68,14 @@ function verdictOf(checks: readonly Checked[]): Effect.Effect<void, InvalidInput
 
 export function checkedBeforeKeeping(
   connection: Parameters<typeof keyTestedOf>[0],
-  { value, apps }: { readonly value: string; readonly apps: readonly GivenAppCredential[] },
+  { given, apps }: { readonly given: ClientChecking[1]; readonly apps: readonly GivenAppCredential[] },
   services: CheckingServices,
-): Effect.Effect<void, InvalidInput | Unavailable, OrgContext> {
-  return Effect.all([keyChecked(connection, value, services), appCredentialsChecked(apps, services)], {
+  checking: ClientChecking[3],
+): Effect.Effect<void, InvalidInput | Unavailable | Conflict, OrgContext | OrgReader> {
+  return Effect.all([keyChecked(connection, given.value, services), appCredentialsChecked(apps, services)], {
     concurrency: 'unbounded',
-  }).pipe(Effect.flatMap((checked: readonly (readonly Checked[])[]) => verdictOf(checked.flat())));
+  }).pipe(
+    Effect.flatMap((checked: readonly (readonly Checked[])[]) => verdictOf(checked.flat())),
+    Effect.andThen(clientCredentialsChecked(connection, given, services, checking)),
+  );
 }

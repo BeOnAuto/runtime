@@ -81,8 +81,17 @@ export const billingDocument = {
 
 const documentsAt: ReadonlyMap<string, string> = new Map([[billingDocumentUrl, JSON.stringify(billingDocument)]]);
 
-function answeredOffTheLoopback({ url }: Readonly<Request>): Response {
-  const document = documentsAt.get(url);
+const tokenOffTheLoopback = 'token-of-an-issuer-off-the-loopback';
+
+function isAskedForAToken({ method, url }: Readonly<Request>): boolean {
+  return method === 'POST' && new URL(url).pathname.endsWith('/token');
+}
+
+function answeredOffTheLoopback(request: Readonly<Request>): Response {
+  if (isAskedForAToken(request)) {
+    return Response.json({ access_token: tokenOffTheLoopback, token_type: 'Bearer', expires_in: 3600 });
+  }
+  const document = documentsAt.get(request.url);
   return document === undefined
     ? new Response(null, { status: 404 })
     : new Response(document, { headers: { 'content-type': 'application/json' } });

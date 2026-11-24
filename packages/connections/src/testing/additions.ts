@@ -1,3 +1,5 @@
+import { generateKeyPairSync } from 'node:crypto';
+
 import type { CallerIdentity, Outcome } from '@on.auto/operations';
 import { Schema } from 'effect';
 
@@ -30,6 +32,14 @@ export const billing = {
   type: 'openapi',
   entry: { document: billingDocumentUrl, base_url: 'https://api.billing.example.com/v2' },
   credential: { kind: 'client_credentials', issuer: 'https://auth.billing.example.com', client_id: 'acme' },
+} as const;
+
+export const billingKey = {
+  private_key: generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({
+    type: 'pkcs8',
+    format: 'pem',
+  }),
+  algorithm: 'ES256',
 } as const;
 
 export const notes = {

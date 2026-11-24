@@ -142,6 +142,11 @@ export function keyRefusedWith(code: string): string {
   return `The provider did not accept this key. Check that each step on this page was done for this key and that the values you entered are right. A change at the provider can take a few minutes to apply. The provider answered: ${code}.`;
 }
 
+export function appDetailsRefusedWith(code: string, description?: string): string {
+  const answered = description === undefined ? `${code}.` : `${code}. ${description}`;
+  return `The provider did not accept the app's details. Check that each step on this page was done and that the values you entered are right. A change at the provider can take a few minutes to apply. The provider answered: ${answered}`;
+}
+
 const keyFileAlone = 'Expected key_file alone, the key file of a credential of the kind jwt_bearer';
 
 const keyFileOfAnotherKind: Issue = {

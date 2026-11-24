@@ -2,7 +2,7 @@ import { providersOf, tracker } from '@on.auto/providers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { added, billing, crm, crmKeyHelp } from '../testing/additions.ts';
+import { added, billing, billingKey, crm, crmKeyHelp } from '../testing/additions.ts';
 import { ada, harness, type Harness, operationNamed } from '../testing/harness.ts';
 import { replacingFiles } from '../testing/replacements.ts';
 import { unansweredWordsOf } from './unanswered-words.ts';
@@ -110,18 +110,13 @@ describe('the ending of a credential given', () => {
   });
 
   it('is kept of a client secret, and never of a private key', async () => {
-    const h = harness();
+    const h = harness({ mostSecretCharacters: 4096 });
     const secret = await added(h, billing);
     const key = await added(h, { ...billing, name: 'billing-key' });
 
     const endings = [
       await given(h, { id: secret.id, token: secret.token, client_secret: 'billing-client-secret' }),
-      await given(h, {
-        id: key.id,
-        token: key.token,
-        private_key: '-----BEGIN PRIVATE KEY-----MC4CAQAwBQYDK2VwBCIEIA',
-        algorithm: 'EdDSA',
-      }),
+      await given(h, { id: key.id, token: key.token, ...billingKey }),
     ];
 
     expect(endings).toEqual(['cret', null]);

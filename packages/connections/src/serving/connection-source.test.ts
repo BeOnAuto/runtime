@@ -19,7 +19,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { documentDecider, documentStreamOfOrg, keptTextOf } from '../documents/document-streams.ts';
 import { type ConnectionPolicyFields, connectionPolicyOf } from '../policy/connection-policy.ts';
 import { connectionRowsName } from '../registry/connection-rows.ts';
-import { added, billing, crm, crmKeyHelp, crmWithTenant, notes } from '../testing/additions.ts';
+import { added, billing, billingKey, crm, crmKeyHelp, crmWithTenant, notes } from '../testing/additions.ts';
 import {
   accessThrough,
   askingThrough,
@@ -306,17 +306,13 @@ describe('a connected connection to an HTTP API as a tool server', () => {
 
 describe('a connected connection of client credentials as a tool server', () => {
   it('holds client credentials in its auth block, a client secret or a private key with its algorithm', async () => {
-    const h = harness();
+    const h = harness({ mostSecretCharacters: 4096 });
     const withSecret = await connectedConnectionSource(
       h,
       { ...billing, credential: { ...billing.credential, scope: 'invoices:read' } },
       { client_secret: 'billing-client-secret' },
     );
-    const withKey = await connectedConnectionSource(
-      h,
-      { ...billing, name: 'billing-key' },
-      { private_key: 'pem', algorithm: 'ES256' },
-    );
+    const withKey = await connectedConnectionSource(h, { ...billing, name: 'billing-key' }, billingKey);
     const source = sourceOf(h);
 
     const settings = [await settingsOf(source, withSecret), await settingsOf(source, withKey)];
@@ -382,7 +378,7 @@ async function graphSearchedAs(input: unknown, given: Readonly<Record<string, st
 }
 
 describe('the token of a connection of client credentials to an MCP server whose metadata names another authorization server', () => {
-  it('is asked at the issuer its provider’s way names, with the resource the server names, where the connection is made from a provider', async () => {
+  it('is asked at the issuer its provider’s way names, with the resource the server names, when it is given and when it is served, where the connection is made from a provider', async () => {
     const named = graphServerNaming();
     const server = graphServerNaming([named.origin]);
 
@@ -393,7 +389,7 @@ describe('the token of a connection of client credentials to an MCP server whose
     );
 
     expect(called).toMatchObject({ status: 'succeeded' });
-    expect([server.tokenRequests(), named.tokenRequests()]).toEqual([1, 0]);
+    expect([server.tokenRequests(), named.tokenRequests()]).toEqual([2, 0]);
     expect(asking.resources()).toEqual([server.url]);
     expect(named.heard()).toEqual([]);
   });

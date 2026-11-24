@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { makeConnectionSource } from '../serving/connection-source.ts';
-import { added, billing, crm, issuesIn, lastFact, notes } from '../testing/additions.ts';
+import { added, billing, billingKey, crm, issuesIn, lastFact, notes } from '../testing/additions.ts';
 import { ada, grace, harness, operationNamed, recordedAs, type Harness, fixtureServing } from '../testing/harness.ts';
 
 const anyWords: unknown = expect.any(String);
@@ -13,6 +13,8 @@ function giving(h: Harness, input: Readonly<Record<string, string>>, caller = ad
 }
 
 const byAda = { connected_by: recordedAs.ada };
+
+const keepingAKey = { mostSecretCharacters: 4096 };
 
 describe('giving the credential of a connection', () => {
   it('keeps exactly its value in the secret store, records its id, approves the connection and uses the link up', async () => {
@@ -46,14 +48,14 @@ describe('giving the credential of a connection', () => {
   });
 
   it('takes the client secret of client credentials, or a private key with its algorithm, which the fact names', async () => {
-    const h = harness();
+    const h = harness(keepingAKey);
     const secret = await added(h, billing);
     const key = await added(h, { ...billing, name: 'billing-key' });
 
     await giving(h, { id: secret.id, token: secret.token, client_secret: 'billing-client-secret' });
-    await giving(h, { id: key.id, token: key.token, private_key: '-----BEGIN PRIVATE KEY-----', algorithm: 'ES256' });
+    await giving(h, { id: key.id, token: key.token, ...billingKey });
 
-    expect([...h.secrets.values().values()]).toEqual(['billing-client-secret', '-----BEGIN PRIVATE KEY-----']);
+    expect([...h.secrets.values().values()]).toEqual(['billing-client-secret', billingKey.private_key]);
     expect(await lastFact(h)).toEqual({ connection: key.id, secret_id: 'secret-2', algorithm: 'ES256', ...byAda });
   });
 });
@@ -172,10 +174,10 @@ describe('client credentials whose client id the connection does not hold', () =
   });
 
   it('take it beside a private key and its algorithm', async () => {
-    const h = harness();
+    const h = harness(keepingAKey);
     const { id, token } = await added(h, billingOfNoClient);
 
-    await giving(h, { id, token, client_id: 'acme', private_key: '-----BEGIN PRIVATE KEY-----', algorithm: 'ES256' });
+    await giving(h, { id, token, client_id: 'acme', ...billingKey });
 
     expect(await lastFact(h)).toEqual({
       connection: id,
@@ -274,14 +276,12 @@ describe('the client credentials a connection sends', () => {
     });
   });
 
-  it('are the private key and the algorithm given beside it, the algorithm as it is written', async () => {
-    const h = harness();
+  it('are the private key and the algorithm given beside it', async () => {
+    const h = harness(keepingAKey);
     const { id, token } = await added(h, billing);
 
-    await giving(h, { id, token, private_key: '-----BEGIN PRIVATE KEY-----', algorithm: '${NOPE:-ES256}' });
+    await giving(h, { id, token, ...billingKey });
 
-    expect(await authSentBy(h, id)).toMatchObject({
-      credential: { kind: 'private_key', algorithm: '${NOPE:-ES256}' },
-    });
+    expect(await authSentBy(h, id)).toMatchObject({ credential: { kind: 'private_key', algorithm: 'ES256' } });
   });
 });

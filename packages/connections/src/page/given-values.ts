@@ -40,7 +40,7 @@ const valuesOfAKeyKept = Effect.fnUntraced(function* (
   const given = yield* Effect.fromResult(givenOf(connection, giving, checking));
   const formatMark = yield* Effect.fromResult(formatMarkOf(connection, given));
   const apps = yield* Effect.fromResult(appCredentialsGivenOf(connection, appsGiven, services));
-  yield* checkedBeforeKeeping(connection, { value: given.value, apps }, services);
+  yield* checkedBeforeKeeping(connection, { given, apps }, services, checking);
   const { secrets } = services;
   const secretId = yield* secrets
     .keep(Redacted.make(given.value), given.endsWith)
