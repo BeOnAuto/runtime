@@ -208,7 +208,7 @@ export const ListedWaySchema = Schema.Struct({
       description: "Why the way is not offered, or why only under the organization's own OAuth client",
     }),
   ),
-}).annotate({ description: 'A way a credential reaches the server, the first the default' });
+}).annotate({ description: 'A way a credential reaches the server' });
 
 export type ListedWay = typeof ListedWaySchema.Type;
 

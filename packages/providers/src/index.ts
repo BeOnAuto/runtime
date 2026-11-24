@@ -15,6 +15,7 @@ export {
   isAManagedServiceAccount,
   isTheWayAsked,
   permissionsOf,
+  wayTakenWhereNoneIsNamed,
   type AccountType,
 } from './entry/account-types.ts';
 export { PermissionsSchema, type Permissions } from './entry/gateway-ways.ts';
@@ -84,6 +85,7 @@ export {
   operatorVariablesOf,
 } from './reading/provider-reach.ts';
 export { ProvidersInvalid, providersShippedRoots, readProviders } from './reading/shipped-providers.ts';
+export { takesTheValuesGiven } from './resolution/placeholder-values.ts';
 export {
   additionOfProvider,
   exchangeOfProvider,

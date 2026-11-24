@@ -155,6 +155,29 @@ function placeholdersOfTheWay(entry: ProviderEntry, way: CredentialWay | undefin
   return { ...entry.placeholders, ...way?.placeholders };
 }
 
+/**
+ * The way whose own values an addition through it is given: none for a way of a service account Auto manages, whose
+ * values are set once Auto creates the account, not by the caller.
+ */
+export function wayAskingItsValues(way: CredentialWay): CredentialWay | undefined {
+  return way.managed_service_account === true ? undefined : way;
+}
+
+/**
+ * Whether an addition through the way takes the values given, by their names alone: each is one the provider or the
+ * way asks, and none of those they require is left out. An addition through a way that does not is refused, so one
+ * that names no way does not take it.
+ */
+export function takesTheValuesGiven(entry: ProviderEntry, way: CredentialWay, given: Given): boolean {
+  const placeholders = placeholdersOfTheWay(entry, wayAskingItsValues(way));
+  return (
+    Object.keys(given).every((name) => Object.hasOwn(placeholders, name)) &&
+    Object.entries(placeholders).every(
+      ([name, placeholder]: readonly [string, Placeholder]) => !isRequired(placeholder) || Object.hasOwn(given, name),
+    )
+  );
+}
+
 export function valuesOf(
   entry: ProviderEntry,
   way: CredentialWay | undefined,

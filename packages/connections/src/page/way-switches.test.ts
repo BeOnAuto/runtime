@@ -74,7 +74,7 @@ async function connectedWithAKey(h: Harness, input: unknown, value: string): Pro
 describe('a connection that has connected, reconnected another way', () => {
   it('keeps its way and its key until the way chosen connects, then takes that way and forgets the key', async () => {
     const h = harness({ providers: desk });
-    const first = await connectedWithAKey(h, { provider: 'desk' }, 'desk-key-0f3c');
+    const first = await connectedWithAKey(h, { provider: 'desk', credential: { kind: 'secret' } }, 'desk-key-0f3c');
     const link = await reconnected(h, first.id);
 
     const chosen = await onItsLink(h, 'choose_way', link, { credential: { kind: 'none' } });
@@ -106,7 +106,7 @@ describe('a connection that has connected, reconnected another way', () => {
 
   it('records nothing for the way it has, its values and its account type, so its page signs it in again that way', async () => {
     const h = harness({ providers: desk });
-    const first = await connectedWithAKey(h, { provider: 'desk' }, 'desk-key-0f3c');
+    const first = await connectedWithAKey(h, { provider: 'desk', credential: { kind: 'secret' } }, 'desk-key-0f3c');
     const link = await reconnected(h, first.id);
     const before = await h.facts();
 

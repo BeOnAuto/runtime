@@ -1,13 +1,22 @@
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { additionOfProvider, hostAlternativesOf, type GivenToProvider } from '../index.ts';
-import { providerOf } from '../testing/fixture-providers.ts';
 import {
+  additionOfProvider,
+  hostAlternativesOf,
+  takesTheValuesGiven,
+  type CredentialWay,
+  type GivenToProvider,
+  type ProviderEntry,
+} from '../index.ts';
+import { ledgers, providerOf, tracker } from '../testing/fixture-providers.ts';
+import {
+  asAManagedServiceAccount,
   asAnInstalledApp,
   asAnInstallingApp,
   asAServiceAccount,
   asTheCompanysApp,
+  asTheCompanysServiceAccount,
   asTheServiceAccountItself,
   mail,
   signingInToMail,
@@ -99,6 +108,54 @@ const refusals: readonly (readonly [string, GivenToProvider, readonly string[]])
 describe('the values of a way that asks values of its own', () => {
   it.each(refusals)('are refused where %s', (_case, given, pointers) => {
     expect(refused(given)).toEqual(pointers.map((pointer) => ({ pointer, detail: anyWords })));
+  });
+});
+
+function wayAt(entry: ProviderEntry, index: number): CredentialWay {
+  const way = entry.credentials[index];
+  if (way === undefined) {
+    throw new Error(`The entry ${entry.name} has no way ${String(index)}`);
+  }
+  return way;
+}
+
+const aSignIn = wayAt(mail, 0);
+
+const theApp = wayAt(mail, 1);
+
+const exchanging = providerOf({ ...mail, credentials: [asTheCompanysServiceAccount, asAManagedServiceAccount] }).entry;
+
+const theCompanysAccount = wayAt(exchanging, 0);
+
+const aManagedAccount = wayAt(exchanging, 1);
+
+const ownValuesOfMail = { project: '123456789012', account: 'robot@acme.example.com' };
+
+const waysAsked = {
+  'a sign-in': [mail, aSignIn],
+  'an app': [mail, theApp],
+  'a client of a provider whose manager is optional': [ledgers, wayAt(ledgers, 0)],
+  'a key of a provider that asks a site': [tracker, wayAt(tracker, 0)],
+  "the company's own service account": [exchanging, theCompanysAccount],
+  'a service account Auto creates': [exchanging, aManagedAccount],
+} as const;
+
+describe('whether an addition through a way takes the values given', () => {
+  it.each([
+    ['a sign-in', {}, true],
+    ['a sign-in', { tenant: '0a1b2c3d' }, false],
+    ['an app', { ...theCompanysValues }, true],
+    ['an app', { tenant: '0a1b2c3d' }, false],
+    ['an app', { ...theCompanysValues, region: 'eu' }, false],
+    ['a client of a provider whose manager is optional', { tenant: 'acme' }, true],
+    ['a key of a provider that asks a site', {}, false],
+    ["the company's own service account", {}, false],
+    ['a service account Auto creates', {}, true],
+    ['a service account Auto creates', { ...ownValuesOfMail }, false],
+  ] as const)('is answered for %s given %o as %s', (named, given, takes) => {
+    const [entry, way] = waysAsked[named];
+
+    expect(takesTheValuesGiven(entry, way, given)).toBe(takes);
   });
 });
 

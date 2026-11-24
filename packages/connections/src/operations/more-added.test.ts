@@ -1,4 +1,5 @@
 import type { Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
+import { keyMadeAt, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { consentedAt, type FakeMcpServer, registeredAt } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -7,6 +8,7 @@ import {
   connectedThrough,
   consentFake,
   consentHarnessAt,
+  filesAt,
   filesWay,
   finishing,
   sharing,
@@ -123,6 +125,36 @@ describe('more added', () => {
         status: 'succeeded',
         output: { status: 'connected', asked_scopes: bothSaid, granted_scope: 'files.read files.share' },
       });
+    });
+  });
+
+  describe('a connection added with a group of more and no way named', () => {
+    it('takes the way that names the group, where a way before it in the order of who a connection acts as names none', async () => {
+      const fake = served();
+      const { entry } = filesAt(fake, sharingWay);
+      const appsKey = {
+        kind: 'secret',
+        permissions: 'application',
+        in: 'header',
+        name: 'Authorization',
+        scheme: 'Bearer',
+        description: 'Files app key',
+        ...keyMadeAt('app.files.example.com'),
+      };
+      const options = {
+        way: sharingWay,
+        providers: providerListOf(providerOf({ ...entry, credentials: [appsKey, ...entry.credentials] })),
+      };
+      const asked = consentHarnessAt(fake, options);
+      const unasked = consentHarnessAt(fake, options);
+
+      await added(asked, sharingToo);
+      await added(unasked, { provider: 'files' });
+
+      expect([(await asked.facts())[0]?.data, (await unasked.facts())[0]?.data]).toMatchObject([
+        { credential: { kind: 'authorization' }, account_type: 'service' },
+        { credential: { kind: 'secret' } },
+      ]);
     });
   });
 

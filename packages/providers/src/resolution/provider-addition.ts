@@ -15,7 +15,7 @@ import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { wayAddresses, type WayAddress, type WayAddresses } from '../entry/templates.ts';
 import { keyFieldNames, type KeyFieldName } from '../keys/key-fields.ts';
 import { actingOf, chosenWayOf, type Acting, type WayAsked } from './chosen-ways.ts';
-import { placedText, valuesOf, type Values } from './placeholder-values.ts';
+import { placedText, valuesOf, wayAskingItsValues, type Values } from './placeholder-values.ts';
 
 export interface GivenToProvider extends WayAsked {
   readonly name?: string | undefined;
@@ -207,10 +207,6 @@ function placingIssuesOf(provider: ProviderEntry, placeholders: Placed): readonl
   return Result.getFailure(valuesOf(provider, undefined, placeholders)).pipe(
     Option.getOrElse((): readonly Issue[] => []),
   );
-}
-
-function wayAskingItsValues(way: CredentialWay): CredentialWay | undefined {
-  return way.managed_service_account === true ? undefined : way;
 }
 
 export function additionOfProvider(

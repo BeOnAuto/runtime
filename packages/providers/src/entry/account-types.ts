@@ -2,6 +2,7 @@ import { alternatives } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import type { Permissions } from './gateway-ways.ts';
+import { identityOrder, type ConnectionIdentity } from './identity-order.ts';
 
 export const AccountTypeSchema = Schema.Literals(['service', 'personal']);
 
@@ -54,6 +55,47 @@ export function isAManagedServiceAccount({
   service_account: serviceAccount,
 }: ActingWay): boolean {
   return managed === true || serviceAccount === 'managed';
+}
+
+/**
+ * Who a connection made through the way may act as, from what the way declares alone: a service account Auto manages,
+ * for a way that says so; the app, for a way of application permissions; each account type the way takes, for a way
+ * of delegated permissions; and no one, for a way that sends no credential.
+ */
+export function identitiesOf(way: WayOfAccounts): readonly ConnectionIdentity[] {
+  const permissions = permissionsOf(way);
+  if (permissions === undefined) {
+    return [];
+  }
+  if (isAManagedServiceAccount(way)) {
+    return ['managed_service_account'];
+  }
+  return permissions === 'application' ? ['application'] : accountTypesOf(way);
+}
+
+interface WayTaken<W> {
+  readonly way: W;
+  readonly accountType?: AccountType;
+}
+
+function asAnAccountType(identity: ConnectionIdentity): AccountType | undefined {
+  return everyAccountType.find((type) => type === identity);
+}
+
+/**
+ * The way an addition that names no way takes, of the ways it may take, in the order they are listed: the first way
+ * that acts as the first identity in `identityOrder` any of them acts as, with that identity's account type where it
+ * is one; none where no way acts as anyone.
+ */
+export function wayTakenWhereNoneIsNamed<W extends WayOfAccounts>(ways: readonly W[]): WayTaken<W> | undefined {
+  for (const identity of identityOrder) {
+    const way = ways.find((each) => identitiesOf(each).includes(identity));
+    if (way !== undefined) {
+      const accountType = asAnAccountType(identity);
+      return accountType === undefined ? { way } : { way, accountType };
+    }
+  }
+  return undefined;
 }
 
 export function isTheWayAsked(way: ActingWay, asked: ActingWay): boolean {

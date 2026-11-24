@@ -1,8 +1,10 @@
+import { asAManagedServiceAccount, asTheCompanysServiceAccount, signingInToMail } from '@on.auto/providers/testing';
+import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { issuesIn, lastFact } from '../testing/additions.ts';
+import { added, issuesIn, lastFact } from '../testing/additions.ts';
 import { addedThe, exchanging, type Port } from '../testing/exchange-harness.ts';
-import { managedWay, ownValues, ownWay, tokenEndpoint } from '../testing/exchanges.ts';
+import { exchangeProvidersWith, managedWay, ownValues, ownWay, tokenEndpoint } from '../testing/exchanges.ts';
 import { ada, operationNamed } from '../testing/harness.ts';
 
 describe('a connection added by the way of the company’s own service account', () => {
@@ -28,6 +30,70 @@ describe('a connection added by the way of a service account Auto creates', () =
     expect((await h.facts())[0]?.data).toMatchObject({
       placeholders: {},
       credential: { kind: 'token_exchange', service_account: 'managed' },
+    });
+  });
+});
+
+const signingInOrExchanging = exchangeProvidersWith(
+  signingInToMail,
+  asTheCompanysServiceAccount,
+  asAManagedServiceAccount,
+);
+
+interface Taken {
+  readonly credential: Readonly<Record<string, unknown>>;
+  readonly accountType?: string;
+}
+
+const takenWhereNoneIsNamed: readonly (readonly [string, readonly Port[], Readonly<Record<string, string>>, Taken])[] =
+  [
+    [
+      'the service account Auto creates, before the company’s own and a sign-in, where it is created here',
+      [],
+      {},
+      { credential: { kind: 'token_exchange', service_account: 'managed' } },
+    ],
+    [
+      'the company’s own service account, where its values are given',
+      [],
+      ownValues,
+      { credential: { kind: 'token_exchange', token_endpoint: tokenEndpoint } },
+    ],
+    [
+      'a sign-in as a service account, where none is created here and the company’s own is given no values',
+      ['managedServiceAccounts'],
+      {},
+      { credential: { kind: 'authorization', permissions: 'delegated' }, accountType: 'service' },
+    ],
+  ];
+
+const AddedFactSchema = Schema.Struct({
+  data: Schema.Struct({
+    credential: Schema.Record(Schema.String, Schema.Unknown),
+    placeholders: Schema.Record(Schema.String, Schema.String),
+    account_type: Schema.optionalKey(Schema.String),
+  }),
+});
+
+describe('a connection added with no way named', () => {
+  it.each(takenWhereNoneIsNamed)('takes %s', async (_case, without, placeholders, taken) => {
+    const { h } = exchanging({ providers: signingInOrExchanging }, without);
+
+    await added(h, { provider: 'mail', placeholders });
+    const { data } = Schema.decodeUnknownSync(AddedFactSchema)((await h.facts())[0]);
+
+    expect(data).toMatchObject({ credential: taken.credential, placeholders });
+    expect(data.account_type).toBe(taken.accountType);
+  });
+
+  it('records a sign-in as a person’s own account where the way is named by its kind, as before', async () => {
+    const { h } = exchanging({ providers: signingInOrExchanging });
+
+    await addedThe(h, { kind: 'authorization' });
+
+    expect((await h.facts())[0]?.data).toMatchObject({
+      credential: { kind: 'authorization' },
+      account_type: 'personal',
     });
   });
 });

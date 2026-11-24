@@ -6,8 +6,10 @@ import {
   accountTypeIssueOf,
   accountTypeWhereNoneIsGiven,
   accountTypesOf,
+  identitiesOf,
   isTheWayAsked,
   permissionsOf,
+  wayTakenWhereNoneIsNamed,
   type AccountType,
 } from './account-types.ts';
 
@@ -74,6 +76,66 @@ describe('what a way acts as', () => {
     [nothing, { kind: 'none' }, true],
   ] as const)('finds %o as the way of %o: %s', (way, asked, found) => {
     expect(isTheWayAsked(way, asked)).toBe(found);
+  });
+});
+
+const aPersonsSignIn = { ...aSignIn, account_types: ['personal'] } as const;
+
+const aSignInOfEither = { ...aSignIn, account_types: ['service', 'personal'] } as const;
+
+const aServiceAccountsKey = { ...aKey, account_types: ['service'] } as const;
+
+const anAppsKey = { ...aKey, permissions: 'application' } as const;
+
+const aManagedServiceAccount = { kind: 'token_exchange', managed_service_account: true } as const;
+
+const theCompanysServiceAccount = { kind: 'token_exchange' } as const;
+
+describe('who a connection made through a way may act as', () => {
+  it.each([
+    [aManagedServiceAccount, ['managed_service_account']],
+    [theCompanysServiceAccount, ['application']],
+    [aClient, ['application']],
+    [anAppsKey, ['application']],
+    [aSignInOfEither, ['service', 'personal']],
+    [aPersonsSignIn, ['personal']],
+    [nothing, []],
+  ] as const)('%o may act as %o', (way, identities) => {
+    expect(identitiesOf(way)).toEqual(identities);
+  });
+});
+
+type WayOfAShape = Parameters<typeof identitiesOf>[0];
+
+type Shape = readonly (readonly [string, readonly WayOfAShape[], WayOfAShape | undefined, AccountType | undefined])[];
+
+const shapes: Shape = [
+  ['an app and a person, the app', [aPersonsSignIn, aClient], aClient, undefined],
+  ['a service account and a person on one way, the service account', [aSignInOfEither], aSignInOfEither, 'service'],
+  [
+    'a person on one way and a service account on another, the service account',
+    [aPersonsSignIn, aServiceAccountsKey],
+    aServiceAccountsKey,
+    'service',
+  ],
+  [
+    "Auto's service account, the company's own and a person, Auto's",
+    [aPersonsSignIn, theCompanysServiceAccount, aManagedServiceAccount],
+    aManagedServiceAccount,
+    undefined,
+  ],
+  ['a person only, the person', [aPersonsSignIn], aPersonsSignIn, 'personal'],
+  ['two apps, the first listed', [anAppsKey, aClient], anAppsKey, undefined],
+  ['a way with no credential and a person, the person', [nothing, aPersonsSignIn], aPersonsSignIn, 'personal'],
+  ['a way with no credential alone, none', [nothing], undefined, undefined],
+  ['no way, none', [], undefined, undefined],
+];
+
+describe('the way an addition that names no way takes', () => {
+  it.each(shapes)('of %s', (_shape, ways, taken, accountType) => {
+    const chosen = wayTakenWhereNoneIsNamed(ways);
+
+    expect([chosen?.way, chosen?.accountType]).toEqual([taken, accountType]);
   });
 });
 

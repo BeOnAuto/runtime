@@ -6770,7 +6770,7 @@ type Provider {
   reconnect_refusal: String
 }
 
-"""A way a credential reaches the server, the first the default"""
+"""A way a credential reaches the server"""
 type ProviderCredentials {
   kind: String!
   in: String

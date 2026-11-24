@@ -6,7 +6,10 @@ import {
   isAManagedServiceAccount,
   permissionsOf,
   providerNamed,
+  takesTheValuesGiven,
+  wayTakenWhereNoneIsNamed,
   type AccountType,
+  type CredentialWay,
   type Permissions,
   type Provider,
   type ProviderList,
@@ -58,9 +61,12 @@ const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allow
 
 const namedByTheServer: Credential = { kind: 'authorization' };
 
-function withItsAccountType(addition: GivenAddition, taken: readonly AccountType[]): GivenAddition {
-  const accountType = accountTypeWhereNoneIsGiven(taken);
-  return accountType === undefined ? addition : { ...addition, account_type: accountType };
+function withItsAccountType(
+  addition: GivenAddition,
+  taken: readonly AccountType[],
+  chosen: AccountType | undefined = accountTypeWhereNoneIsGiven(taken),
+): GivenAddition {
+  return chosen === undefined ? addition : { ...addition, account_type: chosen };
 }
 
 export function actingAsItsKind(credential: Credential): GivenWay {
@@ -108,6 +114,28 @@ function waysAskedOf(named: Provider, listing: Listing, credential: AdditionGive
   return waysInOrderOf(named, listing).filter((way) => isAManagedServiceAccount(way) === managed);
 }
 
+function offersTheGroup(way: CredentialWay, more: string | undefined): boolean {
+  return more === undefined || (way.more ?? []).some((group) => group.name === more);
+}
+
+/**
+ * The way an addition that names no credential takes, with its account type: of the ways offered here that take the
+ * values the addition gives and offer the group of more it asks, the first in `identityOrder`, so the page where
+ * the person approves the connection opens on the first choice it offers them. None for an addition that names a
+ * credential, which keeps the first offered way of the kind it names and the account type `accountTypeWhereNoneIsGiven`
+ * gives, and none where no such way acts as anyone, where the addition takes its way as one of every kind does.
+ */
+function takenWhereNoneIsNamed(named: Provider, listing: Listing, given: AdditionGiven) {
+  const values = given.placeholders ?? {};
+  const takes = (way: CredentialWay) =>
+    isOfferedWay(named, way, listing) &&
+    takesTheValuesGiven(named.entry, way, values) &&
+    offersTheGroup(way, given.more);
+  return given.credential === undefined
+    ? wayTakenWhereNoneIsNamed(waysInOrderOf(named, listing).filter((way) => takes(way)))
+    : undefined;
+}
+
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
@@ -115,10 +143,12 @@ function givenToProvider(
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
   const offeredHere = Result.flatMap(namedHere(listing.providers, provider), (named) => unreplaced(named, listing));
-  return Result.flatMap(offeredHere, (named) =>
-    Result.flatMap(
+  return Result.flatMap(offeredHere, (named) => {
+    const taken = takenWhereNoneIsNamed(named, listing, given);
+    const ways = taken === undefined ? waysAskedOf(named, listing, credential) : [taken.way];
+    return Result.flatMap(
       additionOfProvider(
-        { ...named.entry, credentials: waysAskedOf(named, listing, credential) },
+        { ...named.entry, credentials: ways },
         {
           name,
           placeholders,
@@ -134,11 +164,11 @@ function givenToProvider(
         const unoffered = unofferedGatewayOf(named, addition, listing);
         const acting = { ...addition.credential, ...(permissions === undefined ? {} : { permissions }) };
         return unoffered.length === 0
-          ? Result.succeed(withItsAccountType({ ...addition, credential: acting }, accountTypes))
+          ? Result.succeed(withItsAccountType({ ...addition, credential: acting }, accountTypes, taken?.accountType))
           : Result.fail(unoffered);
       },
-    ),
-  );
+    );
+  });
 }
 
 type AdditionServices = ProviderServices & Listing;

@@ -242,10 +242,10 @@ describe('the name of a connection', () => {
 });
 
 describe('the description of adding a connection', () => {
-  it("opens with a person's account at a service, by a provider search lists or a server given by hand, says that once approved the connection's tools serve the org's playbooks, says to ask in one consent for what the runs and the setting up take, says an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, keeps the page the person finishes on, says a request goes to the admins where the person may not approve it, and ends with what the call does not grant", () => {
+  it("opens with connecting a service, by a provider search lists or a server given by hand, says that once approved the connection's tools serve the org's playbooks, says to ask in one consent for what the runs and the setting up take, says an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, keeps the page the person finishes on, says a request goes to the admins where the person may not approve it, and ends with what the call does not grant", () => {
     expect(operationNamed(harness().operations, 'add_connection').registration.description).toBe(
       [
-        "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
+        'Starts connecting a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.',
         "Once approved, the connection's tools serve the org's playbooks.",
         'Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how.',
         'An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page.',
@@ -515,6 +515,13 @@ describe('what an addition records the connection acts as, answered beside its c
       'service',
     ],
     ['acts as the app', trackerOf({ ...trackerKey, permissions: 'application' }), 'application', null],
+    ['takes either account, as a service account', trackerOf(trackerKey), 'delegated', 'service'],
+    [
+      'takes a person’s own account, beside one that acts as the app, as the app',
+      trackerOf({ ...trackerKey, account_types: ['personal'] }, { ...trackerKey, permissions: 'application' }),
+      'application',
+      null,
+    ],
   ] as const)('of a provider whose way %s', async (_case, offered, permissions, accountType) => {
     const answered = await actingRecorded(harness({ providers: offered }), ofTracker);
 
@@ -523,6 +530,15 @@ describe('what an addition records the connection acts as, answered beside its c
       accountType,
       false,
     ]);
+  });
+
+  it('of a provider whose way takes either account, named by its kind, as a personal account', async () => {
+    const answered = await actingRecorded(harness({ providers: trackerOf(trackerKey) }), {
+      ...ofTracker,
+      credential: { kind: 'secret' },
+    });
+
+    expect([answered.permissions, answered.account_type]).toEqual(['delegated', 'personal']);
   });
 
   it.each([
