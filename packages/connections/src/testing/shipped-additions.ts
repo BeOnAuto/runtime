@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import {
   additionOfProvider,
   holdsAClientId,
+  isAManagedServiceAccount,
   type CredentialWay,
   readProviders,
-  type Placeholder,
   type Provider,
   type ProviderAddition,
   providersShippedRoots,
@@ -16,6 +16,7 @@ import {
   isConnectionServerSettings,
   type AuthSettings,
   type ConnectionServerSettings,
+  type ExchangeAuth,
 } from '@on.auto/tool-servers';
 import { Effect, Function, Option, Redacted, Result } from 'effect';
 
@@ -23,8 +24,7 @@ import { apiOf } from '../entries/described-entries.ts';
 import { readAddition, type AdditionInput, type EntryChecking } from '../entries/entry-checks.ts';
 import { providingOf } from '../providers/provider-providing.ts';
 import { placesNoValue } from '../registry/credential.ts';
-
-type Given = Readonly<Record<string, string>>;
+import { examplesOf, exchangeAuthOfTheAddition, type Placeholders } from './shipped-exchanges.ts';
 
 type Digests = Readonly<Record<string, string>>;
 
@@ -42,26 +42,13 @@ export const clientId = 'a client id of the connection';
 
 export const shippedToolsFile = new URL('../../shipped-tools.json', import.meta.url);
 
-function valuesOf({ example = '', choices }: Placeholder): readonly string[] {
-  return choices === undefined ? [example] : choices.map(({ value }) => value);
-}
-
-function givenOf(given: readonly Given[], [name, placeholder]: readonly [string, Placeholder]): readonly Given[] {
-  return given.flatMap((each) =>
-    valuesOf(placeholder).map((value) => Object.fromEntries([...Object.entries(each), [name, value]])),
-  );
-}
-
-function examplesOf({ entry }: Provider, way: CredentialWay): readonly Given[] {
-  return Object.entries({ ...entry.placeholders, ...way.placeholders }).reduce<readonly Given[]>(
-    (given, placeholder: readonly [string, Placeholder]) => givenOf(given, placeholder),
-    [{}],
-  );
+function askedOf({ entry }: Provider, way: CredentialWay): Placeholders {
+  return isAManagedServiceAccount(way) ? { ...entry.placeholders } : { ...entry.placeholders, ...way.placeholders };
 }
 
 function additionsOf(provider: Provider): readonly ProviderAddition[] {
   return provider.entry.credentials.flatMap((way) =>
-    examplesOf(provider, way).map((placeholders) =>
+    examplesOf(askedOf(provider, way)).map((placeholders) =>
       Result.getOrThrow(
         additionOfProvider(provider.entry, { placeholders, kind: way.kind, canBeGiven: (offered) => offered === way }),
       ),
@@ -80,6 +67,14 @@ function authOfTheConsent({ credential }: ProviderAddition): AuthSettings {
   };
 }
 
+function authOf(addition: ProviderAddition): AuthSettings | ExchangeAuth | undefined {
+  const { kind } = addition.credential;
+  if (kind === 'authorization') {
+    return authOfTheConsent(addition);
+  }
+  return kind === 'token_exchange' ? exchangeAuthOfTheAddition(addition, shipped) : undefined;
+}
+
 function withTheClientId(addition: ProviderAddition): AdditionInput {
   const { credential } = addition;
   return holdsAClientId(credential.kind)
@@ -94,14 +89,14 @@ function checkingOf({ provider, credential, permissions }: ProviderAddition): En
 }
 
 export function settingsOf(addition: ProviderAddition): ConnectionServerSettings {
-  const { kind } = addition.credential;
   const read = readAddition(
     withTheClientId(addition),
     checkingOf(addition),
     placesNoValue(addition.credential) ? undefined : standIn,
   );
   const settings = Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(read), isConnectionServerSettings));
-  return kind === 'authorization' ? { ...settings, auth: authOfTheConsent(addition) } : settings;
+  const auth = authOf(addition);
+  return auth === undefined ? settings : { ...settings, auth };
 }
 
 function digestOf(value: unknown): string {

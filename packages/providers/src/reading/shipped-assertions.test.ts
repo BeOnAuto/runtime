@@ -49,14 +49,16 @@ function waysOf(name: string) {
   const [first, ...later] = entry.credentials;
   return [
     first?.kind,
-    later.map((way) => [
-      way.kind,
-      permissionsOf(way),
-      accountTypesOf(way),
-      way.subject,
-      Object.keys(way.placeholders ?? {}),
-      way.limitation !== undefined,
-    ]),
+    later
+      .filter(({ kind }) => kind === 'jwt_bearer')
+      .map((way) => [
+        way.kind,
+        permissionsOf(way),
+        accountTypesOf(way),
+        way.subject,
+        Object.keys(way.placeholders ?? {}),
+        way.limitation !== undefined,
+      ]),
   ];
 }
 

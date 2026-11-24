@@ -54,3 +54,135 @@ credentials:
         title: Enter the details here
         instructions: Choose the key file Google downloaded.
     description: Connect as a service account your company creates at Google.
+  - kind: token_exchange
+    managed_service_account: true
+    token_endpoint: https://sts.googleapis.com/v1/token
+    audience: //iam.googleapis.com/projects/{project_number}/locations/global/workloadIdentityPools/auto/providers/auto
+    subject_token:
+      type: urn:ietf:params:oauth:token-type:jwt
+      audience: https://iam.googleapis.com/projects/{project_number}/locations/global/workloadIdentityPools/auto/providers/auto
+    parameters:
+      requested_token_type: urn:ietf:params:oauth:token-type:access_token
+      scope: https://www.googleapis.com/auth/cloud-platform
+    impersonation:
+      method: POST
+      url: https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_email}:generateAccessToken
+      request:
+        scope: /scope
+      issued:
+        access_token: /accessToken
+        expires_at: /expireTime
+    scope: https://www.googleapis.com/auth/analytics.readonly
+    says:
+      https://www.googleapis.com/auth/analytics.readonly: See and download Google Analytics data.
+    placeholders:
+      project_number:
+        title: Project number
+        description: Digits only. Google Cloud shows it on the project's Dashboard, under Project info.
+        pattern: '^[0-9]+$'
+        example: '123456789012'
+      service_account_email:
+        title: Service account email
+        description: The email address of the service account you created in step 1.
+        pattern: '^[^@\s/?#:]+@[^@\s/?#:]+$'
+        example: auto@acme-analytics.iam.gserviceaccount.com
+    test:
+      tool: analyticsadmin.accountSummaries.list
+      reached:
+        list: /accountSummaries
+        name: /displayName
+    steps:
+      pages:
+        - title: Add it as a user in Google Analytics
+          page: https://analytics.google.com/
+          page_title: Open Google Analytics
+          instructions: |-
+            - In **Admin**, under **Account** or **Property**, select **Access Management**.
+            - Select **+**, then **Add users**.
+            - Enter the service account's email address and select the permissions you want. This connection only reads.
+            - Select **Add**.
+
+            This step needs an administrator of the Analytics account or property.
+    description: Connect as a service account that Auto manages. An Admin adds its email address in the app.
+  - kind: token_exchange
+    token_endpoint: https://sts.googleapis.com/v1/token
+    audience: //iam.googleapis.com/projects/{project_number}/locations/global/workloadIdentityPools/auto/providers/auto
+    subject_token:
+      type: urn:ietf:params:oauth:token-type:jwt
+      audience: https://iam.googleapis.com/projects/{project_number}/locations/global/workloadIdentityPools/auto/providers/auto
+    parameters:
+      requested_token_type: urn:ietf:params:oauth:token-type:access_token
+      scope: https://www.googleapis.com/auth/cloud-platform
+    impersonation:
+      method: POST
+      url: https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{service_account_email}:generateAccessToken
+      request:
+        scope: /scope
+      issued:
+        access_token: /accessToken
+        expires_at: /expireTime
+    scope: https://www.googleapis.com/auth/analytics.readonly
+    says:
+      https://www.googleapis.com/auth/analytics.readonly: See and download Google Analytics data.
+    placeholders:
+      project_number:
+        title: Project number
+        description: Digits only. Google Cloud shows it on the project's Dashboard, under Project info.
+        pattern: '^[0-9]+$'
+        example: '123456789012'
+      service_account_email:
+        title: Service account email
+        description: The email address of the service account you created in step 1.
+        pattern: '^[^@\s/?#:]+@[^@\s/?#:]+$'
+        example: auto@acme-analytics.iam.gserviceaccount.com
+    test:
+      tool: analyticsadmin.accountSummaries.list
+      reached:
+        list: /accountSummaries
+        name: /displayName
+    key_page: https://console.cloud.google.com/iam-admin/serviceaccounts
+    key_page_title: Open Google Cloud's service accounts
+    steps:
+      key_page:
+        title: Create a service account at Google
+        instructions: |-
+          - Create a service account in a project where the **Google Analytics Admin API** is turned on.
+          - In the same project, [turn on](https://console.cloud.google.com/apis/enableflow?apiid=sts.googleapis.com,iamcredentials.googleapis.com) the **Security Token Service API** and the **IAM Service Account Credentials API**.
+          - Copy the service account's email address. You need it in steps 3, 4 and 5.
+
+          Steps 1 to 3 need whoever manages Google Cloud at your company, with the roles **Workload Identity Pool Admin** and **Service Account Admin** on that project. No key is created.
+      pages:
+        - title: Create an identity pool at Google
+          page: https://console.cloud.google.com/iam-admin/workload-identity-pools
+          page_title: Open Google Cloud's identity pools
+          instructions: |-
+            - Under **Create an identity pool**, enter `auto` in **Name** and select **Continue**.
+            - In **Select a provider**, choose **OpenID Connect (OIDC)**. Enter `auto` in **Provider name**.
+            - In **Issuer URL**, paste this address: {issuer}
+            - Select **Continue**. Under **Configure provider attributes**, map `google.subject` to `assertion.sub`. Select **Save**.
+
+            If you already did this for another Google app in the same project, skip this step.
+        - title: Grant access to the service account
+          page: https://console.cloud.google.com/iam-admin/workload-identity-pools
+          page_title: Open Google Cloud's identity pools
+          instructions: |-
+            - Open the pool `auto` and select **Grant access**, then **Grant access using Service Account impersonation**.
+            - Select the service account you created in step 1.
+            - Select **Only identities matching the filter**. In **Attribute name**, choose **subject**. In **Attribute value**, paste this: {subject}
+            - Select **Save**, then **Dismiss**.
+
+            Only your organization in Auto can then act as this service account. Don't give access to the whole pool, since every organization in Auto can use it.
+        - title: Add it as a user in Google Analytics
+          page: https://analytics.google.com/
+          page_title: Open Google Analytics
+          instructions: |-
+            - In **Admin**, under **Account** or **Property**, select **Access Management**.
+            - Select **+**, then **Add users**.
+            - Enter the service account's email address and select the permissions you want. This connection only reads.
+            - Select **Add**.
+
+            This step needs an administrator of the Analytics account or property.
+      key:
+        title: Enter the details here
+        instructions: Enter the project number and the email address of the service account from step 1.
+    description: Connect as a service account your company creates at Google.

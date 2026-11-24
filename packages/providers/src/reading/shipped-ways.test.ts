@@ -20,6 +20,15 @@ const shipped = Result.getOrThrow(await readProviders(providersOnDisk));
 
 const google = 'accounts.google.com';
 
+const sts = 'sts.googleapis.com';
+
+const impersonation = 'iamcredentials.googleapis.com';
+
+function keylessAt(host: string, signedIn: number): readonly (readonly (readonly string[])[])[] {
+  const exchanged = [[host, sts, impersonation]];
+  return [...Array.from({ length: signedIn }, () => [[host, google]]), exchanged, exchanged];
+}
+
 const microsoft = 'login.microsoftonline.com';
 
 const amazon = 'lwa.amazon.com';
@@ -43,9 +52,9 @@ const hostsOfTheWays = [
   [[['{mcp_address}']]],
   [[['mcp.atlassian.com', 'auth.atlassian.com']], [['mcp.atlassian.com']]],
   [[['mcp.buffer.com']]],
-  [[['dfareporting.googleapis.com', google]], [['dfareporting.googleapis.com', google]]],
-  [[['displayvideo.googleapis.com', google]], [['displayvideo.googleapis.com', google]]],
-  [[['doubleclickbidmanager.googleapis.com', google]]],
+  keylessAt('dfareporting.googleapis.com', 2),
+  keylessAt('displayvideo.googleapis.com', 2),
+  keylessAt('doubleclickbidmanager.googleapis.com', 1),
   [
     [['api.githubcopilot.com', 'github.com', 'github.com', 'github.com', 'api.github.com']],
     [['api.githubcopilot.com', 'github.com']],
@@ -53,14 +62,14 @@ const hostsOfTheWays = [
     [['api.githubcopilot.com', 'api.github.com']],
   ],
   [[['gmail.googleapis.com', google]], [['gmail.googleapis.com', google]]],
-  [[['googleads.googleapis.com', google]], [['googleads.googleapis.com', google]]],
-  [[['analyticsdata.googleapis.com', google]], [['analyticsdata.googleapis.com', google]]],
-  [[['analyticsadmin.googleapis.com', google]], [['analyticsadmin.googleapis.com', google]]],
-  [[['docs.googleapis.com', google]], [['docs.googleapis.com', google]]],
-  [[['www.googleapis.com', google]]],
-  [[['searchconsole.googleapis.com', google]]],
-  [[['sheets.googleapis.com', google]], [['sheets.googleapis.com', google]]],
-  [[['slides.googleapis.com', google]], [['slides.googleapis.com', google]]],
+  keylessAt('googleads.googleapis.com', 2),
+  keylessAt('analyticsdata.googleapis.com', 2),
+  keylessAt('analyticsadmin.googleapis.com', 2),
+  keylessAt('docs.googleapis.com', 2),
+  keylessAt('www.googleapis.com', 1),
+  keylessAt('searchconsole.googleapis.com', 1),
+  keylessAt('sheets.googleapis.com', 2),
+  keylessAt('slides.googleapis.com', 2),
   [[['mcp.hubspot.com', 'mcp.hubspot.com']]],
   [[['mcp.linear.app', 'mcp.linear.app']]],
   [[['api.linkedin.com', 'www.linkedin.com', 'www.linkedin.com', 'www.linkedin.com']]],
@@ -71,7 +80,7 @@ const hostsOfTheWays = [
   [[['graph.microsoft.com', microsoft, microsoft, microsoft]], [['graph.microsoft.com', microsoft]]],
   [[['mcp.posthog.com', 'oauth.posthog.com']]],
   [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
-  [[['searchads360.googleapis.com', google]]],
+  keylessAt('searchads360.googleapis.com', 1),
   [[['slack.com']]],
   [[['mcp.stripe.com', 'access.stripe.com']], [['mcp.stripe.com']]],
   [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],
@@ -178,6 +187,10 @@ function namedAtGoogle(scope: string): string {
   return scope.replaceAll('https://www.googleapis.com/auth/', '');
 }
 
+function eachWay(scope: string, ways: number): readonly string[] {
+  return Array.from({ length: ways }, () => scope);
+}
+
 function scopesOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
   return [name, credentials.map(({ scope = '' }) => namedAtGoogle(scope))];
 }
@@ -207,19 +220,19 @@ describe('the ways of consent of the shipped providers of Google', () => {
     const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
 
     expect(consenting.map(({ entry }) => scopesOfEachWayAtGoogle(entry))).toEqual([
-      ['campaign-manager-360', ['dfareporting dfatrafficking', 'dfareporting dfatrafficking']],
-      ['display-video-360', ['display-video', 'display-video']],
-      ['display-video-360-reports', ['doubleclickbidmanager']],
+      ['campaign-manager-360', eachWay('dfareporting dfatrafficking', 4)],
+      ['display-video-360', eachWay('display-video', 4)],
+      ['display-video-360-reports', eachWay('doubleclickbidmanager', 3)],
       ['gmail', ['gmail.readonly', 'gmail.readonly']],
-      ['google-ads', ['adwords', 'adwords']],
-      ['google-analytics', ['analytics.readonly', 'analytics.readonly']],
-      ['google-analytics-admin', ['analytics.readonly', 'analytics.readonly']],
-      ['google-docs', ['documents.readonly documents', 'documents.readonly documents']],
-      ['google-drive', ['drive.readonly drive.file']],
-      ['google-search-console', ['webmasters']],
-      ['google-sheets', ['spreadsheets.readonly spreadsheets', 'spreadsheets.readonly spreadsheets']],
-      ['google-slides', ['presentations.readonly presentations', 'presentations.readonly presentations']],
-      ['search-ads-360', ['doubleclicksearch']],
+      ['google-ads', eachWay('adwords', 4)],
+      ['google-analytics', eachWay('analytics.readonly', 4)],
+      ['google-analytics-admin', eachWay('analytics.readonly', 4)],
+      ['google-docs', eachWay('documents.readonly documents', 4)],
+      ['google-drive', eachWay('drive.readonly drive.file', 3)],
+      ['google-search-console', eachWay('webmasters', 3)],
+      ['google-sheets', eachWay('spreadsheets.readonly spreadsheets', 4)],
+      ['google-slides', eachWay('presentations.readonly presentations', 4)],
+      ['search-ads-360', eachWay('doubleclicksearch', 3)],
       ['youtube', ['youtube.readonly']],
       [
         'youtube-analytics',

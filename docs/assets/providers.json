@@ -434,6 +434,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -540,6 +548,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -626,6 +642,14 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -800,6 +824,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [
@@ -880,6 +912,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -958,6 +998,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1032,6 +1080,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1074,6 +1130,14 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1136,6 +1200,14 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1202,6 +1274,14 @@
         {
           "kind": "jwt_bearer",
           "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [],
@@ -1263,6 +1343,14 @@
         },
         {
           "kind": "jwt_bearer",
+          "description": "Connect as a service account your company creates at Google."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
           "description": "Connect as a service account your company creates at Google."
         }
       ],
@@ -1919,12 +2007,20 @@
           ],
           "more": [],
           "own_client": false
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account that Auto manages. An Admin adds its email address in the app."
+        },
+        {
+          "kind": "token_exchange",
+          "description": "Connect as a service account your company creates at Google."
         }
       ],
       "placeholders": [
         {
           "name": "manager_id",
-          "description": "The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens.",
+          "description": "The customer ID of the manager account you reach the account through, if you use one: ten digits, without hyphens. If you added the service account at a manager account, enter that account's customer ID.",
           "required": false
         }
       ],
