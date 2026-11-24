@@ -58,6 +58,7 @@ const whatReadingPermits = [
   'playbook/introspect',
   'playbook/list_comments',
   'playbook/list_definitions',
+  'playbook/list_event_lines',
   'playbook/list_generation_models',
   'playbook/list_interactions',
   'playbook/list_playbook_changes',
@@ -123,7 +124,6 @@ const whatOnlyChangingPermits = [
 const whatOnlyWritingPermits = [...whatRunningPermits, ...whatOnlyChangingPermits].toSorted();
 
 const whatReadingAndRunningPermit = [...whatReadingPermits, ...whatRunningPermits].toSorted();
-
 const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted();
 
 const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];

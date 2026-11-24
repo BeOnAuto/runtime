@@ -22,6 +22,7 @@ import {
   defineListPlaybookChanges,
   defineListPlaybookEvents,
   defineGetRunTree,
+  defineListEventLines,
   playbookChanges,
 } from '@on.auto/playbooks';
 import type { Effect } from 'effect';
@@ -93,6 +94,7 @@ export function playbookOperationsServing(
     ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders, connections }, { goals, messages }),
     defineListPlaybookEvents(presenters, holders),
     defineGetRunTree(presenters),
+    defineListEventLines(presenters),
     defineListPlaybookChanges(presenters, playbookChangeNamings(goals)),
     defineGetEvent(presenters, holders),
     ...goalsOperationsServed(goals, results, messages, { connected, askedAbout }),

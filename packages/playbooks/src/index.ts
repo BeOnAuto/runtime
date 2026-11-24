@@ -4,6 +4,7 @@ export { type PlaybookPage, type PlaybookPages } from './operations/playbook-pag
 export { createPlaybook } from './operations/create-playbook.ts';
 export { defineGetEvent } from './feed/get-event.ts';
 export { defineListPlaybookEvents } from './feed/list-playbook-events.ts';
+export { defineListEventLines } from './feed/list-event-lines.ts';
 export { defineGetRunTree, runTreeBounds } from './feed/get-run-tree.ts';
 export { defineGetPlaybook } from './operations/get-playbook.ts';
 export { foundPlaybook, loadRegistry } from './operations/registry-loading.ts';

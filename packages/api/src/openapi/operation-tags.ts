@@ -36,6 +36,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
 const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
   export_playbook: 'playbooks',
+  list_event_lines: 'events',
   list_generation_models: 'models',
   move_definitions: 'definitions',
   render_playbook_page: 'playbooks',

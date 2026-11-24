@@ -35786,6 +35786,398 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/{playbook}/event-lines": {
+      "get": {
+        "operationId": "list_event_lines",
+        "summary": "List event lines",
+        "description": "Lists what happened in the playbook a page at a time, as list_playbook_events lists it for the same input, but with each content an event holds given by its digest and size alone, unread, so a page reads quickly; get_event reads one event whole.",
+        "tags": [
+          "events"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The next_cursor of the page before, to read on after it"
+            }
+          },
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "A time in ISO 8601; only what was recorded from then on"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "run_started",
+                "attempt_resumed",
+                "run_succeeded",
+                "run_rejected",
+                "run_failed",
+                "run_cancel_requested",
+                "tool_call_started",
+                "tool_call_answered",
+                "tool_call_failed",
+                "model_call_started",
+                "model_call_answered",
+                "model_call_failed",
+                "request_answered",
+                "delivery_started",
+                "delivery_succeeded",
+                "delivery_failed",
+                "delivery_refused",
+                "reply_refused",
+                "run_deferred",
+                "interaction_requested",
+                "definition_created",
+                "definition_updated",
+                "definition_retired",
+                "definition_paused",
+                "definition_resumed",
+                "definition_restored",
+                "playbook_page_saved",
+                "event_published",
+                "reaction_refused",
+                "telling_started",
+                "telling_succeeded",
+                "telling_failed",
+                "replies_read",
+                "reading_failed",
+                "asset_kept",
+                "asset_expired",
+                "asset_content_removed",
+                "workflow_input_applied",
+                "step_started",
+                "step_waiting",
+                "step_finished",
+                "step_failed",
+                "step_skipped",
+                "thing.dismissed",
+                "thing.restored",
+                "event_subscription_made",
+                "event_subscription_failed",
+                "event_subscription_removed"
+              ],
+              "description": "Only the events of this type, by its public name"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "The id of a run that no other run started: only what it and the runs it started recorded",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "asc for oldest first, desc for newest first"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "The most items to answer with, from 1 to 100; 20 when left out"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_event_lines/output",
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/PublicEvent"
+                      }
+                    },
+                    "has_more": {
+                      "type": "boolean",
+                      "description": "Whether more remains to read after this page, which may hold fewer events than its limit, or none"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "events",
+                    "has_more",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "PublicEvent": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the event, the same on every read; a workflow's step is its record's id, an underscore and its number"
+                        },
+                        "type": {
+                          "type": "string",
+                          "description": "What kind of event it is, a stable public name"
+                        },
+                        "summary": {
+                          "type": "string",
+                          "description": "What happened, in plain words"
+                        },
+                        "data": {
+                          "type": "object",
+                          "description": "The fact, at most 4096 bytes as JSON in UTF-8, with an input, output, record, answer, arguments, data, messages, response or tool_calls past 2048 bytes as its size"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "properties": {
+                            "stream": {
+                              "type": "string",
+                              "description": "The stream the event is recorded in"
+                            },
+                            "position": {
+                              "type": "integer",
+                              "description": "The event's number in its stream, from 1"
+                            },
+                            "global_position": {
+                              "type": "integer",
+                              "description": "The store's sequence across every playbook, with gaps, which is not the order events are read in"
+                            },
+                            "correlation_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The id of the run at the top of the chain the event belongs to, or null"
+                            },
+                            "causation_id": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The id of the event that directly led to this one, or null when nothing recorded did"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it happened, by its own clock, in ISO 8601 UTC"
+                            },
+                            "by": {
+                              "type": "string",
+                              "description": "Who acted: a caller's id, or playbook:<playbook> for the playbook's own work"
+                            },
+                            "run_id": {
+                              "type": "string",
+                              "description": "The run the event belongs to"
+                            },
+                            "definition": {
+                              "type": "object",
+                              "properties": {
+                                "type": {
+                                  "type": "string",
+                                  "description": "Its type"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Its name"
+                                },
+                                "version": {
+                                  "type": "integer",
+                                  "description": "Its version, where the fact names one"
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "name"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The definition the run executes, or the definition the event is about"
+                            },
+                            "called_by": {
+                              "type": "object",
+                              "properties": {
+                                "run_id": {
+                                  "type": "string",
+                                  "description": "The id of the run whose call started this run"
+                                },
+                                "reference": {
+                                  "type": "string",
+                                  "description": "Where in that run the call is"
+                                },
+                                "run": {
+                                  "type": "integer",
+                                  "description": "Which run of that call this is, from 1"
+                                }
+                              },
+                              "required": [
+                                "run_id",
+                                "reference",
+                                "run"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The call this run answers"
+                            },
+                            "call_depth": {
+                              "type": "integer",
+                              "description": "How many calls are above the run"
+                            },
+                            "depth": {
+                              "type": "integer",
+                              "description": "How many reactions are above the run or event"
+                            },
+                            "trigger": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "description": "event, cron, every or goal"
+                                },
+                                "reference": {
+                                  "type": "string",
+                                  "description": "Where in the definition the trigger is"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "reference"
+                              ],
+                              "additionalProperties": false,
+                              "description": "The trigger that started the run"
+                            },
+                            "acts_for": {
+                              "type": "string",
+                              "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, by id"
+                            },
+                            "trace_id": {
+                              "type": "string",
+                              "description": "The trace of the append that recorded it"
+                            },
+                            "span_id": {
+                              "type": "string",
+                              "description": "The span of the append that recorded it"
+                            }
+                          },
+                          "required": [
+                            "stream",
+                            "position",
+                            "global_position",
+                            "correlation_id",
+                            "causation_id",
+                            "at",
+                            "by"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Where the event is recorded, and who, when, which run and which chain it belongs to"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "type",
+                        "summary",
+                        "data",
+                        "metadata"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Something that happened in the playbook, as a caller reads it"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/playbooks/{playbook}/changes": {
       "get": {
         "operationId": "list_playbook_changes",

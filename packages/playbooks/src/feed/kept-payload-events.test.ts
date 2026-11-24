@@ -26,7 +26,7 @@ import { memoryLedger, memoryPlaybookRegistry } from '@on.auto/operations/testin
 import { Effect, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineGetEvent, defineGetRunTree, playbookRows } from '../index.ts';
+import { defineGetEvent, defineGetRunTree, defineListEventLines, playbookRows } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 
@@ -271,5 +271,24 @@ describe('the tree of a run whose events hold content kept outside them', () => 
       output: { events: [{ data: { title: '1', text_sha256: sha256, text_bytes: bytes } }] },
     });
     expect(JSON.stringify(tree)).not.toContain('kept apart');
+  });
+});
+
+describe('the lines of a playbook whose events hold content kept outside them', () => {
+  it('read none of that content, and give each by its digest and size alone', async () => {
+    const feed = harness(alphaKnown, memoryLedger(undefined, [playbookRows], heldHolders));
+    await heldIn(feed, 1, 'kept apart');
+    const { sha256, bytes } = toKeep('kept apart');
+    const lines = await feed.run(
+      makeDispatcher([])
+        .dispatchToPlaybook(defineListEventLines([helds]).registration, toAlpha(acmeAdmin, {}))
+        .pipe(Effect.provideService(Ledger, unreachableContent(feed.ledger.service))),
+    );
+
+    expect(lines).toMatchObject({
+      status: 'succeeded',
+      output: { events: [{ data: { title: '1', text_sha256: sha256, text_bytes: bytes } }] },
+    });
+    expect(JSON.stringify(lines)).not.toContain('kept apart');
   });
 });

@@ -59,6 +59,7 @@ export const servedDeclarations: readonly string[] = [
   'playbook/introspect: playbook:read',
   'playbook/list_comments: playbook:read',
   'playbook/list_definitions: playbook:read',
+  'playbook/list_event_lines: playbook:read',
   'playbook/list_generation_models: playbook:read',
   'playbook/list_interactions: playbook:read',
   'playbook/list_playbook_changes: playbook:read',

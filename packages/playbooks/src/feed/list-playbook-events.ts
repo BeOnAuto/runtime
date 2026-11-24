@@ -13,7 +13,9 @@ import {
   streamPrefixOfPlaybook,
   type ContentHolders,
   type Presentation,
+  type KeptContent,
   type Presenter,
+  type RecordedFact,
   type RecordedSelection,
 } from '@on.auto/operations';
 import { Effect, Schema, SchemaTransformation } from 'effect';
@@ -51,7 +53,7 @@ const RunIdField = Schema.String.annotate({
   .check(Schema.isUUID())
   .pipe(Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase()));
 
-function feedInput(publicTypes: readonly string[]) {
+export function feedInput(publicTypes: readonly string[]) {
   return Schema.Struct({
     cursor: EventPagingInputFields.cursor,
     since: EventPagingInputFields.since,
@@ -66,9 +68,9 @@ function feedInput(publicTypes: readonly string[]) {
 
 type FeedInput = ReturnType<typeof feedInput>['Type'];
 
-const EventsPage = Schema.Struct({ events: Schema.Array(PublicEventSchema), ...EventPagingOutputFields });
+export const EventsPage = Schema.Struct({ events: Schema.Array(PublicEventSchema), ...EventPagingOutputFields });
 
-function requireSomePublicType(publicTypes: readonly string[]): void {
+export function requireSomePublicType(publicTypes: readonly string[]): void {
   if (publicTypes.length === 0) {
     throw new Error('The events of a playbook need a presenter that shows at least one type of event');
   }
@@ -78,7 +80,13 @@ function selectionOf(run: string | undefined): RecordedSelection {
   return run === undefined ? { kind: 'everything' } : { kind: 'correlated', correlation: run };
 }
 
-function feedReader(presentation: Presentation, holders: ContentHolders) {
+export type ContentReading = (records: readonly RecordedFact[]) => Effect.Effect<KeptContent, never, PlaybookReader>;
+
+function everyContentRead(holders: ContentHolders): ContentReading {
+  return (records) => keptContentOf(records, mostPublicEventDataBytes, holders);
+}
+
+export function feedReader(presentation: Presentation, readingContent: ContentReading) {
   return Effect.fnUntraced(function* (input: FeedInput) {
     const { cursor, since, type, run_id: run, order = 'desc', limit = defaultPageLimit } = input;
     const paging = { order, limit, ...(cursor === undefined ? {} : { cursor }) };
@@ -87,7 +95,7 @@ function feedReader(presentation: Presentation, holders: ContentHolders) {
       ...(since === undefined ? {} : { since }),
       ...(type === undefined ? {} : { types: presentation.storedTypesOf(type) }),
     });
-    const content = yield* keptContentOf(page.records, mostPublicEventDataBytes, holders);
+    const content = yield* readingContent(page.records);
     const showing = { streamPrefix: streamPrefixOfPlaybook(yield* PlaybookContext), content, view: 'page' } as const;
     const { events, hasMore, nextCursor } = eventsPageOf(presentation, page, {
       ...paging,
@@ -110,7 +118,7 @@ export function defineListPlaybookEvents(presenters: readonly Presenter[], holde
     inputSchema: feedInput(presentation.publicTypes),
     outputSchema: EventsPage,
     reasons: ['invalid_input'],
-    handle: feedReader(presentation, holders),
+    handle: feedReader(presentation, everyContentRead(holders)),
     plainLanguage: {
       task: 'read what happened in the playbook',
       attempt: () => 'read what happened in the playbook',

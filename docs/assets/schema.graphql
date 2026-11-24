@@ -389,6 +389,34 @@ type Query {
   ): GetRunTreeAnswer
 
   """
+  Lists what happened in the playbook a page at a time, as list_playbook_events lists it for the same input, but with each content an event holds given by its digest and size alone, unread, so a page reads quickly; get_event reads one event whole.
+  """
+  list_event_lines(
+    """The playbook to read"""
+    playbook: String!
+
+    """The next_cursor of the page before, to read on after it"""
+    cursor: String
+
+    """A time in ISO 8601; only what was recorded from then on"""
+    since: String
+
+    """Only the events of this type, by its public name"""
+    type: String
+
+    """
+    The id of a run that no other run started: only what it and the runs it started recorded
+    """
+    run_id: String
+
+    """asc for oldest first, desc for newest first"""
+    order: String
+
+    """The most items to answer with, from 1 to 100; 20 when left out"""
+    limit: Float
+  ): ListEventLinesAnswer
+
+  """
   Answers which runs, interactions, definitions, playbooks, events, goals, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.
   """
   list_playbook_changes(
@@ -803,6 +831,31 @@ type Playbook {
     """The next_cursor of the page before, to read on after it"""
     cursor: String
   ): GetRunTreeAnswer
+
+  """
+  Lists what happened in the playbook a page at a time, as list_playbook_events lists it for the same input, but with each content an event holds given by its digest and size alone, unread, so a page reads quickly; get_event reads one event whole.
+  """
+  list_event_lines(
+    """The next_cursor of the page before, to read on after it"""
+    cursor: String
+
+    """A time in ISO 8601; only what was recorded from then on"""
+    since: String
+
+    """Only the events of this type, by its public name"""
+    type: String
+
+    """
+    The id of a run that no other run started: only what it and the runs it started recorded
+    """
+    run_id: String
+
+    """asc for oldest first, desc for newest first"""
+    order: String
+
+    """The most items to answer with, from 1 to 100; 20 when left out"""
+    limit: Float
+  ): ListEventLinesAnswer
 
   """
   Answers which runs, interactions, definitions, playbooks, events, goals, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.
@@ -2590,6 +2643,20 @@ type PlaybookExportFindingsOccurrences {
 }
 
 type GetRunTreeAnswer {
+  events: [PublicEvent!]!
+
+  """
+  Whether more remains to read after this page, which may hold fewer events than its limit, or none
+  """
+  has_more: Boolean!
+
+  """
+  The cursor that reads the page after this one, null when nothing remains
+  """
+  next_cursor: String
+}
+
+type ListEventLinesAnswer {
   events: [PublicEvent!]!
 
   """
