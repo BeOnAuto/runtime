@@ -2,17 +2,15 @@ import { defineHttpOperation } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
-import type { ConnectionServices } from '../operations/connection-services.ts';
 import { loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { credentialChosenFor, type WayChoosing } from './chosen-ways.ts';
 import { forgottenVerifierOf, releasedClientsForgottenOf } from './consent-asking.ts';
+import { serviceAccountRemovedBefore } from './service-account-ports.ts';
 import { ChoosingTheWaySchema } from './way-fields.ts';
 
-type Choosing = WayChoosing & Pick<ConnectionServices, 'secrets'>;
-
-export function defineChooseWay(services: Choosing) {
+export function defineChooseWay(services: WayChoosing) {
   return defineHttpOperation('org', 'command', {
     name: 'choose_way',
     title: 'Choose way',
@@ -25,6 +23,7 @@ export function defineChooseWay(services: Choosing) {
       'Choosing the way the connection already has with the same values changes only its account type, where one is given, and otherwise records nothing.',
       "A way the connection's provider or server does not offer is refused as invalid_input, and so are an account type the way does not take, a value the way asks for that is missing or does not fit, and a value the way does not ask for.",
       'A connection that is connected or broken is refused as conflict.',
+      'Choosing another way for a connection that acts as a service account Auto created removes that account first; where Auto cannot remove it now, the choice is refused as unavailable and nothing is changed.',
       "A way the runtime's rules do not allow is refused as forbidden.",
       'On a runtime that signs people in, only an admin of the organization may choose.',
     ].join(' '),
@@ -34,7 +33,7 @@ export function defineChooseWay(services: Choosing) {
     connectionsManagement: true,
     inputSchema: ChoosingTheWaySchema,
     outputSchema: ConnectionSchema,
-    reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input'],
+    reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ id, token, credential, account_type: accountType, placeholders }) {
       const use = { connection: id, token_sha256: tokenSha256Of(token) };
       const asked = {
@@ -44,6 +43,9 @@ export function defineChooseWay(services: Choosing) {
       };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(services), use));
       const chosen = yield* credentialChosenFor(kept, asked, services);
+      if (credential.service_account !== 'managed') {
+        yield* serviceAccountRemovedBefore(kept, services);
+      }
       const { before, after } = yield* recordChangeInRegistry(services, {
         type: 'choose_way',
         ...use,

@@ -3,6 +3,7 @@ import { Schema } from 'effect';
 
 import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
 import { CredentialKindSchema } from '../registry/credential.ts';
+import { ServiceAccountChoiceSchema } from '../registry/exchange-credentials.ts';
 
 export const ChoosingTheWaySchema = Schema.Struct({
   id: ConnectionIdField,
@@ -13,6 +14,12 @@ export const ChoosingTheWaySchema = Schema.Struct({
       PermissionsSchema.annotate({
         description:
           'application or delegated, as the list of ways names it. client_credentials always means application. Left out, every other kind that sends a credential means delegated.',
+      }),
+    ),
+    service_account: Schema.optionalKey(
+      ServiceAccountChoiceSchema.annotate({
+        description:
+          'managed for the way that acts as a service account Auto creates, as the list of ways names it in service_account. Left out for any other way.',
       }),
     ),
   }).annotate({

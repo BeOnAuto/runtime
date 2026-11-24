@@ -21,7 +21,7 @@ import {
   regions,
   tracker,
 } from '../testing/fixture-providers.ts';
-import { agents } from '../testing/own-app-providers.ts';
+import { agents, asTheCompanysServiceAccount, mail } from '../testing/own-app-providers.ts';
 
 function waysOf(provider: Provider) {
   return provider.entry.credentials.map((way) => hostAlternativesOf(provider, way));
@@ -135,6 +135,16 @@ describe('a provider named', () => {
     expect(named('tracker').entry).toEqual(tracker);
     expect(Result.getOrThrow(Result.flip(providerNamed(fixtureProviders, 'crm')))).toEqual([
       { pointer: '/provider', detail: 'There is no provider named crm here' },
+    ]);
+  });
+});
+
+describe('the hosts a way that exchanges a token reaches', () => {
+  it('are the token endpoint and the impersonation address of a way that exchanges a token', () => {
+    const exchanging = providerOf({ ...mail, credentials: [asTheCompanysServiceAccount] });
+
+    expect(waysOf(exchanging)).toEqual([
+      [['api.mail.example.com', 'sts.mail.example.com', 'credentials.mail.example.com']],
     ]);
   });
 });

@@ -3,36 +3,52 @@ import type { Redacted } from 'effect';
 
 import type { TokenRequest } from '../assertions/token-requests.ts';
 import type { ConsentServed } from '../consent/consent-client.ts';
+import type { TokenExchange } from '../exchange/token-exchanges.ts';
 import type { FailureCodes } from '../openapi/failure-codes.ts';
 
 export type MintingCredential =
   | { readonly kind: 'client_secret'; readonly client_secret: Redacted.Redacted }
   | { readonly kind: 'private_key'; readonly private_key: Redacted.Redacted; readonly algorithm: string };
 
+interface SubjectTokenCredential {
+  readonly kind: 'subject_token';
+}
+
 export interface ConsentCredential extends ConsentServed {
   readonly kind: 'consent';
 }
 
-type AuthCredential = MintingCredential | ConsentCredential;
+type ClientCredential = MintingCredential | ConsentCredential;
 
-type AuthGrant = 'client_credentials' | 'jwt_bearer';
+type ClientGrant = 'client_credentials' | 'jwt_bearer';
 
-export interface AuthSettings {
+export interface ClientAuthSettings {
   readonly issuer: string;
   readonly client_id: string;
   readonly scope: string | null;
   readonly discovery?: 'protected_resource' | 'issuer';
   readonly audience?: string;
-  readonly grant?: AuthGrant;
+  readonly grant?: ClientGrant;
   readonly subject?: string;
   readonly parameters?: Readonly<Record<string, string>>;
   readonly token_request?: TokenRequest;
-  readonly credential: AuthCredential;
+  readonly credential: ClientCredential;
 }
 
-export type MintingAuth = AuthSettings & { readonly credential: MintingCredential };
+export interface ExchangeAuth extends TokenExchange {
+  readonly grant: 'token_exchange';
+  readonly scope: string | null;
+  readonly token_request?: undefined;
+  readonly credential: SubjectTokenCredential;
+}
 
-export type ConsentAuth = AuthSettings & { readonly credential: ConsentCredential };
+export type AuthSettings = ClientAuthSettings | ExchangeAuth;
+
+export type ClientMintingAuth = ClientAuthSettings & { readonly credential: MintingCredential };
+
+export type MintingAuth = ClientMintingAuth | ExchangeAuth;
+
+export type ConsentAuth = ClientAuthSettings & { readonly credential: ConsentCredential };
 
 export interface ToolMarks {
   readonly reads: readonly string[];

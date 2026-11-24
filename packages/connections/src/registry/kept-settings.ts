@@ -7,6 +7,8 @@ import type {
   WayChosen,
 } from './connection-events.ts';
 import { scopesSaid, type RecordedConnection } from './connection.ts';
+import { actsAsAManagedServiceAccount } from './exchange-credentials.ts';
+import { withoutItsServiceAccount, type KeptServiceAccount } from './kept-service-accounts.ts';
 
 export type Setting = PlaybooksSet | AccountTypeSet | WayChosen | ModelSet;
 
@@ -17,7 +19,7 @@ const typesOfSettings: ReadonlySet<string> = new Set([
   'connection_model_set',
 ]);
 
-interface Settable {
+interface Settable extends KeptServiceAccount {
   readonly connection: RecordedConnection;
   readonly consent: unknown;
   readonly clientSecretId: string | undefined;
@@ -39,12 +41,13 @@ function entryAt(entry: ConnectionEntry, baseUrl: string | null | undefined): Co
 
 function wayChosenAfter<Kept extends Settable>(kept: Kept, { data }: WayChosen): Kept {
   const { credential, account_type: accountType, says, placeholders, base_url: baseUrl } = data;
+  const before = actsAsAManagedServiceAccount(credential) ? kept : withoutItsServiceAccount(kept);
   return {
-    ...kept,
+    ...before,
     connection: {
-      ...kept.connection,
+      ...before.connection,
       ...(placeholders === undefined ? {} : { placeholders }),
-      entry: entryAt(kept.connection.entry, baseUrl),
+      entry: entryAt(before.connection.entry, baseUrl),
       credential,
       account_type: accountType ?? null,
       asked_scopes: scopesSaid(credential.scope, says),

@@ -1,12 +1,14 @@
 import {
   allPermissions,
   CallFetch,
+  CallSubjectTokens,
   makeDispatcher,
   type AccessDecision,
   type CallerIdentity,
   type Outcome,
   type PolicyDecisionPoint,
   type Runnable,
+  type SubjectTokensOfACall,
 } from '@on.auto/operations';
 import {
   decidingEach,
@@ -123,6 +125,7 @@ type ConnectionServices = Parameters<typeof makeConnectionOperations>[0];
 
 export interface HarnessOptions extends Partial<Omit<ConnectionServices, 'secrets'>>, HarnessConsenting {
   readonly callFetch?: typeof globalThis.fetch;
+  readonly callSubjectTokens?: SubjectTokensOfACall;
   readonly ledger?: MemoryLedger;
   readonly decidedBy?: PolicyDecisionPoint;
 }
@@ -172,22 +175,26 @@ const collecting = {
   eventSchema: ConnectionEventSchema,
 };
 
-function callFetchOf(callFetch: typeof globalThis.fetch | undefined): Layer.Layer<never> {
-  return callFetch === undefined ? Layer.empty : Layer.succeed(CallFetch, callFetch);
+interface BoundToTheCall {
+  readonly callFetch: HarnessOptions['callFetch'] | undefined;
+  readonly callSubjectTokens: HarnessOptions['callSubjectTokens'] | undefined;
 }
 
-function servicesOver(
-  ledger: MemoryLedger,
-  log: (line: string) => void,
-  callFetch: typeof globalThis.fetch | undefined,
-) {
+function boundToTheCall({ callFetch, callSubjectTokens }: BoundToTheCall): Layer.Layer<never> {
+  return Layer.mergeAll(
+    callFetch === undefined ? Layer.empty : Layer.succeed(CallFetch, callFetch),
+    callSubjectTokens === undefined ? Layer.empty : Layer.succeed(CallSubjectTokens, callSubjectTokens),
+  );
+}
+
+function servicesOver(ledger: MemoryLedger, log: (line: string) => void, bound: BoundToTheCall) {
   return Layer.mergeAll(
     ledger.layer,
     Layer.provide(memoryPlaybookRegistry([]), ledger.layer),
     recordingReporter().layer,
     TestClock.layer(),
     loggingInto(log),
-    callFetchOf(callFetch),
+    boundToTheCall(bound),
   );
 }
 
@@ -195,25 +202,30 @@ export function connectionServicesWith(given: Partial<ConnectionServices> & Pick
   return composedOf(given, { secrets: keptSecrets({}), consent: given.consent });
 }
 
+function loggedLines() {
+  const lines: string[] = [];
+  return {
+    log: (line: string) => {
+      lines.push(line);
+    },
+    logged: () => [...lines],
+  };
+}
+
 export function harness({
   beforeKeeping,
   mostSecretCharacters,
   consenting,
   callFetch,
+  callSubjectTokens,
   ledger = keptLedger(),
   decidedBy,
   ...given
 }: HarnessOptions = {}): Harness {
   const secrets = keptSecrets({ beforeKeeping, mostSecretCharacters });
   const consent = harnessConsentOf(ledger.service, secrets, consenting);
-  const logged: string[] = [];
-  const services = servicesOver(
-    ledger,
-    (line) => {
-      logged.push(line);
-    },
-    callFetch,
-  );
+  const lines = loggedLines();
+  const services = servicesOver(ledger, lines.log, { callFetch, callSubjectTokens });
   const composed = composedOf(given, { secrets, consent });
   const operations = makeConnectionOperations(composed);
   const dispatcher = makeDispatcher([], decidedBy === undefined ? {} : { decidedBy });
@@ -221,7 +233,7 @@ export function harness({
     ledger,
     consent,
     facts: async () => (await Effect.runPromise(ledger.service.load(connectionsOfAcme, collecting))).state,
-    logged: () => [...logged],
+    logged: lines.logged,
     secrets,
     operations,
     operationsWith: (changes) => makeConnectionOperations({ ...composed, ...changes }),

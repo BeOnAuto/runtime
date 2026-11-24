@@ -8,13 +8,15 @@ import {
   type FetchLike,
   type OAuthClientProvider,
 } from '@modelcontextprotocol/client';
+import type { SubjectTokensOfACall } from '@on.auto/operations';
 import { Option, Redacted } from 'effect';
 
 import type { AssertedTokens } from '../assertions/requested-tokens.ts';
 import { assertedTokensOf, type Assertion } from '../assertions/signed-assertions.ts';
 import type { ConsentServed, TokenServing } from '../consent/consent-client.ts';
 import { isResourceOf } from '../consent/server-metadata.ts';
-import type { MintingAuth, MintingCredential } from '../settings/server-settings.ts';
+import { exchangedTokensOf } from '../exchange/exchanged-tokens.ts';
+import type { ClientMintingAuth, MintingAuth, MintingCredential } from '../settings/server-settings.ts';
 
 export interface UnauthorizedContext {
   readonly response: Readonly<Response>;
@@ -41,6 +43,8 @@ export interface TokenSourceOptions {
   readonly fetch: FetchLike;
   readonly now: () => number;
   readonly minted: (server: string, token: string) => void;
+  readonly subjectTokens?: SubjectTokensOfACall | undefined;
+  readonly org?: string | undefined;
 }
 
 interface Held {
@@ -66,7 +70,7 @@ export function renewalTimeOf(heldAt: number, expiresAt: number, spreadMs = 0): 
 
 type CredentialsProvider = ClientCredentialsProvider | PrivateKeyJwtProvider;
 
-function credentialsProviderOf({ issuer, client_id, scope, credential }: MintingAuth): CredentialsProvider {
+function credentialsProviderOf({ issuer, client_id, scope, credential }: ClientMintingAuth): CredentialsProvider {
   const common = { clientId: client_id, expectedIssuer: issuer, ...(scope === null ? {} : { scope }) };
   return credential.kind === 'client_secret'
     ? new ClientCredentialsProvider({ ...common, clientSecret: Redacted.value(credential.client_secret) })
@@ -77,7 +81,7 @@ function credentialsProviderOf({ issuer, client_id, scope, credential }: Minting
       });
 }
 
-function discoveryOf(settings: MintingAuth, discovery: Discovery) {
+function discoveryOf(settings: ClientMintingAuth, discovery: Discovery) {
   return discovery === 'from_the_issuer' ? { discoveryState: () => ({ authorizationServerUrl: settings.issuer }) } : {};
 }
 
@@ -104,7 +108,7 @@ function withTheParameters(prepared: Prepared, parameters: Readonly<Record<strin
   };
 }
 
-function preparedOf(prepared: Prepared, { parameters, audience }: MintingAuth) {
+function preparedOf(prepared: Prepared, { parameters, audience }: ClientMintingAuth) {
   return parameters === undefined && audience === undefined
     ? {}
     : {
@@ -119,7 +123,7 @@ function audienceOf(audience?: string) {
   return audience === undefined ? {} : { validateResourceURL: resourceCheckedAndLeftOut };
 }
 
-function providerOf(settings: MintingAuth, discovery: Discovery): OAuthClientProvider {
+function providerOf(settings: ClientMintingAuth, discovery: Discovery): OAuthClientProvider {
   const provider = credentialsProviderOf(settings);
   const preparedByTheCredentials = provider.prepareTokenRequest.bind(provider);
   return Object.assign(
@@ -148,7 +152,7 @@ function authOptionsOf({ serverUrl, fetch }: TokenSourceOptions, { scope, resour
 }
 
 async function credentialsTokensOf(
-  settings: MintingAuth,
+  settings: ClientMintingAuth,
   options: TokenSourceOptions,
   asking: Asking,
 ): Promise<AssertedTokens> {
@@ -163,7 +167,7 @@ function isPrivateKey(credential: MintingCredential): credential is PrivateKey {
   return credential.kind === 'private_key';
 }
 
-function assertionOf(settings: MintingAuth, { scope }: Asking): Assertion {
+function assertionOf(settings: ClientMintingAuth, { scope }: Asking): Assertion {
   const { private_key: privateKey, algorithm } = Option.getOrThrow(
     Option.liftPredicate(settings.credential, isPrivateKey),
   );
@@ -179,6 +183,9 @@ function assertionOf(settings: MintingAuth, { scope }: Asking): Assertion {
 }
 
 function tokensOf(settings: MintingAuth, options: TokenSourceOptions, asking: Asking): Promise<AssertedTokens> {
+  if (settings.grant === 'token_exchange') {
+    return exchangedTokensOf(settings, asking.scope, options);
+  }
   return settings.grant === 'jwt_bearer'
     ? assertedTokensOf(assertionOf(settings, asking), { fetch: options.fetch, now: options.now })
     : credentialsTokensOf(settings, options, asking);

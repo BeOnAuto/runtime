@@ -12,6 +12,7 @@ import { runWaysOf, type RunWays } from './run-ways.ts';
 export interface ToolAccessOptions {
   readonly clientInfo: LinkOptions['clientInfo'];
   readonly consent: LinkOptions['consent'];
+  readonly subjectTokens?: LinkOptions['subjectTokens'];
   readonly content: ContentStore;
   readonly reportServerMessage: (report: ServerMessage) => void;
   readonly runtimeSecrets?: SecretValues;

@@ -1,53 +1,32 @@
 import { alternatives, articled, listed } from '@on.auto/phrasing';
-import {
-  parametersTheRuntimeSets,
-  setInEveryTokenRequestWords,
-  WayClientSourceSchema,
-  WayPkceSchema,
-} from '@on.auto/tool-servers';
+import { parametersTheRuntimeSets, setInEveryTokenRequestWords } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { keyFieldNames, keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
-import { AccountTypesSchema, accountTypeIssuesOf, isTheWayAsked } from './account-types.ts';
+import { keyFieldNames, keyWayFields, keyWayIssuesOf, testIssuesOf } from '../keys/key-fields.ts';
+import { accountTypeIssuesOf, isTheWayAsked } from './account-types.ts';
 import { assertionFieldNames, assertionFields, assertionIssuesOf } from './assertion-ways.ts';
 import { consentEndpoints, consentIssuesOf, oauthClientIssuesOf } from './consent-fields.ts';
-import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
-import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
-import { clientIdTitleField, ownValueFields, pathValueIssuesOf } from './way-values.ts';
+import { gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
+import { groupIssuesOf, wordsIssuesOf } from './scope-groups.ts';
+import {
+  clientIdTitleField,
+  limitationSchemaOf,
+  mostLimitationCharacters,
+  ownValueFields,
+  pathValueIssuesOf,
+  wayFields,
+} from './way-values.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
-export const mostLimitationCharacters = 160;
-
-export function limitationSchemaOf(mostCharacters: number) {
-  return Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostCharacters)).annotate({
-    description: `What a connection made this way cannot do, in one sentence of at most ${String(mostCharacters)} characters, which a person reads under this way where they connect the app.`,
-  });
-}
-
-export const wayFields = {
-  in: Schema.Literals(['header', 'query', 'security']),
-  name: NamedSchema,
-  scheme: NamedSchema,
-  issuer: Schema.String,
-  scope: Schema.String,
-  parameters: Schema.Record(Schema.String, Schema.String),
-  authorization_endpoint: Schema.String,
-  token_endpoint: Schema.String,
-  revocation_endpoint: Schema.String,
-  pkce: WayPkceSchema,
-  clients: Schema.Array(WayClientSourceSchema),
-  oauth_client: Schema.Literal('required'),
-  says: ScopeWordsSchema,
-  more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
-  ending_codes: Schema.Array(NamedSchema).check(Schema.isMinLength(1), Schema.isMaxLength(16)),
-  gateway: GatewaySchema,
-  permissions: PermissionsSchema,
-  account_types: AccountTypesSchema,
-  refresh_token_expires_in: Schema.Int.check(Schema.isGreaterThan(0)),
-};
-
-export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization', 'jwt_bearer']);
+export const WayKindSchema = Schema.Literals([
+  'secret',
+  'client_credentials',
+  'none',
+  'authorization',
+  'jwt_bearer',
+  'token_exchange',
+]);
 
 export type WayKind = typeof WayKindSchema.Type;
 
@@ -71,7 +50,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   parameters: Schema.optionalKey(
     wayFields.parameters.annotate({
       description:
-        "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials. Each value may hold this way's placeholders",
+        "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials; for token_exchange, those its exchange carries, such as requested_token_type. Each value may hold this way's placeholders",
     }),
   ),
   authorization_endpoint: Schema.optionalKey(wayFields.authorization_endpoint),
@@ -219,6 +198,23 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       ...ownValues,
     ],
   },
+  token_exchange: {
+    required: ['token_endpoint', 'audience', 'subject_token'],
+    optional: [
+      'scope',
+      'says',
+      'parameters',
+      'impersonation',
+      'managed_service_account',
+      'read_only',
+      'test',
+      'key_page',
+      'key_page_title',
+      'steps',
+      'limitation',
+      ...ownValues,
+    ],
+  },
 };
 
 const fieldsThroughAGateway: TakenFields = {
@@ -277,6 +273,7 @@ function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
     ...assertionIssuesOf(way),
     ...wordsIssuesOf(way.scope, way.says),
     ...keyWayIssuesOf(way),
+    ...testIssuesOf(way),
     ...accountTypeIssuesOf(way),
   ];
   return way.kind === 'authorization'
@@ -288,7 +285,7 @@ export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFi
 export type CredentialWay = typeof CredentialWaySchema.Type;
 
 const oneWayOfEachKind =
-  'Expected a kind and permissions no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, and an authorization way names in more what a later consent may add';
+  'Expected a kind, permissions and managed_service_account no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, a token_exchange way once with managed_service_account and once without, and an authorization way names in more what a later consent may add';
 
 export function repeatedWayIssuesOf(credentials: readonly CredentialWay[]): readonly EntryIssue[] {
   return credentials.flatMap((way, index): readonly EntryIssue[] =>

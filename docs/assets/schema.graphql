@@ -182,7 +182,7 @@ type Query {
   ): ListedConnection
 
   """
-  Reads the connection an open link names, so Studio's page can show what the person is asked to approve. A link is open from when add_connection or reconnect_connection gave it until the connection is connected or removed, or a newer link replaces it. A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next. asked_by names the client the link was asked through, where the call that gave it named one. For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read. For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them. A token that is unknown, used up or replaced is answered as not found. On a runtime that signs people in, only an admin of the organization may read it.
+  Reads the connection an open link names, so Studio's page can show what the person is asked to approve. A link is open from when add_connection or reconnect_connection gave it until the connection is connected or removed, or a newer link replaces it. A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next. asked_by names the client the link was asked through, where the call that gave it named one. For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read. For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them. For a connection that exchanges a token Auto signs, subject_token names the issuer and the subject of that token, which its steps name, and where the issuer publishes its keys. A token that is unknown, used up or replaced is answered as not found. On a runtime that signs people in, only an admin of the organization may read it.
   """
   read_link(
     """The id of the connection"""
@@ -4548,7 +4548,7 @@ type ListOrgChangesAnswerChangesPlaybook {
 }
 
 """
-A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its way chosen, its playbooks, its account type or its model set, its signing secret set or removed, or one of its app credentials refused
+A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its way chosen, its service account created, its playbooks, its account type or its model set, its signing secret set or removed, or one of its app credentials refused
 """
 type ListOrgChangesAnswerChangesConnection {
   """The kind of the resource that changed"""
@@ -5407,6 +5407,11 @@ type ListedConnection {
   installation: ListedConnectionInstallation
 
   """
+  The service account Auto created for the connection, which it acts as. It is absent until the account is created, and where the connection acts as no account Auto created.
+  """
+  service_account: ListedConnectionServiceAccount
+
+  """
   The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing
   """
   renders: String
@@ -5519,7 +5524,7 @@ type ListedConnectionCredential {
   client_id: String
 
   """
-  For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out
+  For client_credentials, authorization, jwt_bearer and token_exchange, the scopes asked, separated by spaces, none when left out
   """
   scope: String
 
@@ -5529,7 +5534,7 @@ type ListedConnectionCredential {
   subject: String
 
   """
-  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
+  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials; for token_exchange, those its exchange carries
   """
   parameters: JSON
 
@@ -5549,7 +5554,7 @@ type ListedConnectionCredential {
   authorization_endpoint: String
 
   """
-  For authorization, the token endpoint, beside the authorization endpoint
+  For authorization, the token endpoint, beside the authorization endpoint; for token_exchange, the endpoint the exchange is sent to
   """
   token_endpoint: String
 
@@ -5592,6 +5597,11 @@ type ListedConnectionCredential {
   For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched
   """
   pattern: String
+
+  """
+  For token_exchange, managed where the connection acts as a service account that Auto creates for it and removes with it
+  """
+  service_account: String
 }
 
 """
@@ -5867,6 +5877,16 @@ type ListedConnectionInstallation {
   name: String!
 }
 
+"""
+The service account Auto created for the connection, which it acts as. It is absent until the account is created, and where the connection acts as no account Auto created.
+"""
+type ListedConnectionServiceAccount {
+  """
+  The email of the service account, which a person gives access at the service
+  """
+  email: String!
+}
+
 """A group of scopes a later consent may add"""
 type ListedConnectionMore {
   """The name add_connection and reconnect_connection take as more"""
@@ -6056,6 +6076,11 @@ type LinkedConnection {
   The installation of the application that the connection uses, and the account it is installed on. It is absent where the connection uses no installation.
   """
   installation: LinkedConnectionInstallation
+
+  """
+  The service account Auto created for the connection, which it acts as. It is absent until the account is created, and where the connection acts as no account Auto created.
+  """
+  service_account: LinkedConnectionServiceAccount
   link: LinkedConnectionLink!
 
   """The consent started and not finished, while it is open"""
@@ -6075,6 +6100,11 @@ type LinkedConnection {
   For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it
   """
   next_client_id: String
+
+  """
+  For a connection that exchanges a token Auto signs, what its steps name beside their words
+  """
+  subject_token: LinkedConnectionSubjectToken
 
   """
   The client the caller who asked for this link called through, add_connection for the link of an addition and reconnect_connection for a new one, as the token of that call named it: its client ID, its name and the domain of its client ID metadata document. Left out where the call named none, as a call with an API key, or with a session of a page, names none
@@ -6184,7 +6214,7 @@ type LinkedConnectionCredential {
   client_id: String
 
   """
-  For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out
+  For client_credentials, authorization, jwt_bearer and token_exchange, the scopes asked, separated by spaces, none when left out
   """
   scope: String
 
@@ -6194,7 +6224,7 @@ type LinkedConnectionCredential {
   subject: String
 
   """
-  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials
+  For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials; for token_exchange, those its exchange carries
   """
   parameters: JSON
 
@@ -6214,7 +6244,7 @@ type LinkedConnectionCredential {
   authorization_endpoint: String
 
   """
-  For authorization, the token endpoint, beside the authorization endpoint
+  For authorization, the token endpoint, beside the authorization endpoint; for token_exchange, the endpoint the exchange is sent to
   """
   token_endpoint: String
 
@@ -6257,6 +6287,11 @@ type LinkedConnectionCredential {
   For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched
   """
   pattern: String
+
+  """
+  For token_exchange, managed where the connection acts as a service account that Auto creates for it and removes with it
+  """
+  service_account: String
 }
 
 """
@@ -6532,6 +6567,16 @@ type LinkedConnectionInstallation {
   name: String!
 }
 
+"""
+The service account Auto created for the connection, which it acts as. It is absent until the account is created, and where the connection acts as no account Auto created.
+"""
+type LinkedConnectionServiceAccount {
+  """
+  The email of the service account, which a person gives access at the service
+  """
+  email: String!
+}
+
 type LinkedConnectionLink {
   """
   The group of more the link asks beside what the connection holds, where it was given for one
@@ -6557,6 +6602,27 @@ type LinkedConnectionConsent {
 
   """When the consent must be finished by, in ISO 8601 UTC"""
   expires_at: String!
+}
+
+"""
+For a connection that exchanges a token Auto signs, what its steps name beside their words
+"""
+type LinkedConnectionSubjectToken {
+  """The https address Auto signs its tokens as, which the steps name"""
+  issuer: String!
+
+  """
+  The subject Auto signs the tokens of this organization for, which the steps name
+  """
+  subject: String!
+
+  """Where the issuer publishes its public keys, as a JSON Web Key Set"""
+  jwks_uri: String!
+
+  """
+  true where the steps offer those keys as a file to upload at the service, since the service may not reach this Auto; false where the service reads them from jwks_uri
+  """
+  jwk_file: Boolean!
 }
 
 """
@@ -6728,6 +6794,16 @@ type ProviderCredentials {
   client_source: String
 
   """
+  For token_exchange, managed where a connection made this way acts as a service account that Auto creates for it, so the person is asked no values. add_connection and choose_way take it in credential.
+  """
+  service_account: String
+
+  """
+  true where a connection made this way is given only the tools that read.
+  """
+  read_only: Boolean
+
+  """
   The scopes its first consent asks, in its order, each with its words; empty where it asks none
   """
   scopes: [ProviderCredentialsScopes!]!
@@ -6748,7 +6824,7 @@ type ProviderCredentials {
   key_page: String
 
   """
-  For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens the key page, where the entry gives one; left out otherwise
+  For secret, client_credentials, jwt_bearer, authorization and token_exchange, the label of the button that opens the key page, where the entry gives one; left out otherwise
   """
   key_page_title: String
 
@@ -6761,7 +6837,7 @@ type ProviderCredentials {
   client_id_title: String
 
   """
-  For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it
+  For secret, client_credentials, jwt_bearer, authorization and token_exchange, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it
   """
   steps: ProviderCredentialsSteps
 
@@ -6837,7 +6913,7 @@ type ProviderCredentialsKeyFile {
 }
 
 """
-For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it
+For secret, client_credentials, jwt_bearer, authorization and token_exchange, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it
 """
 type ProviderCredentialsSteps {
   key_page: ProviderCredentialsStepsKeyPage

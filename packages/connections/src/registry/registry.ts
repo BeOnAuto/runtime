@@ -1,24 +1,22 @@
 import type { CallingClient } from '@on.auto/operations';
-import type { ClientSource } from '@on.auto/tool-servers';
 
-import {
-  isOfItsSealedValues,
-  type ClientGiven,
-  type ConnectionAdded,
-  type ConnectionBroken,
-  type ConnectionConnected,
-  type ConsentStarted,
-  type LinkIssued,
-  type OfItsSealedValues,
-  type RecordedConnectionEvent,
+import type {
+  ClientGiven,
+  ConnectionAdded,
+  ConnectionBroken,
+  ConnectionConnected,
+  ConsentStarted,
+  LinkIssued,
+  RecordedConnectionEvent,
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, withItsInstallation, wordsOf, type RecordedConnection } from './connection.ts';
-import type { Credential } from './credential.ts';
-import { appCredentialsAfter, appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
+import { appCredentialsHeldOf, type AppSecretIds } from './kept-app-credentials.ts';
 import { isKeptRead, keptReadAfter, noReads, type KeptReads } from './kept-reads.ts';
 import { changesNothingButItsRequest, requestedAfter } from './kept-requests.ts';
+import { withoutItsServiceAccount, type KeptServiceAccount } from './kept-service-accounts.ts';
 import { isASetting, settingAfter } from './kept-settings.ts';
-import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
+import type { KeptSigning } from './kept-signing.ts';
+import { isOfItsKeptValues, withItsKeptValues } from './kept-values.ts';
 
 export interface OpenLink {
   readonly token_sha256: string;
@@ -30,7 +28,7 @@ export interface StartedConsent {
   readonly state_sha256: string;
   readonly verifier_secret_id: string;
   readonly client_id: string;
-  readonly client_source: ClientSource;
+  readonly client_source: ConsentStarted['data']['client_source'];
   readonly scope: string | undefined;
   readonly started_at: string;
   readonly expires_at: string;
@@ -41,7 +39,7 @@ export interface GivenClient {
   readonly secret_id: string;
 }
 
-export interface KeptConnection extends KeptReads {
+export interface KeptConnection extends KeptReads, KeptServiceAccount {
   readonly connection: RecordedConnection;
   readonly ways: readonly RecordedConnection['credential'][] | undefined;
   readonly link: OpenLink | undefined;
@@ -101,6 +99,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     appSecretIds: {},
     model: null,
     ...noReads,
+    serviceAccount: undefined,
   };
 }
 
@@ -149,7 +148,7 @@ function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
   };
 }
 
-function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): Credential {
+function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnected): RecordedConnection['credential'] {
   const { client_id: clientId, client_source: clientSource } = data;
   return {
     ...connection.credential,
@@ -191,6 +190,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     appSecretIds,
     model: kept.model,
     ...noReads,
+    serviceAccount: kept.serviceAccount,
   };
 }
 
@@ -203,30 +203,12 @@ function broken(kept: KeptConnection, { data, context }: ConnectionBroken): Kept
 }
 
 function removed(kept: KeptConnection): KeptConnection {
+  const { connection, ...without } = withoutItsServiceAccount(kept);
   return {
-    ...kept,
-    connection: { ...kept.connection, status: 'removed', broken: null, signing_secret: null, app_credentials: [] },
+    ...without,
+    connection: { ...connection, status: 'removed', broken: null, signing_secret: null, app_credentials: [] },
     link: undefined,
   };
-}
-
-function withSigning(kept: KeptConnection, signing: KeptSigning | undefined): KeptConnection {
-  return { ...kept, signing, connection: { ...kept.connection, signing_secret: signingShown(signing) } };
-}
-
-function withItsSealedValues(kept: KeptConnection, event: OfItsSealedValues): KeptConnection {
-  if (event.type === 'connection_signing_secret_set') {
-    return withSigning(kept, signingSet(kept.signing, event));
-  }
-  return event.type === 'connection_signing_secret_removed'
-    ? withSigning(kept, signingRemoved(kept.signing, event))
-    : {
-        ...kept,
-        connection: {
-          ...kept.connection,
-          app_credentials: appCredentialsAfter(kept.connection.app_credentials, event),
-        },
-      };
 }
 
 function evolvedConnection(
@@ -254,8 +236,8 @@ function evolvedConnection(
   if (isKeptRead(event)) {
     return keptReadAfter(kept, event);
   }
-  if (isOfItsSealedValues(event)) {
-    return withItsSealedValues(kept, event);
+  if (isOfItsKeptValues(event)) {
+    return withItsKeptValues(kept, event);
   }
   return event.type === 'connection_broken' ? broken(kept, event) : removed(kept);
 }

@@ -11,7 +11,13 @@ const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 export function hostAlternativesOf({ entry, address }: Provider, way: CredentialWay): readonly (readonly string[])[] {
   const installed = way.installation === undefined ? [] : [way.installation.issuer];
-  const addresses = [way.base_url ?? address, ...wayAddresses.flatMap((field) => way[field] ?? []), ...installed];
+  const impersonating = way.impersonation === undefined ? [] : [way.impersonation.url];
+  const addresses = [
+    way.base_url ?? address,
+    ...wayAddresses.flatMap((field) => way[field] ?? []),
+    ...installed,
+    ...impersonating,
+  ];
   return setCombinationsOf({ ...entry.placeholders, ...way.placeholders }).map((placed) =>
     addresses.map((each) => hostTemplateOf(each, (name) => placed.get(name))),
   );

@@ -273,6 +273,13 @@ describe('the test of a way of a key', () => {
     ]).toEqual([[], ['/credentials/0/test/tool'], ['/credentials/0/test']]);
   });
 
+  it('calls a tool that needs no arguments and lists nothing it reaches, so it takes no with and no reached', () => {
+    expect([
+      refusedAt({ test: { tool: 'get_viewer', with: { team: 'acme' } } }),
+      refusedAt({ test: { tool: 'get_viewer', reached: { list: '/teams', name: '/name' } } }),
+    ]).toEqual([['/credentials/0/test/with'], ['/credentials/0/test/reached']]);
+  });
+
   it('is refused where the entry marks the tool it names acts, since the runtime calls it with every key given', () => {
     expect([marked({ reads: ['viewer'] }), marked({ acts: ['issues.create'] }), marked({ acts: ['viewer'] })]).toEqual([
       [],

@@ -19,6 +19,7 @@ const typesDecidedApart: ReadonlySet<string> = new Set([
   'set_account_type',
   'set_model',
   'choose_way',
+  'record_service_account',
   'request',
   'decline',
 ]);
@@ -31,7 +32,11 @@ export function decideApart(command: DecidedApart, registry: Registry, providers
   if (command.type === 'refuse_app_credential') {
     return decideAppCredentialRefusal(command, registry);
   }
-  if (command.type === 'set_account_type' || command.type === 'choose_way') {
+  if (
+    command.type === 'set_account_type' ||
+    command.type === 'choose_way' ||
+    command.type === 'record_service_account'
+  ) {
     return decideOnItsWay(command, registry, providers);
   }
   if (command.type === 'request' || command.type === 'decline') {

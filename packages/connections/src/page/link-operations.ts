@@ -1,7 +1,6 @@
-import { CallingClientSchema, defineHttpOperation, type Conflict } from '@on.auto/operations';
+import { CallingClientSchema, defineHttpOperation, OrgContext, type Conflict } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
-import { tokenSha256Of } from '../links/link-token.ts';
 import {
   ChosenPlaybooksField,
   ClientSourceField,
@@ -10,13 +9,7 @@ import {
   NextClientIdField,
   TokenField,
 } from '../operations/connection-fields.ts';
-import {
-  actedNow,
-  allowedToChoose,
-  loadRegistry,
-  recordInRegistry,
-  recordedCaller,
-} from '../operations/registry-access.ts';
+import { actedNow, linkedThrough } from '../operations/registry-access.ts';
 import {
   askedAgainOf,
   moreAskedOf,
@@ -25,7 +18,7 @@ import {
   type AskedMore,
 } from '../providers/asking-more.ts';
 import { ConnectionSchema, connectionShown, scopesAddedTo } from '../registry/connection.ts';
-import { isOpenConsent, linkedConnectionOf, type KeptWithLink } from '../registry/registry-lookup.ts';
+import { isOpenConsent, type KeptWithLink } from '../registry/registry-lookup.ts';
 import {
   isCoveredHere,
   nextClientOf,
@@ -35,6 +28,7 @@ import {
   type Sources,
 } from './consent-asking.ts';
 import { listedOnThePageOf, ListedOnThePageFields, type LinkReading } from './linked-tools.ts';
+import { SubjectTokenShownSchema, subjectTokenShownOf } from './subject-tokens-shown.ts';
 
 const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -72,6 +66,7 @@ const LinkedSchema = Schema.Struct({
     }),
   ),
   next_client_id: NextClientIdField,
+  subject_token: Schema.optionalKey(SubjectTokenShownSchema),
   asked_by: Schema.optionalKey(
     CallingClientSchema.annotate({
       description:
@@ -148,7 +143,7 @@ export function defineReadLink(reading: LinkReading) {
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'asked_by names the client the link was asked through, where the call that gave it named one.',
       'For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read.',
-      'For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them.',
+      'For a server given by hand, ways lists the ways it offers, as its own metadata named them when the connection was added, and choose_way takes one of them. For a connection that exchanges a token Auto signs, subject_token names the issuer and the subject of that token, which its steps name, and where the issuer publishes its keys.',
       'A token that is unknown, used up or replaced is answered as not found.',
       'On a runtime that signs people in, only an admin of the organization may read it.',
     ].join(' '),
@@ -159,12 +154,9 @@ export function defineReadLink(reading: LinkReading) {
     inputSchema: LinkSchema,
     outputSchema: LinkedSchema,
     reasons: ['not_found', 'conflict', 'unavailable'],
-    handle: Effect.fnUntraced(function* ({ id, token }) {
-      const registry = yield* loadRegistry(reading);
+    handle: Effect.fnUntraced(function* (link) {
+      const { kept } = yield* linkedThrough(reading, link);
       const acted = yield* actedNow;
-      const kept = yield* Effect.fromResult(
-        linkedConnectionOf(registry, { connection: id, token_sha256: tokenSha256Of(token) }),
-      );
       const sources = yield* sourcesFor(kept.connection, reading);
       const asked = yield* Effect.fromResult(askedOfTheLink(kept, reading.providers, sources));
       const source = sourceOfAStartOf(kept.connection, asked.scope, sources);
@@ -182,38 +174,9 @@ export function defineReadLink(reading: LinkReading) {
         ...returnAddressFor(kept.connection, reading),
         ...nextClientOf(kept),
         ...askedByOf(kept),
+        ...subjectTokenShownOf(kept, reading.subjectTokens, (yield* OrgContext).org),
         ...(yield* listedOnThePageOf(kept, reading)),
       };
-    }),
-  });
-}
-
-export function defineApprove(services: { readonly providers: LinkReading['providers'] }) {
-  return defineHttpOperation('org', 'command', {
-    name: 'approve',
-    title: 'Approve connection',
-    description: [
-      'Approves a connection that takes no credential to give, one of the credential none or reference, through its open link, and answers it connected.',
-      'On a runtime that signs people in, only an admin of the organization may approve it.',
-      'A connection that takes a secret or client credentials is approved by give_credential instead.',
-      'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
-    ].join(' '),
-    route: { method: 'POST', path: '/connections/{id}/approve' },
-    body: { kind: 'json' },
-    connectionsManagement: true,
-    inputSchema: LinkWithPlaybooksSchema,
-    outputSchema: ConnectionSchema,
-    reasons: ['not_found', 'forbidden', 'conflict'],
-    handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
-      yield* allowedToChoose(choice.playbooks);
-      const use = { connection: id, token_sha256: tokenSha256Of(token) };
-      const { connection } = yield* recordInRegistry(services, {
-        type: 'approve',
-        ...use,
-        connected_by: yield* recordedCaller,
-        ...choice,
-      }).pipe(Effect.catchTag('invalid_input', Effect.die));
-      return connectionShown(connection, null);
     }),
   });
 }

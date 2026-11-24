@@ -1,6 +1,7 @@
 import { placeholderNamePattern, referencedVariablesOf } from '@on.auto/config';
 import type { Schema } from 'effect';
 
+import { isAManagedServiceAccount } from './account-types.ts';
 import { holdsAClientId, waysHoldingAClientId, type WayKind } from './credential-ways.ts';
 import {
   addressGivenWholeIn,
@@ -22,6 +23,7 @@ type Placeholders = Readonly<Record<string, Placeholder>>;
 
 interface TemplatedWay extends WayParts {
   readonly kind: WayKind;
+  readonly managed_service_account?: boolean;
   readonly placeholders?: Placeholders;
 }
 
@@ -44,13 +46,13 @@ const unusedByTheProvider =
   'Expected the placeholder in the address, a header or a query value of the provider, since nothing else takes it';
 
 const unusedByTheWay =
-  "Expected the placeholder in this way's addresses, its base_url, its subject, its client_id, its parameters or its token_request, since nothing else takes it";
+  "Expected the placeholder in this way's addresses, its base_url, its subject, its client_id, its parameters, its token_request, its audience, its subject_token or its impersonation, since nothing else takes it";
 
 const namedAsTheProviders =
   "Expected a name no placeholder of the provider has, since a way's placeholder is asked beside the provider's";
 
 const besideAWayOfItsKind =
-  "Expected no placeholders on a way whose kind another way of the provider has, since a connection is added by the kind of its way alone, and this way's values could not be asked";
+  "Expected no placeholders on a way whose kind another way of the provider has, unless just one of the two declares managed_service_account, since a connection is added by the kind of its way and by whether its account is managed, and this way's values could not be asked";
 
 interface Names {
   readonly declared: readonly string[];
@@ -235,7 +237,10 @@ function ownedIssuesOf({ placeholders = {}, credentials }: Templated): readonly 
   return credentials.flatMap((way, index): readonly EntryIssue[] => {
     const own = Object.keys(way.placeholders ?? {});
     const path = ['credentials', String(index), 'placeholders'];
-    const ofItsKind = credentials.filter(({ kind }) => kind === way.kind).length > 1;
+    const ofItsKind =
+      credentials.filter(
+        (other) => other.kind === way.kind && isAManagedServiceAccount(other) === isAManagedServiceAccount(way),
+      ).length > 1;
     return [
       ...own
         .filter((name) => Object.hasOwn(placeholders, name))

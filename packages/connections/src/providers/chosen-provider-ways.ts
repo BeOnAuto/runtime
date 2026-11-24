@@ -1,6 +1,12 @@
 import { InvalidInput, type Issue } from '@on.auto/operations';
 import { listed } from '@on.auto/phrasing';
-import { additionOfProvider, isTheWayAsked, type CredentialWay, type Provider } from '@on.auto/providers';
+import {
+  additionOfProvider,
+  isAManagedServiceAccount,
+  isTheWayAsked,
+  type CredentialWay,
+  type Provider,
+} from '@on.auto/providers';
 import { JsonPointer, Result } from 'effect';
 
 import type { RecordedConnection } from '../registry/connection.ts';
@@ -44,7 +50,9 @@ function heldOf(held: Values | null, names: readonly string[]): Values {
 }
 
 function valuesFor(named: Provider, ways: readonly CredentialWay[], connection: Chosen, given: Values | undefined) {
-  const ofTheWay = ways.flatMap(({ placeholders = {} }) => Object.keys(placeholders));
+  const ofTheWay = ways
+    .filter((way) => !isAManagedServiceAccount(way))
+    .flatMap(({ placeholders = {} }) => Object.keys(placeholders));
   const ofTheEntry = heldOf(connection.placeholders, Object.keys(named.entry.placeholders ?? {}));
   return { taken: ofTheWay, values: { ...ofTheEntry, ...(given ?? heldOf(connection.placeholders, ofTheWay)) } };
 }

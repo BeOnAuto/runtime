@@ -132,7 +132,7 @@ describe('the ways of an entry', () => {
     const [consent] = drive.credentials;
     const readingAlone = { ...consent, scope: 'files.read', says: { 'files.read': 'Read the files of the account.' } };
     const kindTwice =
-      'Expected a kind and permissions no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, and an authorization way names in more what a later consent may add';
+      'Expected a kind, permissions and managed_service_account no earlier way has together, since a provider takes one way of each kind with application permissions and one with delegated permissions, a token_exchange way once with managed_service_account and once without, and an authorization way names in more what a later consent may add';
 
     expect(problemsOf({ ...tracker, credentials: [] })).toMatchObject([['/credentials', expect.any(String)]]);
     expect(problemsOf({ ...tracker, credentials: [{ kind: 'none' }, { kind: 'none', description: 'Again' }] })).toEqual(

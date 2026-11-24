@@ -43,6 +43,22 @@ describe('one read through a server not kept', () => {
     expect(fake.received()).toEqual([{ tool: 'profile', arguments: {}, meta: {} }]);
   });
 
+  it('sends the arguments a read is given, as a check declares them', async () => {
+    const fake = oneCallServer();
+    const { access } = reportingAccess({}, { timing: patientTiming });
+    closedAfter(access.close);
+
+    const read = await Effect.runPromise(
+      access.readOnceThrough(
+        { org: 'acme', reference: { server: 'graph', tool: 'profile' }, meta: {}, input: { page_size: 2 } },
+        throughTheFake(fake.url, oneCallKey),
+      ),
+    );
+
+    expect(read).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect(fake.received()).toEqual([{ tool: 'profile', arguments: { page_size: 2 }, meta: {} }]);
+  });
+
   it('keeps no content, so a keeping asked of it is refused', async () => {
     await expect(keptNowhere('{}')).rejects.toThrow(Error);
   });

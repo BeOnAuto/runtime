@@ -100,7 +100,10 @@ const itsKey = { private_key: '${GRAPH_CLIENT_SECRET}', algorithm: 'RS256' };
 const ofTheInbox = { subject: 'inbox@acme.example.com' };
 
 function grantsOf(servers: readonly ServerSettings[]): readonly unknown[] {
-  return servers.map((server) => [authOf(server)?.grant, authOf(server)?.subject]);
+  return servers.map((server) => {
+    const auth = authOf(server);
+    return auth?.grant === 'token_exchange' ? [auth.grant] : [auth?.grant, auth?.subject];
+  });
 }
 
 describe('the grant of an auth block', () => {

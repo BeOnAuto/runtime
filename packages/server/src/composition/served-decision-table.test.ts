@@ -84,14 +84,10 @@ const whatRunningPermits = [
   'playbook/send_run_event',
 ];
 
-const whatOnlyChangingPermits = [
-  'org/activate_allocation',
-  'org/activate_license',
-  'org/add_connection',
+const whatManagesConnections = [
   'org/approve',
-  'org/assign_role',
   'org/choose_way',
-  'org/create_playbook',
+  'org/create_service_account',
   'org/decline_connection_request',
   'org/finish',
   'org/give_client',
@@ -100,13 +96,22 @@ const whatOnlyChangingPermits = [
   'org/reconnect_connection',
   'org/remove_connection',
   'org/remove_connection_signing_secret',
-  'org/report_allocation',
-  'org/restore_playbook',
-  'org/retire_playbook',
   'org/set_connection_account_type',
   'org/set_connection_playbooks',
   'org/set_connection_signing_secret',
   'org/start',
+  'org/test_connection',
+];
+
+const whatOnlyChangingPermits = [
+  'org/activate_allocation',
+  'org/activate_license',
+  'org/add_connection',
+  'org/assign_role',
+  'org/create_playbook',
+  'org/report_allocation',
+  'org/restore_playbook',
+  'org/retire_playbook',
   'org/unassign_role',
   'org/update_playbook',
   'playbook/create_definition',
@@ -119,7 +124,8 @@ const whatOnlyChangingPermits = [
   'playbook/retire_definition',
   'playbook/start_definition_version',
   'playbook/update_definition',
-];
+  ...whatManagesConnections,
+].toSorted();
 
 const whatOnlyWritingPermits = [...whatRunningPermits, ...whatOnlyChangingPermits].toSorted();
 
@@ -128,23 +134,6 @@ const everything = [...whatReadingPermits, ...whatOnlyWritingPermits].toSorted()
 
 const whatManagesPermissions = ['org/assign_role', 'org/unassign_role'];
 const everythingButWhatManagesPermissions = everything.filter((name) => !whatManagesPermissions.includes(name));
-
-const whatManagesConnections = [
-  'org/approve',
-  'org/choose_way',
-  'org/decline_connection_request',
-  'org/finish',
-  'org/give_client',
-  'org/give_credential',
-  'org/read_link',
-  'org/reconnect_connection',
-  'org/remove_connection',
-  'org/remove_connection_signing_secret',
-  'org/set_connection_account_type',
-  'org/set_connection_playbooks',
-  'org/set_connection_signing_secret',
-  'org/start',
-];
 
 const whatOnlyAnAdminChanges = [...whatManagesPermissions, ...whatManagesConnections].toSorted();
 

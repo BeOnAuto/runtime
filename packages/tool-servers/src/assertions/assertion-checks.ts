@@ -30,14 +30,21 @@ function checkedAfter(error: unknown, hosts: readonly string[]): AssertionChecke
     : { kind: 'unreached', hosts };
 }
 
-export function assertionCheckedOf(assertion: Assertion, asserting: Asserting): Promise<AssertionChecked> {
+export function mintCheckedOf(
+  mint: (fetch: FetchLike) => Promise<unknown>,
+  fetchOfTheCheck: FetchLike,
+): Promise<AssertionChecked> {
   const asked = new Set<string>();
   const fetch: FetchLike = (...[address, init]: readonly [unknown, unknown?]) => {
     asked.add(new URL(String(address)).hostname);
-    return asserting.fetch(String(address), Object.assign({}, init));
+    return fetchOfTheCheck(String(address), Object.assign({}, init));
   };
-  return assertedTokensOf(assertion, { ...asserting, fetch }).then(
+  return mint(fetch).then(
     (): AssertionChecked => ({ kind: 'taken' }),
     (error: unknown) => checkedAfter(error, [...asked]),
   );
+}
+
+export function assertionCheckedOf(assertion: Assertion, asserting: Asserting): Promise<AssertionChecked> {
+  return mintCheckedOf((fetch) => assertedTokensOf(assertion, { ...asserting, fetch }), asserting.fetch);
 }

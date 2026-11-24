@@ -7,6 +7,7 @@ import type {
   RegisteredClient,
   SecretKeepingFailure,
   SecretReadingFailure,
+  SubjectTokens,
   TokensClaimed,
   TokensReplaced,
 } from '@on.auto/tool-servers';
@@ -49,6 +50,33 @@ export interface ChatModels {
   readonly throughAGateway?: ChatThroughAGateway;
 }
 
+export interface IssuedSubjectTokens {
+  readonly tokens: SubjectTokens;
+  readonly jwkFile: boolean;
+}
+
+export interface ServiceAccountAsked {
+  readonly tokenEndpoint: string;
+  readonly org: string;
+  readonly connection: string;
+}
+
+export interface ServiceAccountMade {
+  readonly email: string;
+  readonly id: string;
+  readonly placeholders: Readonly<Record<string, string>>;
+}
+
+export interface ServiceAccountFailure {
+  readonly reason: 'refused' | 'unavailable';
+}
+
+export interface ManagedServiceAccounts {
+  readonly provides: (tokenEndpoint: string) => boolean;
+  readonly create: (asked: ServiceAccountAsked) => Effect.Effect<ServiceAccountMade, ServiceAccountFailure>;
+  readonly remove: (asked: ServiceAccountAsked) => Effect.Effect<void, ServiceAccountFailure>;
+}
+
 export interface ConnectionServices extends StartsOfConnections {
   readonly secrets: SecretKeeping;
   readonly policy: ConnectionPolicy;
@@ -68,6 +96,8 @@ export interface ConnectionServices extends StartsOfConnections {
   readonly chatModels?: ChatModels;
   readonly connectionRemoved?: ConnectionRemoved;
   readonly received?: EventsReceived;
+  readonly subjectTokens?: IssuedSubjectTokens;
+  readonly managedServiceAccounts?: ManagedServiceAccounts;
 }
 
 export function opensSockets({ sockets }: Pick<ConnectionServices, 'sockets'>): boolean {

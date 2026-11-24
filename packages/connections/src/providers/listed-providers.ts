@@ -73,6 +73,17 @@ export const ListedWaySchema = Schema.Struct({
         "For authorization whose oauth_client is optional, the source of the client a start takes without the organization's own, as read_link names it",
     }),
   ),
+  service_account: Schema.optionalKey(
+    Schema.Literal('managed').annotate({
+      description:
+        'For token_exchange, managed where a connection made this way acts as a service account that Auto creates for it, so the person is asked no values. add_connection and choose_way take it in credential.',
+    }),
+  ),
+  read_only: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description: 'true where a connection made this way is given only the tools that read.',
+    }),
+  ),
   scopes: ListedScopesSchema.annotate({
     description: 'The scopes its first consent asks, in its order, each with its words; empty where it asks none',
   }),
@@ -103,7 +114,7 @@ export const ListedWaySchema = Schema.Struct({
   key_page_title: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens the key page, where the entry gives one; left out otherwise',
+        'For secret, client_credentials, jwt_bearer, authorization and token_exchange, the label of the button that opens the key page, where the entry gives one; left out otherwise',
     }),
   ),
   key_file: Schema.optionalKey(
@@ -128,7 +139,7 @@ export const ListedWaySchema = Schema.Struct({
       connected: Schema.optionalKey(ListedStepSchema),
     }).annotate({
       description:
-        "For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it",
+        "For secret, client_credentials, jwt_bearer, authorization and token_exchange, the heading and paragraph of each step of the page where a person approves the connection, where the entry gives them: key_page, above the button that opens the key page; pages, the steps the person does on other pages of the service, in order, each with the button that opens its page; key, above the field of the key, or for authorization above the fields of the organization's own OAuth client; connected, what the person does once the connection is connected. For authorization, they are the steps of making the organization's own OAuth client, shown where the connection goes under it",
     }),
   ),
   refresh_token_expires_in: Schema.optionalKey(

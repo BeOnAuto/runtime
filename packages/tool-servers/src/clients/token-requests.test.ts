@@ -3,7 +3,7 @@ import { Redacted } from 'effect';
 import { decodeJwt } from 'jose';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { MintingAuth } from '../settings/server-settings.ts';
+import type { ClientMintingAuth } from '../settings/server-settings.ts';
 import { fakeMcpInProcess, inProcessFetch, type ClientRegistration } from '../testing/index.ts';
 import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { askingFetch, clientSecret, refusedAt, rsaKeys, secretAuth, sourceOf } from '../testing/token-sources.ts';
@@ -205,7 +205,7 @@ const robot = 'robot@acme.example.com';
 
 const inbox = 'inbox@acme.example.com';
 
-function asAServiceAccount(issuer: FakeMcpServer, privateKey: string): MintingAuth {
+function asAServiceAccount(issuer: FakeMcpServer, privateKey: string): ClientMintingAuth {
   return secretAuth(issuer, {
     client_id: robot,
     scope: graphDefault,

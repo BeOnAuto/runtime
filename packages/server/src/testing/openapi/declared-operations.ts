@@ -61,6 +61,7 @@ const managingPermissions: ReadonlySet<string> = new Set(
 const managingConnections: ReadonlySet<string> = new Set([
   'org/approve',
   'org/choose_way',
+  'org/create_service_account',
   'org/decline_connection_request',
   'org/finish',
   'org/give_client',
@@ -73,6 +74,7 @@ const managingConnections: ReadonlySet<string> = new Set([
   'org/set_connection_playbooks',
   'org/set_connection_signing_secret',
   'org/start',
+  'org/test_connection',
 ]);
 
 function withWhatItManages(declared: DeclaredAction): ServedDeclaration {

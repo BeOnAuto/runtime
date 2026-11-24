@@ -11,8 +11,8 @@ import {
   NextClientIdField,
   TokenField,
 } from '../operations/connection-fields.ts';
+import { connectedByConsent, takesNoCredential } from '../registry/connecting-decisions.ts';
 import { ChatField, ConnectionSchema, ModelField, type RecordedConnection } from '../registry/connection.ts';
-import { connectedByConsent, takesNoCredential } from '../registry/link-decisions.ts';
 import { unavailableWords } from './consent-words.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));

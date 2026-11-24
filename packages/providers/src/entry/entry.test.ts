@@ -12,7 +12,7 @@ import {
   mail,
   signingInToMail,
 } from '../testing/own-app-providers.ts';
-import { limitationSchemaOf, mostLimitationCharacters } from './credential-ways.ts';
+import { limitationSchemaOf, mostLimitationCharacters } from './way-values.ts';
 
 const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['revoked'] };
 

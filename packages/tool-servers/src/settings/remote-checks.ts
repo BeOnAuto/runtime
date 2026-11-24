@@ -14,7 +14,7 @@ import {
 } from './checked.ts';
 import { headersTheRuntimeSets, type RemoteServerType } from './reserved-headers.ts';
 import type { ServerEntryFields } from './server-entries.ts';
-import type { AuthSettings, MintingCredential } from './server-settings.ts';
+import type { AuthSettings, ClientAuthSettings, MintingCredential } from './server-settings.ts';
 import { parametersTheRuntimeSets, setInEveryTokenRequestWords } from './token-parameters.ts';
 
 type Auth = NonNullable<ServerEntryFields['auth']>;
@@ -50,7 +50,7 @@ function checkedCredential(name: string, { client_secret, private_key, algorithm
   return refused(name, ['auth'], secretOrKeyExpected);
 }
 
-type Granted = Pick<AuthSettings, 'grant' | 'subject'>;
+type Granted = Pick<ClientAuthSettings, 'grant' | 'subject'>;
 
 const assertionExpected = 'Expected private_key with its algorithm, which grant jwt_bearer takes, and no client_secret';
 
@@ -66,7 +66,7 @@ function checkedGrant(name: string, { grant, subject, private_key, client_secret
   return accepted(subject === undefined ? { grant } : { grant, subject });
 }
 
-type Parameters = Pick<AuthSettings, 'parameters'>;
+type Parameters = Pick<ClientAuthSettings, 'parameters'>;
 
 const parametersOfAnAssertion =
   'Expected no parameters beside grant jwt_bearer, whose token request carries the signed JWT alone';
@@ -86,7 +86,7 @@ function checkedParameters(name: string, { grant, parameters }: Auth): Checked<P
   return problems.length === 0 ? accepted({ parameters }) : rejected(problems);
 }
 
-type Requested = Pick<AuthSettings, 'token_request'>;
+type Requested = Pick<ClientAuthSettings, 'token_request'>;
 
 const requestOfAnAssertion = 'Expected token_request only beside grant jwt_bearer, whose signed JWT it sends';
 

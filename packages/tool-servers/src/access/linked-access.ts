@@ -39,6 +39,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     clientInfo: options.clientInfo,
     fetch: options.fetch ?? globalThis.fetch,
     consent: options.consent,
+    subjectTokens: options.subjectTokens,
     secrets,
     now: options.now ?? Date.now,
     documents: options.documents,

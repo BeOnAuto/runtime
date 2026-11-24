@@ -2,10 +2,12 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { CallFetch } from '@on.auto/operations';
+import { CallFetch, CallSubjectTokens, type SubjectTokensOfACall } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { jwtTokenType } from '../exchange/token-exchanges.ts';
+import { fakeConnections } from '../testing/fake-connections.ts';
 import {
   controlledSignals,
   fakeMcpInProcess,
@@ -128,5 +130,87 @@ describe('the fetch the tools of a run reach their servers with', () => {
     expect(await calledOn(access, 'local')).toBe(false);
     expect(await calledOn(access, 'local', recordingFetch())).toBe(false);
     expect(await calledOn(access, 'graph', recordingFetch())).toBe(false);
+  });
+});
+
+interface CountingSigner {
+  readonly tokens: SubjectTokensOfACall;
+  readonly askedFor: () => readonly string[];
+}
+
+function countingSigner(): CountingSigner {
+  const asked: string[] = [];
+  return {
+    tokens: {
+      signedFor: ({ org }) => {
+        asked.push(org);
+        return Promise.resolve(`signed-for-${org}`);
+      },
+    },
+    askedFor: () => [...asked],
+  };
+}
+
+const exchangedBearer = 'graph-exchanged-token-7e21';
+
+function exchangingFetch(): typeof globalThis.fetch {
+  return (...[address, init]: readonly [unknown, unknown?]) =>
+    new URL(String(address)).hostname === 'sts.graph.example.com'
+      ? Promise.resolve(Response.json({ access_token: exchangedBearer, token_type: 'Bearer', expires_in: 3600 }))
+      : inProcessFetch(String(address), Object.assign({}, init));
+}
+
+function exchangingAccess(composed: CountingSigner): ReportingAccess['access'] {
+  const fake = fakeMcpInProcess({ bearer: exchangedBearer });
+  closing.push(fake.close);
+  const connections = fakeConnections();
+  connections.connect('acme', {
+    id: 'graph-id',
+    name: 'graph',
+    entry: { url: fake.url },
+    auth: {
+      grant: 'token_exchange',
+      scope: 'graph.read',
+      token_endpoint: 'https://sts.graph.example.com/v1/token',
+      audience: '//identity.graph.example.com/pools/auto',
+      subject_token: { type: jwtTokenType, audience: 'https://identity.graph.example.com/pools/auto' },
+      credential: { kind: 'subject_token' },
+    },
+  });
+  const { access } = reportingAccess(
+    {},
+    { timing: patientTiming, fetch: exchangingFetch(), connections, subjectTokens: composed.tokens },
+  );
+  closing.push(access.close);
+  return access;
+}
+
+const searched = {
+  org: 'acme',
+  playbook: 'alpha',
+  reference: { server: 'graph', tool: 'search' },
+  input: { query: 'acme' },
+  meta: {},
+};
+
+describe('the subject token a connection exchanges for its token', () => {
+  it('is signed by the signer the call binds, for the organization the connection serves, not by the composed one', async () => {
+    const [composed, ofTheCall] = [countingSigner(), countingSigner()];
+    const access = exchangingAccess(composed);
+
+    const called = await Effect.runPromise(
+      access.callOnce(searched).pipe(Effect.provideService(CallSubjectTokens, ofTheCall.tokens)),
+    );
+
+    expect(called).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect([ofTheCall.askedFor(), composed.askedFor()]).toEqual([['acme'], []]);
+  });
+
+  it('is signed by the composed signer where the call binds none, as on the server', async () => {
+    const composed = countingSigner();
+    const access = exchangingAccess(composed);
+
+    expect(await Effect.runPromise(access.callOnce(searched))).toMatchObject({ kind: 'answered', outcome: 'result' });
+    expect(composed.askedFor()).toEqual(['acme']);
   });
 });

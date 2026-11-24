@@ -1,5 +1,12 @@
 import type { Issue } from '@on.auto/operations';
-import type { ClientSource, TokenRequest, WayOAuthClient } from '@on.auto/tool-servers';
+import {
+  isPinnableUrl,
+  pinnedUrlShape,
+  type ClientSource,
+  type TokenExchange,
+  type TokenRequest,
+  type WayOAuthClient,
+} from '@on.auto/tool-servers';
 import { Option, Result } from 'effect';
 
 import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
@@ -33,6 +40,7 @@ export interface ProviderCredential extends WayAddresses, Partial<Readonly<Recor
   readonly client_id?: string;
   readonly token_request?: TokenRequest;
   readonly installation?: NonNullable<CredentialWay['installation']>;
+  readonly service_account?: 'managed';
 }
 
 export interface ProviderConnectionEntry {
@@ -134,10 +142,13 @@ function assertedOf(
   };
 }
 
+const ofAManagedServiceAccount: Pick<ProviderCredential, 'service_account'> = { service_account: 'managed' };
+
 function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthClient | undefined): ProviderCredential {
   const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
     kind,
+    ...(way.managed_service_account === true ? ofAManagedServiceAccount : {}),
     ...clientSourceOf(way, oauthClient),
     ...(placement === undefined ? {} : { in: placement }),
     ...(name === undefined ? {} : { name }),
@@ -198,6 +209,10 @@ function placingIssuesOf(provider: ProviderEntry, placeholders: Placed): readonl
   );
 }
 
+function wayAskingItsValues(way: CredentialWay): CredentialWay | undefined {
+  return way.managed_service_account === true ? undefined : way;
+}
+
 export function additionOfProvider(
   provider: ProviderEntry,
   given: GivenToProvider,
@@ -206,7 +221,7 @@ export function additionOfProvider(
   return Result.match(chosenWayOf(provider, given), {
     onFailure: (refused) => Result.fail([...placingIssuesOf(provider, placeholders), ...refused]),
     onSuccess: (offered) =>
-      Result.flatMap(valuesOf(provider, offered, placeholders), (values) => {
+      Result.flatMap(valuesOf(provider, wayAskingItsValues(offered), placeholders), (values) => {
         const oauthClient = given.oauthClientFor?.(offered);
         return Result.map(chosenOf(provider.name, offered, oauthClient), (chosen) => ({
           name: given.name ?? provider.name,
@@ -219,5 +234,51 @@ export function additionOfProvider(
           ...actingOf(chosen),
         }));
       }),
+  });
+}
+
+export interface PlacedExchange extends TokenExchange {
+  readonly scope: string | undefined;
+}
+
+function exchangeWrittenIn(way: CredentialWay, values: Values): PlacedExchange {
+  const { parameters, impersonation, scope } = way;
+  const subjectToken = Option.getOrThrow(Option.fromNullishOr(way.subject_token));
+  return {
+    token_endpoint: placedText(Option.getOrThrow(Option.fromNullishOr(way.token_endpoint)), values),
+    audience: placedText(Option.getOrThrow(Option.fromNullishOr(way.audience)), values),
+    subject_token: { ...subjectToken, audience: placedText(subjectToken.audience, values) },
+    ...(parameters === undefined ? {} : { parameters: placedEach(parameters, values) }),
+    ...(impersonation === undefined
+      ? {}
+      : { impersonation: { ...impersonation, url: placedText(impersonation.url, values) } }),
+    scope,
+  };
+}
+
+interface PlacedAddress {
+  readonly pointer: string;
+  readonly address: string;
+}
+
+function unpinnedIssuesOf({ token_endpoint: tokenEndpoint, impersonation }: PlacedExchange): readonly Issue[] {
+  const addresses: readonly PlacedAddress[] = [
+    { pointer: '/credential/token_endpoint', address: tokenEndpoint },
+    ...(impersonation === undefined ? [] : [{ pointer: '/credential/impersonation/url', address: impersonation.url }]),
+  ];
+  return addresses
+    .filter(({ address }: PlacedAddress) => !isPinnableUrl(address))
+    .map(({ pointer }: PlacedAddress) => ({ pointer, detail: pinnedUrlShape }));
+}
+
+export function exchangeOfProvider(
+  provider: ProviderEntry,
+  way: CredentialWay,
+  placeholders: Readonly<Record<string, string>>,
+): Result.Result<PlacedExchange, readonly Issue[]> {
+  return Result.flatMap(valuesOf(provider, way, placeholders), (values) => {
+    const exchange = exchangeWrittenIn(way, values);
+    const issues = unpinnedIssuesOf(exchange);
+    return issues.length === 0 ? Result.succeed(exchange) : Result.fail(issues);
   });
 }

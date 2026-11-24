@@ -227,6 +227,16 @@ export const ConnectionEventSchema = Schema.Union([
     ActedContextSchema,
   ),
   factOf('connection_model_set', Schema.Struct({ ...ofTheConnection, model: Schema.String }), ActedContextSchema),
+  factOf(
+    'connection_service_account_created',
+    Schema.Struct({
+      ...ofTheConnection,
+      email: Schema.String,
+      id: Schema.String,
+      placeholders: Schema.Record(Schema.String, Schema.String),
+    }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;

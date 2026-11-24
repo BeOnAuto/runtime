@@ -102,8 +102,9 @@ type Registry = Awaited<ReturnType<typeof registryOpenedFor>>;
 function registryOpenedFor(
   { made, settings, wiring, modelAccessOf, telemetry, documents }: Serving,
   runtime: Parameters<Serve>[0],
-  served: Pick<Parameters<MadeAtStart['registry']['openedIn']>[2], 'consent' | 'connections'>,
+  { consent, source, subjectTokens }: Pick<Opened['opened'], 'consent' | 'source'> & Pick<Opened, 'subjectTokens'>,
 ) {
+  const served = { consent, connections: source, subjectTokens: subjectTokens.issuing };
   return made.registry.openedIn(runtime, settings, { ...wiring, modelAccessOf, telemetry, ...served, documents });
 }
 
@@ -134,9 +135,10 @@ function servedWith(serving: Serving): Serve {
     const { ledger, workflows, signIn: signingIn } = settings;
     const { opened, signIn, members, chat, subjectTokens } = await signInAndStoresOpened(runtime, serving, ownOrigin);
     const { stores, consent, connectionsReadingThrough, source, clientMetadata, license, opens, ...ownKeys } = opened;
-    const registry = await registryOpenedFor(serving, runtime, { consent, connections: source });
+    const registry = await registryOpenedFor(serving, runtime, { consent, source, subjectTokens });
     const chatWired = chatWiringOf(chat, runtime, registry);
-    const { connections, offering } = connectionsReadingThrough(chatWired.through);
+    const through = { ...chatWired.through, subjectTokens: subjectTokens.issuing };
+    const { connections, offering } = connectionsReadingThrough(through);
     await made.extensions.logged(runtime);
     const functions = await functionsServedBy(runtime, settings, await ledgerConnectionIn(runtime), {
       ...wiring,

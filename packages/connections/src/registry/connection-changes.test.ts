@@ -18,7 +18,6 @@ describe('the names of the streams of connections', () => {
 });
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
-
 function addedWith(provider: string | null, credential: Readonly<Record<string, unknown>>) {
   return {
     type: 'connection_added',
@@ -173,6 +172,7 @@ const typesThatNameAConnection = [
   'connection_signing_secret_removed',
   'connection_identified',
   'connection_model_set',
+  'connection_service_account_created',
 ];
 
 describe('the changes the facts of the connections of an org make', () => {

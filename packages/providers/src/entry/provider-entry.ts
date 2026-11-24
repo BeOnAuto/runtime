@@ -82,7 +82,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
   placeholders: Schema.optionalKey(EntryPlaceholdersSchema),
   credentials: Schema.Array(CredentialWaySchema).check(Schema.isMinLength(1)).annotate({
     description:
-      'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization or jwt_bearer, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
+      'The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization, jwt_bearer or token_exchange, with each of application and delegated permissions, and for token_exchange one with managed_service_account and one without; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it',
   }),
   replaces: Schema.optionalKey(ReplacesSchema),
 });
@@ -170,7 +170,7 @@ function testIssuesOf({ credentials, marks: marked }: ProviderEntry): readonly E
       : [
           {
             path: ['credentials', index, 'test', 'tool'],
-            issue: `Expected a tool that only reads, since the runtime calls it with each key a person gives, and the entry marks ${test.tool} acts`,
+            issue: `Expected a tool that only reads, since the runtime calls it to check a connection before it keeps it, and the entry marks ${test.tool} acts`,
           },
         ],
   );

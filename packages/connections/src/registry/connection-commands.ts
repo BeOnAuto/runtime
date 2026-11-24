@@ -91,6 +91,13 @@ export interface WayChoice extends LinkUse {
   readonly base_url?: string | null;
 }
 
+export interface ServiceAccountRecording extends LinkUse {
+  readonly type: 'record_service_account';
+  readonly email: string;
+  readonly id: string;
+  readonly placeholders: Readonly<Record<string, string>>;
+}
+
 export interface ClientGiving extends LinkUse {
   readonly type: 'give_client';
   readonly client_id: string;
@@ -216,6 +223,7 @@ export type ConnectionCommandData =
   | ConnectionApproval
   | CredentialGiving
   | WayChoice
+  | ServiceAccountRecording
   | ClientGiving
   | ConsentStart
   | ConsentFinish
@@ -237,6 +245,7 @@ export type CommandDecidedApart =
   | AccountTypeSetting
   | ModelSetting
   | WayChoice
+  | ServiceAccountRecording
   | ConnectionRequest
   | RequestDecline;
 

@@ -7,7 +7,7 @@ import { Redacted } from 'effect';
 import { secretsOf } from '../bounds/secrets.ts';
 import { tokenSource, type Discovery, type UnauthorizedContext } from '../clients/token-source.ts';
 import type { FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
-import type { MintingAuth } from '../settings/server-settings.ts';
+import type { ClientMintingAuth } from '../settings/server-settings.ts';
 import { inProcessFetch } from './in-process.ts';
 
 export const clientSecret = 'graph-client-secret-81c2';
@@ -25,7 +25,7 @@ export function rsaKeys() {
   });
 }
 
-export function secretAuth(fake: FakeMcpServer, changes: Partial<MintingAuth> = {}): MintingAuth {
+export function secretAuth(fake: FakeMcpServer, changes: Partial<ClientMintingAuth> = {}): ClientMintingAuth {
   return {
     issuer: fake.origin,
     client_id: 'playbook',
@@ -61,7 +61,7 @@ export function askingFetch() {
 
 export function sourceOf(
   fake: FakeMcpServer,
-  settings: MintingAuth,
+  settings: ClientMintingAuth,
   fetch: FetchLike = inProcessFetch,
   { discovery = 'from_the_server', serverUrl = fake.url }: SourceReach = {},
 ) {

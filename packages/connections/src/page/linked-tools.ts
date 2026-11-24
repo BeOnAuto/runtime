@@ -12,7 +12,7 @@ import { LinkedWaysField, linkedWaysOf } from './linked-ways.ts';
 
 export type LinkReading = Pick<
   ConnectionServices,
-  'consent' | 'pages' | 'providers' | 'providerValues' | 'modelProviders' | 'policy'
+  'consent' | 'pages' | 'providers' | 'providerValues' | 'modelProviders' | 'policy' | 'subjectTokens'
 > &
   ChatReading;
 

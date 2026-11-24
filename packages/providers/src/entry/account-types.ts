@@ -19,13 +19,15 @@ export const AccountTypesSchema = Schema.Array(AccountTypeSchema).check(Schema.i
 interface ActingWay {
   readonly kind: string;
   readonly permissions?: Permissions | undefined;
+  readonly managed_service_account?: boolean | undefined;
+  readonly service_account?: 'managed' | undefined;
 }
 
 interface WayOfAccounts extends ActingWay {
   readonly account_types?: readonly AccountType[] | undefined;
 }
 
-const kindsOfTheApp: ReadonlySet<string> = new Set(['client_credentials', 'jwt_bearer']);
+const kindsOfTheApp: ReadonlySet<string> = new Set(['client_credentials', 'jwt_bearer', 'token_exchange']);
 
 export function permissionsOf({ kind, permissions }: ActingWay): Permissions | undefined {
   if (kind === 'none') {
@@ -47,8 +49,19 @@ export function accountTypeIssueOf(given: AccountType, taken: readonly AccountTy
   return taken.includes(given) ? undefined : `Expected ${alternatives(taken)}, which this connection's way takes.`;
 }
 
+export function isAManagedServiceAccount({
+  managed_service_account: managed,
+  service_account: serviceAccount,
+}: ActingWay): boolean {
+  return managed === true || serviceAccount === 'managed';
+}
+
 export function isTheWayAsked(way: ActingWay, asked: ActingWay): boolean {
-  return way.kind === asked.kind && permissionsOf(way) === permissionsOf(asked);
+  return (
+    way.kind === asked.kind &&
+    permissionsOf(way) === permissionsOf(asked) &&
+    isAManagedServiceAccount(way) === isAManagedServiceAccount(asked)
+  );
 }
 
 const ofAnApplication =

@@ -33,6 +33,7 @@ const denied: AccessDecision = { decision: 'deny', determiningPolicies: [], erro
 const operationsThatManageConnections = [
   'approve',
   'choose_way',
+  'create_service_account',
   'decline_connection_request',
   'finish',
   'give_client',
@@ -46,6 +47,7 @@ const operationsThatManageConnections = [
   'set_connection_playbooks',
   'set_connection_signing_secret',
   'start',
+  'test_connection',
 ];
 
 const settingDeniedToGrace = decidingEach(({ action, principal }) =>

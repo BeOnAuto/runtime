@@ -1,5 +1,11 @@
 import { listed } from '@on.auto/phrasing';
-import { operatorVariablesOf, type Provider, type ProviderList } from '@on.auto/providers';
+import {
+  isAManagedServiceAccount,
+  operatorVariablesOf,
+  type CredentialWay,
+  type Provider,
+  type ProviderList,
+} from '@on.auto/providers';
 import type { Redacted } from 'effect';
 
 import { replacedOf, replacedWayWords } from '../replacements/replaced-providers.ts';
@@ -27,4 +33,29 @@ export function offeringOf(provider: Provider, { providers, providerValues }: Of
   return replaced === undefined
     ? setUpFirst(provider, providerValues)
     : { offered: false, because: replacedWayWords(replaced) };
+}
+
+export interface Exchanging {
+  readonly subjectTokens?: unknown;
+  readonly managedServiceAccounts?: { readonly provides: (tokenEndpoint: string) => boolean };
+}
+
+export function declaredTokenEndpointOf(way: Pick<CredentialWay, 'token_endpoint'>): string {
+  return String(way.token_endpoint);
+}
+
+export function exchangesHere(way: CredentialWay, { subjectTokens, managedServiceAccounts }: Exchanging): boolean {
+  if (way.kind !== 'token_exchange') {
+    return true;
+  }
+  return (
+    subjectTokens !== undefined &&
+    (!isAManagedServiceAccount(way) || managedServiceAccounts?.provides(declaredTokenEndpointOf(way)) === true)
+  );
+}
+
+const managedListed = { service_account: 'managed' } as const;
+
+export function serviceAccountListedOf(way: CredentialWay): { readonly service_account?: 'managed' } {
+  return isAManagedServiceAccount(way) ? managedListed : {};
 }

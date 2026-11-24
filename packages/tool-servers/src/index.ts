@@ -212,6 +212,17 @@ export { TokenRequestSchema, type TokenRequest } from './assertions/token-reques
 export { isUnderTheIssuer, tokenRequestIssuesOf } from './assertions/token-request-checks.ts';
 export type { Assertion } from './assertions/signed-assertions.ts';
 export { assertionCheckedOf, type AssertionChecked } from './assertions/assertion-checks.ts';
+export type { SubjectTokens } from './exchange/subject-tokens.ts';
+export {
+  ImpersonationSchema,
+  SubjectTokenSchema,
+  exchangeParametersTheRuntimeSets,
+  jwtTokenType,
+  type Impersonation,
+  type SubjectToken,
+  type TokenExchange,
+} from './exchange/token-exchanges.ts';
+export { SubjectTokensAbsent, exchangeCheckedOf, type Exchanging } from './exchange/exchanged-tokens.ts';
 export { passingErrorCodes } from './consent/consent-failures.ts';
 export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
@@ -222,6 +233,7 @@ export type {
   AuthSettings,
   ConsentAuth,
   ConsentCredential,
+  ExchangeAuth,
   ServerSettings,
   ShippedDocument,
   ToolServerSettings,

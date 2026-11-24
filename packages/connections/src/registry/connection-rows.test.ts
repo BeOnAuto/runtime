@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { ContextSchema, type ProjectedKeyedRow, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
 import type { ProviderList } from '@on.auto/providers';
 import { drive, messages, providerListOf, providerOf } from '@on.auto/providers/testing';
-import { Schema } from 'effect';
+import { Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
@@ -57,6 +57,7 @@ const histories: readonly (readonly (readonly [string, string])[])[] = [
     ['0.71.0', 'connection_added'],
     ['0.70.0', 'connection_account_type_set'],
   ],
+  [['0.73.0', 'connection_added'], ['0.73.0', 'connection_service_account_created'], ...laterRelease],
 ];
 
 function rowsAfter(stored: readonly unknown[]): readonly ProjectedKeyedRow[] {
@@ -130,5 +131,40 @@ describe('the connections of an org, kept as a row each in the transaction of ev
       connectionRows.rowAfter(undefined, unread),
       connectionRows.keyOf?.(unread, connectionsStream),
     ]).toEqual([undefined, undefined, undefined, undefined]);
+  });
+});
+
+const keptBeforeServiceAccounts =
+  '{"connection":{"id":"connection-1","name":"mail","type":"openapi","provider":"mail","placeholders":{},"entry":{"document":"https://mail.example.com/openapi.json","base_url":"https://api.mail.example.com/v1/self"},"account_type":null,"status":"connected","added_by":{"id":"person:ada","name":"Ada Lovelace"},"added_at":"2026-10-29T10:00:00.000Z","request":null,"connected_at":"2026-10-29T10:00:00.000Z","connected_by":{"id":"person:ada","name":"Ada Lovelace"},"asked_scopes":[{"name":"mail.read","says":"Read the mail of the mailbox."}],"granted_scope":null,"granted_scopes":null,"broken":null,"signing_secret":null,"account":null,"app_credentials":[],"installation":{"id":"41","name":"acme"},"credential":{"kind":"jwt_bearer","permissions":"application","issuer":"https://login.mail.example.com","client_id":"auto-runtime","scope":"mail.read","client_source":"registered"}},"replaced_links":[],"app_secret_ids":{},"model":null,"place_names":[]}';
+
+describe('a row of a connection the release before kept, with no service account', () => {
+  it('reads as the stream folds, and folds a service account created after it as the stream does', () => {
+    const stored = [storedIn('0.73.0', 'connection_added'), storedIn('0.73.0', 'connection_connected')];
+    const created = storedFactOf(storedIn('0.73.0', 'connection_service_account_created'));
+    const before = {
+      kept: keptBeforeServiceAccounts,
+      added_position: 1,
+      credential_as_added: true,
+      account_type_as_added: true,
+    };
+    const after = connectionRows.rowAfter(before, { id: 'm3', position: 3, ...created });
+    const providers = providerListOf();
+
+    expect([
+      registryOfRows([{ org: 'acme', key: 'connection-1', row: before }], providers),
+      registryOfRows(
+        [{ org: 'acme', key: 'connection-1', row: Option.getOrThrow(Option.fromNullishOr(after)) }],
+        providers,
+      ),
+    ]).toEqual([
+      foldedOver(
+        providers,
+        stored.map((fact) => decodeFact(fact)),
+      ),
+      foldedOver(
+        providers,
+        [...stored, created].map((fact) => decodeFact(fact)),
+      ),
+    ]);
   });
 });

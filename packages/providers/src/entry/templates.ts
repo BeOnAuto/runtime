@@ -15,6 +15,9 @@ export interface WayParts extends WayAddresses {
   readonly client_id?: string;
   readonly parameters?: Readonly<Record<string, string>>;
   readonly token_request?: { readonly url: string };
+  readonly audience?: string;
+  readonly subject_token?: { readonly audience: string };
+  readonly impersonation?: { readonly url: string };
 }
 
 interface ServerPart {
@@ -48,13 +51,18 @@ function markerOf(position: number): string {
 const wayFieldsHoldingAnAddress = [...wayAddresses, 'base_url'] as const;
 
 function valuesOf(
-  { subject, client_id: clientId, parameters = {} }: WayParts,
+  { subject, client_id: clientId, audience, subject_token: subjectToken, parameters = {} }: WayParts,
   index: number,
 ): readonly TemplatedField[] {
   const at = ['credentials', String(index)];
-  const named = Object.entries({ subject, client_id: clientId }).flatMap(
-    ([field, text]: readonly [string, string | undefined]): readonly TemplatedField[] =>
-      text === undefined ? [] : [{ path: [...at, field], text, holds: 'value', way: index }],
+  const written: readonly (readonly [readonly string[], string | undefined])[] = [
+    [['subject'], subject],
+    [['client_id'], clientId],
+    [['audience'], audience],
+    [['subject_token', 'audience'], subjectToken?.audience],
+  ];
+  const named = written.flatMap(([field, text]): readonly TemplatedField[] =>
+    text === undefined ? [] : [{ path: [...at, ...field], text, holds: 'value', way: index }],
   );
   return [
     ...named,
@@ -67,17 +75,13 @@ function valuesOf(
   ];
 }
 
-function requestOf({ token_request: request }: WayParts, index: number): readonly TemplatedField[] {
-  return request === undefined
-    ? []
-    : [
-        {
-          path: ['credentials', String(index), 'token_request', 'url'],
-          text: request.url,
-          holds: 'address',
-          way: index,
-        },
-      ];
+function requestsOf(way: WayParts, index: number): readonly TemplatedField[] {
+  return (['token_request', 'impersonation'] as const).flatMap((field): readonly TemplatedField[] => {
+    const request = way[field];
+    return request === undefined
+      ? []
+      : [{ path: ['credentials', String(index), field, 'url'], text: request.url, holds: 'address', way: index }];
+  });
 }
 
 function wayFieldsOf({ credentials = [] }: ServerPart): readonly TemplatedField[] {
@@ -88,7 +92,7 @@ function wayFieldsOf({ credentials = [] }: ServerPart): readonly TemplatedField[
         ? []
         : [{ path: ['credentials', String(index), field], text, holds: 'address', way: index }];
     }),
-    ...requestOf(way, index),
+    ...requestsOf(way, index),
     ...valuesOf(way, index),
   ]);
 }

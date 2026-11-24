@@ -1421,6 +1421,23 @@
       ]
     },
     {
+      "sha256": "849907d06029312457fd1e2617fb4922c36c8606bc68e3cf18620e00fa215323",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool add_connection: argument credential.service_account",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "For a provider's token_exchange, managed for the way where the connection acts as a service account Auto creates for it; left out for the way of the company's own service account"
+      ]
+    },
+    {
       "sha256": "c4fed6cb3bf18a8d735e9a090789c8df7a2013ac6134f0aead3abe94bdeec27c",
       "tier": 1,
       "received": [

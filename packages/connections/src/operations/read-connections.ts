@@ -7,8 +7,9 @@ import { ConnectionIdField } from './connection-fields.ts';
 import { connectionsListed } from './connection-words.ts';
 import { ListedConnectionSchema, listedOf, type Reading } from './listed-connections.ts';
 import { foundConnection, loadRegistry } from './registry-access.ts';
+import { defineTestConnection } from './test-connection.ts';
 
-export function defineListConnections(reading: Reading, managing: Runnable<'org'>) {
+function defineListConnections(reading: Reading, managing: Runnable<'org'>) {
   return defineQuery('org', {
     name: 'list_connections',
     staleOn: [{ kind: 'connection' }],
@@ -52,7 +53,7 @@ export function defineListConnections(reading: Reading, managing: Runnable<'org'
   });
 }
 
-export function defineGetConnection(reading: Reading) {
+function defineGetConnection(reading: Reading) {
   return defineHttpOperation('org', 'query', {
     name: 'get_connection',
     staleOn: [{ kind: 'connection', keyedBy: { connection: 'id' } }],
@@ -72,4 +73,11 @@ export function defineGetConnection(reading: Reading) {
       return yield* Effect.orDie(Effect.fromNullishOr(listed));
     }),
   });
+}
+
+export function connectionReadsOf(
+  reading: Reading & Parameters<typeof defineTestConnection>[0],
+  managing: Runnable<'org'>,
+) {
+  return [defineListConnections(reading, managing), defineGetConnection(reading), defineTestConnection(reading)];
 }

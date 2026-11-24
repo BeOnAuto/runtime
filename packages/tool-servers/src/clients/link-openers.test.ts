@@ -3,12 +3,12 @@ import type { FetchOfACall } from '@on.auto/operations';
 import { Function } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { defaultTiming, secretsOf } from '../index.ts';
+import { SubjectTokensAbsent, defaultTiming, jwtTokenType, secretsOf } from '../index.ts';
 import type { AuthSettings, McpServerSettings } from '../settings/server-settings.ts';
 import { consentClientWith, fakeMcpInProcess, inProcessFetch, testClientInfo } from '../testing/index.ts';
 import type { FakeMcpServer } from '../testing/served-fakes.ts';
 import { askingFetch, clientSecret, secretAuth } from '../testing/token-sources.ts';
-import { openerOf } from './link-openers.ts';
+import { openerOf, tokensOfTheLink } from './link-openers.ts';
 
 const audience = 'https://graph.example.com/api';
 
@@ -31,7 +31,7 @@ function served(authorizationServers?: readonly string[]): FakeMcpServer {
   return fake;
 }
 
-function settingsOf(fake: FakeMcpServer, auth: AuthSettings): McpServerSettings {
+function settingsOf(fake: Pick<FakeMcpServer, 'url'>, auth: AuthSettings): McpServerSettings {
   return {
     type: 'mcp',
     name: 'graph',
@@ -87,4 +87,57 @@ describe('the opener of an mcp server whose metadata names another authorization
     await expect(opened(written)).rejects.toBeInstanceOf(AuthorizationServerMismatchError);
     expect([fake.tokenRequests(), named.tokenRequests()]).toEqual([0, 0]);
   });
+});
+
+const exchanging: AuthSettings = {
+  grant: 'token_exchange',
+  scope: 'service.read',
+  token_endpoint: 'https://sts.service.example.com/v1/token',
+  audience: '//identity.service.example.com/pools/auto',
+  subject_token: { type: jwtTokenType, audience: 'https://identity.service.example.com/pools/auto' },
+  credential: { kind: 'subject_token' },
+};
+
+function tokensFor(orgs: readonly string[] | null) {
+  const asked: string[] = [];
+  const settings: McpServerSettings = {
+    ...settingsOf({ url: 'https://mcp.service.example.com/mcp' }, exchanging),
+    orgs,
+  };
+  const tokens = tokensOfTheLink(settings, {
+    clientInfo: testClientInfo,
+    fetch: () => Promise.resolve(new Response(JSON.stringify({ access_token: 'exchanged-1', expires_in: 3600 }))),
+    consent: consentClientWith(),
+    subjectTokens: {
+      signedFor: ({ org }) => {
+        asked.push(org);
+        return Promise.resolve(`signed-for-${org}`);
+      },
+    },
+    secrets: secretsOf([]),
+    now: Date.now,
+    timing: defaultTiming,
+    reportOutput: Function.constVoid,
+    reportMarkUnlisted: Function.constVoid,
+  });
+  return { token: () => tokens?.token() ?? Promise.reject(new Error('no token source')), asked };
+}
+
+describe('the tokens of a connection whose auth block exchanges a token the server signs', () => {
+  it('asks the server for a subject token of the one organization the connection serves', async () => {
+    const { token, asked } = tokensFor(['org_acme']);
+
+    await expect(token()).resolves.toBe('exchanged-1');
+    expect(asked).toEqual(['org_acme']);
+  });
+
+  it.each([[null], [['org_acme', 'org_globex']]] as const)(
+    'asks for no subject token where the server serves %o',
+    async (orgs) => {
+      const { token, asked } = tokensFor(orgs);
+
+      await expect(token()).rejects.toBeInstanceOf(SubjectTokensAbsent);
+      expect(asked).toEqual([]);
+    },
+  );
 });

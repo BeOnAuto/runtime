@@ -1,6 +1,7 @@
 import { isJsonPointer, TokenRequestSchema, tokenRequestIssuesOf, type TokenRequest } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { exchangeFieldNames, exchangeFields, exchangeIssuesOf, type ExchangingWay } from './exchange-ways.ts';
 import { InstallationSchema, installingWayIssuesOf, type InstallingWay } from './installation-ways.ts';
 
 const notAPointer = 'Expected a JSON Pointer into the key file, such as /private_key';
@@ -59,9 +60,17 @@ export const assertionFields = {
     }),
   ),
   installation: Schema.optionalKey(InstallationSchema),
+  ...exchangeFields,
 };
 
-export const assertionFieldNames = ['subject', 'key_file', 'client_id', 'token_request', 'installation'] as const;
+export const assertionFieldNames = [
+  'subject',
+  'key_file',
+  'client_id',
+  'token_request',
+  'installation',
+  ...exchangeFieldNames,
+] as const;
 
 interface AssertingWay extends InstallingWay {
   readonly kind: string;
@@ -108,7 +117,7 @@ function requestIssuesOf({ token_request: request, issuer, subject, scope }: Ass
   return [...named, ...sent.map(({ path, issue }) => ({ path: ['token_request', ...path], issue }))];
 }
 
-export function assertionIssuesOf(way: AssertingWay): readonly WayIssue[] {
+export function assertionIssuesOf(way: AssertingWay & ExchangingWay): readonly WayIssue[] {
   const signed = way.kind === 'jwt_bearer' ? [...clientIdIssuesOf(way), ...requestIssuesOf(way)] : [];
-  return [...signed, ...installingWayIssuesOf(way)];
+  return [...signed, ...installingWayIssuesOf(way), ...exchangeIssuesOf(way)];
 }

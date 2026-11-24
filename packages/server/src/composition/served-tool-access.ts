@@ -11,6 +11,7 @@ import {
   type ConsentClient,
   type Describing,
   type RequestWays,
+  type SubjectTokens,
   type ThroughWays,
   type Timing,
   type ToolAccess,
@@ -36,6 +37,7 @@ export interface ToolAccessWiring {
 export interface ServedConnections {
   readonly consent: ConsentClient;
   readonly connections: ConnectionSource;
+  readonly subjectTokens?: SubjectTokens | undefined;
 }
 
 interface ServedDocuments {
@@ -56,6 +58,7 @@ export function toolsComposedBy(
     now,
     consent,
     connections,
+    subjectTokens,
     telemetry,
     documents,
   }: ToolAccessWiring & ServedConnections & ServedDocuments,
@@ -68,6 +71,7 @@ export function toolsComposedBy(
     makeToolAccess(servers, {
       clientInfo: release,
       consent,
+      ...(subjectTokens === undefined ? {} : { subjectTokens }),
       fetch: outboundFetch,
       connections,
       documents,

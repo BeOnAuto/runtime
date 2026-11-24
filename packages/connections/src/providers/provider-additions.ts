@@ -3,6 +3,7 @@ import {
   accountTypeWhereNoneIsGiven,
   accountTypesOf,
   additionOfProvider,
+  isAManagedServiceAccount,
   permissionsOf,
   providerNamed,
   type AccountType,
@@ -102,6 +103,11 @@ function unreplaced(named: Provider, { providers }: Listing): Result.Result<Prov
     : Result.fail([{ pointer: theProvider, detail: replacedWayWords(replaced) }]);
 }
 
+function waysAskedOf(named: Provider, listing: Listing, credential: AdditionGiven['credential']) {
+  const managed = credential?.service_account === 'managed';
+  return waysInOrderOf(named, listing).filter((way) => isAManagedServiceAccount(way) === managed);
+}
+
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
@@ -112,7 +118,7 @@ function givenToProvider(
   return Result.flatMap(offeredHere, (named) =>
     Result.flatMap(
       additionOfProvider(
-        { ...named.entry, credentials: waysInOrderOf(named, listing) },
+        { ...named.entry, credentials: waysAskedOf(named, listing, credential) },
         {
           name,
           placeholders,

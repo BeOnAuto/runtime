@@ -107,8 +107,22 @@ const connectedThroughAnInstallation: readonly (typeof ConnectionEventSchema.Typ
   },
 ];
 
-export const keyFileWayFacts = [
+const serviceAccountCreated: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_service_account_created',
+    data: {
+      ...ofTheConnection,
+      email: 'auto-4k2m9q@connections.mail.example.com',
+      id: '104857600000000000001',
+      placeholders: { project: '123456789012', account: 'auto-4k2m9q@connections.mail.example.com' },
+    },
+    context: acted,
+  },
+];
+
+export const actingAsTheApp = [
   ...addedActingAsItself,
   ...wayChosenAsAnInstalledApp,
   ...connectedThroughAnInstallation,
+  ...serviceAccountCreated,
 ];

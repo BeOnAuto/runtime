@@ -31,10 +31,12 @@ export { chatOverASocket } from './chat-destinations.ts';
 export { postTypeNamedBy, readingTheRoomsName } from './place-name-calls.ts';
 export {
   agents,
+  asAManagedServiceAccount,
   asAnInstalledApp,
   asAnInstallingApp,
   asAServiceAccount,
   asTheCompanysApp,
+  asTheCompanysServiceAccount,
   asTheServiceAccountItself,
   installedAppRequest,
   mail,

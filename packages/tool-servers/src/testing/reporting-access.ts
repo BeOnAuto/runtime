@@ -34,6 +34,7 @@ export interface AccessOptions {
   readonly now?: ToolAccessOptions['now'];
   readonly traceMeta?: ToolAccessOptions['traceMeta'];
   readonly connections?: ToolAccessOptions['connections'];
+  readonly subjectTokens?: ToolAccessOptions['subjectTokens'];
   readonly runtimeSecrets?: ToolAccessOptions['runtimeSecrets'];
   readonly documents?: ToolAccessOptions['documents'] | null;
   readonly providers?: NonNullable<ToolServerSettingsContext['providers']>;
@@ -76,7 +77,8 @@ function timedBy({
 }
 
 function accessOver(settings: ToolServers, options: AccessOptions): ReportingAccess {
-  const { fetch, consent = consentClientWith(), connections, runtimeSecrets, documents, reportMarkUnlisted } = options;
+  const { fetch, consent = consentClientWith(), connections, subjectTokens, runtimeSecrets, documents } = options;
+  const { reportMarkUnlisted } = options;
   const messages: ServerMessage[] = [];
   const content = memoryRecordedContent();
   const access = makeToolAccess(settings, {
@@ -90,6 +92,7 @@ function accessOver(settings: ToolServers, options: AccessOptions): ReportingAcc
     ...timedBy(options),
     ...fetchOf(fetch),
     ...(connections === undefined ? {} : { connections }),
+    ...(subjectTokens === undefined ? {} : { subjectTokens }),
     ...(runtimeSecrets === undefined ? {} : { runtimeSecrets }),
     ...(reportMarkUnlisted === undefined ? {} : { reportMarkUnlisted }),
   });

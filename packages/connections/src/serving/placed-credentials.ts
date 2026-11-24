@@ -192,6 +192,17 @@ function moneyOf(providing: Providing | undefined): Pick<Providing, 'handles_mon
   return providing?.handles_money === true ? handlingMoney : {};
 }
 
+function readsOnlyOf(
+  providing: Providing | undefined,
+  { allowed }: Pick<ServerEntryFields, 'allowed'>,
+): Pick<ServerEntryFields, 'allowed'> {
+  if (providing?.read_only !== true) {
+    return {};
+  }
+  const reads = providing.marks?.reads ?? [];
+  return { allowed: (allowed ?? reads).filter((tool) => reads.includes(tool)) };
+}
+
 export interface Providing {
   readonly documents: ReadonlyMap<string, ShippedDocument>;
   readonly values: ReadonlyMap<string, Redacted.Redacted>;
@@ -203,6 +214,7 @@ export interface Providing {
   readonly path_values?: Readonly<Record<string, string>>;
   readonly gateway?: WayGateway;
   readonly handles_money?: true;
+  readonly read_only?: true;
   readonly renders?: string;
   readonly requestOrigins?: readonly string[];
 }
@@ -263,6 +275,7 @@ export function readPlaced(
       ...marksOf(providing?.marks),
       ...failureCodesOf(providing?.failure_codes),
       ...moneyOf(providing),
+      ...readsOnlyOf(providing, written),
       type,
       org,
     },

@@ -61,14 +61,23 @@ function failureOf(status: number, host: string): Error {
   return new TokenRequestFailed(status, host, status === rateLimited || status >= firstServerError);
 }
 
+function sentOf(body: Schema.Json | undefined) {
+  return body === undefined
+    ? { headers: {} }
+    : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
+}
+
 export async function tokensRequestedOf(
   request: TokenRequest,
-  signed: string,
+  bearer: string,
   { fetch, now }: Requesting,
+  body?: Schema.Json,
 ): Promise<AssertedTokens> {
+  const sent = sentOf(body);
   const answer = await fetch(request.url, {
     method: request.method,
-    headers: { authorization: `Bearer ${signed}`, accept: 'application/json' },
+    ...sent,
+    headers: { authorization: `Bearer ${bearer}`, accept: 'application/json', ...sent.headers },
     redirect: 'manual',
   });
   const host = new URL(request.url).hostname;

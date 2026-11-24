@@ -31,6 +31,7 @@ const connectionFactTypes = [
   'connection_identified',
   'connection_place_named',
   'connection_model_set',
+  'connection_service_account_created',
 ];
 
 const Text = Schema.String;
@@ -74,6 +75,9 @@ const KeptSchema = Schema.Struct({
   model: Schema.NullOr(Text),
   identified: Schema.optionalKey(Schema.Struct({ id: Text, name: Schema.optionalKey(Text) })),
   place_names: Schema.Array(Schema.Tuple([Text, Schema.Array(Schema.Tuple([Text, Text]))])),
+  service_account: Schema.optionalKey(
+    Schema.Struct({ email: Text, id: Text, placeholders: Schema.Record(Text, Text) }),
+  ),
 });
 
 type Kept = typeof KeptSchema.Type;
@@ -109,6 +113,10 @@ function signingStored({ current, previous }: KeptSigning) {
   return { current, ...(previous === undefined ? {} : { previous }) };
 }
 
+function serviceAccountStoredOf({ serviceAccount }: KeptConnection): Pick<Kept, 'service_account'> {
+  return serviceAccount === undefined ? {} : { service_account: serviceAccount };
+}
+
 function storedOf(kept: KeptConnection): Kept {
   const { ways, link, consent, secretId, algorithm, clientSecretId, nextClient, signing, identified } = kept;
   return {
@@ -128,6 +136,7 @@ function storedOf(kept: KeptConnection): Kept {
     place_names: [...kept.placeNames].map(
       ([type, names]: readonly [string, ReadonlyMap<string, string>]) => [type, [...names]] as const,
     ),
+    ...serviceAccountStoredOf(kept),
   };
 }
 
@@ -148,6 +157,7 @@ function keptOf(stored: Kept): KeptConnection {
     model: stored.model,
     identified: stored.identified,
     placeNames: new Map(stored.place_names.map(([type, names]) => [type, new Map(names)])),
+    serviceAccount: stored.service_account,
   };
 }
 

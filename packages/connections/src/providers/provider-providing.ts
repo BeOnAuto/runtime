@@ -20,6 +20,8 @@ export interface ProviderServices {
 
 const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
 
+const readingOnly: Pick<Providing, 'read_only'> = { read_only: true };
+
 function gatewayProvidedBy(provider: Provider): Pick<Providing, 'gateway'> {
   const gateway = declaredGatewayOf(provider);
   return gateway === undefined ? {} : { gateway };
@@ -39,6 +41,7 @@ function providedBy(provider: Provider, { credential }: OfAWay): Omit<Providing,
     ...(way?.ending_codes === undefined ? {} : { ending_codes: way.ending_codes }),
     ...(way?.path_values === undefined ? {} : { path_values: way.path_values }),
     ...(entry.handles_money === true ? handlingMoney : {}),
+    ...(way?.read_only === true ? readingOnly : {}),
     ...(entry.renders === undefined ? {} : { renders: entry.renders }),
     requestOrigins: requestOriginsOf(entry),
   };

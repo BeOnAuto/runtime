@@ -1,8 +1,8 @@
 import { defineCommand, OrgContext } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { keyEndedBeforeRemoval } from '../page/connection-gateways.ts';
 import { forgottenOnRemoval } from '../page/forgotten-credentials.ts';
+import { endedBeforeRemoval } from '../page/service-account-ports.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import type { KeptConnection } from '../registry/registry.ts';
 import { ConnectionIdField } from './connection-fields.ts';
@@ -12,7 +12,7 @@ import { foundConnection, recordInRegistry } from './registry-access.ts';
 
 type RemovalServices = Pick<
   ConnectionServices,
-  'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve' | 'connectionRemoved'
+  'secrets' | 'consent' | 'policy' | 'pages' | 'providers' | 'resolve' | 'connectionRemoved' | 'managedServiceAccounts'
 >;
 
 function removedWhereItIsKept({ connection }: KeptConnection, { connectionRemoved }: RemovalServices) {
@@ -26,7 +26,7 @@ export const removedAround = Effect.fnUntraced(function* <Recorded extends { rea
   recording: Effect.Effect<Recorded, E, R>,
   services: RemovalServices,
 ) {
-  yield* keyEndedBeforeRemoval(found, services);
+  yield* endedBeforeRemoval(found, services);
   const recorded = yield* recording;
   yield* forgottenOnRemoval(found, recorded.removed, services);
   yield* removedWhereItIsKept(recorded.removed, services);

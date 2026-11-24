@@ -2,6 +2,7 @@ import { credentialProblems, referencedVariablesOf, substituted } from '@on.auto
 import { isPinnableUrl, pinnedUrlShape } from '@on.auto/tool-servers';
 import { JsonPointer, Schema } from 'effect';
 
+import { parametersNamingATokenType } from './exchange-ways.ts';
 import { addressGivenWholeIn, setCombinationsOf, setNamesOfEach, type Placeholder } from './placeholders.ts';
 import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayParts } from './templates.ts';
 
@@ -18,6 +19,7 @@ interface Written {
 }
 
 interface WrittenWay extends WayParts {
+  readonly kind?: string;
   readonly path_values?: Readonly<Record<string, string>>;
   readonly placeholders?: Readonly<Record<string, Placeholder>>;
 }
@@ -84,6 +86,9 @@ function serverPartOf({
         subject: way.subject,
         client_id: way.client_id,
         ...(way.token_request === undefined ? {} : { token_request: { url: way.token_request.url } }),
+        audience: way.audience,
+        ...(way.subject_token === undefined ? {} : { subject_token: { audience: way.subject_token.audience } }),
+        ...(way.impersonation === undefined ? {} : { impersonation: { url: way.impersonation.url } }),
       }),
     ),
   });
@@ -113,7 +118,7 @@ function placeholderProblemsOf(placeholders: Readonly<Record<string, Placeholder
 
 function credentialIssuesOf(written: Written): readonly EntryIssue[] {
   const pointers = [
-    ...credentialProblems('', serverPartOf(written), '', wayAddresses),
+    ...credentialProblems('', serverPartOf(written), '', [...wayAddresses, ...parametersNamingATokenType]),
     ...placeholderProblemsOf(written.placeholders ?? {}, '/placeholders'),
     ...written.credentials.flatMap(({ placeholders = {} }, index) =>
       placeholderProblemsOf(placeholders, `/credentials/${String(index)}/placeholders`),
@@ -178,6 +183,37 @@ function addressIssuesOf(written: Written): readonly EntryIssue[] {
   );
 }
 
+const freeHostOfAnExchange =
+  'Expected the host written out, or set by the choices of a placeholder: the service at this address receives the token Auto signs for the organization, so no value a person gives may choose it';
+
+function isAnExchangeAddress({ path, way }: TemplatedField, { credentials }: Written): boolean {
+  const exchanging = way !== undefined && credentials[way]?.kind === 'token_exchange';
+  return exchanging && (path.at(-1) === 'token_endpoint' || path.at(-2) === 'impersonation');
+}
+
+function holdsAFreeHost(template: string, placed: Placed): boolean {
+  const { text, markers } = marked(template, (name) => placed.get(name));
+  if (!isPinnableUrl(text)) {
+    return false;
+  }
+  const { hostname } = new URL(text);
+  return [...markers.keys()].some((marker) => hostname.includes(marker));
+}
+
+function exchangeHostIssuesOf(written: Written): readonly EntryIssue[] {
+  return judgedOf(written).flatMap(({ combinations, fields }) =>
+    fields
+      .filter((field) => isAnExchangeAddress(field, written))
+      .filter(({ text }) => combinations.some((placed) => holdsAFreeHost(text, placed)))
+      .map(({ path }) => ({ path, issue: freeHostOfAnExchange })),
+  );
+}
+
 export function writtenIssuesOf(written: Written): readonly EntryIssue[] {
-  return [...addressIssuesOf(written), ...referenceIssuesOf(written), ...credentialIssuesOf(written)];
+  return [
+    ...addressIssuesOf(written),
+    ...exchangeHostIssuesOf(written),
+    ...referenceIssuesOf(written),
+    ...credentialIssuesOf(written),
+  ];
 }

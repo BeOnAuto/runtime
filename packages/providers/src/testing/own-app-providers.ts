@@ -191,3 +191,63 @@ export const mail: ProviderEntry = decodeEntry({
   base_url: 'https://api.mail.example.com/v1/self',
   credentials: [signingInToMail, asTheCompanysApp],
 });
+
+const exchangedFor = {
+  token_endpoint: 'https://sts.mail.example.com/v1/token',
+  audience: '//identity.mail.example.com/projects/{project}/pools/auto/providers/auto',
+  subject_token: {
+    type: 'urn:ietf:params:oauth:token-type:jwt',
+    audience: 'https://identity.mail.example.com/projects/{project}/pools/auto/providers/auto',
+  },
+  scope: 'mail.read',
+  says: { 'mail.read': 'Read the mail of the mailboxes the account reaches.' },
+  parameters: {
+    requested_token_type: 'urn:ietf:params:oauth:token-type:access_token',
+    scope: 'https://mail.example.com/auth/platform',
+  },
+  impersonation: {
+    method: 'POST',
+    url: 'https://credentials.mail.example.com/v1/accounts/{account}:token',
+    request: { scope: '/scope' },
+    issued: { access_token: '/accessToken', expires_at: '/expireTime' },
+  },
+  placeholders: {
+    project: {
+      title: 'Project number',
+      description: 'The number of your project at Mail.',
+      pattern: '^[0-9]{6,20}$',
+      example: '123456789012',
+    },
+    account: {
+      title: 'Service account email',
+      description: 'The email of the service account the connection acts as.',
+      pattern: '^[^@\\s]+@[^@\\s]+$',
+      example: 'robot@acme.example.com',
+    },
+  },
+  test: { tool: 'mailboxes_list', reached: { list: '/mailboxes', name: '/address' } },
+} as const;
+
+export const asTheCompanysServiceAccount = {
+  kind: 'token_exchange',
+  ...exchangedFor,
+  key_page: 'https://admin.mail.example.com/identity',
+  key_page_title: 'Open the identity page of Mail',
+  steps: {
+    key_page: {
+      title: 'Trust Auto at Mail',
+      instructions: 'Add a provider with the issuer {issuer}, and let the subject {subject} act as {account}.',
+    },
+    key: { title: 'Enter the details here', instructions: 'Enter the project number and the account.' },
+  },
+  description: 'A service account your company creates at Mail, without a key.',
+} as const;
+
+export const asAManagedServiceAccount = {
+  kind: 'token_exchange',
+  ...exchangedFor,
+  managed_service_account: true,
+  read_only: true,
+  limitation: 'It only reads.',
+  description: 'A service account Auto creates at Mail for the connection.',
+} as const;

@@ -140,7 +140,7 @@ export function entryIssuesOf(input: AdditionInput, checking: EntryChecking): re
 export function readAddition(
   input: AdditionInput,
   checking: EntryChecking,
-  given: GivenValue | undefined,
+  given?: GivenValue,
 ): Result.Result<ServerSettings, readonly Issue[]> {
   const read = readPlaced(input, placedCredential(input, given), checking);
   return Result.mapError(read, (problems) => issuesOf(problems, `/${JsonPointer.escapeToken(input.name)}`, '/entry'));

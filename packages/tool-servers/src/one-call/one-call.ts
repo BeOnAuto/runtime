@@ -34,7 +34,9 @@ export function recordingAsTheCallAsks(
   return recordContent === false ? { ...recording, content: false, detail: false } : recording;
 }
 
-export type ReadCall = Pick<OneCall, 'org' | 'reference' | 'meta'>;
+export interface ReadCall extends Pick<OneCall, 'org' | 'reference' | 'meta'> {
+  readonly input?: OneCall['input'];
+}
 
 export type OwnCall = Pick<OneCall, 'org' | 'reference' | 'input'>;
 
@@ -201,7 +203,8 @@ export function oneCall(
 }
 
 export function readOnce(call: ReadCall, server: OrgServer, access: OneCallAccess): Effect.Effect<CalledOnce> {
-  return calledThrough({ ...call, input: {} }, server, { access, admitting: () => readingOf(call, access) });
+  const { input = {} } = call;
+  return calledThrough({ ...call, input }, server, { access, admitting: () => readingOf(call, access) });
 }
 
 export function ownCallOnce(call: OwnCall, server: OrgServer, access: OneCallAccess): Effect.Effect<CalledOnce> {

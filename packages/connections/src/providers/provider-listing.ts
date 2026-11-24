@@ -26,9 +26,9 @@ import {
   type OAuthClientChoice,
 } from './listed-providers.ts';
 import { couldReach, couldReachAnyHost } from './provider-host-reach.ts';
-import { offeringOf, type Offering } from './way-offerings.ts';
+import { exchangesHere, offeringOf, serviceAccountListedOf, type Exchanging, type Offering } from './way-offerings.ts';
 
-export interface Listing {
+export interface Listing extends Exchanging {
   readonly providers: ProviderList;
   readonly policy: ConnectionPolicy;
   readonly providerValues: ReadonlyMap<string, Redacted.Redacted>;
@@ -148,7 +148,9 @@ function lacksItsClientForTheApp(provider: Provider, way: CredentialWay, listing
 }
 
 export function waysInOrderOf(provider: Provider, listing: Listing): readonly CredentialWay[] {
-  const credentials = provider.entry.credentials.filter((way) => !lacksItsClientForTheApp(provider, way, listing));
+  const credentials = provider.entry.credentials.filter(
+    (way) => !lacksItsClientForTheApp(provider, way, listing) && exchangesHere(way, listing),
+  );
   const ofItsOwnValues = credentials.filter((way) => asksValuesOfItsOwn(way));
   const alone = credentials.filter(
     (way) => !ofItsOwnValues.includes(way) && isUnderTheOrgsOAuthClientAlone(provider, way, listing),
@@ -265,6 +267,7 @@ function listedProviderOf(provider: Provider, listing: ListingOfTheRuntime): rea
         ]),
         ...actingOf(way),
         ...keyFileListedOf(way),
+        ...serviceAccountListedOf(way),
         ...wayPlaceholdersOf(way),
         ...appCredentialsListedOf(provider, way, listing),
         ...chatListedOf(provider, way, listing),

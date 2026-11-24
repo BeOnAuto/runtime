@@ -15,12 +15,19 @@ import {
 } from './mcp-client.ts';
 import type { ServedClient } from './server-client.ts';
 import type { StdioOpening } from './stdio-client.ts';
-import { tokenSource, type ConsentTokenSources, type Discovery, type TokenSource } from './token-source.ts';
+import {
+  tokenSource,
+  type ConsentTokenSources,
+  type Discovery,
+  type TokenSource,
+  type TokenSourceOptions,
+} from './token-source.ts';
 
 export interface LinkOptions {
   readonly clientInfo: ClientInfo;
   readonly fetch: FetchOfACall;
   readonly consent: ConsentTokenSources;
+  readonly subjectTokens?: TokenSourceOptions['subjectTokens'];
   readonly secrets: Secrets;
   readonly now: () => number;
   readonly documents?: ApiOpening['documents'];
@@ -47,20 +54,40 @@ function tokenHolderOf({ name, connection }: LinkedServerSettings): string {
   return connection === null ? name : `connection ${connection}`;
 }
 
-function tokensOf({ settings, serverUrl, discovery }: Remote, options: Linking): TokenSource | undefined {
+function isDiscoveredAtTheIssuer(auth: Remote['settings']['auth']): boolean {
+  return auth !== null && auth.grant !== 'token_exchange' && auth.discovery === 'issuer';
+}
+
+function orgOf({ orgs }: Pick<LinkedServerSettings, 'orgs'>): string | undefined {
+  return orgs?.length === 1 ? orgs[0] : undefined;
+}
+
+function sourceOptionsOf({ settings, serverUrl, discovery }: Remote, options: Linking): TokenSourceOptions {
+  const { now, secrets, fetch, subjectTokens } = options;
+  const server = tokenHolderOf(settings);
+  return { server, serverUrl, discovery, fetch, now, minted: secrets.replace, subjectTokens, org: orgOf(settings) };
+}
+
+function tokensOf(remote: Remote, options: Linking): TokenSource | undefined {
+  const { settings } = remote;
   const { auth } = settings;
   if (auth === null) {
     return undefined;
   }
+  if (auth.grant === 'token_exchange') {
+    return tokenSource(auth, sourceOptionsOf(remote, options));
+  }
   const { credential } = auth;
-  const holder = tokenHolderOf(settings);
   const { now, secrets, timer } = options;
   return credential.kind === 'consent'
-    ? options.consent.tokenSource(credential, { name: settings.name, holder, now, timer, hold: secrets.replace })
-    : tokenSource(
-        { ...auth, credential },
-        { server: holder, serverUrl, discovery, fetch: options.fetch, now, minted: secrets.replace },
-      );
+    ? options.consent.tokenSource(credential, {
+        name: settings.name,
+        holder: tokenHolderOf(settings),
+        now,
+        timer,
+        hold: secrets.replace,
+      })
+    : tokenSource({ ...auth, credential }, sourceOptionsOf(remote, options));
 }
 
 async function openedStdio(
@@ -87,7 +114,7 @@ export function tokensOfTheLink(settings: LinkedServerSettings, linkOptions: Lin
   if (settings.type === 'openapi') {
     return tokensOf({ settings, serverUrl: settings.api.baseUrl, discovery: 'from_the_issuer' }, options);
   }
-  const discovery = settings.auth?.discovery === 'issuer' ? 'from_the_issuer' : 'from_the_server';
+  const discovery = isDiscoveredAtTheIssuer(settings.auth) ? 'from_the_issuer' : 'from_the_server';
   return tokensOf({ settings, serverUrl: settings.url, discovery }, options);
 }
 

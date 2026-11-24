@@ -60,6 +60,12 @@ export const InstalledSchema = Schema.Struct({
 
 export type Installed = typeof InstalledSchema.Type;
 
+export const ServiceAccountSchema = Schema.Struct({
+  email: Schema.String.annotate({
+    description: 'The email of the service account, which a person gives access at the service',
+  }),
+});
+
 export const ListedInstallationSchema = Schema.Struct({
   ...InstalledSchema.fields,
   admin: Schema.Boolean.annotate({
@@ -169,6 +175,12 @@ export const ConnectionSchema = Schema.Struct({
     InstalledSchema.annotate({
       description:
         'The installation of the application that the connection uses, and the account it is installed on. It is absent where the connection uses no installation.',
+    }),
+  ),
+  service_account: Schema.optionalKey(
+    ServiceAccountSchema.annotate({
+      description:
+        'The service account Auto created for the connection, which it acts as. It is absent until the account is created, and where the connection acts as no account Auto created.',
     }),
   ),
 }).annotate({ identifier: 'Connection', description: 'A tool server the org added, shared by its playbooks' });

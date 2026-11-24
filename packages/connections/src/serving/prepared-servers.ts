@@ -6,18 +6,9 @@ import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
 import { gatewayRefusalOf, reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { gatewayOriginsOf } from '../providers/provider-listing.ts';
 import { providingOf } from '../providers/provider-providing.ts';
+import { exchangeAuthServed, unchecked } from './exchanged-credentials.ts';
 import { consentAuthOf, credentialRefusedOf, givenOf, notAllowed } from './given-credentials.ts';
 import type { Serving } from './serving-services.ts';
-import { servingWords } from './serving-words.ts';
-
-function unchecked(name: string, issues: ReturnType<typeof entryIssuesOf>): ConnectionUnready {
-  return notAllowed(
-    servingWords.unchecked(
-      name,
-      issues.map(({ detail }) => detail),
-    ),
-  );
-}
 
 export function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, ConnectionUnready> {
   const { policy, modelProviders } = serving.services;
@@ -40,7 +31,7 @@ export function preparedServer(serving: Serving): Effect.Effect<ConnectionServer
         ? undefined
         : yield* documentTextOf(serving.services.registry, serving.org, { name: connection.name, document });
     const given = yield* givenOf(serving);
-    const auth = yield* consentAuthOf(serving, checking.providing);
+    const auth = (yield* consentAuthOf(serving, checking.providing)) ?? (yield* exchangeAuthServed(serving));
     const read = readAddition({ ...connection, documentText }, checking, given);
     if (Result.isFailure(read)) {
       return yield* Effect.fail(unchecked(connection.name, read.failure));

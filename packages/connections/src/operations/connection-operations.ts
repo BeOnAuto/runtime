@@ -7,7 +7,7 @@ import { defineAddConnection } from './add-connection.ts';
 import { removalOperationsOf } from './connection-removals.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { modelSettingOf, settingOperationsOf } from './connection-settings.ts';
-import { defineGetConnection, defineListConnections } from './read-connections.ts';
+import { connectionReadsOf } from './read-connections.ts';
 import { defineReconnectConnection } from './reconnect-connection.ts';
 
 interface OrgOperation {
@@ -24,8 +24,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
   const { removing, declining } = removalOperationsOf(services);
   return [
     adding,
-    defineListConnections(reading, removing.registration),
-    defineGetConnection(reading),
+    ...connectionReadsOf(reading, removing.registration),
     defineReconnectConnection(services),
     removing,
     declining,

@@ -6,18 +6,20 @@ import { toolAccessOf, type ToolAccess, type ToolAccessOptions } from '../access
 import type { ConsentTokenSources } from '../clients/token-source.ts';
 import type { RequestWays } from '../declared-requests/request-ways.ts';
 import type { ToolServers } from '../openapi/described-api.ts';
-import { overFetches } from './over-fetches.ts';
+import { overCalls } from './over-calls.ts';
 
 export function makeToolAccess(
   settings: ToolServers,
   options: ToolAccessOptions,
 ): ToolAccess & RequestWays & ThroughWays & ConnectionWays {
   const own = toolAccessOf(settings, options);
-  const { ofTheCall } = overFetches({ fetch: options.fetch ?? globalThis.fetch, made: own }, (fetch) => {
+  const owned = { fetch: options.fetch ?? globalThis.fetch, subjectTokens: options.subjectTokens, made: own };
+  const ofTheCall = overCalls(owned, ({ fetch, subjectTokens }) => {
     const consent: ConsentTokenSources = {
       tokenSource: (served, serving) => options.consent.tokenSource(served, { ...serving, fetch }),
     };
-    return toolAccessOf(settings, { ...options, fetch, consent }, own.linksSendingNoRequest, own.listingsKept);
+    const ofTheCallOnly = { ...options, fetch, consent, subjectTokens };
+    return toolAccessOf(settings, ofTheCallOnly, own.linksSendingNoRequest, own.listingsKept);
   });
   return {
     assets: own.assets,

@@ -12,10 +12,11 @@ import {
 import { Result } from 'effect';
 
 import { decideAccountType } from './account-type-decisions.ts';
-import type { AccountTypeSetting, CommandMetadata, WayChoice } from './connection-commands.ts';
+import type { AccountTypeSetting, CommandMetadata, ServiceAccountRecording, WayChoice } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import { linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
+import { decideServiceAccount } from './service-account-decisions.ts';
 
 type Decision = Result.Result<readonly ConnectionEvent[], NotFound | Conflict | InvalidInput>;
 
@@ -162,10 +163,13 @@ function decideWayChoice(command: WayChoice & CommandMetadata, registry: Registr
 }
 
 export function decideOnItsWay(
-  command: (AccountTypeSetting | WayChoice) & CommandMetadata,
+  command: (AccountTypeSetting | WayChoice | ServiceAccountRecording) & CommandMetadata,
   registry: Registry,
   providers: ProviderList,
 ): Decision {
+  if (command.type === 'record_service_account') {
+    return decideServiceAccount(command, registry);
+  }
   return command.type === 'set_account_type'
     ? decideAccountType(command, registry, providers)
     : decideWayChoice(command, registry, providers);

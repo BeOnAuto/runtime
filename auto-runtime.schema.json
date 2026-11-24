@@ -494,7 +494,15 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["none", "reference", "secret", "client_credentials", "authorization", "jwt_bearer"]
+            "enum": [
+              "none",
+              "reference",
+              "secret",
+              "client_credentials",
+              "authorization",
+              "jwt_bearer",
+              "token_exchange"
+            ]
           },
           "description": "The kinds of credential a connection may take, of none, reference, secret, client_credentials, authorization and jwt_bearer; every kind when left out"
         },
@@ -1924,7 +1932,7 @@
                   "properties": {
                     "kind": {
                       "type": "string",
-                      "enum": ["secret", "client_credentials", "none", "authorization", "jwt_bearer"]
+                      "enum": ["secret", "client_credentials", "none", "authorization", "jwt_bearer", "token_exchange"]
                     },
                     "in": {
                       "type": "string",
@@ -1949,7 +1957,7 @@
                       "additionalProperties": {
                         "type": "string"
                       },
-                      "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials. Each value may hold this way's placeholders"
+                      "description": "For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, where a grant_type is sent in place of client_credentials; for token_exchange, those its exchange carries, such as requested_token_type. Each value may hold this way's placeholders"
                     },
                     "authorization_endpoint": {
                       "type": "string"
@@ -2428,6 +2436,84 @@
                       "additionalProperties": false,
                       "description": "For authorization with application permissions, how a connection is made by installing the application whoever runs Auto registered: the person signs in at the way's issuer, Auto lists the installations they can reach and takes one only from that list, and only on an account they administer, their own or an organization they are an admin of, and asks each token for it with the application's private key"
                     },
+                    "audience": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "For token_exchange, the audience parameter of the exchange, RFC 8693's name for the service a token is asked for, written as the service's documentation gives it. Each {name} in it is a placeholder of the way or of the provider"
+                    },
+                    "subject_token": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["urn:ietf:params:oauth:token-type:jwt"],
+                          "description": "The type of the subject token, urn:ietf:params:oauth:token-type:jwt, a JWT the runtime signs"
+                        },
+                        "audience": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "The aud claim of the JWT the runtime signs, which names the service it is for"
+                        }
+                      },
+                      "required": ["type", "audience"],
+                      "additionalProperties": false,
+                      "description": "For token_exchange, the token Auto signs for the organization and exchanges: its type, urn:ietf:params:oauth:token-type:jwt, and its audience, the aud claim the service expects. Each {name} in the audience is a placeholder of the way or of the provider"
+                    },
+                    "impersonation": {
+                      "type": "object",
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "enum": ["POST"],
+                          "description": "The method of the request, POST"
+                        },
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL the request is sent to, with the exchanged token as its Bearer, that answers the token of the account"
+                        },
+                        "request": {
+                          "type": "object",
+                          "properties": {
+                            "scope": {
+                              "type": "string",
+                              "description": "The JSON Pointer to the place in the JSON body where the scopes go, as a list"
+                            }
+                          },
+                          "required": ["scope"],
+                          "additionalProperties": false,
+                          "description": "Where the JSON body of the request carries what it asks"
+                        },
+                        "issued": {
+                          "type": "object",
+                          "properties": {
+                            "access_token": {
+                              "type": "string",
+                              "description": "A JSON Pointer into the answer, to the access token"
+                            },
+                            "expires_at": {
+                              "type": "string",
+                              "description": "A JSON Pointer into the answer, to the time the access token ends, in RFC 3339; an hour from its issue when left out"
+                            }
+                          },
+                          "required": ["access_token"],
+                          "additionalProperties": false,
+                          "description": "Where the answer names the access token and the time it ends, each as a JSON Pointer"
+                        }
+                      },
+                      "required": ["method", "url", "request", "issued"],
+                      "additionalProperties": false,
+                      "description": "For token_exchange, a second request that turns the exchanged token into the token of the account the connection acts as, as a service account's impersonation does: its method, POST; its https URL, each {name} in it a placeholder; in request, where the way's scopes go in its JSON body; and in issued, where its answer names the token and the time it ends. The way's scope then goes in this request, and the exchange's own scope in parameters"
+                    },
+                    "managed_service_account": {
+                      "type": "boolean",
+                      "enum": [true],
+                      "description": "For token_exchange, true where the account is one whoever runs Auto creates for the connection and removes with it. The way's placeholders are then filled by Auto, and a person is asked none of them. A runtime that cannot create such accounts does not offer the way"
+                    },
+                    "read_only": {
+                      "type": "boolean",
+                      "enum": [true],
+                      "description": "For token_exchange, true where a connection made this way is given only the tools marked reads"
+                    },
                     "instructions": {
                       "type": "string",
                       "description": "For secret, how a person makes the key, in Markdown without HTML of at most 1,000 characters: where it is made, the plan or role it needs, the permissions it needs and its format",
@@ -2436,11 +2522,11 @@
                     },
                     "key_page": {
                       "type": "string",
-                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file; for authorization, of the page where a person makes the organization's own OAuth client"
+                      "description": "For secret, the https address of the page where a person makes the key; for client_credentials, of the page where a person makes the client; for jwt_bearer, of the page where a person makes the key file; for authorization, of the page where a person makes the organization's own OAuth client; for token_exchange, of the page where a person lets the tokens Auto signs act as the account"
                     },
                     "key_page_title": {
                       "type": "string",
-                      "description": "For secret, client_credentials, jwt_bearer and authorization, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
+                      "description": "For secret, client_credentials, jwt_bearer, authorization and token_exchange, the label of the button that opens key_page, such as Create your Tracker app, in at most 40 characters",
                       "minLength": 1,
                       "maxLength": 40
                     },
@@ -2545,7 +2631,7 @@
                         }
                       },
                       "additionalProperties": false,
-                      "description": "For secret, client_credentials, jwt_bearer and authorization, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions; for authorization, the steps of making the organization's own OAuth client, shown where the connection goes under it"
+                      "description": "For secret, client_credentials, jwt_bearer, authorization and token_exchange, the heading and paragraph of each step of the page where a person approves the connection, each a title and instructions; for authorization, the steps of making the organization's own OAuth client, shown where the connection goes under it. For token_exchange, the instructions may name {issuer} and {subject}, the issuer of the tokens Auto signs and the subject it signs them for, which the page shows beside the steps to copy"
                     },
                     "example": {
                       "type": "string",
@@ -2608,11 +2694,29 @@
                       "properties": {
                         "tool": {
                           "type": "string"
+                        },
+                        "with": {
+                          "type": "object",
+                          "description": "For token_exchange, the arguments the tool is called with, by name"
+                        },
+                        "reached": {
+                          "type": "object",
+                          "properties": {
+                            "list": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["list", "name"],
+                          "additionalProperties": false,
+                          "description": "For token_exchange, where the answer of the tool lists the things the connection reaches, and their names"
                         }
                       },
                       "required": ["tool"],
                       "additionalProperties": false,
-                      "description": "For secret, the tool that checks a key: a tool that needs no arguments and is marked reads, which the runtime calls once with the key a person gives before it keeps anything; a key the service refuses is refused, and where the call ends any other way than in a result the runtime keeps nothing and answers that the key could not be checked"
+                      "description": "For secret, the tool that checks a key: a tool that needs no arguments and is marked reads, which the runtime calls once with the key a person gives before it keeps anything; a key the service refuses is refused, and where the call ends any other way than in a result the runtime keeps nothing and answers that the key could not be checked. For token_exchange, the tool that checks what a connection reaches: a tool marked reads, called with the arguments in with, whose answer lists in reached the things the connection reaches"
                     },
                     "client_id_title": {
                       "type": "string",
@@ -2635,7 +2739,7 @@
                   "additionalProperties": false
                 },
                 "minItems": 1,
-                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization or jwt_bearer, with each of application and delegated permissions; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it"
+                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default, at most one of each kind, secret, client_credentials, none, authorization, jwt_bearer or token_exchange, with each of application and delegated permissions, and for token_exchange one with managed_service_account and one without; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it"
               },
               "replaces": {
                 "type": "array",

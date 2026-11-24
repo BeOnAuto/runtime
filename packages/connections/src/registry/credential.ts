@@ -5,21 +5,14 @@ import {
   InstallationSchema,
   keyFieldNames,
   keyFields,
-  wayAddresses,
   wayFields,
-  type WayAddress,
 } from '@on.auto/providers';
-import {
-  ClientIdSchema,
-  ClientSourceSchema,
-  headerNamePattern,
-  isPinnableUrl,
-  pinnedUrlShape,
-  TokenRequestSchema,
-} from '@on.auto/tool-servers';
+import { ClientIdSchema, ClientSourceSchema, headerNamePattern, TokenRequestSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { addressIssuesOf } from './credential-addresses.ts';
 import { nameIssuesOf, variableIssuesOf } from './credential-places.ts';
+import { fieldsOfAnExchange, serviceAccountField } from './exchange-credentials.ts';
 import {
   credentialThroughAGateway,
   fieldsThroughAGateway,
@@ -27,7 +20,15 @@ import {
   isThroughAGateway,
 } from './gateway-credentials.ts';
 
-const credentialKinds = ['none', 'reference', 'secret', 'client_credentials', 'authorization', 'jwt_bearer'] as const;
+const credentialKinds = [
+  'none',
+  'reference',
+  'secret',
+  'client_credentials',
+  'authorization',
+  'jwt_bearer',
+  'token_exchange',
+] as const;
 
 export const CredentialKindSchema = Schema.Literals(credentialKinds);
 
@@ -73,7 +74,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   scope: Schema.optionalKey(
     wayFields.scope.annotate({
       description:
-        'For client_credentials, authorization and jwt_bearer, the scopes asked, separated by spaces, none when left out',
+        'For client_credentials, authorization, jwt_bearer and token_exchange, the scopes asked, separated by spaces, none when left out',
     }),
   ),
   subject: Schema.optionalKey(
@@ -84,7 +85,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   parameters: Schema.optionalKey(
     wayFields.parameters.annotate({
       description:
-        'For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials',
+        'For authorization, the parameters its authorization request carries beside the standard ones; for client_credentials, those its token request carries, a grant_type among them in place of client_credentials; for token_exchange, those its exchange carries',
     }),
   ),
   token_request: Schema.optionalKey(
@@ -106,7 +107,8 @@ export const CredentialFieldsSchema = Schema.Struct({
   ),
   token_endpoint: Schema.optionalKey(
     wayFields.token_endpoint.annotate({
-      description: 'For authorization, the token endpoint, beside the authorization endpoint',
+      description:
+        'For authorization, the token endpoint, beside the authorization endpoint; for token_exchange, the endpoint the exchange is sent to',
     }),
   ),
   revocation_endpoint: Schema.optionalKey(
@@ -150,6 +152,7 @@ export const CredentialFieldsSchema = Schema.Struct({
       "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched",
     ),
   ),
+  service_account: serviceAccountField,
 });
 
 type CredentialFields = typeof CredentialFieldsSchema.Type;
@@ -174,6 +177,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'clients',
   'client_source',
   ...keyFieldNames,
+  'service_account',
 ];
 
 interface TakenFields {
@@ -193,6 +197,7 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
     recorded: ['installation'],
   },
   jwt_bearer: { required: ['issuer'], optional: ['subject', 'client_id', 'scope', 'token_request'] },
+  token_exchange: fieldsOfAnExchange,
 };
 
 function fieldsTakenBy(credential: CredentialFields): TakenFields {
@@ -254,19 +259,6 @@ function schemeIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return issue === undefined ? [] : [{ path: ['scheme'], issue }];
 }
 
-const addressesOfEachKind: Partial<Readonly<Record<CredentialKind, readonly WayAddress[]>>> = {
-  client_credentials: ['issuer'],
-  authorization: wayAddresses,
-  jwt_bearer: ['issuer'],
-};
-
-function addressIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
-  return (addressesOfEachKind[credential.kind] ?? []).flatMap((field) => {
-    const address = credential[field];
-    return address === undefined || isPinnableUrl(address) ? [] : [{ path: [field], issue: pinnedUrlShape }];
-  });
-}
-
 function consentIssuesOfTheKind(credential: CredentialFields): readonly FieldIssue[] {
   return credential.kind === 'authorization' ? consentIssuesOf(credential) : [];
 }
@@ -287,7 +279,7 @@ export function credentialFieldIssuesOf(credential: CredentialFields): readonly 
   ];
 }
 
-const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization']);
+const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization', 'token_exchange']);
 
 export function placesNoValue(credential: Pick<CredentialFields, 'kind' | 'client_source'>): boolean {
   return kindsPlacingNoValue.has(credential.kind) && !isThroughAGateway(credential);

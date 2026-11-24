@@ -38,7 +38,7 @@ const spent = { modelCalls: 2, toolCalls: 3 };
 
 describe('the bounds of a conversation’s memory', () => {
   it('ship with the cloud’s window, its first read of a thread, and the budget the loop’s bounds leave', () => {
-    expect(MEMORY_BOUNDS).toEqual({ rows: 100, threadMessages: 15, conversationBytes: 88_516 });
+    expect(MEMORY_BOUNDS).toEqual({ rows: 100, threadMessages: 15, conversationBytes: 88_216 });
   });
 
   it('leave to the conversation what one request may hold, less the tools’ listing and the instructions', () => {

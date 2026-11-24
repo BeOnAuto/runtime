@@ -10,7 +10,10 @@ import { providingOf } from '../providers/provider-providing.ts';
 import type { KeptWithLink } from '../registry/registry-lookup.ts';
 import { wayChosenOf, type WayAsked } from '../registry/way-decisions.ts';
 
-export type WayChoosing = Pick<ConnectionServices, 'providers' | 'providerValues' | 'policy' | 'consent' | 'pages'>;
+export type WayChoosing = Pick<
+  ConnectionServices,
+  'providers' | 'providerValues' | 'policy' | 'consent' | 'pages' | 'secrets' | 'managedServiceAccounts'
+>;
 
 function handGivenCredentialOf(
   { connection, ways = [connection.credential] }: KeptWithLink,

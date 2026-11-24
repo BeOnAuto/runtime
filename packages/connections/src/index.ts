@@ -3,7 +3,12 @@ export type {
   ChatModels,
   ConnectionRemoved,
   ConnectionServices,
+  IssuedSubjectTokens,
+  ManagedServiceAccounts,
   SecretKeeping,
+  ServiceAccountAsked,
+  ServiceAccountFailure,
+  ServiceAccountMade,
 } from './operations/connection-services.ts';
 export { modelsChosenIn, type ModelChosen } from './registry/models-chosen.ts';
 export { returnAddressOf, type ConnectPages } from './links/connect-page.ts';

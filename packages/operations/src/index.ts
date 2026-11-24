@@ -25,6 +25,7 @@ export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } f
 export { localDeveloperId, OrgMembership, personOfTheOrg, signedInPersonPrefix } from './caller/caller.ts';
 export { CallingClientSchema, type CallingClient } from './caller/calling-client.ts';
 export { CallFetch, type CallMeta, type FetchOfACall } from './caller/call-fetch.ts';
+export { CallSubjectTokens, type SubjectTokensOfACall } from './caller/call-subject-tokens.ts';
 export {
   CallResultSchema,
   invalidArguments,

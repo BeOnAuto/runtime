@@ -1,4 +1,5 @@
-export { WayKindSchema, holdsAClientId, wayFields, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
+export { WayKindSchema, holdsAClientId, type CredentialWay, type WayKind } from './entry/credential-ways.ts';
+export { wayFields } from './entry/way-values.ts';
 export {
   InstallationSchema,
   accountNamePlaceholder,
@@ -11,6 +12,7 @@ export {
   accountTypeIssueOf,
   accountTypeWhereNoneIsGiven,
   accountTypesOf,
+  isAManagedServiceAccount,
   isTheWayAsked,
   permissionsOf,
   type AccountType,
@@ -83,7 +85,9 @@ export {
 export { ProvidersInvalid, providersShippedRoots, readProviders } from './reading/shipped-providers.ts';
 export {
   additionOfProvider,
+  exchangeOfProvider,
   type GivenToProvider,
+  type PlacedExchange,
   type ProviderAddition,
   type ProviderConnectionEntry,
   type ProviderCredential,

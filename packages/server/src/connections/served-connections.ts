@@ -28,6 +28,13 @@ interface ThroughTheRegistry {
   readonly readOnceThrough: ReadOnceThrough;
   readonly chatModels?: ConnectionServices['chatModels'];
   readonly connectionRemoved?: ConnectionServices['connectionRemoved'];
+  readonly subjectTokens?: SubjectTokens | undefined;
+}
+
+type SubjectTokens = NonNullable<ConnectionServices['subjectTokens']>['tokens'];
+
+function issuedOf(subjectTokens: SubjectTokens | undefined): Pick<ConnectionServices, 'subjectTokens'> {
+  return subjectTokens === undefined ? {} : { subjectTokens: { tokens: subjectTokens, jwkFile: true } };
 }
 
 export interface StoresAndConnections extends OwnKeysRead {
@@ -71,7 +78,7 @@ interface Composed extends ThroughTheRegistry {
 
 function connectionServicesOf(
   settings: ServingSettings,
-  { secrets, consent, pages, readOnceThrough, opens, chatModels, connectionRemoved }: Composed,
+  { secrets, consent, pages, readOnceThrough, opens, chatModels, connectionRemoved, subjectTokens }: Composed,
 ): ConnectionServices {
   return {
     consent,
@@ -91,6 +98,7 @@ function connectionServicesOf(
     received: eventsReceivedAt(settings.receiving),
     ...(chatModels === undefined ? {} : { chatModels }),
     ...(connectionRemoved === undefined ? {} : { connectionRemoved }),
+    ...issuedOf(subjectTokens),
   };
 }
 

@@ -12,7 +12,7 @@ import {
 import { DateTime, Effect } from 'effect';
 
 import type { DescribedAddition } from '../entries/described-entries.ts';
-import { tokenSha256OfPage } from '../links/link-token.ts';
+import { tokenSha256Of, tokenSha256OfPage } from '../links/link-token.ts';
 import type {
   ClientGiving,
   ConnectionAddition,
@@ -27,7 +27,7 @@ import type {
   WayChoice,
 } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDeciderOf } from '../registry/registry-decider.ts';
-import { connectionsOfTheOrg, findConnection } from '../registry/registry-lookup.ts';
+import { connectionsOfTheOrg, findConnection, linkedConnectionOf } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
 import type { ConnectionServices, SecretKeeping } from './connection-services.ts';
 import { shownConnection } from './shown-connections.ts';
@@ -43,6 +43,17 @@ export function foundConnection(named: Named, id: string): Effect.Effect<KeptCon
 }
 
 export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
+
+interface GivenLink {
+  readonly id: string;
+  readonly token: string;
+}
+
+export const linkedThrough = Effect.fnUntraced(function* (named: Named, { id, token }: GivenLink) {
+  const use = { connection: id, token_sha256: tokenSha256Of(token) };
+  const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry(named), use));
+  return { kept, use };
+});
 
 const limitedToSomePlaybooks = new Forbidden({
   detail:
