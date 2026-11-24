@@ -1,6 +1,7 @@
 import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
+import { AwaitingApprovalSchema } from './client-approval.ts';
 import { PermissionsStatedSchema, statesTheSamePermissions, type PermissionsStated } from './client-permissions.ts';
 
 const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own', 'gateway'] as const;
@@ -65,6 +66,7 @@ export const ServiceClientSchema = Schema.Struct({
   client_id: ClientIdSchema,
   scopes: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMinLength(1)))),
   permissions: Schema.optionalKey(PermissionsStatedSchema),
+  awaiting_approval: Schema.optionalKey(AwaitingApprovalSchema),
 });
 
 export type ServiceClient = typeof ServiceClientSchema.Type;
@@ -94,6 +96,7 @@ export interface WayOfClients {
 export interface HadSources {
   readonly sourcesOf: (way: WayOfClients) => readonly ClientSource[];
   readonly sourceOf: (way: WayOfClients) => ClientSource | undefined;
+  readonly awaitsApproval: (way: WayOfClients) => boolean;
 }
 
 type ClientMetadata = Readonly<{

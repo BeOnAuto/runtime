@@ -7,9 +7,17 @@ import { describe, expect, it } from 'vitest';
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { providerCredentialChosen } from './chosen-provider-ways.ts';
 
-const noSource: HadSources = { sourcesOf: () => [], sourceOf: Function.constUndefined };
+const noSource: HadSources = {
+  sourcesOf: () => [],
+  sourceOf: Function.constUndefined,
+  awaitsApproval: Function.constFalse,
+};
 
-const everySource: HadSources = { sourcesOf: () => ['gateway'], sourceOf: () => 'gateway' };
+const everySource: HadSources = {
+  sourcesOf: () => ['gateway'],
+  sourceOf: () => 'gateway',
+  awaitsApproval: Function.constFalse,
+};
 
 interface Asking {
   readonly provider: Provider;

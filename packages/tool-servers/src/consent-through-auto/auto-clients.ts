@@ -2,7 +2,13 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Duration, Effect, Exit } from 'effect';
 
 import { requestBoundsOf, type RequestBounds } from '../bounds/call-bounds.ts';
-import type { ServiceClient } from '../consent/client-sources.ts';
+import { awaitsApprovalFor } from '../consent/client-approval.ts';
+import {
+  serviceClientTakenOf,
+  type ClientsHad,
+  type ServiceClient,
+  type WayOfClients,
+} from '../consent/client-sources.ts';
 import { consentServiceOf, type ConsentReturn, type ConsentServiceCalls } from './consent-service.ts';
 
 export type ReturnKind = ConsentReturn['kind'] | 'elsewhere';
@@ -66,6 +72,16 @@ export function servedKindOf(through: ThroughAuto, base: string): ConsentReturn[
   }
   const kind = through.returnKindOf(base);
   return kind === 'elsewhere' ? undefined : kind;
+}
+
+/**
+ * Whether a start of the way takes a client of Auto's consent service that the service lists as awaiting its vendor's
+ * approval, as a whole or for a scope the way asks (`awaitsApprovalFor`): a fact the service states of the client,
+ * never read from the way's issuer or its provider. A way whose start takes any other source, or none, awaits nothing.
+ */
+export function awaitsApprovalOf(way: WayOfClients, had: ClientsHad): boolean {
+  const client = serviceClientTakenOf(way, had);
+  return client !== undefined && awaitsApprovalFor(client, way);
 }
 
 export function serviceClientsListed(through: ThroughAuto): Effect.Effect<readonly ServiceClient[]> {

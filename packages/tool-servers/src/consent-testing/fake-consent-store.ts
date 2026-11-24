@@ -14,6 +14,7 @@ export interface FakeConsentServiceOptions {
   readonly now: () => number;
   readonly scopes?: readonly string[];
   readonly permissions?: 'application';
+  readonly awaitingApproval?: true | { readonly scopes: readonly string[] };
   readonly fetch?: typeof globalThis.fetch;
   readonly studioBase?: string;
 }

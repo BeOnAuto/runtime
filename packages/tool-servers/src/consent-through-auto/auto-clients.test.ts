@@ -2,6 +2,7 @@ import { Duration, Effect, Logger } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { ClientsHad, ServiceClient } from '../consent/client-sources.ts';
 import type { ConsentClient } from '../consent/consent-client.ts';
 import {
   autoClientsOf,
@@ -13,7 +14,7 @@ import {
 } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import type { FakeConsentService, ServiceListing, ThroughAuto } from '../testing/served-fakes.ts';
-import { unlistedWords, type ReturnKind } from './auto-clients.ts';
+import { awaitsApprovalOf, unlistedWords, type ReturnKind } from './auto-clients.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -155,6 +156,68 @@ describe('a start at an issuer both a registered client and Auto’s consent ser
       'state-1',
     ]);
     expect(pathsHeardBy(service)).toEqual(['/clients']);
+  });
+});
+
+const hadWith = (awaiting: ServiceClient['awaiting_approval']): ClientsHad => ({
+  registeredClients: [],
+  publicUrl: undefined,
+  serviceClients: [
+    { issuer: anIssuer, client_id: 'auto-runtime', ...(awaiting === undefined ? {} : { awaiting_approval: awaiting }) },
+  ],
+});
+
+async function awaitingWhere(listing: ServiceListing, scope?: string): Promise<readonly boolean[]> {
+  const { fake, service } = throughAuto(listing);
+  const client = consentClientWith({ autoClients: autoClientsOf(service) });
+  const registered = consentClientWith({
+    registeredClients: [registeredAt(fake.origin)],
+    autoClients: autoClientsOf(service),
+  });
+  const [ofAuto, ofTheRegistered] = await Promise.all([
+    Effect.runPromise(client.hadSources(studioBase)),
+    Effect.runPromise(registered.hadSources(studioBase)),
+  ]);
+  const way = { issuer: fake.origin, scope };
+  return [ofAuto.awaitsApproval(way), ofTheRegistered.awaitsApproval(way)];
+}
+
+describe('the clients Auto’s consent service lists as awaiting their vendor’s approval', () => {
+  it('mark a way whose start takes the client the service lists as awaiting, and no way a registered client serves', async () => {
+    expect(await awaitingWhere({ awaitingApproval: true })).toEqual([true, false]);
+  });
+
+  it('mark no way where the service lists no such fact of the client', async () => {
+    expect(await awaitingWhere({})).toEqual([false, false]);
+  });
+
+  it('mark a way that asks a scope the service lists the client as awaiting for, as the service sends it', async () => {
+    const listing = { scopes: ['files.read', 'files.write'], awaitingApproval: { scopes: ['files.write'] } };
+    expect([...(await awaitingWhere(listing, 'files.write')), ...(await awaitingWhere(listing, 'files.read'))]).toEqual(
+      [true, false, false, false],
+    );
+  });
+
+  it.each([
+    { client: 'awaits as a whole', awaiting: true, scope: 'files.read', awaits: true },
+    { client: 'awaits for the scope asked', awaiting: { scopes: ['files.write'] }, scope: 'files.write', awaits: true },
+    { client: 'awaits for another scope', awaiting: { scopes: ['files.write'] }, scope: 'files.read', awaits: false },
+    {
+      client: 'awaits for one of the scopes asked',
+      awaiting: { scopes: ['files.write'] },
+      scope: 'files.read files.write',
+      awaits: true,
+    },
+    {
+      client: 'awaits for some scopes, and the way asks none',
+      awaiting: { scopes: ['files.write'] },
+      scope: undefined,
+      awaits: false,
+    },
+    { client: 'is listed as not awaiting', awaiting: false, scope: 'files.read', awaits: false },
+    { client: 'is listed with no such fact', awaiting: undefined, scope: 'files.read', awaits: false },
+  ] as const)('mark a way by what it asks where the client $client: $awaits', ({ awaiting, scope, awaits }) => {
+    expect(awaitsApprovalOf({ issuer: anIssuer, scope }, hadWith(awaiting))).toBe(awaits);
   });
 });
 

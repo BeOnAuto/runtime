@@ -30,6 +30,7 @@ import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
 import { replacedOf, replacedWayWords } from '../replacements/replaced-providers.ts';
 import {
+  awaitsApprovalHere,
   gatewayOriginsOf,
   gatewayUnofferedOf,
   isOfferedWay,
@@ -121,7 +122,9 @@ function offersTheGroup(way: CredentialWay, more: string | undefined): boolean {
 /**
  * The way an addition that names no credential takes, with its account type: of the ways offered here that take the
  * values the addition gives and offer the group of more it asks, the first in `identityOrder`, so the page where
- * the person approves the connection opens on the first choice it offers them. None for an addition that names a
+ * the person approves the connection opens on the first choice it offers them; and of those, first the ways whose
+ * client awaits no vendor's approval (`awaitsApprovalHere`), which the service lets every account connect, and only
+ * where none of them acts as anyone, the others. None for an addition that names a
  * credential, which keeps the first offered way of the kind it names and the account type `accountTypeWhereNoneIsGiven`
  * gives, and none where no such way acts as anyone, where the addition takes its way as one of every kind does.
  */
@@ -132,8 +135,18 @@ function takenWhereNoneIsNamed(named: Provider, listing: Listing, given: Additio
     takesTheValuesGiven(named.entry, way, values) &&
     offersTheGroup(way, given.more);
   return given.credential === undefined
-    ? wayTakenWhereNoneIsNamed(waysInOrderOf(named, listing).filter((way) => takes(way)))
+    ? approvedFirst(
+        named,
+        listing,
+        waysInOrderOf(named, listing).filter((way) => takes(way)),
+      )
     : undefined;
+}
+
+/** The way `wayTakenWhereNoneIsNamed` takes of the ways whose client awaits no approval, and else of every way. */
+function approvedFirst(named: Provider, listing: Listing, ways: readonly CredentialWay[]) {
+  const approved = ways.filter((way) => !awaitsApprovalHere(named.entry.name, way, listing.consent));
+  return wayTakenWhereNoneIsNamed(approved) ?? wayTakenWhereNoneIsNamed(ways);
 }
 
 function givenToProvider(

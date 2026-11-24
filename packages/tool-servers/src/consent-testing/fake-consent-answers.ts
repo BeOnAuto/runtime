@@ -220,10 +220,11 @@ function redeemed(asked: Asked, store: Store): Promise<Response> | Response {
   return person === undefined ? signInFirst() : redeemedWith(asked, store, person);
 }
 
-function listed(_asked: Asked, { options: { vendor, scopes, permissions } }: Store): Response {
+function listed(_asked: Asked, { options: { vendor, scopes, permissions, awaitingApproval } }: Store): Response {
   const named = scopes === undefined ? {} : { scopes };
   const stated = permissions === undefined ? {} : { permissions };
-  return answer({ clients: [{ issuer: vendor.origin, client_id: client.clientId, ...named, ...stated }] });
+  const awaiting = awaitingApproval === undefined ? {} : { awaiting_approval: awaitingApproval };
+  return answer({ clients: [{ issuer: vendor.origin, client_id: client.clientId, ...named, ...stated, ...awaiting }] });
 }
 
 const routes: ReadonlyMap<string, Route> = new Map<string, Route>([

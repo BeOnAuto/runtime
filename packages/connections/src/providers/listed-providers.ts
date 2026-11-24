@@ -74,6 +74,12 @@ export const ListedWaySchema = Schema.Struct({
         "For authorization whose oauth_client is optional, the source of the client a start takes without the organization's own, as read_link names it",
     }),
   ),
+  awaiting_approval: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description:
+        "true where the service has not yet approved Auto's app for the access this way asks, so only some accounts can connect this way for now. add_connection takes another way first when no credential is named. Left out otherwise.",
+    }),
+  ),
   service_account: Schema.optionalKey(
     Schema.Literal('managed').annotate({
       description:

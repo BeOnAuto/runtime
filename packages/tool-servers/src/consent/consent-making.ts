@@ -2,7 +2,12 @@ import { Effect } from 'effect';
 
 import { overFetches } from '../call-fetch/over-fetches.ts';
 import type { GatewayRequests } from '../consent-through-a-gateway/gateway-consents.ts';
-import { serviceClientsListed, throughAutoOf, usableClientsOf } from '../consent-through-auto/auto-clients.ts';
+import {
+  awaitsApprovalOf,
+  serviceClientsListed,
+  throughAutoOf,
+  usableClientsOf,
+} from '../consent-through-auto/auto-clients.ts';
 import { heldAmongSecrets, resourcesRecordedBy } from '../consent-tokens/kept-tokens.ts';
 import type { RenewedTokens } from '../consent-tokens/renewed-tokens.ts';
 import { sourcesHad, sourceTakenOf, type ClientSource, type HadSources, type WayOfClients } from './client-sources.ts';
@@ -38,6 +43,7 @@ function hadSourcesOf(options: LoadedOptions, studioBase: string): Effect.Effect
   return Effect.map(usable, (serviceClients) => ({
     sourcesOf: (way: WayOfClients): readonly ClientSource[] => sourcesHad(way, { ...options, serviceClients }),
     sourceOf: (way: WayOfClients) => sourceTakenOf(way, { ...options, serviceClients }),
+    awaitsApproval: (way: WayOfClients) => awaitsApprovalOf(way, { ...options, serviceClients }),
   }));
 }
 

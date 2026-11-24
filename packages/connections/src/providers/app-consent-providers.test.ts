@@ -37,8 +37,13 @@ function listedWith(entry: unknown, consenting: Readonly<Partial<ConsentClientOp
   return h.call(operationNamed(h.operations, 'list_providers'), ada);
 }
 
-function throughAutosClientForTheApp() {
-  const service = fakeConsentServiceInProcess({ vendor: { origin: issuer }, now: () => 0, permissions: 'application' });
+function throughAutosClientForTheApp(listing: { readonly awaitingApproval?: true } = {}) {
+  const service = fakeConsentServiceInProcess({
+    vendor: { origin: issuer },
+    now: () => 0,
+    permissions: 'application',
+    ...listing,
+  });
   closing.push(service.close);
   return { autoClients: autoClientsOf(service) };
 }
@@ -115,6 +120,60 @@ describe('a provider whose way of consent acts as the app under the organization
           },
         ],
       },
+    });
+  });
+});
+
+const awaiting = { awaitingApproval: true } as const;
+
+const markOf = (way: number) => ['output', 'providers', 0, 'credentials', way, 'awaiting_approval'];
+
+describe('a provider whose way of consent takes a client of Auto’s that its vendor has not yet approved', () => {
+  it('marks the way that takes the client where the consent service lists it as awaiting, and no other way', async () => {
+    const listed = await listedWith(forTheCompany, throughAutosClientForTheApp(awaiting));
+
+    expect(listed).toMatchObject({
+      output: {
+        providers: [
+          {
+            credentials: [
+              { permissions: 'application', client_source: 'auto', awaiting_approval: true },
+              { permissions: 'delegated', oauth_client: 'required' },
+            ],
+          },
+        ],
+      },
+    });
+    expect(listed).not.toHaveProperty(markOf(1));
+  });
+
+  it('marks no way where the consent service lists no such fact', async () => {
+    const listed = await listedWith(forTheCompany, throughAutosClientForTheApp());
+
+    expect(listed).not.toHaveProperty(markOf(0));
+    expect(listed).not.toHaveProperty(markOf(1));
+  });
+
+  it.each([
+    ['takes another way that acts as someone first', awaiting, 'delegated'],
+    ['takes the way first in the order, as without the fact', {}, 'application'],
+  ] as const)(
+    'where the consent service marks the client, an addition that names no way %s',
+    async (_, listing, taken) => {
+      expect(
+        await adding(harnessOf(forTheCompany, throughAutosClientForTheApp(listing)), { provider: 'drive' }),
+      ).toMatchObject({ status: 'succeeded', output: { status: 'pending', permissions: taken } });
+    },
+  );
+
+  it('takes that way where no other way is offered, as it would without the fact', async () => {
+    const theAppAlone = { ...drive, credentials: [{ ...signingIn, permissions: 'application' }] };
+
+    expect(
+      await adding(harnessOf(theAppAlone, throughAutosClientForTheApp(awaiting)), { provider: 'drive' }),
+    ).toMatchObject({
+      status: 'succeeded',
+      output: { status: 'pending', permissions: 'application', credential: { kind: 'authorization', issuer } },
     });
   });
 });

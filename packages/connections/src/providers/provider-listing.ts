@@ -28,6 +28,7 @@ import {
 import { couldReach, couldReachAnyHost } from './provider-host-reach.ts';
 import { exchangesHere, offeringOf, serviceAccountListedOf, type Exchanging, type Offering } from './way-offerings.ts';
 
+export { awaitsApprovalHere } from './consent-offered.ts';
 export interface Listing extends Exchanging {
   readonly providers: ProviderList;
   readonly policy: ConnectionPolicy;
@@ -59,6 +60,7 @@ function isListed(provider: Provider, way: CredentialWay, policy: ConnectionPoli
 interface OAuthClientOffered {
   readonly oauth_client: OAuthClientChoice;
   readonly client_source?: ClientSource;
+  readonly awaiting_approval?: true;
   readonly because?: string;
 }
 
@@ -139,10 +141,6 @@ function isUnderTheOrgsOAuthClientAlone(provider: Provider, way: CredentialWay, 
   return oauthClientOfferedOf(provider, way, listing)?.oauth_client === 'required';
 }
 
-function asksValuesOfItsOwn({ placeholders }: CredentialWay): boolean {
-  return placeholders !== undefined;
-}
-
 function lacksItsClientForTheApp(provider: Provider, way: CredentialWay, listing: Listing): boolean {
   return takesAClientForTheApp(way) && 'because' in consentOfferedOf(provider.entry.name, way, listing.consent);
 }
@@ -151,7 +149,7 @@ export function waysInOrderOf(provider: Provider, listing: Listing): readonly Cr
   const credentials = provider.entry.credentials.filter(
     (way) => !lacksItsClientForTheApp(provider, way, listing) && exchangesHere(way, listing),
   );
-  const ofItsOwnValues = credentials.filter((way) => asksValuesOfItsOwn(way));
+  const ofItsOwnValues = credentials.filter(({ placeholders }) => placeholders !== undefined);
   const alone = credentials.filter(
     (way) => !ofItsOwnValues.includes(way) && isUnderTheOrgsOAuthClientAlone(provider, way, listing),
   );

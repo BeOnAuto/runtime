@@ -26,6 +26,7 @@ export interface ThroughAuto {
 export interface ServiceListing {
   readonly scopes?: readonly string[];
   readonly permissions?: 'application';
+  readonly awaitingApproval?: true | { readonly scopes: readonly string[] };
 }
 
 export const studioSession = Redacted.make('session-of-a-person-signed-in-to-auto');
