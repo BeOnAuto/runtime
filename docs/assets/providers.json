@@ -375,7 +375,7 @@
           "kind": "secret",
           "description": "API token",
           "key_page": "https://admin.atlassian.com",
-          "instructions": "In [Atlassian Administration](https://admin.atlassian.com), an organization admin turns on **API token** for the Atlassian MCP server, creates a service account, and creates an API token for it with the scopes for Jira and Confluence. Paste that token on this connection's page. Atlassian lets a token last a year at most."
+          "instructions": "In [Atlassian Administration](https://admin.atlassian.com), an organization admin turns on **Allow API token authentication** for the Atlassian MCP server, creates a service account, and creates an API token for it with the scopes for Jira and Confluence. Paste that token on this connection's page. Atlassian lets a token last a year at most."
         }
       ],
       "placeholders": [],
@@ -2166,7 +2166,7 @@
           "kind": "secret",
           "description": "API key",
           "key_page": "https://dashboard.stripe.com/apikeys",
-          "instructions": "On Stripe's [API keys page](https://dashboard.stripe.com/apikeys), select **Create restricted key** and, when Stripe asks what the key is for, select **Authorizing agent access to your account**. Give the key only the permissions your playbooks need, create it and copy it. Stripe shows it once. Paste it on this connection's page."
+          "instructions": "On Stripe's [API keys page](https://dashboard.stripe.com/apikeys), select **Create restricted key** and, when Stripe asks how you will be using the key, select **Authorising an AI agent**. Give the key only the permissions your playbooks need and create it. Copy the key from the **Token** column. Stripe shows it once. Paste it on this connection's page."
         }
       ],
       "placeholders": [],

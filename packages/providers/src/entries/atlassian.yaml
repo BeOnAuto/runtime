@@ -30,9 +30,10 @@ credentials:
     scheme: Bearer
     description: API token
     instructions: >-
-      In [Atlassian Administration](https://admin.atlassian.com), an organization admin turns on **API token** for the
-      Atlassian MCP server, creates a service account, and creates an API token for it with the scopes for Jira and
-      Confluence. Paste that token on this connection's page. Atlassian lets a token last a year at most.
+      In [Atlassian Administration](https://admin.atlassian.com), an organization admin turns on **Allow API token
+      authentication** for the Atlassian MCP server, creates a service account, and creates an API token for it with
+      the scopes for Jira and Confluence. Paste that token on this connection's page. Atlassian lets a token last a year
+      at most.
     key_page: https://admin.atlassian.com
     key_page_title: Open Atlassian Administration
     steps:
@@ -40,7 +41,7 @@ credentials:
         title: Allow API tokens for Atlassian's MCP server
         instructions: |-
           - Select **Connectors**, then **Atlassian MCP server**.
-          - In the **Authentication** section, turn **API token** on.
+          - In the **Authentication** tab, turn **Allow API token authentication** on.
 
           This page needs an organization admin at Atlassian.
       pages:

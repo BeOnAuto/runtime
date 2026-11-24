@@ -49,7 +49,7 @@ credentials:
 
           - Under **API permissions**, select **Add a permission**, **Microsoft Graph** and **Application permissions**. Tick `Mail.ReadWrite`, `Mail.Send` and `Calendars.ReadWrite`, and select **Add permissions**.
           - Select **Grant admin consent** and confirm. This needs the Privileged Role Administrator role.
-          - Under **Certificates & secrets**, select **New client secret**, choose when it expires and select **Add**. Copy its **Value** now: Microsoft shows it only once. When it expires, reconnect with a new secret.
+          - Under **Certificates & secrets**, select **New client secret**, choose when it expires and select **Add**. In the list of secrets, copy the text in the **Value** column, not the **Secret ID** beside it. Microsoft shows the value only once. When it expires, reconnect with a new secret.
 
           Admin consent lets the app reach every mailbox in your organization. To let it reach only some, skip admin consent and follow [Limit which mailboxes the app can reach](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac).
       key:
